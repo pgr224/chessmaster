@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -16,6 +18,7 @@ class OnboardingScreen extends StatefulWidget {
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final _pageController = PageController();
   final _usernameController = TextEditingController();
+  final Random _random = Random();
   int _currentPage = 0;
   bool _isLoading = false;
   String? _usernameErrorText;
@@ -74,9 +77,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         if (state is AuthAuthenticatedState) context.go('/home');
         if (state is AuthErrorState) {
           final isConflict = _isRegisterConflict(state.message);
+          String? suggestedUsername;
+          if (isConflict) {
+            suggestedUsername = _buildUsernameSuggestion(_usernameController.text.trim());
+            _usernameController.text = suggestedUsername;
+            _usernameController.selection = TextSelection.fromPosition(
+              TextPosition(offset: _usernameController.text.length),
+            );
+          }
+
           setState(() {
             _isLoading = false;
-            _usernameErrorText = isConflict ? 'Username already taken, try another one.' : null;
+            _usernameErrorText = isConflict
+                ? 'Username already taken. Try "$suggestedUsername".'
+                : null;
           });
 
           if (isConflict && _currentPage != _pages.length - 1) {
@@ -318,6 +332,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         text.contains('conflict') ||
         text.contains('already exists') ||
         text.contains('already taken');
+  }
+
+  String _buildUsernameSuggestion(String currentUsername) {
+    final cleaned = currentUsername.replaceAll(RegExp(r'\s+'), '');
+    final base = cleaned.isEmpty ? 'ChessPlayer' : cleaned.replaceAll(RegExp(r'\d+$'), '');
+    final suffix = 100 + _random.nextInt(900);
+    return '$base$suffix';
   }
 
   @override
