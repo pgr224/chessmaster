@@ -49,7 +49,7 @@ class ProfileScreen extends StatelessWidget {
                     user.username[0].toUpperCase(),
                     style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: AppTheme.goldPrimary),
                   ),
-                ).animate().scale(duration: 600.ms, curve: Curves.backOut),
+                ).animate().scale(duration: 600.ms, curve: Curves.easeOutBack),
                 Container(
                   padding: const EdgeInsets.all(4),
                   decoration: const BoxDecoration(color: AppTheme.accentCyan, shape: BoxShape.circle),

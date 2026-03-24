@@ -6,6 +6,8 @@ import '../../blocs/game/game_bloc.dart';
 import '../../blocs/multiplayer/multiplayer_bloc.dart';
 import '../game/game_screen.dart';
 import '../../widgets/chat_widget.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../domain/engine/chess_engine.dart';
 
 class GameRoomScreen extends StatelessWidget {
   final String gameId;
