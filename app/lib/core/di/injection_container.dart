@@ -1,6 +1,7 @@
 import 'package:get_it/get_it.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import '../router/app_router.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/game_repository.dart';
 import '../../data/services/multiplayer_service.dart';
@@ -15,6 +16,8 @@ final sl = GetIt.instance;
 Future<void> init() async {
   // ── External services ──
   sl.registerLazySingleton<Dio>(() {
+    var isRecoveringFrom401 = false;
+
     final dio = Dio(BaseOptions(
       baseUrl: dotenv.env['API_URL'] ?? 'https://chess-api.yourdomain.com',
       connectTimeout: const Duration(seconds: 10),
@@ -29,9 +32,20 @@ Future<void> init() async {
         if (token != null) options.headers['Authorization'] = 'Bearer $token';
         handler.next(options);
       },
-      onError: (DioException e, handler) {
+      onError: (DioException e, handler) async {
         if (e.response?.statusCode == 401) {
-          // Token expired — trigger re-auth
+          final hasAuthHeader = e.requestOptions.headers.containsKey('Authorization');
+          if (hasAuthHeader && !isRecoveringFrom401) {
+            isRecoveringFrom401 = true;
+            try {
+              await sl<AuthRepository>().signOut();
+              if (AppRouter.router.state.matchedLocation != '/onboarding') {
+                AppRouter.router.go('/onboarding?reason=session_expired');
+              }
+            } finally {
+              isRecoveringFrom401 = false;
+            }
+          }
         }
         handler.next(e);
       },

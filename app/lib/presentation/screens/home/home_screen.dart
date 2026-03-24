@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/router/app_router.dart';
 import '../../../presentation/blocs/auth/auth_bloc.dart';
@@ -30,65 +31,74 @@ class _HomeScreenState extends State<HomeScreen> {
                 slivers: [
                   SliverToBoxAdapter(child: _buildHeader(user)),
                   SliverToBoxAdapter(child: _buildQuickStats(user)),
-                  SliverToBoxAdapter(child: _buildSectionTitle('Game Modes')),
+                  SliverToBoxAdapter(child: _buildSectionTitle('🎮 Game Modes')),
                   SliverPadding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     sliver: SliverList(
                       delegate: SliverChildListDelegate([
                         _buildModeCard(
-                          icon: '🤖',
-                          title: 'vs AI',
-                          subtitle: 'Challenge the computer',
+                          emoji: '🤖',
+                          title: 'Play vs AI',
+                          subtitle: 'Challenge the computer!',
                           gradient: const LinearGradient(
-                            colors: [Color(0xFF1565C0), Color(0xFF7B61FF)],
+                            colors: [Color(0xFF74B9FF), Color(0xFFA29BFE)],
                           ),
+                          shadowColor: const Color(0xFF74B9FF),
                           onTap: () => context.push('/game/setup', extra: GameMode.singlePlayer),
                           delay: 0,
                         ),
                         _buildModeCard(
-                          icon: '👥',
-                          title: 'Two Player',
-                          subtitle: 'Play locally with a friend',
+                          emoji: '👫',
+                          title: 'Two Players',
+                          subtitle: 'Play with a friend!',
                           gradient: const LinearGradient(
-                            colors: [Color(0xFF2E7D32), Color(0xFF00E676)],
+                            colors: [Color(0xFF6BCB77), Color(0xFF4ECDC4)],
                           ),
+                          shadowColor: const Color(0xFF6BCB77),
                           onTap: () => context.go('/game/play', extra: const GameConfig(mode: GameMode.twoPlayer)),
-                          delay: 100,
+                          delay: 80,
                         ),
                         _buildModeCard(
-                          icon: '🌐',
+                          emoji: '🌍',
                           title: 'Online Battle',
-                          subtitle: 'Compete with players worldwide',
-                          gradient: AppTheme.cyanGradient,
-                          onTap: () => context.push('/lobby'),
-                          delay: 200,
-                        ),
-                        _buildModeCard(
-                          icon: '🏆',
-                          title: 'Tournament',
-                          subtitle: 'Enter bracket competition',
-                          gradient: LinearGradient(colors: [AppTheme.goldDark, AppTheme.goldPrimary]),
-                          onTap: () => context.push('/tournaments'),
-                          delay: 300,
-                        ),
-                        _buildModeCard(
-                          icon: '📚',
-                          title: 'Tutorial',
-                          subtitle: 'Learn chess step by step',
+                          subtitle: 'Play with the world!',
                           gradient: const LinearGradient(
-                            colors: [Color(0xFF880E4F), Color(0xFFFF4081)],
+                            colors: [Color(0xFFFF6B9D), Color(0xFFA29BFE)],
                           ),
+                          shadowColor: const Color(0xFFFF6B9D),
+                          onTap: () => context.push('/lobby'),
+                          delay: 160,
+                        ),
+                        _buildModeCard(
+                          emoji: '🏆',
+                          title: 'Tournament',
+                          subtitle: 'Win the championship!',
+                          gradient: LinearGradient(
+                            colors: [AppTheme.goldDark, AppTheme.goldPrimary],
+                          ),
+                          shadowColor: AppTheme.goldPrimary,
+                          onTap: () => context.push('/tournaments'),
+                          delay: 240,
+                        ),
+                        _buildModeCard(
+                          emoji: '📚',
+                          title: 'Learn Chess',
+                          subtitle: 'Become a master!',
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFFFB347), Color(0xFFFF8A5C)],
+                          ),
+                          shadowColor: const Color(0xFFFF8A5C),
                           onTap: () => context.push('/tutorial'),
-                          delay: 400,
+                          delay: 320,
                         ),
                       ]),
                     ),
                   ),
-                  SliverToBoxAdapter(child: _buildSectionTitle('Daily Puzzle')),
+                  SliverToBoxAdapter(child: _buildSectionTitle('🧩 Daily Puzzle')),
                   SliverToBoxAdapter(child: _buildDailyPuzzle()),
-                  SliverToBoxAdapter(child: _buildSectionTitle('Recent Games')),
+                  SliverToBoxAdapter(child: _buildSectionTitle('🕹️ Recent Games')),
                   SliverToBoxAdapter(child: _buildRecentGames()),
-                  const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                  const SliverToBoxAdapter(child: SizedBox(height: 32)),
                 ],
               ),
             ),
@@ -100,7 +110,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildHeader(UserModel? user) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
       child: Row(
         children: [
           Expanded(
@@ -109,42 +119,46 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 Text(
                   _greeting(),
-                  style: TextStyle(
+                  style: GoogleFonts.baloo2(
                     color: AppTheme.textSecondary,
-                    fontSize: 14,
+                    fontSize: 16,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   user?.username ?? 'Player',
-                  style: const TextStyle(
+                  style: GoogleFonts.fredoka(
                     color: AppTheme.textPrimary,
-                    fontSize: 24,
+                    fontSize: 28,
                     fontWeight: FontWeight.w700,
                   ),
                 ).animate().fadeIn(duration: 400.ms).slideX(begin: -0.1),
               ],
             ),
           ),
-          // Avatar
+          // Avatar — big and colorful
           GestureDetector(
             onTap: () => context.push('/profile'),
             child: Container(
-              width: 52,
-              height: 52,
+              width: 60,
+              height: 60,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: const LinearGradient(
-                  colors: [AppTheme.goldDark, AppTheme.goldPrimary],
-                ),
-                boxShadow: AppTheme.goldShadow,
+                gradient: AppTheme.rainbowGradient,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppTheme.goldPrimary.withValues(alpha: 0.4),
+                    blurRadius: 16,
+                    spreadRadius: 2,
+                  ),
+                ],
               ),
               child: user?.avatarUrl != null
                   ? ClipOval(child: Image.network(user!.avatarUrl!, fit: BoxFit.cover))
-                  : const Icon(Icons.person_rounded, color: AppTheme.midnight, size: 28),
+                  : const Icon(Icons.person_rounded, color: AppTheme.midnight, size: 32),
             ),
-          ).animate().scale(duration: 400.ms, curve: Curves.easeOutBack),
+          ).animate().scale(duration: 500.ms, curve: Curves.elasticOut),
         ],
       ),
     );
@@ -152,63 +166,70 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildQuickStats(UserModel? user) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: AppTheme.cardGradient,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.goldPrimary.withOpacity(0.2)),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.25)),
         boxShadow: AppTheme.cardShadow,
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _statItem('${user?.stats.gamesPlayed ?? 0}', 'Games', Icons.sports_esports_rounded),
+          _statItem('${user?.stats.gamesPlayed ?? 0}', '🎮 Games', null),
           _divider(),
-          _statItem('${user?.stats.wins ?? 0}', 'Wins', Icons.emoji_events_rounded,
-              color: AppTheme.goldPrimary),
+          _statItem('${user?.stats.wins ?? 0}', '🏆 Wins', AppTheme.goldPrimary),
           _divider(),
           _statItem(
             '${user?.stats.winRate.toStringAsFixed(0) ?? 0}%',
-            'Win Rate', Icons.trending_up_rounded,
-            color: AppTheme.accentGreen,
+            '📈 Rate', AppTheme.accentCyan,
           ),
           _divider(),
-          _statItem('${user?.rating ?? 1200}', 'Rating', Icons.star_rounded,
-              color: AppTheme.accentCyan),
+          _statItem('${user?.rating ?? 1200}', '⭐ ELO', AppTheme.skyBlue),
         ],
       ),
     ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.1);
   }
 
-  Widget _statItem(String value, String label, IconData icon, {Color? color}) {
+  Widget _statItem(String value, String label, Color? color) {
     return Column(
       children: [
-        Icon(icon, color: color ?? AppTheme.textSecondary, size: 20),
-        const SizedBox(height: 4),
-        Text(value, style: TextStyle(
+        Text(value, style: GoogleFonts.fredoka(
           color: color ?? AppTheme.textPrimary,
-          fontSize: 20, fontWeight: FontWeight.w800,
+          fontSize: 22, fontWeight: FontWeight.w700,
         )),
-        Text(label, style: const TextStyle(color: AppTheme.textMuted, fontSize: 11)),
+        const SizedBox(height: 4),
+        Text(label, style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 13)),
       ],
     );
   }
 
-  Widget _divider() => Container(width: 1, height: 40, color: AppTheme.textMuted.withOpacity(0.2));
+  Widget _divider() => Container(
+    width: 1, height: 44,
+    decoration: BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topCenter, end: Alignment.bottomCenter,
+        colors: [Colors.transparent, AppTheme.textMuted.withValues(alpha: 0.3), Colors.transparent],
+      ),
+    ),
+  );
 
   Widget _buildSectionTitle(String title) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 14),
       child: Row(
         children: [
-          Container(width: 4, height: 20, decoration: BoxDecoration(
-            gradient: AppTheme.goldGradient,
-            borderRadius: BorderRadius.circular(2),
-          )),
-          const SizedBox(width: 10),
-          Text(title, style: const TextStyle(
-            color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.w700,
+          Container(
+            width: 5, height: 24,
+            decoration: BoxDecoration(
+              gradient: AppTheme.rainbowGradient,
+              borderRadius: BorderRadius.circular(3),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(title, style: GoogleFonts.fredoka(
+            color: AppTheme.textPrimary, fontSize: 22, fontWeight: FontWeight.w600,
           )),
         ],
       ),
@@ -216,68 +237,87 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildModeCard({
-    required String icon,
+    required String emoji,
     required String title,
     required String subtitle,
     required LinearGradient gradient,
+    required Color shadowColor,
     required VoidCallback onTap,
     int delay = 0,
   }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
+        margin: const EdgeInsets.only(bottom: 14),
         decoration: BoxDecoration(
           gradient: AppTheme.cardGradient,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: Colors.white.withOpacity(0.05)),
-          boxShadow: AppTheme.cardShadow,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+          boxShadow: [
+            BoxShadow(
+              color: shadowColor.withValues(alpha: 0.15),
+              blurRadius: 20,
+              offset: const Offset(0, 6),
+            ),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.2),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Material(
           color: Colors.transparent,
           child: InkWell(
             onTap: onTap,
-            borderRadius: BorderRadius.circular(18),
-            splashColor: Colors.white.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(24),
+            splashColor: shadowColor.withValues(alpha: 0.1),
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
               child: Row(
                 children: [
-                  // Icon container with gradient
+                  // Big gradient emoji container
                   Container(
-                    width: 56,
-                    height: 56,
+                    width: 64,
+                    height: 64,
                     decoration: BoxDecoration(
                       gradient: gradient,
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: shadowColor.withValues(alpha: 0.3),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
                     child: Center(
-                      child: Text(icon, style: const TextStyle(fontSize: 28)),
+                      child: Text(emoji, style: const TextStyle(fontSize: 34)),
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 18),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(title, style: const TextStyle(
-                          color: AppTheme.textPrimary, fontSize: 17, fontWeight: FontWeight.w700,
+                        Text(title, style: GoogleFonts.fredoka(
+                          color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.w600,
                         )),
-                        const SizedBox(height: 2),
-                        Text(subtitle, style: const TextStyle(
-                          color: AppTheme.textSecondary, fontSize: 13,
+                        const SizedBox(height: 3),
+                        Text(subtitle, style: GoogleFonts.baloo2(
+                          color: AppTheme.textSecondary, fontSize: 15,
                         )),
                       ],
                     ),
                   ),
                   Container(
-                    width: 32, height: 32,
+                    width: 36, height: 36,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.06),
-                      borderRadius: BorderRadius.circular(10),
+                      color: shadowColor.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.arrow_forward_ios_rounded,
-                        color: AppTheme.textSecondary, size: 14),
+                    child: Icon(Icons.arrow_forward_ios_rounded,
+                        color: shadowColor, size: 16),
                   ),
                 ],
               ),
@@ -291,48 +331,50 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildDailyPuzzle() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF1A1040), Color(0xFF0E1535)],
+          colors: [Color(0xFF2D1B69), Color(0xFF1A1A40)],
         ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.accentPurple.withOpacity(0.4)),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppTheme.lavender.withValues(alpha: 0.4)),
         boxShadow: [
-          BoxShadow(color: AppTheme.accentPurple.withOpacity(0.2), blurRadius: 20),
+          BoxShadow(color: AppTheme.lavender.withValues(alpha: 0.15), blurRadius: 20),
         ],
       ),
       child: Row(
         children: [
-          const Text('🧩', style: TextStyle(fontSize: 40)),
-          const SizedBox(width: 16),
+          const Text('🧩', style: TextStyle(fontSize: 48)),
+          const SizedBox(width: 18),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Daily Puzzle', style: TextStyle(
-                  color: AppTheme.accentPurple, fontSize: 12, fontWeight: FontWeight.w700,
+                Text('DAILY PUZZLE', style: GoogleFonts.fredoka(
+                  color: AppTheme.lavender, fontSize: 13, fontWeight: FontWeight.w600,
                   letterSpacing: 1.5,
                 )),
-                const Text('White to move and win!', style: TextStyle(
-                  color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w700,
+                Text('White to move and win!', style: GoogleFonts.fredoka(
+                  color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.w600,
                 )),
                 const SizedBox(height: 4),
-                Text('Difficulty: ★★★☆☆', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+                Text('Difficulty: ⭐⭐⭐', style: GoogleFonts.baloo2(
+                  color: AppTheme.textSecondary, fontSize: 14,
+                )),
               ],
             ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.accentPurple,
+              backgroundColor: AppTheme.lavender,
               foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             ),
             onPressed: () {},
-            child: const Text('Solve', style: TextStyle(fontWeight: FontWeight.w700)),
+            child: Text('Solve!', style: GoogleFonts.fredoka(fontWeight: FontWeight.w600, fontSize: 16)),
           ),
         ],
       ),
@@ -340,14 +382,25 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildRecentGames() {
-    // Placeholder — would be loaded from local DB
     return Container(
-      height: 100,
+      height: 110,
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      child: const Center(
-        child: Text(
-          'No recent games. Start playing!',
-          style: TextStyle(color: AppTheme.textMuted, fontSize: 14),
+      decoration: BoxDecoration(
+        color: AppTheme.navyCard.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text('🕹️', style: TextStyle(fontSize: 32)),
+            const SizedBox(height: 8),
+            Text(
+              'No recent games. Start playing!',
+              style: GoogleFonts.baloo2(color: AppTheme.textMuted, fontSize: 16),
+            ),
+          ],
         ),
       ),
     );
@@ -355,8 +408,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String _greeting() {
     final hour = DateTime.now().hour;
-    if (hour < 12) return 'Good morning,';
-    if (hour < 17) return 'Good afternoon,';
-    return 'Good evening,';
+    if (hour < 12) return 'Good morning ☀️';
+    if (hour < 17) return 'Good afternoon 🌤️';
+    return 'Good evening 🌙';
   }
 }

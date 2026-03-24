@@ -69,16 +69,23 @@ class AuthRepository {
       data: {'username': username, 'deviceId': deviceId},
     );
 
-    final token = response.data['token'] as String;
+    final rawToken = (response.data['token'] ?? response.data['accessToken']) as String;
+    final token = _normalizeToken(rawToken);
     final userId = response.data['userId'] as String;
 
     // Store token & basic user info locally
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_tokenKey, token);
 
-    // Fetch full profile
+    // Prefer user payload from register response to avoid an immediate follow-up
+    // profile request that may 401 while auth propagation is still in flight.
     _dio.options.headers['Authorization'] = 'Bearer $token';
-    final profile = await _fetchProfile(userId);
+    final profile = _resolveRegisteredUser(
+      responseData: response.data as Map<String, dynamic>,
+      userId: userId,
+      fallbackUsername: username,
+      deviceId: deviceId,
+    );
 
     final userJson = jsonEncode(profile.toJson());
     await prefs.setString(_userKey, userJson);
@@ -100,9 +107,26 @@ class AuthRepository {
     return UserModel.fromJson(response.data as Map<String, dynamic>);
   }
 
-  Future<UserModel> _fetchProfile(String userId) async {
-    final response = await _dio.get('/api/profile/$userId');
-    return UserModel.fromJson(response.data as Map<String, dynamic>);
+  UserModel _resolveRegisteredUser({
+    required Map<String, dynamic> responseData,
+    required String userId,
+    required String fallbackUsername,
+    required String deviceId,
+  }) {
+    final embeddedUser = responseData['user'];
+    if (embeddedUser is Map<String, dynamic>) {
+      return UserModel.fromJson(embeddedUser);
+    }
+
+    return UserModel(
+      id: userId,
+      username: fallbackUsername,
+      avatarUrl: null,
+      rating: 1200,
+      isOnline: true,
+      stats: const UserStats(),
+      deviceId: deviceId,
+    );
   }
 
   Future<void> signOut() async {
@@ -114,6 +138,17 @@ class AuthRepository {
 
   Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_tokenKey);
+    final storedToken = prefs.getString(_tokenKey);
+    if (storedToken == null) return null;
+
+    final normalized = _normalizeToken(storedToken);
+    if (normalized != storedToken) {
+      await prefs.setString(_tokenKey, normalized);
+    }
+    return normalized;
+  }
+
+  String _normalizeToken(String token) {
+    return token.replaceFirst(RegExp(r'^Bearer\s+', caseSensitive: false), '').trim();
   }
 }

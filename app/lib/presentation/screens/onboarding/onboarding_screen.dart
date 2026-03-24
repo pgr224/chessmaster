@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../presentation/blocs/auth/auth_bloc.dart';
 
@@ -20,28 +21,48 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   final List<_OnboardPage> _pages = const [
     _OnboardPage(
+      image: 'assets/images/onboarding_1.png',
       emoji: '♟️',
-      title: 'Welcome to Chess Master',
-      subtitle: 'Play chess like never before — offline anytime, online with the world.',
-      gradient: LinearGradient(colors: [Color(0xFF0A0E27), Color(0xFF1A2248)]),
+      title: 'Welcome to Chess Master!',
+      subtitle: 'The most fun way to play chess — anytime, anywhere! 🎉',
+      gradient: LinearGradient(
+        begin: Alignment.topCenter, end: Alignment.bottomCenter,
+        colors: [Color(0xFF1A1A2E), Color(0xFF2D1B69)],
+      ),
+      accentColor: Color(0xFFFFD93D),
     ),
     _OnboardPage(
+      image: 'assets/images/onboarding_2.png',
       emoji: '🤖',
-      title: 'Powerful AI Opponent',
-      subtitle: 'Challenge our Stockfish-powered AI across 4 difficulty levels.',
-      gradient: LinearGradient(colors: [Color(0xFF0F1535), Color(0xFF1565C0)]),
+      title: 'Play Against Smart AI!',
+      subtitle: 'Our friendly robot will challenge you at YOUR level! 🧠',
+      gradient: LinearGradient(
+        begin: Alignment.topCenter, end: Alignment.bottomCenter,
+        colors: [Color(0xFF0F3460), Color(0xFF1A1A4E)],
+      ),
+      accentColor: Color(0xFF74B9FF),
     ),
     _OnboardPage(
-      emoji: '🌐',
-      title: 'Real-time Multiplayer',
-      subtitle: 'Battle players worldwide, join tournaments, and climb the leaderboard.',
-      gradient: LinearGradient(colors: [Color(0xFF0F1535), Color(0xFF7B61FF)]),
+      image: 'assets/images/onboarding_3.png',
+      emoji: '🌍',
+      title: 'Play With Friends!',
+      subtitle: 'Connect and battle players from around the world! 🤝',
+      gradient: LinearGradient(
+        begin: Alignment.topCenter, end: Alignment.bottomCenter,
+        colors: [Color(0xFF1A1A2E), Color(0xFF2D4059)],
+      ),
+      accentColor: Color(0xFF6BCB77),
     ),
     _OnboardPage(
+      image: 'assets/images/onboarding_4.png',
       emoji: '📚',
-      title: 'Learn & Improve',
-      subtitle: 'Master openings, tactics, and endgames with our interactive tutorial.',
-      gradient: LinearGradient(colors: [Color(0xFF0F1535), Color(0xFF880E4F)]),
+      title: 'Learn & Get Better!',
+      subtitle: 'Discover cool tricks and become a chess champion! ⭐',
+      gradient: LinearGradient(
+        begin: Alignment.topCenter, end: Alignment.bottomCenter,
+        colors: [Color(0xFF1A1A2E), Color(0xFF4A1942)],
+      ),
+      accentColor: Color(0xFFFF6B9D),
     ),
   ];
 
@@ -80,29 +101,74 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       decoration: BoxDecoration(gradient: page.gradient),
       child: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(32),
+          padding: const EdgeInsets.symmetric(horizontal: 28),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(page.emoji, style: const TextStyle(fontSize: 96))
-                  .animate().scale(duration: 500.ms, curve: Curves.elasticOut),
+              // ── Generated illustration ──
+              Container(
+                height: 260,
+                width: 260,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(32),
+                  boxShadow: [
+                    BoxShadow(
+                      color: page.accentColor.withValues(alpha: 0.3),
+                      blurRadius: 40,
+                      spreadRadius: 8,
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(32),
+                  child: Image.asset(
+                    page.image,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      color: AppTheme.surface,
+                      child: Center(
+                        child: Text(page.emoji, style: const TextStyle(fontSize: 96)),
+                      ),
+                    ),
+                  ),
+                ),
+              )
+                  .animate()
+                  .scale(begin: const Offset(0.7, 0.7), duration: 600.ms, curve: Curves.elasticOut)
+                  .fadeIn(duration: 400.ms),
+
               const SizedBox(height: 40),
+
+              // ── Title ──
               Text(
                 page.title,
-                style: const TextStyle(
-                  color: AppTheme.textPrimary, fontSize: 28, fontWeight: FontWeight.w800,
+                style: GoogleFonts.fredoka(
+                  color: AppTheme.textPrimary,
+                  fontSize: 30,
+                  fontWeight: FontWeight.w700,
                   height: 1.2,
                 ),
                 textAlign: TextAlign.center,
-              ).animate().fadeIn(delay: 200.ms),
+              )
+                  .animate()
+                  .fadeIn(delay: 200.ms)
+                  .slideY(begin: 0.3),
+
               const SizedBox(height: 16),
+
+              // ── Subtitle ──
               Text(
                 page.subtitle,
-                style: const TextStyle(
-                  color: AppTheme.textSecondary, fontSize: 16, height: 1.5,
+                style: GoogleFonts.baloo2(
+                  color: AppTheme.textSecondary,
+                  fontSize: 18,
+                  height: 1.5,
                 ),
                 textAlign: TextAlign.center,
-              ).animate().fadeIn(delay: 300.ms),
+              )
+                  .animate()
+                  .fadeIn(delay: 400.ms)
+                  .slideY(begin: 0.2),
             ],
           ),
         ),
@@ -114,69 +180,97 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final isLast = _currentPage == _pages.length - 1;
 
     return Container(
-      color: AppTheme.midnight,
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 40),
+      decoration: BoxDecoration(
+        color: AppTheme.midnight,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.3),
+            blurRadius: 20,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
       child: Column(
         children: [
-          // Page indicators
+          // ── Page dots ──
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: List.generate(_pages.length, (i) => AnimatedContainer(
               duration: 300.ms,
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-              width: _currentPage == i ? 24 : 8,
-              height: 8,
+              margin: const EdgeInsets.symmetric(horizontal: 5),
+              width: _currentPage == i ? 32 : 10,
+              height: 10,
               decoration: BoxDecoration(
-                color: _currentPage == i ? AppTheme.goldPrimary : AppTheme.textMuted,
-                borderRadius: BorderRadius.circular(4),
+                gradient: _currentPage == i
+                    ? LinearGradient(colors: [_pages[_currentPage].accentColor, AppTheme.goldPrimary])
+                    : null,
+                color: _currentPage == i ? null : AppTheme.textMuted.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(5),
               ),
             )),
           ),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: 28),
 
-          // Username field (last page only)
+          // ── Username field (last page) ──
           if (isLast) ...[
             TextField(
               controller: _usernameController,
+              style: GoogleFonts.baloo2(color: AppTheme.textPrimary, fontSize: 18),
               decoration: InputDecoration(
-                labelText: 'Choose your username',
-                hintText: 'ChessMaster2024...',
-                prefixIcon: const Icon(Icons.person_rounded, color: AppTheme.goldPrimary),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                labelText: '🎮 Pick your player name!',
+                labelStyle: GoogleFonts.fredoka(color: AppTheme.textSecondary, fontSize: 16),
+                hintText: 'SuperChessKid...',
+                hintStyle: GoogleFonts.baloo2(color: AppTheme.textMuted),
+                prefixIcon: const Icon(Icons.person_rounded, color: AppTheme.goldPrimary, size: 28),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(20)),
+                filled: true,
+                fillColor: AppTheme.surface,
               ),
             ).animate().fadeIn().slideY(begin: 0.3),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
           ],
 
-          // Action button
+          // ── Action button ──
           SizedBox(
             width: double.infinity,
-            height: 54,
+            height: 60,
             child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isLast ? AppTheme.accentCyan : AppTheme.goldPrimary,
+                foregroundColor: AppTheme.midnight,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                elevation: 8,
+                shadowColor: (isLast ? AppTheme.accentCyan : AppTheme.goldPrimary).withValues(alpha: 0.5),
+              ),
               onPressed: _isLoading ? null : () {
                 if (isLast) {
                   _register();
                 } else {
                   _pageController.nextPage(
-                    duration: 300.ms, curve: Curves.easeInOut,
+                    duration: 400.ms, curve: Curves.easeInOut,
                   );
                 }
               },
               child: _isLoading
-                  ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  ? const SizedBox(width: 28, height: 28, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
                   : Text(
-                      isLast ? 'Start Playing!' : 'Next →',
-                      style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+                      isLast ? '🚀 Start Playing!' : 'Next →',
+                      style: GoogleFonts.fredoka(fontSize: 20, fontWeight: FontWeight.w700),
                     ),
             ),
-          ),
+          ).animate().fadeIn(delay: 100.ms).scale(begin: const Offset(0.95, 0.95)),
 
-          // Skip button
+          // ── Skip ──
           if (!isLast)
             TextButton(
               onPressed: () => _pageController.jumpToPage(_pages.length - 1),
-              child: const Text('Skip', style: TextStyle(color: AppTheme.textMuted)),
+              child: Text(
+                'Skip ⏩',
+                style: GoogleFonts.baloo2(color: AppTheme.textMuted, fontSize: 16),
+              ),
             ),
         ],
       ),
@@ -187,7 +281,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final username = _usernameController.text.trim();
     if (username.length < 2) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Username must be at least 2 characters')),
+        SnackBar(
+          content: Text('Username must be at least 2 characters 😊', style: GoogleFonts.baloo2()),
+        ),
       );
       return;
     }
@@ -204,14 +300,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 }
 
 class _OnboardPage {
+  final String image;
   final String emoji;
   final String title;
   final String subtitle;
   final LinearGradient gradient;
+  final Color accentColor;
   const _OnboardPage({
+    required this.image,
     required this.emoji,
     required this.title,
     required this.subtitle,
     required this.gradient,
+    required this.accentColor,
   });
 }
