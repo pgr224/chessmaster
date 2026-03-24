@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
 
 class LearnScreen extends StatelessWidget {
@@ -13,7 +14,9 @@ class LearnScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text('Chess Academy', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
+        title: Text('📚 Chess Academy',
+          style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 22, fontWeight: FontWeight.w600),
+        ),
         centerTitle: true,
       ),
       body: Container(
@@ -26,12 +29,14 @@ class LearnScreen extends StatelessWidget {
                 child: ListView(
                   padding: const EdgeInsets.all(24),
                   children: [
-                    const Text('Explore Categories', style: TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 16),
-                    _buildCategory('Fundamentals', 'The basics of movement and value.', Icons.school_rounded, AppTheme.goldPrimary),
-                    _buildCategory('Openings', 'Control the center from move one.', Icons.grid_view_rounded, AppTheme.accentCyan),
-                    _buildCategory('Tactics', 'Find the winning combinations.', Icons.bolt_rounded, AppTheme.accentPurple),
-                    _buildCategory('Endgames', 'Master the art of conversion.', Icons.hourglass_bottom_rounded, AppTheme.accentGreen),
+                    Text('🗂️ Explore Categories',
+                      style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 22, fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 18),
+                    _buildCategory('🎓 Fundamentals', 'Learn how pieces move!', AppTheme.goldPrimary),
+                    _buildCategory('♟️ Openings', 'Control the center!', AppTheme.skyBlue),
+                    _buildCategory('⚡ Tactics', 'Find winning combos!', AppTheme.accentPurple),
+                    _buildCategory('⏳ Endgames', 'Finish strong!', AppTheme.accentCyan),
                   ],
                 ),
               ),
@@ -44,40 +49,45 @@ class LearnScreen extends StatelessWidget {
 
   Widget _buildFeaturedCard(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
       width: double.infinity,
-      height: 180,
+      height: 190,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [AppTheme.goldDark, AppTheme.goldPrimary]),
-        borderRadius: BorderRadius.circular(24),
+        gradient: const LinearGradient(colors: [AppTheme.goldDark, AppTheme.goldPrimary, AppTheme.goldLight]),
+        borderRadius: BorderRadius.circular(28),
         boxShadow: [
-          BoxShadow(color: AppTheme.goldPrimary.withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 8)),
+          BoxShadow(color: AppTheme.goldPrimary.withValues(alpha: 0.35), blurRadius: 24, offset: const Offset(0, 10)),
         ],
       ),
       child: Stack(
         children: [
           Positioned(
             right: -10, bottom: -10,
-            child: Icon(Icons.star_rounded, size: 100, color: Colors.white.withOpacity(0.2)),
+            child: Icon(Icons.star_rounded, size: 120, color: Colors.white.withValues(alpha: 0.15)),
           ),
           Padding(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(26),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text('LATEST LESSON', style: TextStyle(color: AppTheme.midnight, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 1)),
-                const SizedBox(height: 8),
-                const Text('Master the\nSicilian Defense', style: TextStyle(color: AppTheme.midnight, fontSize: 22, fontWeight: FontWeight.w900, height: 1.1)),
+                Text('✨ LATEST LESSON', style: GoogleFonts.fredoka(
+                  color: AppTheme.midnight, fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: 1,
+                )),
+                const SizedBox(height: 10),
+                Text('Master the\nSicilian Defense', style: GoogleFonts.fredoka(
+                  color: AppTheme.midnight, fontSize: 24, fontWeight: FontWeight.w700, height: 1.15,
+                )),
                 const Spacer(),
                 ElevatedButton(
                   onPressed: () {},
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.midnight,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   ),
-                  child: const Text('Start Now'),
+                  child: Text('Start Now! 🚀', style: GoogleFonts.fredoka(fontWeight: FontWeight.w600, fontSize: 16)),
                 ),
               ],
             ),
@@ -87,7 +97,7 @@ class LearnScreen extends StatelessWidget {
     ).animate().fadeIn().slideY(begin: 0.1);
   }
 
-  Widget _buildCategory(String title, String desc, IconData icon, Color color) {
+  Widget _buildCategory(String title, String desc, Color color) {
     return GestureDetector(
       onTap: () {},
       child: Container(
@@ -95,29 +105,34 @@ class LearnScreen extends StatelessWidget {
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           color: AppTheme.navyCard,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white.withOpacity(0.05)),
-          boxShadow: AppTheme.cardShadow,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: color.withValues(alpha: 0.15)),
+          boxShadow: [
+            BoxShadow(color: color.withValues(alpha: 0.1), blurRadius: 12, offset: const Offset(0, 4)),
+          ],
         ),
         child: Row(
           children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(15)),
-              child: Icon(icon, color: color),
-            ),
-            const SizedBox(width: 20),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 2),
-                  Text(desc, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+                  Text(title, style: GoogleFonts.fredoka(
+                    color: AppTheme.textPrimary, fontSize: 19, fontWeight: FontWeight.w600,
+                  )),
+                  const SizedBox(height: 4),
+                  Text(desc, style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 15)),
                 ],
               ),
             ),
-            const Icon(Icons.arrow_forward_ios_rounded, color: AppTheme.textMuted, size: 14),
+            Container(
+              width: 36, height: 36,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(Icons.arrow_forward_ios_rounded, color: color, size: 16),
+            ),
           ],
         ),
       ),

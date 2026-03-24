@@ -18,6 +18,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final _usernameController = TextEditingController();
   int _currentPage = 0;
   bool _isLoading = false;
+  String? _usernameErrorText;
 
   final List<_OnboardPage> _pages = const [
     _OnboardPage(
@@ -72,9 +73,27 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       listener: (context, state) {
         if (state is AuthAuthenticatedState) context.go('/home');
         if (state is AuthErrorState) {
-          setState(() => _isLoading = false);
+          final isConflict = _isRegisterConflict(state.message);
+          setState(() {
+            _isLoading = false;
+            _usernameErrorText = isConflict ? 'Username already taken, try another one.' : null;
+          });
+
+          if (isConflict && _currentPage != _pages.length - 1) {
+            _pageController.animateToPage(
+              _pages.length - 1,
+              duration: 300.ms,
+              curve: Curves.easeInOut,
+            );
+          }
+
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.message)),
+            SnackBar(
+              content: Text(
+                isConflict ? 'Username already taken, try another one.' : state.message,
+                style: GoogleFonts.baloo2(),
+              ),
+            ),
           );
         }
       },
@@ -226,6 +245,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 hintStyle: GoogleFonts.baloo2(color: AppTheme.textMuted),
                 prefixIcon: const Icon(Icons.person_rounded, color: AppTheme.goldPrimary, size: 28),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(20)),
+                errorText: _usernameErrorText,
                 filled: true,
                 fillColor: AppTheme.surface,
               ),
@@ -287,8 +307,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       );
       return;
     }
+    setState(() => _usernameErrorText = null);
     setState(() => _isLoading = true);
     context.read<AuthBloc>().add(AuthRegisterEvent(username: username));
+  }
+
+  bool _isRegisterConflict(String message) {
+    final text = message.toLowerCase();
+    return text.contains('409') ||
+        text.contains('conflict') ||
+        text.contains('already exists') ||
+        text.contains('already taken');
   }
 
   @override

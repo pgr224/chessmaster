@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../blocs/auth/auth_bloc.dart';
 import '../../../data/models/achievement_model.dart';
@@ -43,28 +44,30 @@ class ProfileScreen extends StatelessWidget {
               alignment: Alignment.bottomRight,
               children: [
                 CircleAvatar(
-                  radius: 50,
-                  backgroundColor: AppTheme.goldPrimary.withOpacity(0.1),
+                  radius: 56,
+                  backgroundColor: AppTheme.goldPrimary.withValues(alpha: 0.15),
                   child: Text(
                     user.username[0].toUpperCase(),
-                    style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: AppTheme.goldPrimary),
+                    style: GoogleFonts.fredoka(
+                      fontSize: 48, fontWeight: FontWeight.w700, color: AppTheme.goldPrimary,
+                    ),
                   ),
                 ).animate().scale(duration: 600.ms, curve: Curves.easeOutBack),
                 Container(
-                  padding: const EdgeInsets.all(4),
+                  padding: const EdgeInsets.all(6),
                   decoration: const BoxDecoration(color: AppTheme.accentCyan, shape: BoxShape.circle),
-                  child: const Icon(Icons.edit_rounded, size: 16, color: AppTheme.midnight),
+                  child: const Icon(Icons.edit_rounded, size: 18, color: AppTheme.midnight),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 18),
             Text(
               user.username,
-              style: const TextStyle(color: AppTheme.textPrimary, fontSize: 24, fontWeight: FontWeight.bold),
+              style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 28, fontWeight: FontWeight.w700),
             ).animate().fadeIn(delay: 200.ms),
             Text(
-              'Rank: Master of strategy',
-              style: TextStyle(color: AppTheme.goldPrimary.withOpacity(0.8), fontSize: 14, fontWeight: FontWeight.w600),
+              '⭐ Master of Strategy',
+              style: GoogleFonts.baloo2(color: AppTheme.goldPrimary.withValues(alpha: 0.9), fontSize: 16, fontWeight: FontWeight.w600),
             ).animate().fadeIn(delay: 300.ms),
           ],
         ),
@@ -79,42 +82,41 @@ class ProfileScreen extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            _statCard('ELO', '1540', Icons.trending_up_rounded, AppTheme.accentCyan),
-            _statCard('GAMES', '124', Icons.grid_view_rounded, AppTheme.goldPrimary),
-            _statCard('WIN RATE', '64%', Icons.emoji_events_rounded, AppTheme.accentGreen),
+            _statCard('⭐ ELO', '1540', AppTheme.skyBlue),
+            _statCard('🎮 GAMES', '124', AppTheme.goldPrimary),
+            _statCard('🏆 WIN %', '64%', AppTheme.accentCyan),
           ],
         ),
       ),
     );
   }
 
-  Widget _statCard(String label, String value, IconData icon, Color color) {
+  Widget _statCard(String label, String value, Color color) {
     return Container(
-      width: 100,
-      padding: const EdgeInsets.all(16),
+      width: 108,
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppTheme.surface.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.1)),
+        color: AppTheme.surface.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Column(
         children: [
-          Icon(icon, color: color, size: 20),
-          const SizedBox(height: 8),
-          Text(value, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.bold)),
-          Text(label, style: const TextStyle(color: AppTheme.textMuted, fontSize: 10, letterSpacing: 0.8)),
+          Text(value, style: GoogleFonts.fredoka(color: color, fontSize: 22, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 6),
+          Text(label, style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 12)),
         ],
       ),
-    ).animate().fadeIn().scale(begin: const Offset(0.9,0.9));
+    ).animate().fadeIn().scale(begin: const Offset(0.9, 0.9));
   }
 
   Widget _buildAchievementsHeader() {
-    return const SliverPadding(
-      padding: EdgeInsets.fromLTRB(24, 40, 24, 16),
+    return SliverPadding(
+      padding: const EdgeInsets.fromLTRB(24, 40, 24, 16),
       sliver: SliverToBoxAdapter(
         child: Text(
-          'Achievements',
-          style: TextStyle(color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.bold),
+          '🏅 Achievements',
+          style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 22, fontWeight: FontWeight.w600),
         ),
       ),
     );
@@ -143,50 +145,51 @@ class ProfileScreen extends StatelessWidget {
 
   Widget _buildAchievementCard(Achievement a, int index) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: a.isUnlocked ? AppTheme.navyCard : AppTheme.surface.withOpacity(0.4),
-        borderRadius: BorderRadius.circular(20),
+        color: a.isUnlocked ? AppTheme.navyCard : AppTheme.surface.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: a.isUnlocked ? AppTheme.goldPrimary.withOpacity(0.3) : Colors.transparent,
-          width: 1.5,
+          color: a.isUnlocked ? AppTheme.goldPrimary.withValues(alpha: 0.35) : Colors.transparent,
+          width: 2,
         ),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: a.isUnlocked ? AppTheme.goldPrimary.withOpacity(0.1) : Colors.black12,
+              color: a.isUnlocked ? AppTheme.goldPrimary.withValues(alpha: 0.12) : Colors.black12,
               shape: BoxShape.circle,
             ),
             child: Text(
               a.icon,
-              style: TextStyle(fontSize: 28, color: a.isUnlocked ? null : Colors.grey),
+              style: TextStyle(fontSize: 32, color: a.isUnlocked ? null : Colors.grey),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           Text(
             a.title,
-            style: TextStyle(
+            style: GoogleFonts.fredoka(
               color: a.isUnlocked ? AppTheme.textPrimary : AppTheme.textMuted,
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
+              fontWeight: FontWeight.w600, fontSize: 16,
             ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 4),
           Text(
             a.description,
-            style: TextStyle(color: AppTheme.textSecondary, fontSize: 10),
+            style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 12),
             textAlign: TextAlign.center,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
           if (a.isUnlocked) ...[
             const Spacer(),
-             const Text('UNLOCKED', style: TextStyle(color: AppTheme.goldPrimary, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 1)),
+            Text('✅ UNLOCKED', style: GoogleFonts.fredoka(
+              color: AppTheme.goldPrimary, fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 1,
+            )),
           ],
         ],
       ),
