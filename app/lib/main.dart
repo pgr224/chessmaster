@@ -8,6 +8,7 @@ import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'core/di/injection_container.dart' as di;
 import 'presentation/blocs/auth/auth_bloc.dart';
+import 'presentation/blocs/multiplayer/multiplayer_bloc.dart';
 import 'presentation/blocs/theme/theme_bloc.dart';
 import 'presentation/blocs/settings/settings_bloc.dart';
 
@@ -50,6 +51,7 @@ class ChessApp extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider<AuthBloc>(create: (_) => di.sl<AuthBloc>()..add(AuthInitializeEvent())),
+        BlocProvider<MultiplayerBloc>(create: (_) => di.sl<MultiplayerBloc>()),
         BlocProvider<ThemeBloc>(create: (_) => di.sl<ThemeBloc>()..add(ThemeLoadEvent())),
         BlocProvider<SettingsBloc>(create: (_) => di.sl<SettingsBloc>()..add(SettingsLoadEvent())),
       ],

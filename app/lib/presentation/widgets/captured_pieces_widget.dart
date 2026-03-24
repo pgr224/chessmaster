@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../domain/engine/chess_engine.dart';
 
@@ -14,7 +15,7 @@ class CapturedPiecesWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (pieces.isEmpty) return const SizedBox(height: 24);
+    if (pieces.isEmpty) return const SizedBox(height: 32);
 
     // Sort by value: queen > rook > bishop > knight > pawn
     final sorted = List<ChessPiece>.from(pieces)
@@ -24,29 +25,50 @@ class CapturedPiecesWidget extends StatelessWidget {
     final totalValue = pieces.fold(0, (sum, p) => sum + _pieceValue(p.type));
 
     return Container(
-      height: 28,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      height: 32,
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
         children: [
-          ...sorted.take(10).map((p) => Text(
-            p.symbol,
-            style: TextStyle(
-              fontSize: 16,
-              shadows: [Shadow(
-                color: Colors.black.withOpacity(0.5),
-                blurRadius: 2, offset: const Offset(1, 1),
-              )],
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppTheme.surface.withValues(alpha: 0.4),
+              borderRadius: BorderRadius.circular(12),
             ),
-          )),
-          if (pieces.length > 10)
-            Text(' +${pieces.length - 10}',
-                style: const TextStyle(color: AppTheme.textMuted, fontSize: 12)),
-          const SizedBox(width: 8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ...sorted.take(12).map((p) => Text(
+                  p.symbol,
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: color == PieceColor.white ? Colors.white : AppTheme.textPrimary.withValues(alpha: 0.9),
+                    shadows: const [Shadow(
+                      color: Colors.black26,
+                      blurRadius: 2, offset: Offset(1, 1),
+                    )],
+                  ),
+                )),
+                if (pieces.length > 12)
+                  Text(' +${pieces.length - 12}',
+                      style: GoogleFonts.baloo2(color: AppTheme.textMuted, fontSize: 13, fontWeight: FontWeight.w600)),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
           if (totalValue > 0)
-            Text(
-              '+$totalValue',
-              style: const TextStyle(
-                color: AppTheme.accentGreen, fontSize: 13, fontWeight: FontWeight.w700,
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppTheme.accentCyan.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                '+$totalValue',
+                style: GoogleFonts.fredoka(
+                  color: AppTheme.accentCyan, fontSize: 13, fontWeight: FontWeight.w700,
+                ),
               ),
             ),
         ],

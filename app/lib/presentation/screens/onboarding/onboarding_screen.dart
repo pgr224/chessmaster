@@ -22,6 +22,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   int _currentPage = 0;
   bool _isLoading = false;
   String? _usernameErrorText;
+  bool _hasRetriedSuggestedUsername = false;
 
   final List<_OnboardPage> _pages = const [
     _OnboardPage(
@@ -84,6 +85,38 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             _usernameController.selection = TextSelection.fromPosition(
               TextPosition(offset: _usernameController.text.length),
             );
+          }
+
+          if (isConflict && !_hasRetriedSuggestedUsername && suggestedUsername != null) {
+            _hasRetriedSuggestedUsername = true;
+
+            if (_currentPage != _pages.length - 1) {
+              _pageController.animateToPage(
+                _pages.length - 1,
+                duration: 300.ms,
+                curve: Curves.easeInOut,
+              );
+            }
+
+            setState(() {
+              _isLoading = true;
+              _usernameErrorText = 'Username was taken. Trying "$suggestedUsername" instead...';
+            });
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Username was taken. Trying "$suggestedUsername" instead.',
+                  style: GoogleFonts.baloo2(),
+                ),
+              ),
+            );
+
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              context.read<AuthBloc>().add(AuthRegisterEvent(username: suggestedUsername!));
+            });
+            return;
           }
 
           setState(() {
@@ -321,8 +354,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       );
       return;
     }
-    setState(() => _usernameErrorText = null);
-    setState(() => _isLoading = true);
+    setState(() {
+      _usernameErrorText = null;
+      _isLoading = true;
+      _hasRetriedSuggestedUsername = false;
+    });
     context.read<AuthBloc>().add(AuthRegisterEvent(username: username));
   }
 

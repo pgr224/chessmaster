@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../domain/engine/chess_engine.dart';
 
@@ -27,94 +28,109 @@ class GameOverOverlay extends StatelessWidget {
         (result == GameResult.blackWins && playerColor == PieceColor.black);
     final isDraw = result == GameResult.draw;
 
+    final statusColor = isWin ? AppTheme.goldPrimary 
+        : isDraw ? AppTheme.accentCyan 
+        : AppTheme.accentRed;
+
     return Container(
-      color: Colors.black.withOpacity(0.85),
+      color: Colors.black.withValues(alpha: 0.85),
       child: Center(
         child: Container(
-          margin: const EdgeInsets.all(24),
-          padding: const EdgeInsets.all(32),
+          margin: const EdgeInsets.symmetric(horizontal: 28),
+          padding: const EdgeInsets.all(36),
           decoration: BoxDecoration(
             gradient: AppTheme.cardGradient,
-            borderRadius: BorderRadius.circular(28),
-            border: Border.all(
-              color: isWin ? AppTheme.goldPrimary
-                  : isDraw ? AppTheme.accentCyan
-                  : AppTheme.accentRed,
-              width: 1.5,
-            ),
+            borderRadius: BorderRadius.circular(32),
+            border: Border.all(color: statusColor.withValues(alpha: 0.6), width: 3),
             boxShadow: [
-              BoxShadow(
-                color: (isWin ? AppTheme.goldPrimary
-                    : isDraw ? AppTheme.accentCyan
-                    : AppTheme.accentRed).withOpacity(0.3),
-                blurRadius: 32,
-                spreadRadius: 4,
-              ),
+              BoxShadow(color: statusColor.withValues(alpha: 0.3), blurRadius: 40, spreadRadius: 4),
             ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Trophy / Result emoji
-              Text(
-                isWin ? '🏆' : isDraw ? '🤝' : '💔',
-                style: const TextStyle(fontSize: 64),
-              ).animate()
-                  .scale(begin: const Offset(0.5, 0.5), duration: 500.ms, curve: Curves.elasticOut),
-
-              const SizedBox(height: 16),
-
-              // Result text
-              Text(
-                isWin ? 'Victory!' : isDraw ? 'Draw!' : 'Defeat',
-                style: TextStyle(
-                  color: isWin ? AppTheme.goldPrimary
-                      : isDraw ? AppTheme.accentCyan
-                      : AppTheme.accentRed,
-                  fontSize: 36,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1,
+              // Trophy / Result emoji — big and bouncy
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
                 ),
-              ).animate().fadeIn(delay: 200.ms),
+                child: Text(
+                  isWin ? '🏆' : isDraw ? '🤝' : '💔',
+                  style: const TextStyle(fontSize: 72),
+                ),
+              ).animate()
+                  .scale(begin: const Offset(0.4, 0.4), duration: 600.ms, curve: Curves.elasticOut)
+                  .fadeIn(),
 
-              const SizedBox(height: 8),
+              const SizedBox(height: 24),
+
+              // Result title
+              Text(
+                isWin ? 'VICTORY!' : isDraw ? 'DRAW!' : 'DEFEAT',
+                style: GoogleFonts.fredoka(
+                  color: statusColor,
+                  fontSize: 40,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 2,
+                ),
+              ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.2),
+
+              const SizedBox(height: 10),
 
               Text(
                 _resultText(),
-                style: const TextStyle(color: AppTheme.textSecondary, fontSize: 16),
+                style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 18, fontWeight: FontWeight.w600),
                 textAlign: TextAlign.center,
-              ).animate().fadeIn(delay: 300.ms),
+              ).animate().fadeIn(delay: 350.ms),
 
-              const SizedBox(height: 32),
+              const SizedBox(height: 40),
 
-              // Action buttons
+              // Action buttons — colorful and large
               Row(
                 children: [
                   Expanded(
-                    child: OutlinedButton.icon(
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppTheme.textPrimary,
+                        side: BorderSide(color: AppTheme.textMuted.withValues(alpha: 0.3), width: 2),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
                       onPressed: onShare,
-                      icon: const Icon(Icons.share_rounded),
-                      label: const Text('Share'),
+                      child: Text('Share ✨', style: GoogleFonts.fredoka(fontWeight: FontWeight.w600)),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 16),
                   Expanded(
-                    child: ElevatedButton.icon(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: statusColor,
+                        foregroundColor: AppTheme.midnight,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        elevation: 8,
+                      ),
                       onPressed: onPlayAgain,
-                      icon: const Icon(Icons.replay_rounded),
-                      label: const Text('Play Again'),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('Restart 🔄', style: GoogleFonts.fredoka(fontWeight: FontWeight.w700, fontSize: 16)),
+                        ],
+                      ),
                     ),
                   ),
                 ],
-              ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.2),
+              ).animate().fadeIn(delay: 500.ms).slideY(begin: 0.3),
 
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
 
               TextButton(
                 onPressed: onGoHome,
-                child: const Text('← Back to Home',
-                    style: TextStyle(color: AppTheme.textSecondary)),
-              ).animate().fadeIn(delay: 500.ms),
+                child: Text('← Back to Home',
+                    style: GoogleFonts.fredoka(color: AppTheme.textMuted, fontSize: 16, fontWeight: FontWeight.w600)),
+              ).animate().fadeIn(delay: 650.ms),
             ],
           ),
         ),
@@ -125,14 +141,15 @@ class GameOverOverlay extends StatelessWidget {
   String _resultText() {
     if (result == GameResult.draw) {
       return switch (drawReason) {
-        DrawReason.stalemate        => 'Stalemate — no legal moves',
-        DrawReason.insufficientMaterial => 'Draw — insufficient material',
-        DrawReason.fiftyMoveRule    => 'Draw — 50-move rule',
-        DrawReason.threefoldRepetition => 'Draw — threefold repetition',
-        DrawReason.agreement        => 'Draw by mutual agreement',
-        null                        => 'The game ends in a draw',
+        DrawReason.stalemate        => 'Stalemate — no legal moves left! 😅',
+        DrawReason.insufficientMaterial => 'Draw — not enough pieces to win! ♟️',
+        DrawReason.fiftyMoveRule    => 'Draw — 50 moves without a catch! ⏳',
+        DrawReason.threefoldRepetition => 'Draw — the same move happened 3 times! 🔄',
+        DrawReason.agreement        => 'Draw by mutual agreement! 🤝',
+        null                        => 'The game ends in a draw! 😊',
       };
     }
-    return result == GameResult.whiteWins ? 'White wins!' : 'Black wins!';
+    final winner = result == GameResult.whiteWins ? 'White' : 'Black';
+    return '$winner wins the battle! 🥳';
   }
 }

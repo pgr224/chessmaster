@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../domain/engine/chess_engine.dart';
 
@@ -15,42 +16,47 @@ class PromotionDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final pieces = [PieceType.queen, PieceType.rook, PieceType.bishop, PieceType.knight];
+    final types = [PieceType.queen, PieceType.rook, PieceType.bishop, PieceType.knight];
 
     return Container(
-      color: Colors.black.withOpacity(0.8),
+      color: Colors.black.withValues(alpha: 0.82),
       child: Center(
         child: Container(
-          padding: const EdgeInsets.all(24),
+          margin: const EdgeInsets.symmetric(horizontal: 24),
+          padding: const EdgeInsets.all(32),
           decoration: BoxDecoration(
             gradient: AppTheme.cardGradient,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: AppTheme.goldPrimary.withOpacity(0.5)),
-            boxShadow: AppTheme.goldShadow,
+            borderRadius: BorderRadius.circular(32),
+            border: Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.6), width: 2),
+            boxShadow: [
+              BoxShadow(color: AppTheme.goldPrimary.withValues(alpha: 0.25), blurRadius: 40, spreadRadius: 4),
+            ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
-                'Promote Pawn',
-                style: TextStyle(
-                  color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.w700,
+              Text(
+                '✨ Level Up!',
+                style: GoogleFonts.fredoka(
+                  color: AppTheme.goldPrimary, fontSize: 32, fontWeight: FontWeight.w800,
                 ),
               ),
-              const SizedBox(height: 8),
-              const Text(
-                'Select a piece to promote to',
-                style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+              const SizedBox(height: 10),
+              Text(
+                'Pick a powerful new piece for your pawn! 🚀',
+                style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 16, fontWeight: FontWeight.w600),
+                textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 24),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: pieces.map((type) => _pieceOption(type, color)).toList(),
+              const SizedBox(height: 32),
+              Wrap(
+                spacing: 12, runSpacing: 12,
+                alignment: WrapAlignment.center,
+                children: types.map((type) => _pieceOption(type, color)).toList(),
               ),
             ],
           ),
         ),
-      ).animate().fadeIn(duration: 200.ms).scale(begin: const Offset(0.8, 0.8)),
+      ).animate().scale(begin: const Offset(0.7, 0.7), curve: Curves.elasticOut, duration: 600.ms).fadeIn(),
     );
   }
 
@@ -59,31 +65,32 @@ class PromotionDialog extends StatelessWidget {
     return GestureDetector(
       onTap: () => onSelect(type),
       child: Container(
-        width: 68,
-        height: 68,
-        margin: const EdgeInsets.symmetric(horizontal: 6),
+        width: 84,
+        height: 100,
         decoration: BoxDecoration(
           gradient: const LinearGradient(
             colors: [AppTheme.surface, AppTheme.navyCard],
+            begin: Alignment.topCenter, end: Alignment.bottomCenter,
           ),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppTheme.goldPrimary.withOpacity(0.3)),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.2)),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 8, offset: const Offset(0, 4)),
+          ],
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(piece.symbol, style: const TextStyle(fontSize: 32)),
+            Text(piece.symbol, style: const TextStyle(fontSize: 48)),
+            const SizedBox(height: 4),
             Text(
               type.name.capitalize(),
-              style: const TextStyle(color: AppTheme.textMuted, fontSize: 10),
+              style: GoogleFonts.fredoka(color: AppTheme.textMuted, fontSize: 12, fontWeight: FontWeight.w600),
             ),
           ],
         ),
-      ).animate().scale(
-        begin: const Offset(0.9, 0.9),
-        duration: 200.ms,
-        curve: Curves.easeOutBack,
-      ),
+      ).animate(onPlay: (c) => c.repeat(reverse: true))
+          .scale(begin: const Offset(0.98, 0.98), end: const Offset(1.02, 1.02), duration: 2.seconds, curve: Curves.easeInOut),
     );
   }
 }

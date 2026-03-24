@@ -2,7 +2,9 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../di/injection_container.dart' as di;
 import '../../presentation/blocs/auth/auth_bloc.dart';
+import '../../presentation/blocs/game/game_bloc.dart';
 import '../../presentation/screens/splash/splash_screen.dart';
 import '../../presentation/screens/onboarding/onboarding_screen.dart';
 import '../../presentation/screens/home/home_screen.dart';
@@ -111,9 +113,15 @@ class AppRouter {
         builder: (context, state) {
           final extra = state.extra;
           if (extra is GameRouteExtra) {
-            return GameScreen(config: extra.config, tutorial: extra.tutorial);
+            return BlocProvider<GameBloc>(
+              create: (_) => di.sl<GameBloc>(),
+              child: GameScreen(config: extra.config, tutorial: extra.tutorial),
+            );
           }
-          return GameScreen(config: extra as GameConfig);
+          return BlocProvider<GameBloc>(
+            create: (_) => di.sl<GameBloc>(),
+            child: GameScreen(config: extra as GameConfig),
+          );
         },
       ),
       GoRoute(
@@ -134,8 +142,11 @@ class AppRouter {
       GoRoute(
         path: '/room/:gameId',
         name: 'game_room',
-        builder: (context, state) => GameRoomScreen(
-          gameId: state.pathParameters['gameId']!,
+        builder: (context, state) => BlocProvider<GameBloc>(
+          create: (_) => di.sl<GameBloc>(),
+          child: GameRoomScreen(
+            gameId: state.pathParameters['gameId']!,
+          ),
         ),
       ),
       GoRoute(
