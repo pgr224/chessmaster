@@ -81,7 +81,7 @@ class PromotionDialog extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(piece.symbol, style: const TextStyle(fontSize: 48)),
+            Text(piece.symbol, style: const TextStyle(fontFamily: 'ChessMerida', fontSize: 48)),
             const SizedBox(height: 4),
             Text(
               type.name.capitalize(),

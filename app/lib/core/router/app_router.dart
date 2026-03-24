@@ -44,8 +44,8 @@ class AppRouter {
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/splash',
     redirect: (context, state) {
-      final authState = context.read<AuthBloc>().state;
-      final isAuthenticated = authState is AuthAuthenticatedState;
+      final authBloc = di.sl<AuthBloc>();
+      final isAuthenticated = authBloc.state is AuthAuthenticatedState;
       final isSplash = state.matchedLocation == '/splash';
       final isOnboarding = state.matchedLocation == '/onboarding';
 
@@ -118,9 +118,13 @@ class AppRouter {
               child: GameScreen(config: extra.config, tutorial: extra.tutorial),
             );
           }
+          final config = extra is GameConfig 
+              ? extra 
+              : const GameConfig(mode: GameMode.singlePlayer, playerColor: 'white', difficulty: AIDifficulty.basic);
+          
           return BlocProvider<GameBloc>(
             create: (_) => di.sl<GameBloc>(),
-            child: GameScreen(config: extra as GameConfig),
+            child: GameScreen(config: config),
           );
         },
       ),

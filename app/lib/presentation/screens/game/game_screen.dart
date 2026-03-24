@@ -76,9 +76,11 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                     _buildOpponentInfo(state),
                     const SizedBox(height: 4),
                     _buildCapturedPieces(state, PieceColor.black),
-                    const Spacer(),
-                    _buildBoard(context, state),
-                    const Spacer(),
+                    Expanded(
+                      child: Center(
+                        child: _buildBoard(context, state),
+                      ),
+                    ),
                     _buildCapturedPieces(state, PieceColor.white),
                     const SizedBox(height: 4),
                     _buildPlayerInfo(state),

@@ -62,13 +62,15 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget>
 
   @override
   Widget build(BuildContext context) {
-    return AspectRatio(
-      aspectRatio: 1,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final size = constraints.maxWidth;
-          final sqSize = size / 8;
-          return Container(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final size = constraints.maxWidth < constraints.maxHeight 
+            ? constraints.maxWidth 
+            : constraints.maxHeight;
+        final sqSize = size / 8;
+        return Container(
+          width: size,
+          height: size,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(8),
               boxShadow: [
@@ -350,28 +352,21 @@ class _PieceWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: SizedBox(
-        width: size,
-        height: size,
-        child: FittedBox(
-          fit: BoxFit.contain,
-          child: _buildPieceVisual(),
-        ),
-      ),
+      child: _buildPieceVisual(),
     );
   }
 
   Widget _buildPieceVisual() {
-    // Unicode chess pieces with styled text rendering
-    // In production: load SVG assets per theme
     final isWhite = piece.color == PieceColor.white;
     return Text(
       piece.symbol,
       style: TextStyle(
-        fontSize: 48,
+        fontFamily: 'ChessMerida',
+        fontSize: size * 0.85,
+        color: isWhite ? Colors.white : Colors.black, // Ensure good contrast
         shadows: [
           Shadow(
-            color: isWhite ? Colors.black.withOpacity(0.3) : Colors.white.withOpacity(0.1),
+            color: isWhite ? Colors.black.withValues(alpha: 0.3) : Colors.white.withValues(alpha: 0.1),
             blurRadius: 2,
             offset: const Offset(1, 1),
           ),

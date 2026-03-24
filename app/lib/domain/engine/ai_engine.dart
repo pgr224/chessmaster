@@ -1,17 +1,13 @@
-import 'dart:isolate';
 import 'dart:math';
 import '../engine/chess_engine.dart';
 import '../../data/models/game_config.dart';
 
-/// AI Engine — Integrates Stockfish WASM + custom minimax fallback
-/// Communicates via Isolates to keep UI thread free
-
 class AIEngine {
   static const Map<AIDifficulty, _AIConfig> _configs = {
     AIDifficulty.basic:        _AIConfig(depth: 1, randomness: 0.7),
-    AIDifficulty.intermediate: _AIConfig(depth: 5, randomness: 0.1),
-    AIDifficulty.advanced:     _AIConfig(depth: 10, randomness: 0.0),
-    AIDifficulty.impossible:   _AIConfig(depth: 20, randomness: 0.0),
+    AIDifficulty.intermediate: _AIConfig(depth: 4, randomness: 0.1),
+    AIDifficulty.advanced:     _AIConfig(depth: 5, randomness: 0.0),
+    AIDifficulty.impossible:   _AIConfig(depth: 6, randomness: 0.0),
   };
 
   static Future<Move?> getBestMove(
@@ -22,9 +18,8 @@ class AIEngine {
     final config = _configs[difficulty]!;
     final fen = engine.toFEN();
 
-    // Run in isolate to not block UI
-    final result = await Isolate.run(() => _computeMove(fen, config));
-    return result;
+    // Run synchronously (avoids serialization issues on web with compute())
+    return _computeMove(fen, config);
   }
 
   static Move? _computeMove(String fen, _AIConfig config) {

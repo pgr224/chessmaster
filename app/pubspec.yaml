@@ -67,5 +67,9 @@ flutter:
     - assets/animations/
     - assets/themes/
     - assets/tutorials/
-    - assets/fonts/
     - .env
+
+  fonts:
+    - family: ChessMerida
+      fonts:
+        - asset: assets/fonts/chess_merida.ttf
