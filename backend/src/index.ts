@@ -31,7 +31,8 @@ app.use('*', cors({
   origin: (origin) => {
     if (!origin) return null;
     if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) return origin;
-    return 'https://chess.yourdomain.com';
+    if (origin.startsWith('https://chessmaster-app.pages.dev') || origin === 'https://chessmaster-app.pages.dev') return origin;
+    return 'https://chessmaster-app.pages.dev';
   },
   allowHeaders: ['Content-Type', 'Authorization', 'X-Device-ID', 'Accept'],
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
