@@ -96,6 +96,17 @@ enum MultiplayerStatus {
   gameFound, inGame, gameOver,
 }
 
+class MoveDetail extends Equatable {
+  final String from;
+  final String to;
+  final String? promotion;
+
+  const MoveDetail({required this.from, required this.to, this.promotion});
+
+  @override
+  List<Object?> get props => [from, to, promotion];
+}
+
 // ═══════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════
@@ -111,6 +122,7 @@ class MultiplayerState extends Equatable {
   final String? errorMessage;
   final Duration? matchmakingTime;
   final int onlineCount;
+  final MoveDetail? lastOpponentMove;
 
   const MultiplayerState({
     this.status = MultiplayerStatus.disconnected,
@@ -124,6 +136,7 @@ class MultiplayerState extends Equatable {
     this.errorMessage,
     this.matchmakingTime,
     this.onlineCount = 0,
+    this.lastOpponentMove,
   });
 
   MultiplayerState copyWith({
@@ -138,6 +151,8 @@ class MultiplayerState extends Equatable {
     String? errorMessage,
     Duration? matchmakingTime,
     int? onlineCount,
+    MoveDetail? lastOpponentMove,
+    bool clearLastMove = false,
   }) {
     return MultiplayerState(
       status: status ?? this.status,
@@ -151,11 +166,14 @@ class MultiplayerState extends Equatable {
       errorMessage: errorMessage ?? this.errorMessage,
       matchmakingTime: matchmakingTime ?? this.matchmakingTime,
       onlineCount: onlineCount ?? this.onlineCount,
+      lastOpponentMove: clearLastMove ? null : (lastOpponentMove ?? this.lastOpponentMove),
     );
   }
 
   @override
-  List<Object?> get props => [status, gameId, opponentName, chatMessages, drawOffered, opponentLeft];
+  List<Object?> get props => [
+    status, gameId, opponentName, chatMessages, drawOffered, opponentLeft, lastOpponentMove
+  ];
 }
 
 // ═══════════════════════════════════════════
@@ -170,6 +188,7 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
     on<MpCancelMatchmakingEvent>(_onCancelMatchmaking);
     on<MpGameFoundEvent>(_onGameFound);
     on<MpMakeMoveEvent>(_onMakeMove);
+    on<MpOpponentMoveEvent>(_onOpponentMove);
     on<MpSendChatEvent>(_onSendChat);
     on<MpChatReceivedEvent>(_onChatReceived);
     on<MpResignEvent>(_onResign);
@@ -239,6 +258,13 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
 
   void _onMakeMove(MpMakeMoveEvent event, Emitter<MultiplayerState> emit) {
     _service.sendMove(from: event.from, to: event.to, promotion: event.promotion);
+    emit(state.copyWith(clearLastMove: true)); // Clear opponent move when we move
+  }
+
+  void _onOpponentMove(MpOpponentMoveEvent event, Emitter<MultiplayerState> emit) {
+    emit(state.copyWith(
+      lastOpponentMove: MoveDetail(from: event.from, to: event.to, promotion: event.promotion),
+    ));
   }
 
   void _onSendChat(MpSendChatEvent event, Emitter<MultiplayerState> emit) {

@@ -7,6 +7,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/router/app_router.dart';
 import '../../../data/models/game_config.dart';
+import '../../../data/models/tutorial_model.dart';
 import '../../../presentation/blocs/game/game_bloc.dart';
 import '../../../domain/engine/chess_engine.dart';
 import '../../widgets/chess_board_widget.dart';
@@ -19,7 +20,8 @@ import '../../widgets/hint_button_widget.dart';
 
 class GameScreen extends StatefulWidget {
   final GameConfig config;
-  const GameScreen({super.key, required this.config});
+  final TutorialLesson? tutorial;
+  const GameScreen({super.key, required this.config, this.tutorial});
 
   @override
   State<GameScreen> createState() => _GameScreenState();
@@ -34,7 +36,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     super.initState();
     _confettiController = ConfettiController(duration: const Duration(seconds: 3));
     _checkAnimController = AnimationController(vsync: this, duration: 500.ms);
-    context.read<GameBloc>().add(GameStartEvent(widget.config));
+    context.read<GameBloc>().add(GameStartEvent(widget.config, tutorial: widget.tutorial));
   }
 
   @override
@@ -86,11 +88,54 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               if (state.isGameOver) _buildGameOverOverlay(context, state),
               _buildConfetti(),
               if (state.status == GameStatus.check) _buildCheckAlert(state),
+              if (state.tutorialMessage != null) _buildTutorialOverlay(state),
             ],
           ),
         );
       },
     );
+  }
+
+  Widget _buildTutorialOverlay(GameState state) {
+    return Positioned(
+      bottom: 120,
+      left: 16, right: 16,
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppTheme.navyCard.withOpacity(0.95),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppTheme.goldPrimary.withOpacity(0.4)),
+          boxShadow: [
+            BoxShadow(color: AppTheme.goldPrimary.withOpacity(0.1), blurRadius: 20),
+          ],
+        ),
+        child: Column(
+          children: [
+            Row(children: [
+              const Icon(Icons.school_rounded, color: AppTheme.goldPrimary, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'TUTORIAL STEP ${state.tutorialStep + 1}',
+                style: const TextStyle(
+                  color: AppTheme.goldPrimary, fontSize: 12, fontWeight: FontWeight.w800,
+                  letterSpacing: 1.2,
+                ),
+              ),
+            ]),
+            const SizedBox(height: 12),
+            Text(
+              state.tutorialMessage!,
+              style: const TextStyle(
+                color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600,
+                height: 1.4,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    ).animate().fadeIn().slideY(begin: 0.1);
   }
 
   Widget _buildBackground() {

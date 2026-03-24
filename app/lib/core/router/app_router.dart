@@ -21,7 +21,18 @@ import '../../presentation/screens/learn/learn_screen.dart';
 import '../../presentation/screens/learn/article_screen.dart';
 import '../../data/models/user_model.dart';
 import '../../data/models/game_config.dart';
+import '../../data/models/tutorial_model.dart';
 export '../../data/models/game_config.dart';
+
+class GameRouteExtra {
+  final GameConfig config;
+  final TutorialLesson? tutorial;
+
+  const GameRouteExtra({
+    required this.config,
+    this.tutorial,
+  });
+}
 
 class AppRouter {
   static final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -97,9 +108,13 @@ class AppRouter {
       GoRoute(
         path: '/game/play',
         name: 'game_play',
-        builder: (context, state) => GameScreen(
-          config: state.extra as GameConfig,
-        ),
+        builder: (context, state) {
+          final extra = state.extra;
+          if (extra is GameRouteExtra) {
+            return GameScreen(config: extra.config, tutorial: extra.tutorial);
+          }
+          return GameScreen(config: extra as GameConfig);
+        },
       ),
       GoRoute(
         path: '/tutorial',

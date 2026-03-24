@@ -47,6 +47,13 @@ class Square {
 
   const Square(this.file, this.rank);
 
+  factory Square.fromString(String s) {
+    if (s.length != 2) throw ArgumentError('Invalid square string');
+    final f = s.codeUnitAt(0) - 97;
+    final r = int.parse(s[1]) - 1;
+    return Square(f, r);
+  }
+
   bool get isValid => file >= 0 && file < 8 && rank >= 0 && rank < 8;
 
   Square operator +(List<int> delta) => Square(file + delta[0], rank + delta[1]);
@@ -72,6 +79,8 @@ class Move {
   final bool isEnPassant;
   final ChessPiece? capturedPiece;
   String? algebraic;
+
+  String toAlgebraic() => '${from.toAlgebraic()}${to.toAlgebraic()}';
 
   Move({
     required this.from,

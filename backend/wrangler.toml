@@ -8,8 +8,8 @@ compatibility_flags = ["nodejs_compat"]
 # ════════════════════════════════════
 [[d1_databases]]
 binding = "DB"
-database_name = "chessmaster"
-database_id = "45324819-b88b-4aad-83d3-7ab121f4109e"  # Replace with actual ID after: wrangler d1 create chess-master-db
+database_name = "chessmaster-real4"
+database_id = "0104f57f-e5e0-4f93-b7da-9473da2846c1"
 
 # ════════════════════════════════════
 # KV NAMESPACE (caching)

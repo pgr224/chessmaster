@@ -7,6 +7,7 @@ import '../../../domain/engine/ai_engine.dart';
 import '../../../data/repositories/game_repository.dart';
 import '../../../data/models/game_model.dart';
 import '../../../data/models/game_config.dart';
+import '../../../data/models/tutorial_model.dart';
 
 // ═══════════════════════════════════════════
 // EVENTS
@@ -18,8 +19,9 @@ abstract class GameEvent extends Equatable {
 
 class GameStartEvent extends GameEvent {
   final GameConfig config;
-  const GameStartEvent(this.config);
-  @override List<Object?> get props => [config];
+  final TutorialLesson? tutorial;
+  const GameStartEvent(this.config, {this.tutorial});
+  @override List<Object?> get props => [config, tutorial];
 }
 
 class GameSelectPieceEvent extends GameEvent {
@@ -79,6 +81,9 @@ class GameState extends Equatable {
   final Square? promotionFrom;
   final Square? promotionTo;
   final DrawReason? drawOfferFrom;
+  final TutorialLesson? tutorial;
+  final int tutorialStep;
+  final String? tutorialMessage;
 
   const GameState({
     required this.board,
@@ -104,6 +109,9 @@ class GameState extends Equatable {
     this.promotionFrom,
     this.promotionTo,
     this.drawOfferFrom,
+    this.tutorial,
+    this.tutorialStep = 0,
+    this.tutorialMessage,
   });
 
   bool get isGameOver => status == GameStatus.checkmate ||
@@ -137,9 +145,13 @@ class GameState extends Equatable {
     Square? promotionFrom,
     Square? promotionTo,
     DrawReason? drawOfferFrom,
+    TutorialLesson? tutorial,
+    int? tutorialStep,
+    String? tutorialMessage,
     bool clearSelected = false,
     bool clearHint = false,
     bool clearDrawOffer = false,
+    bool clearTutorialMessage = false,
   }) {
     return GameState(
       board: board ?? this.board,
@@ -164,6 +176,9 @@ class GameState extends Equatable {
       promotionFrom: promotionFrom ?? this.promotionFrom,
       promotionTo: promotionTo ?? this.promotionTo,
       drawOfferFrom: clearDrawOffer ? null : (drawOfferFrom ?? this.drawOfferFrom),
+      tutorial: tutorial ?? this.tutorial,
+      tutorialStep: tutorialStep ?? this.tutorialStep,
+      tutorialMessage: clearTutorialMessage ? null : (tutorialMessage ?? this.tutorialMessage),
     );
   }
 
@@ -171,7 +186,7 @@ class GameState extends Equatable {
   List<Object?> get props => [
     board, currentTurn, selectedSquare, legalMoves, moveHistory,
     status, result, isAIThinking, hintMove, hintsUsed, currentFEN,
-    showPromotionDialog,
+    showPromotionDialog, tutorial, tutorialStep, tutorialMessage,
   ];
 }
 
@@ -203,7 +218,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
   }
 
   void _onStart(GameStartEvent event, Emitter<GameState> emit) {
-    _engine = ChessEngine();
+    _engine = ChessEngine.fromFEN(event.tutorial?.initialFEN ?? 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
     final config = event.config;
 
     final playerColor = config.playerColor == 'black'
@@ -217,6 +232,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       aiDifficulty: config.difficulty,
       boardTheme: config.boardTheme ?? 'classic',
       currentFEN: _engine.toFEN(),
+      tutorial: event.tutorial,
+      tutorialMessage: event.tutorial?.steps.first.text,
     ));
 
     // If AI plays first (player chose black)
@@ -276,6 +293,16 @@ class GameBloc extends Bloc<GameEvent, GameState> {
 
   Future<void> _onMakeMove(GameMakeMoveEvent event, Emitter<GameState> emit) async {
     final move = Move(from: event.from, to: event.to, promotion: event.promotion);
+
+    // Tutorial check
+    if (state.mode == GameMode.tutorial && state.tutorial != null) {
+      final currentStep = state.tutorial!.steps[state.tutorialStep];
+      if (currentStep.expectedMove != null && move.toAlgebraic() != currentStep.expectedMove) {
+        emit(state.copyWith(tutorialMessage: currentStep.errorMessage ?? "That's not exactly what I asked. Try again!"));
+        return;
+      }
+    }
+
     final success = _engine.makeMove(move);
     if (!success && !(event.from == event.to)) return; // Invalid move
 
@@ -295,6 +322,23 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       clearHint: true,
       showPromotionDialog: false,
     ));
+
+    // Tutorial Progress
+    if (state.mode == GameMode.tutorial && state.tutorial != null) {
+      final currentStep = state.tutorial!.steps[state.tutorialStep];
+      if (currentStep.isCompletion) {
+        emit(state.copyWith(
+          tutorialMessage: currentStep.successMessage ?? "Well done! Lesson Complete.",
+          status: GameStatus.draw, // Mark as finished visually
+        ));
+      } else {
+        final nextIdx = state.tutorialStep + 1;
+        emit(state.copyWith(
+          tutorialStep: nextIdx,
+          tutorialMessage: state.tutorial!.steps[nextIdx].text,
+        ));
+      }
+    }
 
     // Vibrate on check
     if (_engine.status == GameStatus.check) {
