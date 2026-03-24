@@ -34,6 +34,7 @@ new_sqlite_classes = ["GameRoom"]
 # ════════════════════════════════════
 [vars]
 ENVIRONMENT = "production"
+JWT_SECRET = "production-chess-secret-2026"
 
 # Secrets (set via: wrangler secret put JWT_SECRET)
 # JWT_SECRET = <set via wrangler secret>
