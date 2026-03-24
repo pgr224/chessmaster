@@ -1,0 +1,82 @@
+﻿
+ Γ¢à∩╕Å wrangler 3.114.17 (update available 4.76.0)
+-----------------------------------------------
+
+node.exe : [33mΓû▓ [43;33m[
+[43;30mWARNING[43;33m][0m 
+[1mThe version of Wrangler 
+you are using is now 
+out-of-date.[0m
+At line:1 char:1
++ & "C:\Program 
+Files\nodejs/node.exe" "C:\Use
+rs\pgr22\AppData\Roaming\ ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~
+    + CategoryInfo          : 
+    NotSpecified: ([33mΓû▓   
+  [43;3...ut-of-date.[0m:   
+ String) [], RemoteExcepti    
+on
+    + FullyQualifiedErrorId : 
+    NativeCommandError
+ 
+
+  Please update to the latest 
+version to prevent critical 
+errors.
+  Run `npm install --save-dev 
+wrangler@4` to update to the 
+latest version.
+  After installation, run 
+Wrangler with `npx wrangler`.
+
+
+[33mΓû▓ [43;33m[[43;30mWARN
+ING[43;33m][0m 
+[1mProcessing wrangler.toml 
+configuration:[0m
+
+    - [1mDeprecation[0m: 
+"build.upload.format":
+      The format is inferred 
+automatically from the code.
+
+
+Total Upload: 237.48 KiB / gzip: 47.32 KiB
+Your worker has access to the following bindings:
+- Durable Objects:
+  - GAME_ROOM: GameRoom
+- KV Namespaces:
+  - CHESS_KV: d7635832617b44f1a966216c2126085f
+- D1 Databases:
+  - DB: chessmaster (45324819-b88b-4aad-83d3-7ab121f4109e)
+- Vars:
+  - ENVIRONMENT: "production"
+
+[31mX [41;31m[[41;97mERROR
+[41;31m][0m [1mA request to 
+the Cloudflare API (/accounts/
+56280198e3630dc2d4f49f0e972417
+48/workers/scripts/chess-maste
+r-api) failed.[0m
+
+  In order to use Durable 
+Objects with a free plan, you 
+must create a namespace using 
+a `new_sqlite_classes` 
+migration. [code: 10097]
+  
+  If you think this is a bug, 
+please open an issue at: [4mh
+ttps://github.com/cloudflare/w
+orkers-sdk/issues/new/choose[
+0m
+
+
+≡ƒ¬╡  Logs were written to "C:
+\Users\pgr22\AppData\Roaming\x
+dg.config\.wrangler\logs\wrang
+ler-2026-03-23_21-25-38_284.lo
+g"

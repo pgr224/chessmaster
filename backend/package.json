@@ -1,0 +1,31 @@
+{
+  "name": "chess-master-backend",
+  "version": "1.0.0",
+  "description": "Chess Master — Cloudflare Workers Backend",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --env development",
+    "deploy": "wrangler deploy",
+    "deploy:dev": "wrangler deploy --env development",
+    "build": "tsc --noEmit",
+    "db:create": "wrangler d1 create chessmaster",
+    "db:migrate": "wrangler d1 execute chessmaster --local --file=./schema/d1-schema.sql",
+    "db:migrate:remote": "wrangler d1 execute chessmaster --remote --file=./schema/d1-schema.sql",
+    "db:seed": "wrangler d1 execute chessmaster --local --file=./schema/seed.sql",
+    "kv:create": "wrangler kv:namespace create CHESS_KV",
+    "tail": "wrangler tail",
+    "secret:jwt": "wrangler secret put JWT_SECRET",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "hono": "^4.3.0",
+    "uuid": "^9.0.0",
+    "zod": "^3.23.0",
+    "jose": "^5.3.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240529.0",
+    "typescript": "^5.4.5",
+    "wrangler": "^3.60.0"
+  }
+}

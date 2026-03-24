@@ -1,0 +1,36 @@
+# Node.js
+node_modules/
+dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.env
+.idea/
+.vscode/
+
+# Cloudflare Wrangler
+.wrangler/
+
+# Flutter/Dart
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh
+android/app/src/main/res/drawable-xhdpi/
+android/app/src/main/res/drawable-xhdpi/launcher_icon.png
+**/*.jfm
+**/*.metadata
+**/flutter_service_worker.js
+
+# Gemini/AI tools
+.gemini/
+.agents/
+_agents/
+tmp/
+
+# OS files
+.DS_Store
+Thumbs.db

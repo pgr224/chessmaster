@@ -1,0 +1,59 @@
+name = "chess-master-api"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# ════════════════════════════════════
+# CLOUDFLARE D1 DATABASE
+# ════════════════════════════════════
+[[d1_databases]]
+binding = "DB"
+database_name = "chessmaster"
+database_id = "45324819-b88b-4aad-83d3-7ab121f4109e"  # Replace with actual ID after: wrangler d1 create chess-master-db
+
+# ════════════════════════════════════
+# KV NAMESPACE (caching)
+# ════════════════════════════════════
+[[kv_namespaces]]
+binding = "CHESS_KV"
+id = "d7635832617b44f1a966216c2126085f"  # Replace after: wrangler kv:namespace create CHESS_KV
+
+# ════════════════════════════════════
+# DURABLE OBJECTS (WebSocket rooms)
+# ════════════════════════════════════
+[[durable_objects.bindings]]
+name = "GAME_ROOM"
+class_name = "GameRoom"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["GameRoom"]
+
+# ════════════════════════════════════
+# ENVIRONMENT VARIABLES
+# ════════════════════════════════════
+[vars]
+ENVIRONMENT = "production"
+
+# Secrets (set via: wrangler secret put JWT_SECRET)
+# JWT_SECRET = <set via wrangler secret>
+
+# ════════════════════════════════════
+# DEV ENVIRONMENT
+# ════════════════════════════════════
+[env.development]
+name = "chess-master-api-dev"
+vars = { ENVIRONMENT = "development", JWT_SECRET = "dev-secret-only" }
+
+[[env.development.d1_databases]]
+binding = "DB"
+database_name = "chess-master-db-dev"
+database_id = "YOUR_DEV_D1_DATABASE_ID"
+
+# ════════════════════════════════════
+# BUILD SETTINGS
+# ════════════════════════════════════
+[build]
+# command = "npm run build"
+[build.upload]
+format = "modules"
