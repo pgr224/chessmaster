@@ -29,11 +29,19 @@ class _LobbyScreenState extends State<LobbyScreen> {
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<MultiplayerBloc, MultiplayerState>(
+      listenWhen: (previous, current) =>
+          previous.status != current.status || previous.lobbyNotice != current.lobbyNotice,
       listener: (context, state) {
         if (state.status == MultiplayerStatus.matchmaking) {
           context.push('/matchmaking');
         } else if (state.status == MultiplayerStatus.inGame && state.gameId != null) {
           context.go('/room/${state.gameId}');
+        }
+
+        if (state.lobbyNotice != null) {
+          ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(SnackBar(content: Text(state.lobbyNotice!)));
         }
       },
       builder: (context, state) {
@@ -62,50 +70,39 @@ class _LobbyScreenState extends State<LobbyScreen> {
           body: Container(
             decoration: const BoxDecoration(gradient: AppTheme.backgroundGradient),
             child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _buildConnectionStatus(state),
-                    const SizedBox(height: 32),
-                    Text(
-                      'Select Time Control',
-                      style: GoogleFonts.fredoka(
-                        color: AppTheme.textPrimary,
-                        fontSize: 24,
-                        fontWeight: FontWeight.w700,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final isWide = constraints.maxWidth >= 980;
+                  final content = _buildMainContent(state, constraints, isWide);
+
+                  if (isWide) {
+                    return Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(child: SingleChildScrollView(child: content)),
+                          const SizedBox(width: 20),
+                          SizedBox(
+                            width: 340,
+                            child: _buildOnlinePlayersPreview(state),
+                          ),
+                        ],
                       ),
-                    ).animate().fadeIn().slideY(),
-                    const SizedBox(height: 16),
-                    _buildTimeGrid().animate().fadeIn(delay: 200.ms).slideY(),
-                    const Spacer(),
-                    _buildPlayButton(state).animate().fadeIn(delay: 400.ms).slideY(),
-                    const SizedBox(height: 16),
-                    OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 18),
-                        side: BorderSide(color: AppTheme.goldPrimary.withValues(alpha: 0.5)),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                      ),
-                      onPressed: () {
-                        // Create private room logic
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Private rooms coming soon!')),
-                        );
-                      },
-                      icon: const Icon(Icons.lock_rounded, color: AppTheme.goldPrimary),
-                      label: Text(
-                        'Create Private Game',
-                        style: GoogleFonts.fredoka(
-                          color: AppTheme.goldPrimary,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ).animate().fadeIn(delay: 500.ms).slideY(),
-                  ],
-                ),
+                    );
+                  }
+
+                  return SingleChildScrollView(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      children: [
+                        content,
+                        const SizedBox(height: 18),
+                        _buildOnlinePlayersPreview(state),
+                      ],
+                    ),
+                  );
+                },
               ),
             ),
           ),
@@ -140,12 +137,18 @@ class _LobbyScreenState extends State<LobbyScreen> {
             ),
           ),
           const SizedBox(width: 12),
-          Text(
-            isConnected ? 'Connected to Global Server' : 'Connecting...',
-            style: GoogleFonts.baloo2(
-              color: AppTheme.textSecondary,
-              fontWeight: FontWeight.w700,
-              fontSize: 17,
+          Expanded(
+            child: Text(
+              isConnected
+                  ? 'Connected to Global Server • ${state.onlineCount} players online'
+                  : 'Connecting to online lobby...',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.baloo2(
+                color: AppTheme.textSecondary,
+                fontWeight: FontWeight.w700,
+                fontSize: 17,
+              ),
             ),
           ),
         ],
@@ -153,7 +156,114 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
-  Widget _buildTimeGrid() {
+  Widget _buildMainContent(MultiplayerState state, BoxConstraints constraints, bool isWide) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildConnectionStatus(state),
+        const SizedBox(height: 24),
+        _buildHeroCard(state),
+        const SizedBox(height: 26),
+        Text(
+          'Select Time Control',
+          style: GoogleFonts.fredoka(
+            color: AppTheme.textPrimary,
+            fontSize: 24,
+            fontWeight: FontWeight.w700,
+          ),
+        ).animate().fadeIn().slideY(),
+        const SizedBox(height: 16),
+        _buildTimeGrid(constraints.maxWidth).animate().fadeIn(delay: 200.ms).slideY(),
+        const SizedBox(height: 18),
+        if (!isWide) ...[
+          _buildOnlinePlayersButton(state),
+          const SizedBox(height: 16),
+        ],
+        _buildPlayButton(state).animate().fadeIn(delay: 400.ms).slideY(),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            if (isWide) ...[
+              Expanded(child: _buildOnlinePlayersButton(state)),
+              const SizedBox(width: 12),
+            ],
+            Expanded(
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  side: BorderSide(color: AppTheme.goldPrimary.withValues(alpha: 0.5)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                ),
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Private rooms coming soon!')),
+                  );
+                },
+                icon: const Icon(Icons.lock_rounded, color: AppTheme.goldPrimary),
+                label: Text(
+                  'Create Private Game',
+                  style: GoogleFonts.fredoka(
+                    color: AppTheme.goldPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ).animate().fadeIn(delay: 500.ms).slideY(),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHeroCard(MultiplayerState state) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: AppTheme.rainbowGradient,
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.goldPrimary.withValues(alpha: 0.2),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.groups_rounded, color: AppTheme.midnight, size: 42),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Play Live With Real Opponents',
+                  style: GoogleFonts.fredoka(
+                    color: AppTheme.midnight,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Quick match, direct 1v1 challenge, or send a tournament invite from the player list.',
+                  style: GoogleFonts.baloo2(
+                    color: AppTheme.midnight.withValues(alpha: 0.9),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimeGrid(double width) {
     final times = [
       {'label': 'Bullet', 'time': '1+0', 'icon': Icons.flash_on_rounded},
       {'label': 'Blitz', 'time': '3+0', 'icon': Icons.local_fire_department_rounded},
@@ -162,15 +272,17 @@ class _LobbyScreenState extends State<LobbyScreen> {
       {'label': 'Rapid', 'time': '15+10', 'icon': Icons.hourglass_top_rounded},
       {'label': 'Classic', 'time': '30+0', 'icon': Icons.account_balance_rounded},
     ];
+    final crossAxisCount = width < 520 ? 2 : 3;
+    final aspectRatio = width < 520 ? 1.5 : 1.0;
 
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: crossAxisCount,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
-        childAspectRatio: 1.0,
+        childAspectRatio: aspectRatio,
       ),
       itemCount: times.length,
       itemBuilder: (context, index) {
@@ -219,6 +331,266 @@ class _LobbyScreenState extends State<LobbyScreen> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildOnlinePlayersButton(MultiplayerState state) {
+    return FilledButton.icon(
+      style: FilledButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 18),
+        backgroundColor: AppTheme.accentPurple,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      ),
+      onPressed: () => _showPlayersWindow(state),
+      icon: const Icon(Icons.groups_2_rounded, color: Colors.white),
+      label: Text(
+        'View Online Players',
+        style: GoogleFonts.fredoka(
+          color: Colors.white,
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOnlinePlayersPreview(MultiplayerState state) {
+    final previewPlayers = state.availablePlayers.take(3).toList(growable: false);
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: AppTheme.cardGradient,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.person_search_rounded, color: AppTheme.goldPrimary),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Players Online',
+                  style: GoogleFonts.fredoka(
+                    color: AppTheme.textPrimary,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              Text(
+                '${state.onlineCount}',
+                style: GoogleFonts.fredoka(
+                  color: AppTheme.accentCyan,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Challenge a player directly or invite them to a friendly tournament room.',
+            style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 15, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 12),
+          ...previewPlayers.map(_buildPreviewPlayerTile),
+          const SizedBox(height: 10),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: () => _showPlayersWindow(state),
+              child: Text(
+                'Open full player window',
+                style: GoogleFonts.fredoka(color: AppTheme.goldPrimary, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPreviewPlayerTile(OnlineLobbyUser player) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppTheme.surface.withValues(alpha: 0.8),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 18,
+            backgroundColor: player.isAvailable ? AppTheme.accentCyan : AppTheme.textMuted,
+            child: Text(player.name.characters.first.toUpperCase(), style: GoogleFonts.fredoka(color: AppTheme.midnight)),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(player.name, style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
+                Text('${player.rating} ELO • ${player.flair}', style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 13)),
+              ],
+            ),
+          ),
+          _availabilityChip(player.isAvailable),
+        ],
+      ),
+    );
+  }
+
+  Widget _availabilityChip(bool isAvailable) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: (isAvailable ? AppTheme.accentCyan : AppTheme.textMuted).withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        isAvailable ? 'Ready' : 'Busy',
+        style: GoogleFonts.fredoka(
+          color: isAvailable ? AppTheme.accentCyan : AppTheme.textMuted,
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showPlayersWindow(MultiplayerState state) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.82,
+          minChildSize: 0.55,
+          maxChildSize: 0.96,
+          builder: (context, scrollController) {
+            return Container(
+              decoration: const BoxDecoration(
+                gradient: AppTheme.backgroundGradient,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              child: SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 56,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.18),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      Text(
+                        'Available Online Players',
+                        style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 26, fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Choose a player and send either a 1v1 challenge or a tournament invite.',
+                        style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 16, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 16),
+                      Expanded(
+                        child: ListView.builder(
+                          controller: scrollController,
+                          itemCount: state.availablePlayers.length,
+                          itemBuilder: (context, index) => _buildChallengeCard(state.availablePlayers[index]),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildChallengeCard(OnlineLobbyUser player) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: AppTheme.cardGradient,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 22,
+                backgroundColor: player.isAvailable ? AppTheme.goldPrimary : AppTheme.textMuted,
+                child: Text(player.name.characters.first.toUpperCase(), style: GoogleFonts.fredoka(color: AppTheme.midnight, fontSize: 20)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(player.name, style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.w700)),
+                    Text('${player.rating} ELO • ${player.flair}', style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 14)),
+                  ],
+                ),
+              ),
+              _availabilityChip(player.isAvailable),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              FilledButton.icon(
+                onPressed: player.isAvailable
+                    ? () => context.read<MultiplayerBloc>().add(
+                          MpSendChallengeEvent(
+                            opponent: player,
+                            mode: ChallengeMode.duel,
+                            timeControl: _selectedTime,
+                          ),
+                        )
+                    : null,
+                icon: const Icon(Icons.sports_martial_arts_rounded),
+                label: const Text('1v1 Challenge'),
+              ),
+              OutlinedButton.icon(
+                onPressed: player.isAvailable
+                    ? () => context.read<MultiplayerBloc>().add(
+                          MpSendChallengeEvent(
+                            opponent: player,
+                            mode: ChallengeMode.tournament,
+                            timeControl: _selectedTime,
+                          ),
+                        )
+                    : null,
+                icon: const Icon(Icons.emoji_events_rounded),
+                label: const Text('Tournament Invite'),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 

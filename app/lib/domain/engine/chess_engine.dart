@@ -80,6 +80,14 @@ class Move {
   final ChessPiece? capturedPiece;
   String? algebraic;
 
+  // Metadata for fast unmaking
+  Square? prevEnPassant;
+  bool? prevWhiteKingside;
+  bool? prevWhiteQueenside;
+  bool? prevBlackKingside;
+  bool? prevBlackQueenside;
+  int? prevHalfMoveClock;
+
   String toAlgebraic() => '${from.toAlgebraic()}${to.toAlgebraic()}';
 
   Move({
@@ -196,26 +204,52 @@ class ChessEngine {
     return true;
   }
 
-  /// Undo the last move
+  /// Undo the last move instantly (O(1))
   bool undoMove() {
     if (_moveHistory.isEmpty) return false;
-    // Re-init and replay all moves except last
-    final moves = List<Move>.from(_moveHistory)..removeLast();
-    _initBoard();
-    _currentTurn = PieceColor.white;
-    _enPassantTarget = null;
-    _halfMoveClock = 0;
-    _fullMoveNumber = 1;
-    _moveHistory.clear();
-    _positionHistory.clear();
-    _positionHistory.add(toFEN());
-    _resetCastlingRights();
-    _status = GameStatus.active;
-    _result = GameResult.ongoing;
-    for (final m in moves) {
-      makeMove(m);
-    }
+    final move = _moveHistory.removeLast();
+    _unmakeMove(move);
+    _currentTurn = _opponent(_currentTurn);
+    if (_currentTurn == PieceColor.black) _fullMoveNumber--; // Redo full move count correctly
+    _positionHistory.removeLast();
+    _updateStatus();
     return true;
+  }
+
+  void _unmakeMove(Move move) {
+    final piece = _board[move.to.rank][move.to.file]!;
+    
+    // Restore piece to 'from'
+    final restoredPiece = move.promotion != null
+        ? ChessPiece(type: PieceType.pawn, color: piece.color, hasMoved: piece.hasMoved)
+        : piece;
+    
+    _board[move.from.rank][move.from.file] = restoredPiece;
+    _board[move.to.rank][move.to.file] = move.capturedPiece;
+
+    // Special cases
+    if (move.isCastle) {
+      final rank = move.from.rank;
+      final kingside = move.to.file == 6;
+      final rookFrom = kingside ? 7 : 0;
+      final rookTo = kingside ? 5 : 3;
+      _board[rank][rookFrom] = _board[rank][rookTo];
+      _board[rank][rookTo] = null;
+    }
+
+    if (move.isEnPassant) {
+      final captureRank = move.from.rank;
+      _board[captureRank][move.to.file] = ChessPiece(type: PieceType.pawn, color: _opponent(piece.color));
+      _board[move.to.rank][move.to.file] = null; // En passant 'to' was empty
+    }
+
+    // Restore state
+    _enPassantTarget = move.prevEnPassant;
+    _whiteKingsideCastle = move.prevWhiteKingside ?? true;
+    _whiteQueensideCastle = move.prevWhiteQueenside ?? true;
+    _blackKingsideCastle = move.prevBlackKingside ?? true;
+    _blackQueensideCastle = move.prevBlackQueenside ?? true;
+    _halfMoveClock = move.prevHalfMoveClock ?? 0;
   }
 
   bool get isInCheck => _isKingInCheck(_currentTurn);
@@ -373,6 +407,15 @@ class ChessEngine {
   // ═══════════════════════════════════════════
   void _applyMove(Move move) {
     final piece = _board[move.from.rank][move.from.file]!;
+    
+    // Capture state for unmaking
+    move.prevEnPassant = _enPassantTarget;
+    move.prevWhiteKingside = _whiteKingsideCastle;
+    move.prevWhiteQueenside = _whiteQueensideCastle;
+    move.prevBlackKingside = _blackKingsideCastle;
+    move.prevBlackQueenside = _blackQueensideCastle;
+    move.prevHalfMoveClock = _halfMoveClock;
+
     _enPassantTarget = null;
 
     // Handle castling rook
@@ -392,6 +435,10 @@ class ChessEngine {
       _board[captureRank][move.to.file] = null;
     }
 
+    // Capture the piece being taken
+    // (Already in capturedPiece from pseudo-legal gen, but just in case)
+    // Actually we trust move.capturedPiece from generation
+
     // Promotion
     final movedPiece = move.promotion != null
         ? ChessPiece(type: move.promotion!, color: piece.color, hasMoved: true)
@@ -401,8 +448,7 @@ class ChessEngine {
     _board[move.from.rank][move.from.file] = null;
 
     // Double pawn push → set en passant target
-    if (piece.type == PieceType.pawn &&
-        (move.to.rank - move.from.rank).abs() == 2) {
+    if (piece.type == PieceType.pawn && (move.to.rank - move.from.rank).abs() == 2) {
       _enPassantTarget = Square(move.from.file, (move.from.rank + move.to.rank) ~/ 2);
     }
 
@@ -415,13 +461,14 @@ class ChessEngine {
     } else {
       _halfMoveClock++;
     }
+    
     if (_currentTurn == PieceColor.black) _fullMoveNumber++;
 
-    // Algebraic notation
-    move.algebraic = _buildAlgebraic(move, piece);
     _moveHistory.add(move);
-
     _currentTurn = _opponent(_currentTurn);
+    
+    // Position history is for repetition detection in real games
+    // We can avoid this during alpha-beta search if necessary
     _positionHistory.add(toFEN());
   }
 

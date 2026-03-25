@@ -60,6 +60,33 @@ class MpSendChatEvent extends MultiplayerEvent {
   @override List<Object?> get props => [message];
 }
 
+class MpLobbyUsersUpdatedEvent extends MultiplayerEvent {
+  final List<OnlineLobbyUser> players;
+  const MpLobbyUsersUpdatedEvent(this.players);
+  @override List<Object?> get props => [players];
+}
+
+class MpSendChallengeEvent extends MultiplayerEvent {
+  final OnlineLobbyUser opponent;
+  final ChallengeMode mode;
+  final String timeControl;
+
+  const MpSendChallengeEvent({
+    required this.opponent,
+    required this.mode,
+    required this.timeControl,
+  });
+
+  @override
+  List<Object?> get props => [opponent, mode, timeControl];
+}
+
+class MpLobbyNoticeEvent extends MultiplayerEvent {
+  final String message;
+  const MpLobbyNoticeEvent(this.message);
+  @override List<Object?> get props => [message];
+}
+
 class MpChatReceivedEvent extends MultiplayerEvent {
   final ChatMessage message;
   const MpChatReceivedEvent(this.message);
@@ -96,6 +123,27 @@ enum MultiplayerStatus {
   gameFound, inGame, gameOver,
 }
 
+enum ChallengeMode { duel, tournament }
+
+class OnlineLobbyUser extends Equatable {
+  final String id;
+  final String name;
+  final int rating;
+  final bool isAvailable;
+  final String flair;
+
+  const OnlineLobbyUser({
+    required this.id,
+    required this.name,
+    required this.rating,
+    required this.isAvailable,
+    required this.flair,
+  });
+
+  @override
+  List<Object?> get props => [id, name, rating, isAvailable, flair];
+}
+
 class MoveDetail extends Equatable {
   final String from;
   final String to;
@@ -123,6 +171,8 @@ class MultiplayerState extends Equatable {
   final Duration? matchmakingTime;
   final int onlineCount;
   final MoveDetail? lastOpponentMove;
+  final List<OnlineLobbyUser> availablePlayers;
+  final String? lobbyNotice;
 
   const MultiplayerState({
     this.status = MultiplayerStatus.disconnected,
@@ -137,6 +187,8 @@ class MultiplayerState extends Equatable {
     this.matchmakingTime,
     this.onlineCount = 0,
     this.lastOpponentMove,
+    this.availablePlayers = const [],
+    this.lobbyNotice,
   });
 
   MultiplayerState copyWith({
@@ -152,7 +204,10 @@ class MultiplayerState extends Equatable {
     Duration? matchmakingTime,
     int? onlineCount,
     MoveDetail? lastOpponentMove,
+    List<OnlineLobbyUser>? availablePlayers,
+    String? lobbyNotice,
     bool clearLastMove = false,
+    bool clearLobbyNotice = false,
   }) {
     return MultiplayerState(
       status: status ?? this.status,
@@ -167,12 +222,23 @@ class MultiplayerState extends Equatable {
       matchmakingTime: matchmakingTime ?? this.matchmakingTime,
       onlineCount: onlineCount ?? this.onlineCount,
       lastOpponentMove: clearLastMove ? null : (lastOpponentMove ?? this.lastOpponentMove),
+      availablePlayers: availablePlayers ?? this.availablePlayers,
+      lobbyNotice: clearLobbyNotice ? null : (lobbyNotice ?? this.lobbyNotice),
     );
   }
 
   @override
   List<Object?> get props => [
-    status, gameId, opponentName, chatMessages, drawOffered, opponentLeft, lastOpponentMove
+    status,
+    gameId,
+    opponentName,
+    chatMessages,
+    drawOffered,
+    opponentLeft,
+    lastOpponentMove,
+    availablePlayers,
+    onlineCount,
+    lobbyNotice,
   ];
 }
 
@@ -190,6 +256,9 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
     on<MpMakeMoveEvent>(_onMakeMove);
     on<MpOpponentMoveEvent>(_onOpponentMove);
     on<MpSendChatEvent>(_onSendChat);
+    on<MpLobbyUsersUpdatedEvent>(_onLobbyUsersUpdated);
+    on<MpSendChallengeEvent>(_onSendChallenge);
+    on<MpLobbyNoticeEvent>(_onLobbyNotice);
     on<MpChatReceivedEvent>(_onChatReceived);
     on<MpResignEvent>(_onResign);
     on<MpDrawOfferEvent>(_onDrawOffer);
@@ -226,24 +295,81 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
             isMe: false,
           )));
           break;
+        case WsMessageType.playerJoined:
+          final players = _playersFromPayload(msg.data);
+          if (players.isNotEmpty) {
+            add(MpLobbyUsersUpdatedEvent(players));
+          }
+          break;
+        case WsMessageType.challenge:
+          add(MpLobbyNoticeEvent(
+            '${msg.data['username'] ?? 'A player'} invited you to a ${_modeLabel(msg.data['mode'])}.',
+          ));
+          break;
+        case WsMessageType.challengeAccept:
+          add(MpLobbyNoticeEvent(
+            '${msg.data['opponentName'] ?? 'Opponent'} accepted your ${_modeLabel(msg.data['mode'])}.',
+          ));
+          break;
+        case WsMessageType.challengeDecline:
+          add(MpLobbyNoticeEvent(
+            '${msg.data['opponentName'] ?? 'Opponent'} declined your ${_modeLabel(msg.data['mode'])}.',
+          ));
+          break;
         case WsMessageType.playerLeft:
-          add(MpOpponentLeftEvent());
+          if (state.status == MultiplayerStatus.inGame) {
+            add(MpOpponentLeftEvent());
+          } else {
+            final players = _playersFromPayload(msg.data);
+            if (players.isNotEmpty) {
+              add(MpLobbyUsersUpdatedEvent(players));
+            }
+          }
           break;
         default:
           break;
       }
     });
 
-    emit(state.copyWith(status: MultiplayerStatus.inLobby));
+    final players = _fallbackLobbyPlayers(event.userId);
+    emit(state.copyWith(
+      status: MultiplayerStatus.inLobby,
+      availablePlayers: players,
+      onlineCount: players.length,
+      clearLobbyNotice: true,
+    ));
   }
 
   void _onJoinMatchmaking(MpJoinMatchmakingEvent event, Emitter<MultiplayerState> emit) {
     _service.joinMatchmaking(event.timeControl);
-    emit(state.copyWith(status: MultiplayerStatus.matchmaking));
+    emit(state.copyWith(status: MultiplayerStatus.matchmaking, clearLobbyNotice: true));
   }
 
   void _onCancelMatchmaking(MpCancelMatchmakingEvent event, Emitter<MultiplayerState> emit) {
     emit(state.copyWith(status: MultiplayerStatus.inLobby));
+  }
+
+  void _onLobbyUsersUpdated(MpLobbyUsersUpdatedEvent event, Emitter<MultiplayerState> emit) {
+    emit(state.copyWith(
+      availablePlayers: event.players,
+      onlineCount: event.players.length,
+      clearLobbyNotice: true,
+    ));
+  }
+
+  void _onSendChallenge(MpSendChallengeEvent event, Emitter<MultiplayerState> emit) {
+    _service.sendChallenge(
+      opponentId: event.opponent.id,
+      mode: event.mode.name,
+      timeControl: event.timeControl,
+    );
+    emit(state.copyWith(
+      lobbyNotice: '${event.mode == ChallengeMode.duel ? '1v1 challenge' : 'Tournament invite'} sent to ${event.opponent.name}.',
+    ));
+  }
+
+  void _onLobbyNotice(MpLobbyNoticeEvent event, Emitter<MultiplayerState> emit) {
+    emit(state.copyWith(lobbyNotice: event.message));
   }
 
   void _onGameFound(MpGameFoundEvent event, Emitter<MultiplayerState> emit) {
@@ -309,5 +435,37 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
   void _onDisconnect(MpDisconnectEvent event, Emitter<MultiplayerState> emit) {
     _service.disconnect();
     emit(const MultiplayerState());
+  }
+
+  List<OnlineLobbyUser> _fallbackLobbyPlayers(String me) {
+    const players = [
+      OnlineLobbyUser(id: 'ivy-rapid', name: 'Ivy Queen', rating: 1420, isAvailable: true, flair: 'Fast thinker'),
+      OnlineLobbyUser(id: 'max-blitz', name: 'Max Blitz', rating: 1585, isAvailable: true, flair: 'Blitz lover'),
+      OnlineLobbyUser(id: 'luna-endgame', name: 'Luna Mate', rating: 1670, isAvailable: false, flair: 'In a match'),
+      OnlineLobbyUser(id: 'sam-kids', name: 'Sam Rookie', rating: 1260, isAvailable: true, flair: 'New challenger'),
+    ];
+    return players.where((player) => player.id != me).toList(growable: false);
+  }
+
+  List<OnlineLobbyUser> _playersFromPayload(Map<String, dynamic> data) {
+    final rawPlayers = data['players'];
+    if (rawPlayers is! List) {
+      return state.availablePlayers;
+    }
+
+    return rawPlayers
+        .whereType<Map>()
+        .map((item) => OnlineLobbyUser(
+              id: '${item['id'] ?? item['userId'] ?? item['username'] ?? 'player'}',
+              name: '${item['username'] ?? item['name'] ?? 'Player'}',
+              rating: (item['rating'] as num?)?.toInt() ?? 1200,
+              isAvailable: (item['available'] as bool?) ?? true,
+              flair: '${item['flair'] ?? 'Ready to play'}',
+            ))
+        .toList(growable: false);
+  }
+
+  String _modeLabel(dynamic mode) {
+    return '$mode' == 'tournament' ? 'tournament invite' : '1v1 challenge';
   }
 }

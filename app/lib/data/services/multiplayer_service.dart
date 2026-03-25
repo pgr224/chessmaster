@@ -124,6 +124,22 @@ class MultiplayerService {
     ));
   }
 
+  void sendChallenge({
+    required String opponentId,
+    required String mode,
+    required String timeControl,
+  }) {
+    send(WsMessage(
+      type: WsMessageType.challenge,
+      data: {
+        'userId': _userId,
+        'opponentId': opponentId,
+        'mode': mode,
+        'timeControl': timeControl,
+      },
+    ));
+  }
+
   void _startPingTimer() {
     _pingTimer?.cancel();
     _pingTimer = Timer.periodic(const Duration(seconds: 30), (_) {

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../blocs/multiplayer/multiplayer_bloc.dart';
 
@@ -64,16 +65,16 @@ class _MatchmakingScreenState extends State<MatchmakingScreen> with SingleTicker
                       children: [
                         _buildRadar(),
                         const SizedBox(height: 64),
-                        const Text(
+                        Text(
                           'Searching for opponent...',
-                          style: TextStyle(color: AppTheme.textPrimary, fontSize: 22, fontWeight: FontWeight.bold),
+                          style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 24, fontWeight: FontWeight.w700),
                         )
                         .animate(onPlay: (controller) => controller.repeat())
                         .shimmer(duration: 2.seconds, color: AppTheme.goldPrimary),
                         const SizedBox(height: 12),
-                        const Text(
+                        Text(
                           'Estimated wait: 0:15',
-                          style: TextStyle(color: AppTheme.textSecondary, fontSize: 16),
+                          style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 16, fontWeight: FontWeight.w600),
                         ),
                       ],
                     ),
@@ -97,8 +98,8 @@ class _MatchmakingScreenState extends State<MatchmakingScreen> with SingleTicker
             width: 100, height: 100,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: AppTheme.goldPrimary.withOpacity(0.1),
-              border: Border.all(color: AppTheme.goldPrimary.withOpacity(0.3), width: 2),
+              color: AppTheme.goldPrimary.withValues(alpha: 0.1),
+              border: Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.3), width: 2),
             ),
             child: const Center(
               child: Icon(Icons.search_rounded, color: AppTheme.goldPrimary, size: 40),
@@ -115,8 +116,8 @@ class _MatchmakingScreenState extends State<MatchmakingScreen> with SingleTicker
                     shape: BoxShape.circle,
                     gradient: SweepGradient(
                       colors: [
-                        AppTheme.goldPrimary.withOpacity(0.0),
-                        AppTheme.goldPrimary.withOpacity(0.4),
+                        AppTheme.goldPrimary.withValues(alpha: 0.0),
+                        AppTheme.goldPrimary.withValues(alpha: 0.4),
                       ],
                       stops: const [0.8, 1.0],
                     ),

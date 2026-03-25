@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -69,22 +71,13 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             children: [
               _buildBackground(),
               SafeArea(
-                child: Column(
-                  children: [
-                    _buildTopBar(context, state),
-                    const SizedBox(height: 4),
-                    _buildOpponentInfo(state),
-                    _buildCapturedPieces(state, PieceColor.black),
-                    Expanded(
-                      child: Center(
-                        child: _buildBoard(context, state),
-                      ),
-                    ),
-                    _buildCapturedPieces(state, PieceColor.white),
-                    _buildPlayerInfo(state),
-                    const SizedBox(height: 6),
-                    _buildActionBar(context, state),
-                  ],
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isWide = constraints.maxWidth >= 1080;
+                    return isWide
+                        ? _buildWideLayout(context, state, constraints)
+                        : _buildCompactLayout(context, state, constraints);
+                  },
                 ),
               ),
               if (state.showPromotionDialog) _buildPromotionOverlay(context, state),
@@ -347,29 +340,104 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
   bool _showMoves = false;
 
-  Widget _buildBoard(BuildContext context, GameState state) {
+  Widget _buildCompactLayout(BuildContext context, GameState state, BoxConstraints constraints) {
+    return Column(
+      children: [
+        _buildTopBar(context, state),
+        const SizedBox(height: 2),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Column(
+              children: [
+                _buildOpponentInfo(state),
+                _buildCapturedPieces(state, PieceColor.black),
+                Expanded(
+                  child: Center(
+                    child: _buildBoardFrame(
+                      context,
+                      state,
+                      maxDimension: math.min(constraints.maxWidth - 8, constraints.maxHeight * 0.58),
+                    ),
+                  ),
+                ),
+                _buildCapturedPieces(state, PieceColor.white),
+                _buildPlayerInfo(state),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 4),
+        _buildActionBar(context, state),
+      ],
+    );
+  }
+
+  Widget _buildWideLayout(BuildContext context, GameState state, BoxConstraints constraints) {
+    const sideWidth = 330.0;
+    final maxBoard = math.min(constraints.maxHeight - 32, constraints.maxWidth - sideWidth - 56);
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
+      padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Expanded(
-            child: ChessBoardWidget(
-              board: state.board,
-              perspective: state.playerColor ?? PieceColor.white,
-              selectedSquare: state.selectedSquare,
-              legalMoves: state.legalMoves,
-              lastMove: state.moveHistory.isNotEmpty ? state.moveHistory.last : null,
-              hintMove: state.hintMove,
-              status: state.status,
-              boardTheme: state.boardTheme ?? 'classic',
-              onSquareTap: state.isGameOver ? null : (sq) {
-                context.read<GameBloc>().add(GameSelectPieceEvent(sq));
-              },
-              isInteractive: !state.isAIThinking && state.isPlayerTurn,
+            child: Column(
+              children: [
+                _buildTopBar(context, state),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: Center(
+                    child: _buildBoardFrame(context, state, maxDimension: maxBoard),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 18),
+          SizedBox(
+            width: sideWidth,
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  _buildOpponentInfo(state),
+                  _buildCapturedPieces(state, PieceColor.black),
+                  const SizedBox(height: 10),
+                  if (state.moveHistory.isNotEmpty) _buildMoveHistoryCard(state),
+                  const SizedBox(height: 10),
+                  _buildCapturedPieces(state, PieceColor.white),
+                  _buildPlayerInfo(state),
+                  const SizedBox(height: 12),
+                  _buildActionBar(context, state),
+                ],
+              ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildBoardFrame(BuildContext context, GameState state, {required double maxDimension}) {
+    final dimension = math.max(300.0, math.min(maxDimension, 860.0));
+    return ConstrainedBox(
+      constraints: BoxConstraints.tightFor(width: dimension, height: dimension),
+      child: ChessBoardWidget(
+        board: state.board,
+        perspective: state.playerColor ?? PieceColor.white,
+        selectedSquare: state.selectedSquare,
+        legalMoves: state.legalMoves,
+        lastMove: state.moveHistory.isNotEmpty ? state.moveHistory.last : null,
+        hintMove: state.hintMove,
+        status: state.status,
+        boardTheme: state.boardTheme ?? 'classic',
+        onSquareTap: state.isGameOver
+            ? null
+            : (sq) {
+                context.read<GameBloc>().add(GameSelectPieceEvent(sq));
+              },
+        isInteractive: !state.isAIThinking && state.isPlayerTurn,
       ),
     );
   }
@@ -384,8 +452,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 20, offset: const Offset(0, -4)),
         ],
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      child: Wrap(
+        alignment: WrapAlignment.spaceEvenly,
+        runSpacing: 8,
+        spacing: 6,
         children: [
           // Hint button (single player only)
           if (state.mode == GameMode.singlePlayer)
@@ -425,10 +495,11 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             icon: Icons.share_rounded,
             label: 'Share',
             color: AppTheme.goldPrimary,
-            onTap: () {
-              final pgn = context.read<GameBloc>().engine.toPGN() ?? '';
-              Share.share('Check out my chess game!\n\n$pgn', subject: 'Chess Master Game');
-            },
+            onTap: () => _sharePgn(
+              context.read<GameBloc>().engine.toPGN(),
+              'Check out my chess game!',
+              'Chess Master Game',
+            ),
           ),
         ],
       ),
@@ -445,7 +516,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       onTap: onTap,
       child: AnimatedContainer(
         duration: 200.ms,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        width: 88,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
         decoration: BoxDecoration(
           color: onTap != null ? (color ?? AppTheme.textSecondary).withValues(alpha: 0.1) : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
@@ -461,6 +533,29 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             )),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildMoveHistoryCard(GameState state) {
+    return Container(
+      height: 220,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        gradient: AppTheme.cardGradient,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppTheme.skyBlue.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Recent Moves',
+            style: GoogleFonts.fredoka(color: AppTheme.skyBlue, fontSize: 18, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 10),
+          Expanded(child: MoveHistoryWidget(moves: state.moveHistory)),
+        ],
       ),
     );
   }
@@ -489,10 +584,20 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         context.read<GameBloc>().add(GameStartEvent(widget.config));
       },
       onGoHome: () => context.go('/home'),
-      onShare: () {
-        final pgn = context.read<GameBloc>().engine.toPGN() ?? '';
-        Share.share('Check out my chess game results!\n\n$pgn', subject: 'Chess Master Results');
-      },
+      onShare: () => _sharePgn(
+        context.read<GameBloc>().engine.toPGN(),
+        'Check out my chess game results!',
+        'Chess Master Results',
+      ),
+    );
+  }
+
+  Future<void> _sharePgn(String pgn, String intro, String subject) {
+    return SharePlus.instance.share(
+      ShareParams(
+        text: '$intro\n\n$pgn',
+        subject: subject,
+      ),
     );
   }
 

@@ -191,11 +191,11 @@ class _MainScaffoldState extends State<MainScaffold> {
 
   Widget _buildNavBar() {
     return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
+      decoration: const BoxDecoration(
+        gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [const Color(0xFF0F1535), const Color(0xFF0A0E27)],
+          colors: [Color(0xFF0F1535), Color(0xFF0A0E27)],
         ),
         border: const Border(
           top: BorderSide(color: Color(0xFF1F2952), width: 1),
@@ -209,12 +209,15 @@ class _MainScaffoldState extends State<MainScaffold> {
           setState(() => _currentIndex = index);
           context.go(_navItems[index].path);
         },
-        indicatorColor: const Color(0xFFD4AF37).withOpacity(0.2),
-        destinations: _navItems.map((item) => NavigationDestination(
-          icon: Icon(item.icon, color: const Color(0xFF4A5580)),
-          selectedIcon: Icon(item.icon, color: const Color(0xFFD4AF37)),
-          label: item.label,
-        )).toList(),
+        indicatorColor: const Color(0xFFD4AF37).withValues(alpha: 0.2),
+        destinations: [
+          for (final item in _navItems)
+            NavigationDestination(
+              icon: Icon(item.icon, color: const Color(0xFF4A5580)),
+              selectedIcon: Icon(item.icon, color: const Color(0xFFD4AF37)),
+              label: item.label,
+            ),
+        ],
       ),
     );
   }

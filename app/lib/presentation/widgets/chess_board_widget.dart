@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/theme/app_theme.dart';
@@ -39,35 +41,14 @@ class ChessBoardWidget extends StatefulWidget {
   State<ChessBoardWidget> createState() => _ChessBoardWidgetState();
 }
 
-class _ChessBoardWidgetState extends State<ChessBoardWidget>
-    with TickerProviderStateMixin {
-  late AnimationController _moveAnimController;
-  Square? _animatingPieceSrc;
-  Square? _animatingPieceDst;
-
-  @override
-  void initState() {
-    super.initState();
-    _moveAnimController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 200),
-    );
-  }
-
-  @override
-  void dispose() {
-    _moveAnimController.dispose();
-    super.dispose();
-  }
+class _ChessBoardWidgetState extends State<ChessBoardWidget> {
 
   @override
   Widget build(BuildContext context) {
     return Center(
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final size = constraints.maxWidth < constraints.maxHeight
-              ? constraints.maxWidth
-              : constraints.maxHeight;
+          final size = math.min(constraints.maxWidth, constraints.maxHeight);
           final sqSize = size / 8;
           
           return SizedBox(
@@ -75,17 +56,17 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget>
             height: size,
             child: Container(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.5),
+                    color: Colors.black.withValues(alpha: 0.5),
                     blurRadius: 24,
                     offset: const Offset(0, 12),
                   ),
                 ],
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(16),
                 child: AspectRatio(
                   aspectRatio: 1.0,
                   child: Stack(
@@ -158,11 +139,11 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget>
         // Hint highlight
         if (widget.hintMove != null) ...[
           _highlight(widget.hintMove!.from, sqSize, AppTheme.hintSq),
-          _highlight(widget.hintMove!.to, sqSize, AppTheme.hintSq.withOpacity(0.9)),
+          _highlight(widget.hintMove!.to, sqSize, AppTheme.hintSq.withValues(alpha: 0.9)),
         ],
         // Selected piece
         if (widget.selectedSquare != null)
-          _highlight(widget.selectedSquare!, sqSize, AppTheme.selectedSq.withOpacity(0.7)),
+          _highlight(widget.selectedSquare!, sqSize, AppTheme.selectedSq.withValues(alpha: 0.7)),
         // Legal moves
         ...widget.legalMoves.map((m) => _legalMoveIndicator(m, sqSize)),
         // Check highlight
@@ -289,8 +270,8 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget>
                 fontSize: sqSize * 0.18,
                 fontWeight: FontWeight.bold,
                 color: (f + 0) % 2 == 0
-                    ? AppTheme.lightSquare.withOpacity(0.8)
-                    : AppTheme.darkSquare.withOpacity(0.8),
+                    ? AppTheme.lightSquare.withValues(alpha: 0.8)
+                    : AppTheme.darkSquare.withValues(alpha: 0.8),
               ),
             ),
           );
@@ -307,8 +288,8 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget>
                 fontSize: sqSize * 0.18,
                 fontWeight: FontWeight.bold,
                 color: (r + 0) % 2 == 1
-                    ? AppTheme.lightSquare.withOpacity(0.8)
-                    : AppTheme.darkSquare.withOpacity(0.8),
+                    ? AppTheme.lightSquare.withValues(alpha: 0.8)
+                    : AppTheme.darkSquare.withValues(alpha: 0.8),
               ),
             ),
           );

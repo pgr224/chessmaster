@@ -28,51 +28,54 @@ class CapturedPiecesWidget extends StatelessWidget {
       height: 32,
       margin: const EdgeInsets.symmetric(vertical: 4),
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: AppTheme.surface.withValues(alpha: 0.4),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ...sorted.take(12).map((p) => Text(
-                  p.symbol,
-                  style: TextStyle(
-                    fontFamily: 'ChessMerida',
-                    fontSize: 18,
-                    color: color == PieceColor.white ? Colors.white : AppTheme.textPrimary.withValues(alpha: 0.9),
-                    shadows: const [Shadow(
-                      color: Colors.black26,
-                      blurRadius: 2, offset: Offset(1, 1),
-                    )],
-                  ),
-                )),
-                if (pieces.length > 12)
-                  Text(' +${pieces.length - 12}',
-                      style: GoogleFonts.baloo2(color: AppTheme.textMuted, fontSize: 13, fontWeight: FontWeight.w600)),
-              ],
-            ),
-          ),
-          const SizedBox(width: 10),
-          if (totalValue > 0)
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: AppTheme.accentCyan.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(8),
+                color: AppTheme.surface.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(12),
               ),
-              child: Text(
-                '+$totalValue',
-                style: GoogleFonts.fredoka(
-                  color: AppTheme.accentCyan, fontSize: 13, fontWeight: FontWeight.w700,
-                ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ...sorted.take(12).map((p) => Text(
+                    p.symbol,
+                    style: TextStyle(
+                      fontFamily: 'ChessMerida',
+                      fontSize: 18,
+                      color: color == PieceColor.white ? Colors.white : AppTheme.textPrimary.withValues(alpha: 0.9),
+                      shadows: const [Shadow(
+                        color: Colors.black26,
+                        blurRadius: 2, offset: Offset(1, 1),
+                      )],
+                    ),
+                  )),
+                  if (pieces.length > 12)
+                    Text(' +${pieces.length - 12}',
+                        style: GoogleFonts.baloo2(color: AppTheme.textMuted, fontSize: 13, fontWeight: FontWeight.w600)),
+                ],
               ),
             ),
-        ],
+            const SizedBox(width: 10),
+            if (totalValue > 0)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppTheme.accentCyan.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '+$totalValue',
+                  style: GoogleFonts.fredoka(
+                    color: AppTheme.accentCyan, fontSize: 13, fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

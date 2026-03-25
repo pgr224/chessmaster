@@ -67,9 +67,16 @@ class PlayerInfoWidget extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(name, style: GoogleFonts.fredoka(
-                color: AppTheme.textPrimary, fontWeight: FontWeight.w700, fontSize: 15,
-              )),
+              SizedBox(
+                width: 150,
+                child: Text(name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.fredoka(
+                    color: AppTheme.textPrimary, fontWeight: FontWeight.w700, fontSize: 15,
+                  ),
+                ),
+              ),
               if (isThinking)
                 Row(
                   mainAxisSize: MainAxisSize.min,
