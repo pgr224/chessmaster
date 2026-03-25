@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
 
@@ -15,7 +14,7 @@ class LearnScreen extends StatelessWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: Text('📚 Chess Academy',
-          style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 22, fontWeight: FontWeight.w600),
+          style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 26, fontWeight: FontWeight.w700),
         ),
         centerTitle: true,
       ),
@@ -30,7 +29,7 @@ class LearnScreen extends StatelessWidget {
                   padding: const EdgeInsets.all(24),
                   children: [
                     Text('🗂️ Explore Categories',
-                      style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 22, fontWeight: FontWeight.w600),
+                      style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 24, fontWeight: FontWeight.w700),
                     ),
                     const SizedBox(height: 18),
                     _buildCategory('🎓 Fundamentals', 'Learn how pieces move!', AppTheme.goldPrimary),
@@ -53,7 +52,9 @@ class LearnScreen extends StatelessWidget {
       width: double.infinity,
       height: 190,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [AppTheme.goldDark, AppTheme.goldPrimary, AppTheme.goldLight]),
+        gradient: const LinearGradient(
+          colors: [Color(0xFFFF8A5C), Color(0xFFFFD93D), Color(0xFF6BCB77)],
+        ),
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(color: AppTheme.goldPrimary.withValues(alpha: 0.35), blurRadius: 24, offset: const Offset(0, 10)),
@@ -76,7 +77,7 @@ class LearnScreen extends StatelessWidget {
                 )),
                 const SizedBox(height: 10),
                 Text('Master the\nSicilian Defense', style: GoogleFonts.fredoka(
-                  color: AppTheme.midnight, fontSize: 24, fontWeight: FontWeight.w700, height: 1.15,
+                  color: AppTheme.midnight, fontSize: 28, fontWeight: FontWeight.w700, height: 1.15,
                 )),
                 const Spacer(),
                 ElevatedButton(
@@ -104,7 +105,7 @@ class LearnScreen extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: AppTheme.navyCard,
+          gradient: AppTheme.cardGradient,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(color: color.withValues(alpha: 0.15)),
           boxShadow: [
@@ -118,10 +119,10 @@ class LearnScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(title, style: GoogleFonts.fredoka(
-                    color: AppTheme.textPrimary, fontSize: 19, fontWeight: FontWeight.w600,
+                    color: AppTheme.textPrimary, fontSize: 21, fontWeight: FontWeight.w700,
                   )),
                   const SizedBox(height: 4),
-                  Text(desc, style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 15)),
+                  Text(desc, style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 16, fontWeight: FontWeight.w600)),
                 ],
               ),
             ),

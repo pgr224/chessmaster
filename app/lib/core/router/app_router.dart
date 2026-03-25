@@ -13,15 +13,13 @@ import '../../presentation/screens/game/game_setup_screen.dart';
 import '../../presentation/screens/multiplayer/lobby_screen.dart';
 import '../../presentation/screens/multiplayer/matchmaking_screen.dart';
 import '../../presentation/screens/multiplayer/game_room_screen.dart';
-import '../../presentation/screens/tournament/tournament_screen.dart';
-import '../../presentation/screens/tournament/bracket_screen.dart';
+import '../../presentation/screens/news/chess_world_screen.dart';
 import '../../presentation/screens/profile/profile_screen.dart';
 import '../../presentation/screens/leaderboard/leaderboard_screen.dart';
 import '../../presentation/screens/settings/settings_screen.dart';
 import '../../presentation/screens/tutorial/tutorial_screen.dart';
 import '../../presentation/screens/learn/learn_screen.dart';
 import '../../presentation/screens/learn/article_screen.dart';
-import '../../data/models/user_model.dart';
 import '../../data/models/game_config.dart';
 import '../../data/models/tutorial_model.dart';
 export '../../data/models/game_config.dart';
@@ -154,16 +152,9 @@ class AppRouter {
         ),
       ),
       GoRoute(
-        path: '/tournaments',
-        name: 'tournaments',
-        builder: (context, state) => const TournamentScreen(),
-      ),
-      GoRoute(
-        path: '/tournament/:id/bracket',
-        name: 'bracket',
-        builder: (context, state) => BracketScreen(
-          tournamentId: state.pathParameters['id']!,
-        ),
+        path: '/chess_world',
+        name: 'chess_world',
+        builder: (context, state) => const ChessWorldScreen(),
       ),
     ],
   );

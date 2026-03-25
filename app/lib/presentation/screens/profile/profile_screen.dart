@@ -82,9 +82,9 @@ class ProfileScreen extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            _statCard('⭐ ELO', '1540', AppTheme.skyBlue),
-            _statCard('🎮 GAMES', '124', AppTheme.goldPrimary),
-            _statCard('🏆 WIN %', '64%', AppTheme.accentCyan),
+            _statCard('⭐ ELO', '${user.rating}', AppTheme.skyBlue),
+            _statCard('🎮 GAMES', '${user.stats.gamesPlayed}', AppTheme.goldPrimary),
+            _statCard('🏆 WIN %', '${user.stats.winRate.toStringAsFixed(0)}%', AppTheme.accentCyan),
           ],
         ),
       ),
@@ -96,15 +96,22 @@ class ProfileScreen extends StatelessWidget {
       width: 108,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppTheme.surface.withValues(alpha: 0.6),
+        gradient: AppTheme.cardGradient,
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: color.withValues(alpha: 0.2)),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.16),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
       child: Column(
         children: [
           Text(value, style: GoogleFonts.fredoka(color: color, fontSize: 22, fontWeight: FontWeight.w700)),
           const SizedBox(height: 6),
-          Text(label, style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 12)),
+          Text(label, style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
         ],
       ),
     ).animate().fadeIn().scale(begin: const Offset(0.9, 0.9));
@@ -116,7 +123,7 @@ class ProfileScreen extends StatelessWidget {
       sliver: SliverToBoxAdapter(
         child: Text(
           '🏅 Achievements',
-          style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 22, fontWeight: FontWeight.w600),
+          style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 24, fontWeight: FontWeight.w700),
         ),
       ),
     );

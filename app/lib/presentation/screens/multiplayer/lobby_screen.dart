@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../blocs/auth/auth_bloc.dart';
 import '../../blocs/multiplayer/multiplayer_bloc.dart';
@@ -48,7 +49,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 context.pop();
               },
             ),
-            title: const Text('Online Multiplayer', style: TextStyle(color: AppTheme.textPrimary)),
+            title: Text(
+              '🌍 Online Multiplayer',
+              style: GoogleFonts.fredoka(
+                color: AppTheme.textPrimary,
+                fontSize: 24,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
             centerTitle: true,
           ),
           body: Container(
@@ -61,9 +69,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   children: [
                     _buildConnectionStatus(state),
                     const SizedBox(height: 32),
-                    const Text(
+                    Text(
                       'Select Time Control',
-                      style: TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.bold),
+                      style: GoogleFonts.fredoka(
+                        color: AppTheme.textPrimary,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ).animate().fadeIn().slideY(),
                     const SizedBox(height: 16),
                     _buildTimeGrid().animate().fadeIn(delay: 200.ms).slideY(),
@@ -72,9 +84,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     const SizedBox(height: 16),
                     OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        side: BorderSide(color: AppTheme.goldPrimary.withOpacity(0.5)),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        padding: const EdgeInsets.symmetric(vertical: 18),
+                        side: BorderSide(color: AppTheme.goldPrimary.withValues(alpha: 0.5)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                       ),
                       onPressed: () {
                         // Create private room logic
@@ -83,7 +95,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         );
                       },
                       icon: const Icon(Icons.lock_rounded, color: AppTheme.goldPrimary),
-                      label: const Text('Create Private Game', style: TextStyle(color: AppTheme.goldPrimary, fontSize: 16)),
+                      label: Text(
+                        'Create Private Game',
+                        style: GoogleFonts.fredoka(
+                          color: AppTheme.goldPrimary,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ).animate().fadeIn(delay: 500.ms).slideY(),
                   ],
                 ),
@@ -98,11 +117,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
   Widget _buildConnectionStatus(MultiplayerState state) {
     final isConnected = state.status == MultiplayerStatus.inLobby;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
       decoration: BoxDecoration(
-        color: AppTheme.surface.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        gradient: AppTheme.cardGradient,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -114,7 +133,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
               color: isConnected ? AppTheme.accentGreen : AppTheme.accentRed,
               boxShadow: [
                 BoxShadow(
-                  color: (isConnected ? AppTheme.accentGreen : AppTheme.accentRed).withOpacity(0.5),
+                  color: (isConnected ? AppTheme.accentGreen : AppTheme.accentRed).withValues(alpha: 0.5),
                   blurRadius: 8,
                 ),
               ],
@@ -123,7 +142,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
           const SizedBox(width: 12),
           Text(
             isConnected ? 'Connected to Global Server' : 'Connecting...',
-            style: const TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.w600),
+            style: GoogleFonts.baloo2(
+              color: AppTheme.textSecondary,
+              fontWeight: FontWeight.w700,
+              fontSize: 17,
+            ),
           ),
         ],
       ),
@@ -160,7 +183,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
             decoration: BoxDecoration(
               gradient: isSelected ? AppTheme.cardGradient : null,
               color: isSelected ? null : AppTheme.surface,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(20),
               border: Border.all(
                 color: isSelected ? AppTheme.goldPrimary : Colors.transparent,
                 width: 2,
@@ -177,17 +200,18 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 const SizedBox(height: 8),
                 Text(
                   item['time'] as String,
-                  style: TextStyle(
+                  style: GoogleFonts.fredoka(
                     color: isSelected ? AppTheme.textPrimary : AppTheme.textSecondary,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 Text(
                   item['label'] as String,
-                  style: TextStyle(
+                  style: GoogleFonts.baloo2(
                     color: isSelected ? AppTheme.goldPrimary : AppTheme.textMuted,
-                    fontSize: 12,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ],
@@ -202,25 +226,32 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final isReady = state.status == MultiplayerStatus.inLobby;
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 18),
+        padding: const EdgeInsets.symmetric(vertical: 20),
         backgroundColor: AppTheme.goldPrimary,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
         elevation: 8,
-        shadowColor: AppTheme.goldPrimary.withOpacity(0.5),
+        shadowColor: AppTheme.goldPrimary.withValues(alpha: 0.5),
       ),
       onPressed: isReady ? () {
         context.read<MultiplayerBloc>().add(MpJoinMatchmakingEvent(timeControl: _selectedTime));
       } : null,
       child: isReady 
-        ? const Text('Find Match', style: TextStyle(
-            color: AppTheme.midnight, fontSize: 18, fontWeight: FontWeight.w800,
+        ? Text('Find Match', style: GoogleFonts.fredoka(
+            color: AppTheme.midnight, fontSize: 22, fontWeight: FontWeight.w800,
           ))
-        : const Row(
+        : Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.midnight)),
-              SizedBox(width: 12),
-              Text('Connecting...', style: TextStyle(color: AppTheme.midnight, fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.midnight)),
+              const SizedBox(width: 12),
+              Text(
+                'Connecting...',
+                style: GoogleFonts.fredoka(
+                  color: AppTheme.midnight,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ],
           ),
     );

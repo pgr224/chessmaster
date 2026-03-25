@@ -1,4 +1,4 @@
-enum GameMode { tutorial, singlePlayer, twoPlayer, multiplayer, tournament }
+enum GameMode { tutorial, singlePlayer, twoPlayer, multiplayer }
 enum AIDifficulty { basic, intermediate, advanced, impossible }
 
 class GameConfig {

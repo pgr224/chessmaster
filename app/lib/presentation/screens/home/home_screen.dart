@@ -70,14 +70,14 @@ class _HomeScreenState extends State<HomeScreen> {
                           delay: 160,
                         ),
                         _buildModeCard(
-                          emoji: '🏆',
-                          title: 'Tournament',
-                          subtitle: 'Win the championship!',
+                          emoji: '📰',
+                          title: 'Chess World',
+                          subtitle: 'News, events, and career tips!',
                           gradient: LinearGradient(
-                            colors: [AppTheme.goldDark, AppTheme.goldPrimary],
+                            colors: [const Color(0xFFFFD93D), const Color(0xFFFF8A5C)],
                           ),
-                          shadowColor: AppTheme.goldPrimary,
-                          onTap: () => context.push('/tournaments'),
+                          shadowColor: const Color(0xFFFFD93D),
+                          onTap: () => context.push('/chess_world'),
                           delay: 240,
                         ),
                         _buildModeCard(

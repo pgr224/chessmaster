@@ -552,7 +552,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     GameMode.singlePlayer => '🤖 VS ROBOT',
     GameMode.twoPlayer    => '👥 2 PLAYER',
     GameMode.multiplayer  => '🌍 ONLINE',
-    GameMode.tournament   => '🏆 TOURNAMENT',
   };
 
   Future<void> _showExitDialog(BuildContext context) async {
