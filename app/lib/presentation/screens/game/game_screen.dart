@@ -72,9 +72,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                 child: Column(
                   children: [
                     _buildTopBar(context, state),
-                    const SizedBox(height: 12),
-                    _buildOpponentInfo(state),
                     const SizedBox(height: 4),
+                    _buildOpponentInfo(state),
                     _buildCapturedPieces(state, PieceColor.black),
                     Expanded(
                       child: Center(
@@ -82,9 +81,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                       ),
                     ),
                     _buildCapturedPieces(state, PieceColor.white),
-                    const SizedBox(height: 4),
                     _buildPlayerInfo(state),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 6),
                     _buildActionBar(context, state),
                   ],
                 ),
@@ -93,12 +91,103 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               if (state.isGameOver) _buildGameOverOverlay(context, state),
               _buildConfetti(),
               if (state.status == GameStatus.check) _buildCheckAlert(state),
+              if (state.isPlayerTurn && !state.isGameOver) _buildTurnOverlay(state),
+              if (_showMoves) _buildMoveHistoryOverlay(state),
               if (state.tutorialMessage != null) _buildTutorialOverlay(state),
             ],
           ),
         );
       },
     );
+  }
+
+  Widget _buildMoveHistoryOverlay(GameState state) {
+    return Positioned.fill(
+      child: Stack(
+        children: [
+          GestureDetector(
+            onTap: () => setState(() => _showMoves = false),
+            child: Container(color: Colors.black.withValues(alpha: 0.2)),
+          ),
+          Positioned(
+            right: 16, top: 80, bottom: 120,
+            width: 200,
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.navyCard.withValues(alpha: 0.95),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: AppTheme.skyBlue.withValues(alpha: 0.3)),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 20, offset: const Offset(0, 8)),
+                ],
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.history_rounded, color: AppTheme.skyBlue, size: 20),
+                      const SizedBox(width: 8),
+                      Text('MOVES', style: GoogleFonts.fredoka(color: AppTheme.skyBlue, fontSize: 13, fontWeight: FontWeight.w700)),
+                      const Spacer(),
+                      _glassAction(icon: Icons.close_rounded, size: 24, onTap: () => setState(() => _showMoves = false)),
+                    ],
+                  ),
+                  const Divider(color: Colors.white10, height: 20),
+                  Expanded(child: MoveHistoryWidget(moves: state.moveHistory)),
+                ],
+              ),
+            ),
+          ).animate().slideX(begin: 1, duration: 300.ms, curve: Curves.easeOutCubic),
+        ],
+      ),
+    );
+  }
+
+  Widget _glassAction({required IconData icon, required double size, void Function()? onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.1), shape: BoxShape.circle),
+        child: Icon(icon, color: AppTheme.textPrimary, size: size - 8),
+      ),
+    );
+  }
+
+  Widget _buildTurnOverlay(GameState state) {
+    return Positioned(
+      bottom: 120,
+      left: 0, right: 0,
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          decoration: BoxDecoration(
+            gradient: AppTheme.goldGradient,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(color: AppTheme.goldPrimary.withValues(alpha: 0.3), blurRadius: 15, offset: const Offset(0, 5)),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.star_rounded, color: AppTheme.midnight, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'YOUR TURN!',
+                style: GoogleFonts.fredoka(
+                  color: AppTheme.midnight, fontSize: 14, fontWeight: FontWeight.w800,
+                  letterSpacing: 1.0,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ).animate(onPlay: (c) => c.repeat(reverse: true))
+        .scale(begin: const Offset(1, 1), end: const Offset(1.05, 1.05), duration: 800.ms)
+        .shimmer(delay: 2.seconds, duration: 1200.ms);
   }
 
   Widget _buildTutorialOverlay(GameState state) {
@@ -184,7 +273,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             ),
           ),
           const Spacer(),
-          // Undo button (offline only)
+          // Undo button
           if (state.mode != GameMode.multiplayer)
             _glassButton(
               icon: Icons.undo_rounded,
@@ -192,6 +281,12 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   ? () => context.read<GameBloc>().add(GameUndoEvent())
                   : null,
             ),
+          const SizedBox(width: 8),
+          // History button
+          _glassButton(
+            icon: Icons.history_rounded,
+            onTap: () => setState(() => _showMoves = true),
+          ),
         ],
       ),
     );
@@ -250,6 +345,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     return CapturedPiecesWidget(pieces: pieces, color: color);
   }
 
+  bool _showMoves = false;
+
   Widget _buildBoard(BuildContext context, GameState state) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -272,12 +369,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               isInteractive: !state.isAIThinking && state.isPlayerTurn,
             ),
           ),
-          const SizedBox(height: 12),
-          // Move history scroll
-          SizedBox(
-            height: 48,
-            child: MoveHistoryWidget(moves: state.moveHistory),
-          ),
         ],
       ),
     );
@@ -285,7 +376,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
   Widget _buildActionBar(BuildContext context, GameState state) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
       decoration: BoxDecoration(
         color: AppTheme.deepSpace.withValues(alpha: 0.9),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),

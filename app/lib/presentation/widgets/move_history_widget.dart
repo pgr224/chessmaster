@@ -5,7 +5,12 @@ import '../../../domain/engine/chess_engine.dart';
 
 class MoveHistoryWidget extends StatefulWidget {
   final List<Move> moves;
-  const MoveHistoryWidget({super.key, required this.moves});
+  final Axis scrollDirection;
+  const MoveHistoryWidget({
+    super.key,
+    required this.moves,
+    this.scrollDirection = Axis.vertical,
+  });
 
   @override
   State<MoveHistoryWidget> createState() => _MoveHistoryWidgetState();
@@ -34,7 +39,7 @@ class _MoveHistoryWidgetState extends State<MoveHistoryWidget> {
   Widget build(BuildContext context) {
     if (widget.moves.isEmpty) {
       return Center(
-        child: Text('⏰ Waiting for moves...', 
+        child: Text('Waiting for moves...', 
           style: GoogleFonts.baloo2(color: AppTheme.textMuted, fontSize: 13, fontWeight: FontWeight.w500)),
       );
     }
@@ -42,18 +47,22 @@ class _MoveHistoryWidgetState extends State<MoveHistoryWidget> {
     final moveCount = (widget.moves.length / 2).ceil();
     return ListView.builder(
       controller: _scrollController,
-      scrollDirection: Axis.horizontal,
+      scrollDirection: widget.scrollDirection,
       physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: widget.scrollDirection == Axis.horizontal 
+          ? const EdgeInsets.symmetric(horizontal: 16)
+          : const EdgeInsets.symmetric(vertical: 8),
       itemCount: moveCount,
       itemBuilder: (context, index) {
         final whiteMove = widget.moves.length > index * 2 ? widget.moves[index * 2] : null;
         final blackMove = widget.moves.length > index * 2 + 1 ? widget.moves[index * 2 + 1] : null;
 
-        return Center(
+        return Padding(
+          padding: widget.scrollDirection == Axis.horizontal
+              ? const EdgeInsets.only(right: 8)
+              : const EdgeInsets.only(bottom: 8),
           child: Container(
-            margin: const EdgeInsets.only(right: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
               color: AppTheme.surface.withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(14),
@@ -62,20 +71,25 @@ class _MoveHistoryWidgetState extends State<MoveHistoryWidget> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('${index + 1}.', style: GoogleFonts.fredoka(color: AppTheme.textMuted, fontSize: 12, fontWeight: FontWeight.w600)),
-                const SizedBox(width: 6),
+                SizedBox(
+                  width: 24,
+                  child: Text('${index + 1}.', style: GoogleFonts.fredoka(color: AppTheme.textMuted, fontSize: 11, fontWeight: FontWeight.w600)),
+                ),
+                const SizedBox(width: 4),
                 if (whiteMove != null)
-                  Text(
-                    whiteMove.algebraic ?? '?',
-                    style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 14, fontWeight: FontWeight.w700),
+                  Expanded(
+                    child: Text(
+                      whiteMove.algebraic ?? '?',
+                      style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 14, fontWeight: FontWeight.w700),
+                    ),
                   ),
-                if (blackMove != null) ...[
-                  const SizedBox(width: 8),
-                  Text(
-                    blackMove.algebraic ?? '?',
-                    style: GoogleFonts.fredoka(color: AppTheme.textSecondary, fontSize: 14, fontWeight: FontWeight.w600),
+                if (blackMove != null)
+                  Expanded(
+                    child: Text(
+                      blackMove.algebraic ?? '?',
+                      style: GoogleFonts.fredoka(color: AppTheme.textSecondary, fontSize: 14, fontWeight: FontWeight.w600),
+                    ),
                   ),
-                ],
               ],
             ),
           ),
