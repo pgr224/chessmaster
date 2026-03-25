@@ -254,20 +254,23 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          ChessBoardWidget(
-            board: state.board,
-            perspective: state.playerColor ?? PieceColor.white,
-            selectedSquare: state.selectedSquare,
-            legalMoves: state.legalMoves,
-            lastMove: state.moveHistory.isNotEmpty ? state.moveHistory.last : null,
-            hintMove: state.hintMove,
-            status: state.status,
-            boardTheme: state.boardTheme ?? 'classic',
-            onSquareTap: state.isGameOver ? null : (sq) {
-              context.read<GameBloc>().add(GameSelectPieceEvent(sq));
-            },
-            isInteractive: !state.isAIThinking && state.isPlayerTurn,
+          Expanded(
+            child: ChessBoardWidget(
+              board: state.board,
+              perspective: state.playerColor ?? PieceColor.white,
+              selectedSquare: state.selectedSquare,
+              legalMoves: state.legalMoves,
+              lastMove: state.moveHistory.isNotEmpty ? state.moveHistory.last : null,
+              hintMove: state.hintMove,
+              status: state.status,
+              boardTheme: state.boardTheme ?? 'classic',
+              onSquareTap: state.isGameOver ? null : (sq) {
+                context.read<GameBloc>().add(GameSelectPieceEvent(sq));
+              },
+              isInteractive: !state.isAIThinking && state.isPlayerTurn,
+            ),
           ),
           const SizedBox(height: 12),
           // Move history scroll

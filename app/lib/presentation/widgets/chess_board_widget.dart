@@ -62,35 +62,42 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget>
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final size = constraints.maxWidth < constraints.maxHeight 
-            ? constraints.maxWidth 
-            : constraints.maxHeight;
-        final sqSize = size / 8;
-        return Container(
-          width: size,
-          height: size,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.5),
-                  blurRadius: 24,
-                  offset: const Offset(0, 12),
-                ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Stack(
-                children: [
-                  _buildBoardGrid(sqSize),
-                  _buildHighlights(sqSize),
-                  _buildPieces(sqSize),
-                  if (widget.showCoordinates) _buildCoordinates(sqSize),
-                  if (widget.isInteractive) _buildTapOverlay(sqSize),
+    return Center(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final size = constraints.maxWidth < constraints.maxHeight
+              ? constraints.maxWidth
+              : constraints.maxHeight;
+          final sqSize = size / 8;
+          
+          return SizedBox(
+            width: size,
+            height: size,
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.5),
+                    blurRadius: 24,
+                    offset: const Offset(0, 12),
+                  ),
                 ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: AspectRatio(
+                  aspectRatio: 1.0,
+                  child: Stack(
+                    children: [
+                      _buildBoardGrid(sqSize),
+                      _buildHighlights(sqSize),
+                      _buildPieces(sqSize),
+                      if (widget.showCoordinates) _buildCoordinates(sqSize),
+                      if (widget.isInteractive) _buildTapOverlay(sqSize),
+                    ],
+                  ),
+                ),
               ),
             ),
           );
@@ -100,16 +107,21 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget>
   }
 
   Widget _buildBoardGrid(double sqSize) {
-    return GridView.builder(
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 8),
-      itemCount: 64,
-      itemBuilder: (context, index) {
-        final file = index % 8;
-        final rank = 7 - (index ~/ 8);
-        final isLight = (file + rank) % 2 == 1;
-        return _squareColor(isLight, widget.boardTheme);
-      },
+    return Column(
+      children: List.generate(8, (r) {
+        final rank = 7 - r;
+        return Row(
+          children: List.generate(8, (f) {
+            final file = f;
+            final isLight = (file + rank) % 2 == 1;
+            return SizedBox(
+              width: sqSize,
+              height: sqSize,
+              child: _squareColor(isLight, widget.boardTheme),
+            );
+          }),
+        );
+      }),
     );
   }
 
@@ -306,22 +318,26 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget>
   }
 
   Widget _buildTapOverlay(double sqSize) {
-    return GridView.builder(
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 8),
-      itemCount: 64,
-      itemBuilder: (context, index) {
-        final file = index % 8;
-        final rank = 7 - index ~/ 8;
-        final sq = widget.perspective == PieceColor.white
-            ? Square(file, rank)
-            : Square(7 - file, 7 - rank);
-        return GestureDetector(
-          onTap: () => widget.onSquareTap?.call(sq),
-          behavior: HitTestBehavior.translucent,
-          child: const SizedBox.expand(),
+    return Column(
+      children: List.generate(8, (r) {
+        final displayRank = r;
+        return Row(
+          children: List.generate(8, (f) {
+            final displayFile = f;
+            final sq = widget.perspective == PieceColor.white
+                ? Square(displayFile, 7 - displayRank)
+                : Square(7 - displayFile, displayRank);
+            return GestureDetector(
+              onTap: () => widget.onSquareTap?.call(sq),
+              behavior: HitTestBehavior.translucent,
+              child: SizedBox(
+                width: sqSize,
+                height: sqSize,
+              ),
+            );
+          }),
         );
-      },
+      }),
     );
   }
 

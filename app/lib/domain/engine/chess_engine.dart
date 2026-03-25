@@ -21,12 +21,12 @@ class ChessPiece {
 
   String get symbol {
     final symbols = {
-      PieceType.pawn: color == PieceColor.white ? 'P' : 'p',
-      PieceType.rook: color == PieceColor.white ? 'R' : 'r',
-      PieceType.knight: color == PieceColor.white ? 'N' : 'n',
-      PieceType.bishop: color == PieceColor.white ? 'B' : 'b',
-      PieceType.queen: color == PieceColor.white ? 'Q' : 'q',
-      PieceType.king: color == PieceColor.white ? 'K' : 'k',
+      PieceType.pawn: color == PieceColor.white ? '♙' : '♟',
+      PieceType.rook: color == PieceColor.white ? '♖' : '♜',
+      PieceType.knight: color == PieceColor.white ? '♘' : '♞',
+      PieceType.bishop: color == PieceColor.white ? '♗' : '♝',
+      PieceType.queen: color == PieceColor.white ? '♕' : '♛',
+      PieceType.king: color == PieceColor.white ? '♔' : '♚',
     };
     return symbols[type]!;
   }
