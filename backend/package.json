@@ -6,15 +6,18 @@
   "scripts": {
     "dev": "wrangler dev --env development",
     "deploy": "wrangler deploy",
+    "deploy:staging": "wrangler deploy --env staging",
     "deploy:dev": "wrangler deploy --env development",
     "build": "tsc --noEmit",
     "db:create": "wrangler d1 create chessmaster",
     "db:migrate": "wrangler d1 execute chessmaster --local --file=./schema/d1-schema.sql",
     "db:migrate:remote": "wrangler d1 execute chessmaster --remote --file=./schema/d1-schema.sql",
+    "db:migrate:staging": "wrangler d1 execute chessmaster --env staging --remote --file=./schema/d1-schema.sql",
     "db:seed": "wrangler d1 execute chessmaster --local --file=./schema/seed.sql",
     "kv:create": "wrangler kv:namespace create CHESS_KV",
     "tail": "wrangler tail",
     "secret:jwt": "wrangler secret put JWT_SECRET",
+    "secret:jwt:staging": "wrangler secret put JWT_SECRET --env staging",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {

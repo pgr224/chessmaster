@@ -52,6 +52,26 @@ database_name = "chess-master-db-dev"
 database_id = "YOUR_DEV_D1_DATABASE_ID"
 
 # ════════════════════════════════════
+# STAGING ENVIRONMENT
+# ════════════════════════════════════
+[env.staging]
+name = "chess-master-api-staging"
+vars = { ENVIRONMENT = "staging", JWT_SECRET = "staging-secret-2026" }
+
+[[env.staging.d1_databases]]
+binding = "DB"
+database_name = "chess-master-db-staging"
+database_id = "YOUR_STAGING_D1_DATABASE_ID"
+
+[[env.staging.kv_namespaces]]
+binding = "CHESS_KV"
+id = "YOUR_STAGING_KV_NAMESPACE_ID"
+
+[[env.staging.durable_objects.bindings]]
+name = "GAME_ROOM"
+class_name = "GameRoom"
+
+# ════════════════════════════════════
 # BUILD SETTINGS
 # ════════════════════════════════════
 [build]

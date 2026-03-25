@@ -199,6 +199,10 @@ class ChessEngine {
         m.promotion == move.promotion).firstOrNull;
     if (legalMove == null) return false;
 
+    // Generate algebraic representation for the UI
+    final piece = pieceAt(legalMove.from)!;
+    legalMove.algebraic = _buildAlgebraic(legalMove, piece);
+
     _applyMove(legalMove);
     _updateStatus();
     return true;
@@ -405,7 +409,7 @@ class ChessEngine {
   // ═══════════════════════════════════════════
   // MOVE APPLICATION
   // ═══════════════════════════════════════════
-  void _applyMove(Move move) {
+  void applyMoveInternal(Move move) {
     final piece = _board[move.from.rank][move.from.file]!;
     
     // Capture state for unmaking
@@ -435,10 +439,6 @@ class ChessEngine {
       _board[captureRank][move.to.file] = null;
     }
 
-    // Capture the piece being taken
-    // (Already in capturedPiece from pseudo-legal gen, but just in case)
-    // Actually we trust move.capturedPiece from generation
-
     // Promotion
     final movedPiece = move.promotion != null
         ? ChessPiece(type: move.promotion!, color: piece.color, hasMoved: true)
@@ -466,9 +466,6 @@ class ChessEngine {
 
     _moveHistory.add(move);
     _currentTurn = _opponent(_currentTurn);
-    
-    // Position history is for repetition detection in real games
-    // We can avoid this during alpha-beta search if necessary
     _positionHistory.add(toFEN());
   }
 
