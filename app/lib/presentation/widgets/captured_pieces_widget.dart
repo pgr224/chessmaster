@@ -42,9 +42,8 @@ class CapturedPiecesWidget extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   ...sorted.take(12).map((p) => Text(
-                    p.symbol,
+                    p.unicodeSymbol,
                     style: TextStyle(
-                      fontFamily: 'ChessMerida',
                       fontSize: 18,
                       color: color == PieceColor.white ? Colors.white : AppTheme.textPrimary.withValues(alpha: 0.9),
                       shadows: const [Shadow(

@@ -31,6 +31,18 @@ class ChessPiece {
     return symbols[type]!;
   }
 
+  String get unicodeSymbol {
+    final symbols = {
+      PieceType.pawn: color == PieceColor.white ? '♙' : '♟',
+      PieceType.rook: color == PieceColor.white ? '♖' : '♜',
+      PieceType.knight: color == PieceColor.white ? '♘' : '♞',
+      PieceType.bishop: color == PieceColor.white ? '♗' : '♝',
+      PieceType.queen: color == PieceColor.white ? '♕' : '♛',
+      PieceType.king: color == PieceColor.white ? '♔' : '♚',
+    };
+    return symbols[type]!;
+  }
+
   String toFEN() {
     final chars = {
       PieceType.pawn: 'p', PieceType.rook: 'r', PieceType.knight: 'n',

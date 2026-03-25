@@ -11,6 +11,7 @@ class AuthRepository {
   static const _tokenKey = 'auth_token';
   static const _userKey = 'user_data';
   static const _deviceIdKey = 'device_id';
+  static final RegExp _usernamePattern = RegExp(r'^[a-zA-Z0-9_]{2,30}$');
 
   AuthRepository(this._dio);
 
@@ -60,21 +61,30 @@ class AuthRepository {
   }
 
   Future<UserModel> register({required String username, String? avatarPath}) async {
+    final normalizedUsername = _normalizeUsername(username);
+    if (!_usernamePattern.hasMatch(normalizedUsername)) {
+      throw Exception('Username must be 2-30 characters and use only letters, numbers, or underscore.');
+    }
+
     final deviceId = await getDeviceId();
 
     final response = await _dio.post(
       '/api/auth/register',
-      data: {'username': username, 'deviceId': deviceId},
+      data: {'username': normalizedUsername, 'deviceId': deviceId},
       options: Options(validateStatus: (status) {
         if (status == null) return false;
-        return status >= 200 && status < 300 || status == 409;
+        return status >= 200 && status < 500;
       }),
     );
+
+    if (response.statusCode == 400) {
+      throw Exception(_extractValidationMessage(response.data));
+    }
 
     if (response.statusCode == 409) {
       final recovered = await _recoverFromRegisterConflict(
         responseData: response.data,
-        fallbackUsername: username,
+        fallbackUsername: normalizedUsername,
         deviceId: deviceId,
       );
       if (recovered != null) return recovered;
@@ -96,7 +106,7 @@ class AuthRepository {
     final profile = _resolveRegisteredUser(
       responseData: response.data as Map<String, dynamic>,
       userId: userId,
-      fallbackUsername: username,
+      fallbackUsername: normalizedUsername,
       deviceId: deviceId,
     );
 
@@ -147,6 +157,35 @@ class AuthRepository {
       }
     }
     return 'Account already exists for this device or username. Please use a different username or continue with your existing account.';
+  }
+
+  String _extractValidationMessage(dynamic responseData) {
+    if (responseData is Map<String, dynamic>) {
+      final details = responseData['details'];
+      if (details is Map<String, dynamic>) {
+        final fieldErrors = details['fieldErrors'];
+        if (fieldErrors is Map<String, dynamic>) {
+          final usernameErrors = fieldErrors['username'];
+          if (usernameErrors is List && usernameErrors.isNotEmpty && usernameErrors.first is String) {
+            return usernameErrors.first as String;
+          }
+        }
+      }
+
+      final candidates = [responseData['message'], responseData['error'], responseData['detail']];
+      for (final value in candidates) {
+        if (value is String && value.trim().isNotEmpty) {
+          return value.trim();
+        }
+      }
+    }
+    return 'Invalid registration data. Use 2-30 characters with letters, numbers, or underscore.';
+  }
+
+  String _normalizeUsername(String username) {
+    final trimmed = username.trim();
+    final underscored = trimmed.replaceAll(RegExp(r'\s+'), '_');
+    return underscored.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '');
   }
 
   Future<UserModel> updateProfile({

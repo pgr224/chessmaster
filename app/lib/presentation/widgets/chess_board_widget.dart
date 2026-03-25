@@ -356,9 +356,8 @@ class _PieceWidget extends StatelessWidget {
   Widget _buildPieceVisual() {
     final isWhite = piece.color == PieceColor.white;
     return Text(
-      piece.symbol,
+      piece.unicodeSymbol,
       style: TextStyle(
-        fontFamily: 'ChessMerida',
         fontSize: size * 0.85,
         color: isWhite ? Colors.white : Colors.black, // Ensure good contrast
         shadows: [

@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -16,6 +17,7 @@ class OnboardingScreen extends StatefulWidget {
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
+  static final RegExp _usernamePattern = RegExp(r'^[a-zA-Z0-9_]{2,30}$');
   final _pageController = PageController();
   final _usernameController = TextEditingController();
   final Random _random = Random();
@@ -285,11 +287,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           if (isLast) ...[
             TextField(
               controller: _usernameController,
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9_]')),
+                LengthLimitingTextInputFormatter(30),
+              ],
               style: GoogleFonts.baloo2(color: AppTheme.textPrimary, fontSize: 18),
               decoration: InputDecoration(
                 labelText: '🎮 Pick your player name!',
                 labelStyle: GoogleFonts.fredoka(color: AppTheme.textSecondary, fontSize: 16),
-                hintText: 'SuperChessKid...',
+                hintText: 'SuperChessKid_01',
                 hintStyle: GoogleFonts.baloo2(color: AppTheme.textMuted),
                 prefixIcon: const Icon(Icons.person_rounded, color: AppTheme.goldPrimary, size: 28),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(20)),
@@ -347,10 +353,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   void _register() {
     final username = _usernameController.text.trim();
-    if (username.length < 2) {
+    if (!_usernamePattern.hasMatch(username)) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Username must be at least 2 characters 😊', style: GoogleFonts.baloo2()),
+          content: Text(
+            'Use 2-30 characters: letters, numbers, or underscore 😊',
+            style: GoogleFonts.baloo2(),
+          ),
         ),
       );
       return;
@@ -372,10 +381,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   String _buildUsernameSuggestion(String currentUsername) {
-    final cleaned = currentUsername.replaceAll(RegExp(r'\s+'), '');
+    final cleaned = currentUsername
+        .trim()
+        .replaceAll(RegExp(r'\s+'), '_')
+        .replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '');
     final base = cleaned.isEmpty ? 'ChessPlayer' : cleaned.replaceAll(RegExp(r'\d+$'), '');
     final suffix = 100 + _random.nextInt(900);
-    return '$base$suffix';
+    final candidate = '$base$suffix';
+    return candidate.length > 30 ? candidate.substring(0, 30) : candidate;
   }
 
   @override
