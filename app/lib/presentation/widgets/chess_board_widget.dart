@@ -393,6 +393,32 @@ class _PieceWidget extends StatelessWidget {
     );
   }
 
+  Widget _buildLetterPiece(bool isWhite, Color color) {
+    return Center(
+      child: Text(
+        piece.symbol.toUpperCase(),
+        style: GoogleFonts.jura(
+          fontSize: size * 0.7,
+          fontWeight: FontWeight.bold,
+          color: color,
+        ),
+      ),
+    );
+  }
+
+  Widget _build8BitPiece(bool isWhite, Color color) {
+    return Center(
+      child: Text(
+        piece.symbol.toUpperCase(),
+        style: GoogleFonts.vt323(
+          fontSize: size * 0.5,
+          color: color,
+        ),
+      ),
+    );
+  }
+}
+
 class _ObjectPiece extends StatelessWidget {
   final ChessPiece piece;
   final String theme;
@@ -437,7 +463,6 @@ class _ObjectPiecePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final w = size.width;
     final h = size.height;
-    final center = Offset(w / 2, h / 2);
 
     // 1. Shadow
     final shadowPaint = Paint()
