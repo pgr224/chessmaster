@@ -231,7 +231,10 @@ class _MainScaffoldState extends State<MainScaffold> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF0A0E27),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24), border: Border.all(color: const Color(0xFFD4AF37).withValues(alpha: 0.3))),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: BorderSide(color: const Color(0xFFD4AF37).withValues(alpha: 0.3)),
+        ),
         title: Text('Quit Game?', style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold)),
         content: Text('Are you sure you want to exit Chess Master?', style: GoogleFonts.baloo2(color: Colors.white70)),
         actions: [
