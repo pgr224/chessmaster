@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/router/app_router.dart';
+import '../../blocs/auth/auth_bloc.dart';
 import '../../blocs/game/game_bloc.dart';
 import '../../blocs/multiplayer/multiplayer_bloc.dart';
 import '../../blocs/theme/theme_bloc.dart';
@@ -18,19 +19,17 @@ class GameRoomScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocConsumer<MultiplayerBloc, MultiplayerState>(
       listenWhen: (prev, current) => 
-          prev.opponentLeft != current.opponentLeft || 
           prev.status != current.status ||
-          prev.gameEndCause != current.gameEndCause,
+          prev.gameReason != current.gameReason,
       listener: (context, mpState) {
-        if (mpState.opponentLeft) {
-          final cause = _friendlyCause(mpState.gameEndCause);
+        if (mpState.gameReason == 'disconnect_timeout') {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Opponent left: $cause')),
+            const SnackBar(content: Text('Opponent left: disconnect timeout')),
           );
         }
-        if (mpState.status == MultiplayerStatus.gameOver && mpState.gameEndCause != null) {
+        if (mpState.status == MultiplayerStatus.gameOver && mpState.gameReason != null) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Match ended: ${_friendlyCause(mpState.gameEndCause)}')),
+            SnackBar(content: Text('Match ended: ${_friendlyCause(mpState.gameReason)}')),
           );
         }
         if (mpState.status == MultiplayerStatus.disconnected) {
@@ -54,14 +53,13 @@ class GameRoomScreen extends StatelessWidget {
             // Sync Multiplayer -> Game (Opponent made a move)
             BlocListener<MultiplayerBloc, MultiplayerState>(
               listenWhen: (prev, current) => 
-                prev.lastOpponentMove != current.lastOpponentMove && 
-                current.lastOpponentMove != null,
+                (prev.lastMoveFrom != current.lastMoveFrom || prev.lastMoveTo != current.lastMoveTo) && 
+                current.lastMoveFrom != null,
               listener: (context, state) {
-                final move = state.lastOpponentMove!;
                 context.read<GameBloc>().add(GameMakeMoveEvent(
-                  Square.fromString(move.from),
-                  Square.fromString(move.to),
-                  promotion: move.promotion != null ? PieceType.values.byName(move.promotion!) : null,
+                  Square.fromString(state.lastMoveFrom!),
+                  Square.fromString(state.lastMoveTo!),
+                  promotion: state.lastMovePromotion != null ? PieceType.values.byName(state.lastMovePromotion!) : null,
                 ));
               },
             ),

@@ -22,12 +22,12 @@ async function loadStockfish() {
   if (stockfishEngine) return;
 
   try {
-    // Try loading the official Stockfish WASM module
-    // The stockfish.js file should export a factory function
-    importScripts('stockfish.js');
+    // Load Stockfish WASM from CDN for better reliability in web version
+    // Using cdnjs for a stable v10.0.2 build
+    importScripts('https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js');
 
     if (typeof Stockfish === 'function') {
-      stockfishEngine = await Stockfish();
+      stockfishEngine = Stockfish();
     } else if (typeof INIT_ENGINE === 'function') {
       stockfishEngine = await INIT_ENGINE();
     } else {

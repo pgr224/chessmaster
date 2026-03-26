@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../../data/models/multiplayer_models.dart';
 import '../../../core/theme/app_theme.dart';
-import 'package:chess_master/presentation/blocs/multiplayer/multiplayer_bloc.dart';
+import '../blocs/multiplayer/multiplayer_bloc.dart';
 
 class ChatWidget extends StatefulWidget {
   final List<ChatMessage> messages;

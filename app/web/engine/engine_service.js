@@ -29,7 +29,7 @@
   // Timeout config per engine (ms)
   const TIMEOUT_CONFIG = {
     [ENGINE_SUNFISH]: 3000,
-    [ENGINE_STOCKFISH]: 8000,
+    [ENGINE_STOCKFISH]: 15000,
   };
 
   // ═══════════════════════════════════════

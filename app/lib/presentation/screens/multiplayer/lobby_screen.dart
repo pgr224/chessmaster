@@ -22,7 +22,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
     super.initState();
     final authState = context.read<AuthBloc>().state;
     if (authState is AuthAuthenticatedState) {
-      context.read<MultiplayerBloc>().add(MpConnectEvent(authState.user.id));
+      context.read<MultiplayerBloc>().add(MpConnectLobbyEvent(
+        authState.user.id,
+        authState.user.username,
+        rating: authState.user.xp,
+      ));
     }
   }
 
@@ -57,7 +61,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
             leading: IconButton(
               icon: const Icon(Icons.arrow_back_rounded, color: AppTheme.textPrimary),
               onPressed: () {
-                context.read<MultiplayerBloc>().add(MpDisconnectEvent());
+                context.read<MultiplayerBloc>().add(MpDisconnectLobbyEvent());
                 context.pop();
               },
             ),
@@ -679,7 +683,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
         shadowColor: AppTheme.goldPrimary.withValues(alpha: 0.5),
       ),
       onPressed: isReady ? () {
-        context.read<MultiplayerBloc>().add(MpJoinMatchmakingEvent(timeControl: _selectedTime));
+        context.read<MultiplayerBloc>().add(MpStartMatchmakingEvent());
       } : null,
       child: isReady 
         ? Text('Find Match', style: GoogleFonts.fredoka(

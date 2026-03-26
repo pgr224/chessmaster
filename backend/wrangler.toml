@@ -25,9 +25,17 @@ id = "d7635832617b44f1a966216c2126085f"  # Replace after: wrangler kv:namespace 
 name = "GAME_ROOM"
 class_name = "GameRoom"
 
+[[durable_objects.bindings]]
+name = "LOBBY"
+class_name = "Lobby"
+
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["GameRoom"]
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["Lobby"]
 
 # ════════════════════════════════════
 # ENVIRONMENT VARIABLES
