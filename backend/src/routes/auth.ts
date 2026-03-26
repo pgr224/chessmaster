@@ -20,6 +20,18 @@ const LoginSchema = z.object({
   deviceId: z.string(),
 })
 
+// Check if username is already taken
+auth.get('/check-username', async (c) => {
+  const username = c.req.query('username')
+  if (!username) return c.json({ error: 'Username required' }, 400)
+  
+  const existing = await c.env.DB.prepare(
+    'SELECT id FROM users WHERE username = ?'
+  ).bind(username).first()
+  
+  return c.json({ available: !existing })
+})
+
 // ────────────────────────────────────────
 // REGISTER (Device Binding)
 // ────────────────────────────────────────

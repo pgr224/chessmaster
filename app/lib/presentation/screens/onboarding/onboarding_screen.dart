@@ -89,38 +89,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             );
           }
 
-          if (isConflict && !_hasRetriedSuggestedUsername && suggestedUsername != null) {
-            _hasRetriedSuggestedUsername = true;
-
-            if (_currentPage != _pages.length - 1) {
-              _pageController.animateToPage(
-                _pages.length - 1,
-                duration: 300.ms,
-                curve: Curves.easeInOut,
-              );
-            }
-
-            setState(() {
-              _isLoading = true;
-              _usernameErrorText = 'Username was taken. Trying "$suggestedUsername" instead...';
-            });
-
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  'Username was taken. Trying "$suggestedUsername" instead.',
-                  style: GoogleFonts.baloo2(),
-                ),
-              ),
-            );
-
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (!mounted) return;
-              context.read<AuthBloc>().add(AuthRegisterEvent(username: suggestedUsername!));
-            });
-            return;
-          }
-
           setState(() {
             _isLoading = false;
             _usernameErrorText = isConflict

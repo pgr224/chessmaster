@@ -6,12 +6,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:dio/dio.dart';
 import '../models/user_model.dart';
 
+import 'package:uuid/uuid.dart';
+
 class AuthRepository {
   final Dio _dio;
   static const _tokenKey = 'auth_token';
   static const _userKey = 'user_data';
   static const _deviceIdKey = 'device_id';
   static final RegExp _usernamePattern = RegExp(r'^[a-zA-Z0-9_]{2,30}$');
+  final _uuid = const Uuid();
 
   AuthRepository(this._dio);
 
@@ -28,7 +31,7 @@ class AuthRepository {
     String rawId;
 
     if (kIsWeb) {
-      rawId = 'web_${DateTime.now().millisecondsSinceEpoch}';
+      rawId = 'web_${_uuid.v4()}';
     } else if (defaultTargetPlatform == TargetPlatform.android) {
       final android = await info.androidInfo;
       rawId = '${android.id}:${android.model}:${android.brand}';
@@ -36,7 +39,7 @@ class AuthRepository {
       final ios = await info.iosInfo;
       rawId = ios.identifierForVendor ?? '${ios.model}:${ios.systemVersion}';
     } else {
-      rawId = 'desktop_${DateTime.now().millisecondsSinceEpoch}';
+      rawId = 'desktop_${_uuid.v4()}';
     }
 
     // Hash the raw ID for privacy
@@ -45,11 +48,22 @@ class AuthRepository {
     return hash;
   }
 
-  Future<UserModel?> getCurrentUser() async {
+  Future<UserModel?> getCurrentUser({bool forceRefresh = false}) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString(_tokenKey);
-    final userData = prefs.getString(_userKey);
     
+    // Even if we have a token, if we want to refresh or if we only have deviceId, 
+    // try to silent login to get latest user data
+    if (token == null || forceRefresh) {
+      try {
+        final user = await login();
+        return user;
+      } catch (_) {
+        if (!forceRefresh) return null;
+      }
+    }
+
+    final userData = prefs.getString(_userKey);
     if (token == null || userData == null) return null;
     
     try {
@@ -58,6 +72,33 @@ class AuthRepository {
     } catch (_) {
       return null;
     }
+  }
+
+  Future<UserModel> login() async {
+    final deviceId = await getDeviceId();
+    final response = await _dio.post(
+      '/api/auth/login',
+      data: {'deviceId': deviceId},
+    );
+
+    final rawToken = (response.data['token'] ?? response.data['accessToken']) as String;
+    final token = _normalizeToken(rawToken);
+    final userId = response.data['userId'] as String;
+
+    _dio.options.headers['Authorization'] = 'Bearer $token';
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_tokenKey, token);
+
+    final profile = _resolveRegisteredUser(
+      responseData: response.data as Map<String, dynamic>,
+      userId: userId,
+      fallbackUsername: (response.data['username'] ?? 'User') as String,
+      deviceId: deviceId,
+    );
+
+    await prefs.setString(_userKey, jsonEncode(profile.toJson()));
+    return profile;
   }
 
   Future<UserModel> register({required String username, String? avatarPath}) async {

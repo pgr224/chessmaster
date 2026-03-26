@@ -101,6 +101,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         onChanged: (v) => context.read<SettingsBloc>().add(SettingsShowCoordinatesEvent(v)),
                       ),
                       _switchTile(
+                        title: 'Show Square Labels',
+                        subtitle: 'Display notation (e.g. e4) inside each square',
+                        value: settings.showSquareLabels,
+                        onChanged: (v) => context.read<SettingsBloc>().add(SettingsShowSquareLabelsEvent(v)),
+                      ),
+                      _switchTile(
                         title: 'Show Legal Move Dots',
                         subtitle: 'Display target hints for selected pieces',
                         value: settings.showLegalMoves,

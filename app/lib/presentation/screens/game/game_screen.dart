@@ -485,6 +485,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         pieceTheme: state.pieceTheme,
         moveAnimationSpeed: settings.moveAnimationSpeed,
         showCoordinates: settings.showCoordinates,
+        showSquareLabels: settings.showSquareLabels,
         whitePieceColor: state.whitePieceColor,
         blackPieceColor: state.blackPieceColor,
         onSquareTap: state.isGameOver

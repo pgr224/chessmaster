@@ -19,6 +19,7 @@ class ChessBoardWidget extends StatefulWidget {
   final String pieceTheme;
   final String moveAnimationSpeed;
   final bool showCoordinates;
+  final bool showSquareLabels;
   final Color whitePieceColor;
   final Color blackPieceColor;
   final Function(Square)? onSquareTap;
@@ -38,6 +39,7 @@ class ChessBoardWidget extends StatefulWidget {
     this.pieceTheme = 'classic',
     this.moveAnimationSpeed = 'normal',
     this.showCoordinates = true,
+    this.showSquareLabels = false,
     this.whitePieceColor = Colors.white,
     this.blackPieceColor = Colors.black,
     this.onSquareTap,
@@ -80,6 +82,7 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
                     children: [
                       _buildBoardGrid(sqSize),
                       _buildHighlights(sqSize),
+                      if (widget.showSquareLabels) _buildSquareLabels(sqSize),
                       _buildPieces(sqSize),
                       if (widget.showCoordinates) _buildCoordinates(sqSize),
                       if (widget.isInteractive) _buildTapOverlay(sqSize),
@@ -315,6 +318,45 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
           );
         }),
       ],
+    );
+  }
+
+  Widget _buildSquareLabels(double sqSize) {
+    final themeData = AppTheme.boardThemes[widget.boardTheme] ?? AppTheme.boardThemes['classic']!;
+    final notationColor = themeData.notation.withValues(alpha: 0.35); // Subtle
+
+    return Stack(
+      children: List.generate(64, (index) {
+        final r = index ~/ 8;
+        final f = index % 8;
+        final rank = 7 - r;
+        final file = f;
+        
+        // Logical coordinates based on perspective
+        int displayFile, displayRank;
+        if (widget.perspective == PieceColor.white) {
+          displayFile = file;
+          displayRank = r;
+        } else {
+          displayFile = 7 - file;
+          displayRank = 7 - r;
+        }
+
+        final label = '${String.fromCharCode(97 + file)}${rank + 1}';
+        
+        return Positioned(
+          left: displayFile * sqSize + 2,
+          top: displayRank * sqSize + 2,
+          child: Text(
+            label,
+            style: GoogleFonts.jura(
+              fontSize: sqSize * 0.14,
+              fontWeight: FontWeight.bold,
+              color: notationColor,
+            ),
+          ),
+        );
+      }),
     );
   }
 

@@ -11,6 +11,7 @@ class SettingsSoundEvent extends SettingsEvent { final bool enabled; const Setti
 class SettingsVibrationEvent extends SettingsEvent { final bool enabled; const SettingsVibrationEvent(this.enabled); @override List<Object?> get props => [enabled]; }
 class SettingsNotificationsEvent extends SettingsEvent { final bool enabled; const SettingsNotificationsEvent(this.enabled); @override List<Object?> get props => [enabled]; }
 class SettingsShowCoordinatesEvent extends SettingsEvent { final bool enabled; const SettingsShowCoordinatesEvent(this.enabled); @override List<Object?> get props => [enabled]; }
+class SettingsShowSquareLabelsEvent extends SettingsEvent { final bool enabled; const SettingsShowSquareLabelsEvent(this.enabled); @override List<Object?> get props => [enabled]; }
 class SettingsShowLegalMovesEvent extends SettingsEvent { final bool enabled; const SettingsShowLegalMovesEvent(this.enabled); @override List<Object?> get props => [enabled]; }
 class SettingsAutoFlipBoardEvent extends SettingsEvent { final bool enabled; const SettingsAutoFlipBoardEvent(this.enabled); @override List<Object?> get props => [enabled]; }
 class SettingsMoveAnimationSpeedEvent extends SettingsEvent {
@@ -27,6 +28,7 @@ class SettingsState extends Equatable {
   final bool vibrationEnabled;
   final bool notificationsEnabled;
   final bool showCoordinates;
+  final bool showSquareLabels;
   final bool showLegalMoves;
   final bool autoFlipBoard;
   final String moveAnimationSpeed;
@@ -40,6 +42,7 @@ class SettingsState extends Equatable {
     this.vibrationEnabled = true,
     this.notificationsEnabled = true,
     this.showCoordinates = true,
+    this.showSquareLabels = false,
     this.showLegalMoves = true,
     this.autoFlipBoard = false,
     this.moveAnimationSpeed = 'normal',
@@ -54,6 +57,7 @@ class SettingsState extends Equatable {
     bool? vibrationEnabled,
     bool? notificationsEnabled,
     bool? showCoordinates,
+    bool? showSquareLabels,
     bool? showLegalMoves,
     bool? autoFlipBoard,
     String? moveAnimationSpeed,
@@ -67,6 +71,7 @@ class SettingsState extends Equatable {
         vibrationEnabled: vibrationEnabled ?? this.vibrationEnabled,
         notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
         showCoordinates: showCoordinates ?? this.showCoordinates,
+        showSquareLabels: showSquareLabels ?? this.showSquareLabels,
         showLegalMoves: showLegalMoves ?? this.showLegalMoves,
         autoFlipBoard: autoFlipBoard ?? this.autoFlipBoard,
         moveAnimationSpeed: moveAnimationSpeed ?? this.moveAnimationSpeed,
@@ -109,6 +114,10 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
       (await SharedPreferences.getInstance()).setBool('show_coordinates', e.enabled);
       emit(state.copyWith(showCoordinates: e.enabled));
     });
+    on<SettingsShowSquareLabelsEvent>((e, emit) async {
+      (await SharedPreferences.getInstance()).setBool('show_square_labels', e.enabled);
+      emit(state.copyWith(showSquareLabels: e.enabled));
+    });
     on<SettingsShowLegalMovesEvent>((e, emit) async {
       (await SharedPreferences.getInstance()).setBool('show_legal_moves', e.enabled);
       emit(state.copyWith(showLegalMoves: e.enabled));
@@ -143,6 +152,7 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
       vibrationEnabled: prefs.getBool('vibration') ?? true,
       notificationsEnabled: prefs.getBool('notifications') ?? true,
       showCoordinates: prefs.getBool('show_coordinates') ?? true,
+      showSquareLabels: prefs.getBool('show_square_labels') ?? false,
       showLegalMoves: prefs.getBool('show_legal_moves') ?? true,
       autoFlipBoard: prefs.getBool('auto_flip_board') ?? false,
       moveAnimationSpeed: prefs.getString('move_animation_speed') ?? 'normal',
