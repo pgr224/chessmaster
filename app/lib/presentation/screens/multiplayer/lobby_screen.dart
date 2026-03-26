@@ -43,12 +43,15 @@ class _LobbyScreenState extends State<LobbyScreen> {
         }
 
         if (state.lobbyNotice != null) {
-          if (state.lobbyNotice!.contains('invited you')) {
-             _showChallengeDialog(context, state.lobbyNotice!);
+          if (state.lobbyNotice!.contains('invited you') && state.challengerId != null) {
+             _showChallengeDialog(context, state.lobbyNotice!, state.challengerId!);
           } else {
             ScaffoldMessenger.of(context)
               ..hideCurrentSnackBar()
-              ..showSnackBar(SnackBar(content: Text(state.lobbyNotice!)));
+              ..showSnackBar(SnackBar(
+                content: Text(state.lobbyNotice!),
+                onVisible: () => context.read<MultiplayerBloc>().add(MpClearNoticeEvent()),
+              ));
           }
         }
       },
@@ -707,9 +710,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
-  void _showChallengeDialog(BuildContext context, String message) {
+  void _showChallengeDialog(BuildContext context, String message, String challengerId) {
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.midnight,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
@@ -717,7 +721,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
         content: Text(message, style: GoogleFonts.baloo2(color: AppTheme.textPrimary, fontSize: 16)),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx),
+            onPressed: () {
+              context.read<MultiplayerBloc>().add(MpClearNoticeEvent());
+              Navigator.pop(ctx);
+            },
             child: Text('Decline', style: GoogleFonts.fredoka(color: AppTheme.accentRed, fontWeight: FontWeight.w600)),
           ),
           ElevatedButton(
@@ -726,7 +733,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
               foregroundColor: AppTheme.midnight,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             ),
-            onPressed: () => Navigator.pop(ctx),
+            onPressed: () {
+              context.read<MultiplayerBloc>().add(MpAcceptChallengeEvent(challengerId));
+              Navigator.pop(ctx);
+            },
             child: Text('Accept', style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
           ),
         ],

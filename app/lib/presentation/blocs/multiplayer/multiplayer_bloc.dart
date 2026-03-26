@@ -78,10 +78,17 @@ class MpSendChallengeEvent extends MultiplayerEvent {
   @override List<Object?> get props => [opponent, mode, timeControl];
 }
 
+class MpAcceptChallengeEvent extends MultiplayerEvent {
+  final String challengerId;
+  const MpAcceptChallengeEvent(this.challengerId);
+}
+class MpClearNoticeEvent extends MultiplayerEvent {}
+
 class MpResignEvent extends MultiplayerEvent {}
 class MpLobbyNoticeEvent extends MultiplayerEvent {
   final String message;
-  const MpLobbyNoticeEvent(this.message);
+  final String? challengerId;
+  const MpLobbyNoticeEvent(this.message, {this.challengerId});
 }
 class MpDisconnectLobbyEvent extends MultiplayerEvent {}
 
@@ -103,6 +110,7 @@ class MultiplayerState extends Equatable {
   final String? gameResult;
   final String? gameReason;
   final String? lobbyNotice;
+  final String? challengerId;
 
   const MultiplayerState({
     this.status = MultiplayerStatus.disconnected,
@@ -119,6 +127,7 @@ class MultiplayerState extends Equatable {
     this.gameResult,
     this.gameReason,
     this.lobbyNotice,
+    this.challengerId,
   });
 
   MultiplayerState copyWith({
@@ -136,6 +145,7 @@ class MultiplayerState extends Equatable {
     String? gameResult,
     String? gameReason,
     String? lobbyNotice,
+    String? challengerId,
   }) {
     return MultiplayerState(
       status: status ?? this.status,
@@ -151,14 +161,15 @@ class MultiplayerState extends Equatable {
       lastMovePromotion: lastMovePromotion ?? this.lastMovePromotion,
       gameResult: gameResult ?? this.gameResult,
       gameReason: gameReason ?? this.gameReason,
-      lobbyNotice: lobbyNotice ?? this.lobbyNotice,
+      lobbyNotice: (lobbyNotice == null && challengerId == null) ? null : (lobbyNotice ?? this.lobbyNotice),
+      challengerId: (lobbyNotice == null && challengerId == null) ? null : (challengerId ?? this.challengerId),
     );
   }
 
   @override List<Object?> get props => [
     status, onlineCount, searchingCount, availablePlayers.length, gameId, 
     playerColor, opponentName, chatMessages.length, lastMoveFrom, lastMoveTo, 
-    gameResult
+    gameResult, lobbyNotice, challengerId
   ];
 }
 
@@ -195,7 +206,12 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
       emit(const MultiplayerState());
     });
     on<MpGameOverEvent>((event, emit) => emit(state.copyWith(status: MultiplayerStatus.gameOver, gameResult: event.result, gameReason: event.reason)));
-    on<MpLobbyNoticeEvent>((event, emit) => emit(state.copyWith(lobbyNotice: event.message)));
+    on<MpLobbyNoticeEvent>((event, emit) => emit(state.copyWith(lobbyNotice: event.message, challengerId: event.challengerId)));
+    on<MpAcceptChallengeEvent>((event, emit) {
+      _service.acceptChallenge(event.challengerId);
+      emit(state.copyWith(lobbyNotice: null, challengerId: null));
+    });
+    on<MpClearNoticeEvent>((event, emit) => emit(state.copyWith(lobbyNotice: null, challengerId: null)));
   }
 
   Future<void> _onConnectLobby(MpConnectLobbyEvent event, Emitter<MultiplayerState> emit) async {
@@ -219,7 +235,10 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
         add(MpGameFoundEvent(msg['data']['gameId'], msg['data']['color'], msg['data']['opponentName']));
       } else if (msg['type'] == 'CHALLENGE_RECEIVED') {
         final d = msg['data'];
-        add(MpLobbyNoticeEvent('${d['challengerName']} invited you to ${d['mode']} (${d['timeControl']})!'));
+        add(MpLobbyNoticeEvent(
+          '${d['challengerName']} invited you to ${d['mode']} (${d['timeControl']})!',
+          challengerId: d['challengerId']?.toString(),
+        ));
       }
     });
     emit(state.copyWith(status: MultiplayerStatus.inLobby));

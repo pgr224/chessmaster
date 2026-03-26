@@ -91,6 +91,24 @@ export class Lobby implements DurableObject {
           }
           break
         }
+
+        case 'CHALLENGE_ACCEPTED': {
+          const { challengerId } = msg
+          const sockets = this.state.getWebSockets()
+          const challenger = sockets.find(s => (s.deserializeAttachment() as LobbyPlayer)?.id === challengerId)
+          
+          if (challenger) {
+            const gameId = crypto.randomUUID()
+            const msg = (color: string, oppName: string) => JSON.stringify({
+              type: 'MATCH_FOUND',
+              data: { gameId, color, opponentName: oppName }
+            })
+
+            ws.send(msg('black', (challenger.deserializeAttachment() as LobbyPlayer).name))
+            challenger.send(msg('white', meta.name))
+          }
+          break
+        }
       }
     } catch (e) {
       console.error('Lobby DO error:', e)

@@ -95,6 +95,14 @@ class MultiplayerService {
     }));
   }
 
+  /// Accept a direct challenge from another player
+  void acceptChallenge(String challengerId) {
+    _lobbyChannel?.sink.add(jsonEncode({
+      'type': 'CHALLENGE_ACCEPTED',
+      'challengerId': challengerId,
+    }));
+  }
+
   /// Resign game
   void resign() {
     _gameChannel?.sink.add(jsonEncode({'type': 'RESIGN'}));
