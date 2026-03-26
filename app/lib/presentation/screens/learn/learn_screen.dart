@@ -387,7 +387,7 @@ class LearnScreen extends StatelessWidget {
       ('💥 Back Rank Mate', 'Intermediate', 'intermediate3', AppTheme.skyBlue),
       ('🎭 The Skewer', 'Intermediate', 'intermediate4', AppTheme.accentCyan),
       ('🔄 Discovered Attack', 'Intermediate', 'intermediate5', Color(0xFF6BCB77)),
-      ('🛡️ Scholar\\'s Mate', 'Advanced', 'advanced1', AppTheme.accentRed),
+      ("🛡️ Scholar's Mate", 'Advanced', 'advanced1', AppTheme.accentRed),
       ('💎 Zwischenzug', 'Advanced', 'advanced5', AppTheme.lavender),
     ];
 
