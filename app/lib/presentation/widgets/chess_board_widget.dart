@@ -564,14 +564,37 @@ class _ObjectPiecePainter extends CustomPainter {
     final p = Path();
     switch (type) {
       case PieceType.king:
-        p.addRRect(RRect.fromRectXY(Rect.fromLTWH(w*0.25, h*0.2, w*0.5, h*0.7), 4, 4));
-        p.addRect(Rect.fromLTWH(w*0.35, h*0.1, w*0.3, h*0.15));
+        // King on throne with cross crown
+        p.addRRect(RRect.fromRectXY(Rect.fromLTWH(w*0.2, h*0.25, w*0.6, h*0.65), 12, 12));
+        p.addRect(Rect.fromLTWH(w*0.35, h*0.12, w*0.3, h*0.15)); // crown base
+        p.moveTo(w*0.5, h*0.02); p.lineTo(w*0.5, h*0.12); // cross vertical
+        p.moveTo(w*0.42, h*0.07); p.lineTo(w*0.58, h*0.07); // cross horizontal
+        break;
+      case PieceType.queen:
+        // Queen with hand on cheek pose (characteristic of Lewis)
+        p.addRRect(RRect.fromRectXY(Rect.fromLTWH(w*0.25, h*0.28, w*0.5, h*0.62), 14, 14));
+        p.addOval(Rect.fromCircle(center: Offset(w*0.5, h*0.18), radius: w*0.12)); // crown
+        break;
+      case PieceType.bishop:
+        p.addRRect(RRect.fromRectXY(Rect.fromLTWH(w*0.3, h*0.32, w*0.4, h*0.58), 10, 10));
+        p.moveTo(w*0.4, h*0.1); p.lineTo(w*0.5, h*0.32); p.lineTo(w*0.6, h*0.1); p.close(); // mitre
+        break;
+      case PieceType.knight:
+        // Knight on small horse
+        p.addRRect(RRect.fromRectXY(Rect.fromLTWH(w*0.42, h*0.45, w*0.25, h*0.45), 4, 4)); // body
+        p.moveTo(w*0.35, h*0.35); // head
+        p.quadraticBezierTo(w*0.28, h*0.4, w*0.35, h*0.55); // neck
+        p.lineTo(w*0.55, h*0.45); p.lineTo(w*0.5, h*0.25); // snout/ears
+        p.close();
+        break;
+      case PieceType.rook:
+        // Warder with shield
+        p.addRect(Rect.fromLTWH(w*0.32, h*0.22, w*0.36, h*0.68));
+        p.addRRect(RRect.fromRectXY(Rect.fromLTWH(w*0.22, h*0.4, w*0.2, h*0.45), 2, 2)); // shield
         break;
       case PieceType.pawn:
-        p.addOval(Rect.fromCenter(center: Offset(w*0.5, h*0.6), width: w*0.4, height: h*0.5));
+        p.addOval(Rect.fromCenter(center: Offset(w*0.5, h*0.65), width: w*0.45, height: h*0.55));
         break;
-      default:
-        p.addRRect(RRect.fromRectXY(Rect.fromLTWH(w*0.3, h*0.3, w*0.4, h*0.6), 8, 8));
     }
     return p;
   }
@@ -579,14 +602,68 @@ class _ObjectPiecePainter extends CustomPainter {
   Path _getMexicoPath(PieceType type, Size s) {
     final w = s.width; final h = s.height;
     final p = Path();
-    p.addRRect(RRect.fromRectAndRadius(Rect.fromLTWH(w*0.3, h*0.3, w*0.4, h*0.6), Radius.circular(w*0.05)));
+    switch (type) {
+      case PieceType.king:
+        p.addRect(Rect.fromLTWH(w*0.25, h*0.25, w*0.5, h*0.65));
+        p.addPolygon([Offset(w*0.25, h*0.25), Offset(w*0.5, h*0.05), Offset(w*0.75, h*0.25)], true);
+        break;
+      case PieceType.queen:
+        p.addRect(Rect.fromLTWH(w*0.3, h*0.3, w*0.4, h*0.6));
+        p.addOval(Rect.fromCircle(center: Offset(w*0.5, h*0.15), radius: w*0.15));
+        break;
+      case PieceType.knight:
+        // Stylized jaguar/serpent head
+        p.moveTo(w*0.35, h*0.8); p.lineTo(w*0.65, h*0.8); p.lineTo(w*0.65, h*0.4);
+        p.lineTo(w*0.4, h*0.25); p.lineTo(w*0.25, h*0.4); p.close();
+        break;
+      case PieceType.bishop:
+        p.addRRect(RRect.fromRectXY(Rect.fromLTWH(w*0.35, h*0.4, w*0.3, h*0.5), 6, 6));
+        p.addPolygon([Offset(w*0.4, h*0.3), Offset(w*0.5, h*0.15), Offset(w*0.6, h*0.3)], true);
+        break;
+      case PieceType.rook:
+        p.addRect(Rect.fromLTWH(w*0.3, h*0.2, w*0.4, h*0.75));
+        p.addRect(Rect.fromLTWH(w*0.25, h*0.15, w*0.12, h*0.12));
+        p.addRect(Rect.fromLTWH(w*0.63, h*0.15, w*0.12, h*0.12));
+        break;
+      case PieceType.pawn:
+        p.addRect(Rect.fromLTWH(w*0.35, h*0.5, w*0.3, h*0.4));
+        p.addOval(Rect.fromCircle(center: Offset(w*0.5, h*0.4), radius: w*0.15));
+        break;
+    }
     return p;
   }
 
   Path _getAngularPath(PieceType type, Size s) {
     final w = s.width; final h = s.height;
     final p = Path();
-    p.moveTo(w*0.5, h*0.1); p.lineTo(w*0.8, h*0.8); p.lineTo(w*0.2, h*0.8); p.close();
+    switch (type) {
+      case PieceType.king:
+        p.moveTo(w*0.5, h*0.05); p.lineTo(w*0.85, h*0.85); p.lineTo(w*0.15, h*0.85); p.close();
+        p.addRect(Rect.fromLTWH(w*0.48, h*0.1, w*0.04, h*0.15)); // cross
+        p.addRect(Rect.fromLTWH(w*0.43, h*0.14, w*0.14, h*0.04));
+        break;
+      case PieceType.queen:
+        p.addPolygon([Offset(w*0.5, h*0.1), Offset(w*0.8, h*0.3), Offset(w*0.7, h*0.85), Offset(w*0.3, h*0.85), Offset(w*0.2, h*0.3)], true);
+        p.addOval(Rect.fromCircle(center: Offset(w*0.5, h*0.1), radius: w*0.05));
+        break;
+      case PieceType.knight:
+        p.moveTo(w*0.4, h*0.85); p.lineTo(w*0.7, h*0.85); p.lineTo(w*0.7, h*0.4);
+        p.lineTo(w*0.3, h*0.25); p.lineTo(w*0.4, h*0.4); p.close();
+        break;
+      case PieceType.bishop:
+        p.addPolygon([Offset(w*0.5, h*0.2), Offset(w*0.7, h*0.5), Offset(w*0.5, h*0.85), Offset(w*0.3, h*0.5)], true);
+        p.moveTo(w*0.5, h*0.3); p.lineTo(w*0.6, h*0.4); // mitre slit
+        break;
+      case PieceType.rook:
+        p.addRect(Rect.fromLTWH(w*0.3, h*0.3, w*0.4, h*0.6));
+        p.addRect(Rect.fromLTWH(w*0.25, h*0.15, w*0.15, h*0.2));
+        p.addRect(Rect.fromLTWH(w*0.6, h*0.15, w*0.15, h*0.2));
+        break;
+      case PieceType.pawn:
+        p.moveTo(w*0.5, h*0.4); p.lineTo(w*0.75, h*0.85); p.lineTo(w*0.25, h*0.85); p.close();
+        p.addOval(Rect.fromCircle(center: Offset(w*0.5, h*0.35), radius: w*0.12));
+        break;
+    }
     return p;
   }
 
@@ -594,15 +671,40 @@ class _ObjectPiecePainter extends CustomPainter {
     final w = s.width; final h = s.height;
     final p = Path();
     switch (type) {
-      case PieceType.pawn:
-        p.addOval(Rect.fromCircle(center: Offset(w * 0.5, h * 0.3), radius: w * 0.15));
-        p.addRRect(RRect.fromRectXY(Rect.fromLTWH(w * 0.3, h * 0.45, w * 0.4, h * 0.45), 8, 8));
+      case PieceType.king:
+        p.addRRect(RRect.fromRectXY(Rect.fromLTWH(w*0.3, h*0.25, w*0.4, h*0.65), 10, 10));
+        p.addRect(Rect.fromLTWH(w*0.45, h*0.08, w*0.1, h*0.15));
+        p.addRect(Rect.fromLTWH(w*0.4, h*0.12, w*0.2, h*0.07));
+        break;
+      case PieceType.queen:
+        p.addOval(Rect.fromCircle(center: Offset(w*0.5, h*0.3), radius: w*0.25));
+        p.addRRect(RRect.fromRectXY(Rect.fromLTWH(w*0.3, h*0.5, w*0.4, h*0.4), 8, 8));
+        p.addOval(Rect.fromCircle(center: Offset(w*0.5, h*0.15), radius: w*0.08));
+        break;
+      case PieceType.knight:
+        p.moveTo(w*0.35, h*0.85); p.lineTo(w*0.65, h*0.85); p.lineTo(w*0.6, h*0.5);
+        p.quadraticBezierTo(w*0.8, h*0.4, w*0.55, h*0.2); // head & ears
+        p.lineTo(w*0.5, h*0.25); p.lineTo(w*0.3, h*0.35); // snout
+        p.quadraticBezierTo(w*0.25, h*0.45, w*0.4, h*0.5); // neck
+        p.close();
+        break;
+      case PieceType.bishop:
+        p.addOval(Rect.fromCenter(center: Offset(w*0.5, h*0.35), width: w*0.3, height: h*0.45));
+        p.addRRect(RRect.fromRectXY(Rect.fromLTWH(w*0.35, h*0.6, w*0.3, h*0.3), 5, 5));
+        p.moveTo(w*0.52, h*0.2); p.lineTo(w*0.43, h*0.3); // slit
         break;
       case PieceType.rook:
-        p.addRRect(RRect.fromRectXY(Rect.fromLTWH(w * 0.25, h * 0.2, w * 0.5, h * 0.75), 4, 4));
+        p.addRect(Rect.fromLTWH(w*0.3, h*0.25, w*0.4, h*0.6));
+        p.addRect(Rect.fromLTWH(w*0.28, h*0.18, w * 0.44, h * 0.1)); // top plate
+        // Battlement gaps
+        p.addRect(Rect.fromLTWH(w*0.32, h*0.1, w*0.06, h*0.1));
+        p.addRect(Rect.fromLTWH(w*0.47, h*0.1, w*0.06, h*0.1));
+        p.addRect(Rect.fromLTWH(w*0.62, h*0.1, w*0.06, h*0.1));
         break;
-      default:
-        p.addOval(Rect.fromCircle(center: Offset(w * 0.5, h * 0.5), radius: w * 0.4));
+      case PieceType.pawn:
+        p.addOval(Rect.fromCircle(center: Offset(w * 0.5, h * 0.35), radius: w * 0.15));
+        p.addRRect(RRect.fromRectXY(Rect.fromLTWH(w * 0.35, h * 0.55, w * 0.3, h * 0.35), 8, 8));
+        break;
     }
     return p;
   }

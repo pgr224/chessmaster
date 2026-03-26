@@ -6,6 +6,8 @@ import 'package:share_plus/share_plus.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../blocs/auth/auth_bloc.dart';
 import '../../../data/models/achievement_model.dart';
+import '../../../data/models/user_model.dart';
+import '../../../data/models/game_record_model.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -23,8 +25,9 @@ class ProfileScreen extends StatelessWidget {
             decoration: const BoxDecoration(gradient: AppTheme.backgroundGradient),
             child: CustomScrollView(
               slivers: [
-                _buildHeader(user),
+                _buildHeader(context, user),
                 _buildStats(user),
+                _buildRecentGames(context, user),
                 _buildModeStats(user),
                 _buildAchievementsHeader(),
                 _buildAchievementsGrid(),
@@ -36,7 +39,7 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(dynamic user) {
+  Widget _buildHeader(BuildContext context, UserModel user) {
     return SliverToBoxAdapter(
       child: Container(
         padding: const EdgeInsets.only(top: 80, bottom: 40),
@@ -48,17 +51,25 @@ class ProfileScreen extends StatelessWidget {
                 CircleAvatar(
                   radius: 56,
                   backgroundColor: AppTheme.goldPrimary.withValues(alpha: 0.15),
-                  child: Text(
+                  backgroundImage: user.avatarUrl != null ? NetworkImage(user.avatarUrl!) : null,
+                  child: user.avatarUrl == null ? Text(
                     user.username[0].toUpperCase(),
                     style: GoogleFonts.fredoka(
                       fontSize: 48, fontWeight: FontWeight.w700, color: AppTheme.goldPrimary,
                     ),
-                  ),
+                  ) : null,
                 ).animate().scale(duration: 600.ms, curve: Curves.easeOutBack),
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: const BoxDecoration(color: AppTheme.accentCyan, shape: BoxShape.circle),
-                  child: const Icon(Icons.edit_rounded, size: 18, color: AppTheme.midnight),
+                GestureDetector(
+                  onTap: () => _showEditProfile(context, user),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.accentCyan,
+                      shape: BoxShape.circle,
+                      boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
+                    ),
+                    child: const Icon(Icons.settings_suggest_rounded, size: 20, color: AppTheme.midnight),
+                  ),
                 ),
               ],
             ),
@@ -77,7 +88,7 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStats(dynamic user) {
+  Widget _buildStats(UserModel user) {
     return SliverToBoxAdapter(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
@@ -90,7 +101,7 @@ class ProfileScreen extends StatelessWidget {
           ],
         ),
       ),
-    );
+    ).animate().fadeIn().scale(begin: const Offset(0.9, 0.9));
   }
 
   Widget _statCard(String label, String value, Color color) {
@@ -119,7 +130,96 @@ class ProfileScreen extends StatelessWidget {
     ).animate().fadeIn().scale(begin: const Offset(0.9, 0.9));
   }
 
-  Widget _buildModeStats(dynamic user) {
+  Widget _buildRecentGames(BuildContext context, UserModel user) {
+    final games = user.recentGames.take(5).toList();
+    if (games.isEmpty) return const SliverToBoxAdapter(child: SizedBox());
+
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('🕒 Recent Games', style: GoogleFonts.fredoka(
+                  color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.w700,
+                )),
+                if (user.recentGames.length > 5)
+                  TextButton(
+                    onPressed: () {}, // TODO: Show full history
+                    child: Text('View More', style: GoogleFonts.fredoka(color: AppTheme.goldPrimary)),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Container(
+              decoration: BoxDecoration(
+                gradient: AppTheme.cardGradient,
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+              ),
+              child: ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: games.length,
+                separatorBuilder: (_, __) => Divider(color: Colors.white.withValues(alpha: 0.05), height: 1),
+                itemBuilder: (context, index) => _buildGameTile(games[index]),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGameTile(GameRecord game) {
+    final bool isWin = game.result == 'Won';
+    final bool isDraw = game.result == 'Draw';
+    final resultColor = isWin ? AppTheme.goldPrimary : (isDraw ? Colors.blueGrey : Colors.redAccent);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: resultColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(isWin ? '🏆' : (isDraw ? '🤝' : '💀'), style: const TextStyle(fontSize: 18)),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('vs ${game.opponent}', style: GoogleFonts.fredoka(
+                  color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600,
+                )),
+                Text('${game.mode} • ${game.moves} moves', style: GoogleFonts.baloo2(
+                  color: AppTheme.textMuted, fontSize: 12,
+                )),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(game.result.toUpperCase(), style: GoogleFonts.fredoka(
+                color: resultColor, fontSize: 14, fontWeight: FontWeight.w700,
+              )),
+              Text(game.date, style: GoogleFonts.baloo2(color: AppTheme.textMuted, fontSize: 11)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModeStats(UserModel user) {
     double _modeWinRate(int wins, int games) => games > 0 ? wins / games * 100 : 0;
     final aiRate = _modeWinRate(user.stats.aiWins, user.stats.aiGames);
     final mpRate = _modeWinRate(user.stats.multiplayerWins, user.stats.multiplayerGames);
@@ -288,5 +388,87 @@ class ProfileScreen extends StatelessWidget {
             'https://play.google.com/store/apps/details?id=com.chessmaster.app',
       subject: 'Chess Master Achievement: ${a.title}',
     ));
+  }
+
+  void _showEditProfile(BuildContext context, UserModel user) {
+    final nameController = TextEditingController(text: user.username);
+    final avatars = [
+      'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix',
+      'https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka',
+      'https://api.dicebear.com/7.x/avataaars/svg?seed=King',
+      'https://api.dicebear.com/7.x/avataaars/svg?seed=Viking',
+    ];
+    String selectedAvatar = user.avatarUrl ?? avatars[0];
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.midnight,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setLocalState) => Padding(
+          padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(context).viewInsets.bottom + 40),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('⚙️ Profile Settings', style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 22, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 24),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: avatars.map((url) {
+                    final isSel = selectedAvatar == url;
+                    return GestureDetector(
+                      onTap: () => setLocalState(() => selectedAvatar = url),
+                      child: Container(
+                        margin: const EdgeInsets.only(right: 12),
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: isSel ? AppTheme.goldPrimary : Colors.transparent, width: 3),
+                        ),
+                        child: CircleAvatar(radius: 32, backgroundImage: NetworkImage(url)),
+                      ),
+                    );
+                  }).toList(),
+                ).animate().slideX(begin: 0.1),
+              ),
+              const SizedBox(height: 24),
+              TextField(
+                controller: nameController,
+                style: GoogleFonts.fredoka(color: AppTheme.textPrimary),
+                decoration: InputDecoration(
+                  labelText: 'Username',
+                  labelStyle: GoogleFonts.fredoka(color: AppTheme.textSecondary),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.white10)),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: AppTheme.goldPrimary)),
+                  prefixIcon: const Icon(Icons.person_pin_rounded, color: AppTheme.goldPrimary),
+                ),
+              ),
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: ElevatedButton(
+                  onPressed: () {
+                    ctx.read<AuthBloc>().add(AuthUpdateProfileEvent(
+                      username: nameController.text,
+                      avatarPath: selectedAvatar,
+                    ));
+                    Navigator.pop(ctx);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.goldPrimary,
+                    foregroundColor: AppTheme.midnight,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                  ),
+                  child: Text('Save Changes', style: GoogleFonts.fredoka(fontSize: 18, fontWeight: FontWeight.w600)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

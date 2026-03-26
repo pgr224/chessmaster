@@ -1,3 +1,5 @@
+import 'game_record_model.dart';
+
 class UserModel {
   final String id;
   final String username;
@@ -6,6 +8,7 @@ class UserModel {
   final bool isOnline;
   final UserStats stats;
   final String deviceId;
+  final List<GameRecord> recentGames;
 
   const UserModel({
     required this.id,
@@ -15,6 +18,7 @@ class UserModel {
     required this.isOnline,
     required this.stats,
     required this.deviceId,
+    this.recentGames = const [],
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -26,6 +30,9 @@ class UserModel {
       isOnline: (json['is_online'] as int? ?? 0) == 1,
       stats: UserStats.fromJson(json['stats'] as Map<String, dynamic>? ?? {}),
       deviceId: json['device_id'] as String? ?? '',
+      recentGames: (json['recent_games'] as List? ?? [])
+          .map((g) => GameRecord.fromJson(g as Map<String, dynamic>))
+          .toList(),
     );
   }
 
@@ -49,6 +56,7 @@ class UserModel {
       'multiplayer_wins': stats.multiplayerWins,
       'tournament_wins': stats.tournamentWins,
     },
+    'recent_games': recentGames.map((g) => g.toJson()).toList(),
   };
 }
 

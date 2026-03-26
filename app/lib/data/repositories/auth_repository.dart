@@ -200,7 +200,11 @@ class AuthRepository {
         if (avatarPath != null) 'avatarUrl': avatarPath,
       },
     );
-    return UserModel.fromJson(response.data as Map<String, dynamic>);
+    
+    final updated = UserModel.fromJson(response.data as Map<String, dynamic>);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_userKey, jsonEncode(updated.toJson()));
+    return updated;
   }
 
   UserModel _resolveRegisteredUser({
