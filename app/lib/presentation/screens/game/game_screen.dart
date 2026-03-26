@@ -103,7 +103,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               if (state.status == GameStatus.check) _buildCheckAlert(state, minimalMotion),
               if (state.isPlayerTurn && !state.isGameOver) _buildTurnOverlay(state, minimalMotion),
               if (_showMoves) _buildMoveHistoryOverlay(state),
-              if (state.tutorialMessage != null && _tutorialVisible) _buildTutorialOverlay(state),
+              if (state.tutorialMessage != null && state.mode == GameMode.tutorial) _buildTutorialOverlay(state),
+              if (state.tutorialMessage != null && state.mode == GameMode.puzzle) _buildTutorialOverlay(state),
             ],
           ),
         );
@@ -207,64 +208,133 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildTutorialOverlay(GameState state) {
+    final lesson = state.tutorial;
+    final totalSteps = lesson?.steps.length ?? 1;
+    final currentStep = state.tutorialStep + 1;
+    final isCompleted = state.isGameOver;
+    final step = lesson != null && state.tutorialStep < lesson.steps.length
+        ? lesson.steps[state.tutorialStep]
+        : null;
+
     return Positioned(
       top: 60,
       left: 12, right: 12,
       child: IgnorePointer(
-        ignoring: false, // Allow taps to be processed by dismiss button
+        ignoring: false,
         child: Container(
+          constraints: const BoxConstraints(maxHeight: 220),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: AppTheme.navyCard.withValues(alpha: 0.95),
+            color: AppTheme.navyCard.withValues(alpha: 0.97),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.5), width: 2),
+            border: Border.all(
+              color: isCompleted
+                  ? AppTheme.accentCyan.withValues(alpha: 0.7)
+                  : AppTheme.goldPrimary.withValues(alpha: 0.5),
+              width: 2,
+            ),
             boxShadow: [
-              BoxShadow(color: AppTheme.goldPrimary.withValues(alpha: 0.2), blurRadius: 16, offset: const Offset(0, 4)),
+              BoxShadow(
+                color: (isCompleted ? AppTheme.accentCyan : AppTheme.goldPrimary).withValues(alpha: 0.2),
+                blurRadius: 16, offset: const Offset(0, 4),
+              ),
             ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header with close button
+              // Header with step counter
               Row(
                 children: [
-                  const Icon(Icons.psychology_rounded, color: AppTheme.goldPrimary, size: 20),
+                  Icon(
+                    isCompleted ? Icons.check_circle_rounded : Icons.psychology_rounded,
+                    color: isCompleted ? AppTheme.accentCyan : AppTheme.goldPrimary,
+                    size: 20,
+                  ),
                   const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      state.mode == GameMode.puzzle ? 'CHALLENGE' : 'STEP ${state.tutorialStep + 1}',
-                      style: GoogleFonts.fredoka(
-                        color: AppTheme.goldPrimary, fontSize: 12, fontWeight: FontWeight.w700,
-                        letterSpacing: 0.8,
-                      ),
+                  Text(
+                    state.mode == GameMode.puzzle
+                        ? 'CHALLENGE'
+                        : isCompleted
+                            ? '✅ COMPLETE'
+                            : 'STEP $currentStep of $totalSteps',
+                    style: GoogleFonts.fredoka(
+                      color: isCompleted ? AppTheme.accentCyan : AppTheme.goldPrimary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.8,
                     ),
                   ),
-                  GestureDetector(
-                    onTap: () => setState(() => _tutorialVisible = false),
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: AppTheme.textSecondary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Icon(
-                        Icons.close_rounded,
-                        color: AppTheme.textSecondary,
-                        size: 18,
-                      ),
+                  const Spacer(),
+                  // Progress dots
+                  if (lesson != null)
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: List.generate(totalSteps, (i) {
+                        final isActive = i == state.tutorialStep;
+                        final isDone = i < state.tutorialStep;
+                        return Container(
+                          width: isActive ? 14 : 8,
+                          height: 8,
+                          margin: const EdgeInsets.only(left: 3),
+                          decoration: BoxDecoration(
+                            color: isDone
+                                ? AppTheme.accentCyan
+                                : isActive
+                                    ? AppTheme.goldPrimary
+                                    : AppTheme.textMuted.withValues(alpha: 0.3),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        );
+                      }),
                     ),
-                  ),
                 ],
               ),
-              const SizedBox(height: 12),
-              // Tutorial text
-              Text(
-                state.tutorialMessage!,
-                style: GoogleFonts.baloo2(
-                  color: AppTheme.textPrimary, fontSize: 14, fontWeight: FontWeight.w500,
-                  height: 1.4,
+              const SizedBox(height: 10),
+              // Tutorial text (scrollable)
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        state.tutorialMessage!,
+                        style: GoogleFonts.baloo2(
+                          color: AppTheme.textPrimary, fontSize: 14, fontWeight: FontWeight.w500,
+                          height: 1.4,
+                        ),
+                        textAlign: TextAlign.left,
+                      ),
+                      // Persistent hint
+                      if (step?.hintText != null && !isCompleted) ...[
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: AppTheme.skyBlue.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: AppTheme.skyBlue.withValues(alpha: 0.2)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.lightbulb_rounded, color: AppTheme.skyBlue, size: 14),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  step!.hintText!,
+                                  style: GoogleFonts.baloo2(
+                                    color: AppTheme.skyBlue, fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
-                textAlign: TextAlign.left,
               ),
             ],
           ),
@@ -383,7 +453,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   }
 
   bool _showMoves = false;
-  bool _tutorialVisible = true;
 
   Widget _buildCompactLayout(BuildContext context, GameState state, BoxConstraints constraints) {
     return Column(

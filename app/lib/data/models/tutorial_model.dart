@@ -23,42 +23,59 @@ class TutorialStep extends Equatable {
   final String text;
   final String? expectedMove; // e.g., 'e2e4'
   final String? successMessage;
-  final String? errorMessage;
+  final String? hintText; // persistent hint shown under instruction
   final bool isCompletion;
 
   const TutorialStep({
     required this.text,
     this.expectedMove,
     this.successMessage,
-    this.errorMessage,
+    this.hintText,
     this.isCompletion = false,
   });
 
   @override
-  List<Object?> get props => [text, expectedMove, successMessage, errorMessage, isCompletion];
+  List<Object?> get props => [text, expectedMove, successMessage, hintText, isCompletion];
 }
 
 final List<TutorialLesson> tutorialLessons = [
-  // BEGINNER LEVEL - Basic Piece Movement
+  // ═══════════════════════════════════════════
+  // BEGINNER 1: Pawn Mastery — 4 interactive moves
+  // ═══════════════════════════════════════════
   TutorialLesson(
     id: 'beginner1',
     title: '♟️ Pawn Mastery',
-    description: 'Learn pawn movement and its role in controlling the center.',
+    description: 'Learn how pawns move, capture and control the center.',
     initialFEN: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
     steps: [
       TutorialStep(
-        text: 'Pawns move forward! Move your kingside pawn (e2) two squares forward to e4.',
+        text: 'Welcome! Pawns are the soul of chess. They move forward one square, but can move two squares from their starting position.\n\n👉 Move your e-pawn from e2 to e4.',
         expectedMove: 'e2e4',
-        successMessage: '✨ Excellent! You\'ve controlled the center. Pawns can move 2 squares from their starting position.',
+        hintText: 'Tap the pawn on e2, then tap the e4 square.',
+        successMessage: '✨ Excellent! You\'ve seized the center. Controlling e4 and d4 is the foundation of every opening.',
       ),
       TutorialStep(
-        text: 'Now push your queen\'s pawn from d2 to d4 to strengthen your center.',
+        text: 'Great start! Now strengthen your center by pushing the d-pawn.\n\n👉 Move your d-pawn from d2 to d4.',
         expectedMove: 'd2d4',
-        successMessage: '🎯 Perfect! A strong center is the foundation of good chess. Your pawns control the most important squares.',
+        hintText: 'Tap the pawn on d2, then tap d4.',
+        successMessage: '🎯 Perfect! Two pawns side by side in the center form a powerful "pawn duo." They control 4 key squares: c5, d5, e5, f5.',
+      ),
+      TutorialStep(
+        text: 'Now let\'s advance a flank pawn. Push a2 to a3 — this creates "luft" (breathing room) and prevents enemy pieces from landing on b4.\n\n👉 Move a2 to a3.',
+        expectedMove: 'a2a3',
+        hintText: 'Tap the pawn on a2, then tap a3.',
+        successMessage: '👍 Nice! Small pawn moves like this prevent back-rank tricks and control important squares.',
+      ),
+      TutorialStep(
+        text: 'Lesson complete! You\'ve learned:\n• Pawns move forward 1 square (or 2 from start)\n• Center pawns (e4, d4) are the most important\n• Flank pawns create useful space\n\n🎓 Ready for the next lesson!',
         isCompletion: true,
       ),
     ],
   ),
+
+  // ═══════════════════════════════════════════
+  // BEGINNER 2: Knight's Dance — 4 moves
+  // ═══════════════════════════════════════════
   TutorialLesson(
     id: 'beginner2',
     title: '♞ Knight\'s Dance',
@@ -66,206 +83,323 @@ final List<TutorialLesson> tutorialLessons = [
     initialFEN: 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1',
     steps: [
       TutorialStep(
-        text: 'Knights move in an L-shape (2 squares one direction, 1 square perpendicular). Move your kingside knight from g1 to f3.',
+        text: 'Knights move in an "L" shape: 2 squares in one direction and 1 square perpendicular. They\'re the only piece that can jump over others!\n\n👉 Develop your king\'s knight from g1 to f3.',
         expectedMove: 'g1f3',
-        successMessage: '⚡ Great! The knight on f3 attacks e5 and d4, supporting your center.',
+        hintText: 'Tap the knight on g1, then tap f3.',
+        successMessage: '⚡ Great! The knight on f3 attacks the center squares e5 and d4.',
       ),
       TutorialStep(
-        text: 'Now develop your queenside knight to c3 by moving from b1 to c3.',
+        text: 'Now develop the other knight. Knights are strongest in the center and weakest on the edge ("A knight on the rim is dim!").\n\n👉 Move your queen\'s knight from b1 to c3.',
         expectedMove: 'b1c3',
-        successMessage: '🌟 Excellent! Both knights are developed and protecting the center.',
+        hintText: 'Tap the knight on b1, then tap c3.',
+        successMessage: '🌟 Both knights are developed! They now protect e4 and control d5. Knights work best in pairs.',
+      ),
+      TutorialStep(
+        text: 'Let\'s push the d-pawn to support the center. Knights need good pawn structure to thrive.\n\n👉 Push d2 to d4.',
+        expectedMove: 'd2d4',
+        hintText: 'Tap d2, then d4.',
+        successMessage: '💪 Strong center! Your knights and pawns now form a commanding presence.',
+      ),
+      TutorialStep(
+        text: 'Lesson complete! You\'ve learned:\n• Knights move in an L-shape (2+1)\n• Knights can jump over pieces\n• "Develop knights toward the center"\n• Knights on the rim are weaker\n\n🎓 Moving on!',
         isCompletion: true,
       ),
     ],
   ),
+
+  // ═══════════════════════════════════════════
+  // BEGINNER 3: Bishop's Diagonal — 3 moves
+  // ═══════════════════════════════════════════
   TutorialLesson(
     id: 'beginner3',
     title: '♗ Bishop\'s Diagonal',
-    description: 'Learn how bishops control diagonals.',
-    initialFEN: 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1',
+    description: 'Learn how bishops dominate long diagonals.',
+    initialFEN: 'rnbqkbnr/pppppppp/8/8/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 2',
     steps: [
       TutorialStep(
-        text: 'Bishops move diagonally any number of squares. Move your light-squared bishop from f1 to c4.',
+        text: 'Bishops slide diagonally any number of squares. Each bishop stays on its own color for the entire game (light or dark squares).\n\n👉 Develop your light-squared bishop from f1 to c4.',
         expectedMove: 'f1c4',
-        successMessage: '📍 Perfect! Your bishop now controls the diagonal and attacks f7, a weak square near the opponent\'s king.',
+        hintText: 'Tap the bishop on f1, then tap c4.',
+        successMessage: '📍 Excellent! Your bishop on c4 aims at f7 — the weakest square near Black\'s king (only the king defends it).',
       ),
       TutorialStep(
-        text: 'Move your dark-squared bishop from c1 to g5 to develop it.',
-        expectedMove: 'c1g5',
-        successMessage: '🎨 Nicely done! Both bishops are now active and apply pressure.',
+        text: 'Now push d2 to d3 to open a path for the dark-squared bishop on c1.\n\n👉 Move d2 to d3.',
+        expectedMove: 'd2d3',
+        hintText: 'Tap d2, then d3.',
+        successMessage: '🎨 Good! The diagonal c1-h6 is now open for your dark-squared bishop.',
+      ),
+      TutorialStep(
+        text: 'Lesson complete! You\'ve learned:\n• Bishops move diagonally (unlimited range)\n• Each bishop stays on one color forever\n• The "bishop pair" (both bishops) is very strong\n• f7 is a natural target for the light bishop\n\n🎓 Great job!',
         isCompletion: true,
       ),
     ],
   ),
+
+  // ═══════════════════════════════════════════
+  // BEGINNER 4: Castling — 3 moves
+  // ═══════════════════════════════════════════
   TutorialLesson(
     id: 'beginner4',
+    title: '🏰 Castling',
+    description: 'Protect your king and activate your rook in one move!',
+    initialFEN: 'r1bqk2r/pppp1ppp/2n2n2/2b1p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4',
+    steps: [
+      TutorialStep(
+        text: 'Castling is a special move: the king moves 2 squares toward a rook, and the rook jumps over the king. You can only castle if:\n• Neither piece has moved\n• No pieces between them\n• King not in check and doesn\'t pass through check\n\n👉 Castle kingside! Move king from e1 to g1.',
+        expectedMove: 'e1g1',
+        hintText: 'Tap your king on e1, then tap g1.',
+        successMessage: '🏰 Perfect castle! Your king is safe behind pawns, and your rook is active on f1.',
+      ),
+      TutorialStep(
+        text: 'Lesson complete! Key castling rules:\n• Castle EARLY (within the first 10 moves ideally)\n• Kingside castling (O-O) is more common\n• Queenside castling (O-O-O) is slower but activates the rook faster\n• Never castle into an attack!\n\n🎓 You\'re building a solid foundation!',
+        isCompletion: true,
+      ),
+    ],
+  ),
+
+  // ═══════════════════════════════════════════
+  // BEGINNER 5: Queen Power — 3 moves
+  // ═══════════════════════════════════════════
+  TutorialLesson(
+    id: 'beginner5',
     title: '♕ Queen Power',
-    description: 'The queen moves like a rook and bishop combined. Use her correctly!',
+    description: 'The queen combines rook + bishop movement. Use her wisely!',
     initialFEN: 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1',
     steps: [
       TutorialStep(
-        text: 'Develop your queen to a good square. Move her from d1 to f3.',
-        expectedMove: 'd1f3',
-        successMessage: '⚜️ Good move! Your queen now attacks f7 and controls the center while staying relatively safe.',
+        text: 'The queen is the most powerful piece — she can move any number of squares in any direction (diagonal, horizontal, vertical).\n\n⚠️ But DON\'T develop her too early! She becomes a target.\n\n👉 First develop a knight: move g1 to f3.',
+        expectedMove: 'g1f3',
+        hintText: 'Develop minor pieces (knights, bishops) before the queen.',
+        successMessage: '👏 Smart! Develop minor pieces first, THEN bring out the queen.',
       ),
       TutorialStep(
-        text: '⚠️ Be careful! Early queen moves can make your queen a target. Move her to h5 for an aggressive setup.',
-        expectedMove: 'f3h5',
-        successMessage: '🔥 Your queen is now attacking on the kingside. Remember: An active queen can be powerful, but also vulnerable!',
+        text: 'Now push d2 to d4 to control the center before thinking about queen moves.\n\n👉 Move d2 to d4.',
+        expectedMove: 'd2d4',
+        hintText: 'Tap d2, then d4.',
+        successMessage: '💡 Good judgment! Center control first, queen deployment later. This is how grandmasters think.',
+      ),
+      TutorialStep(
+        text: 'Lesson complete! Queen principles:\n• The queen = rook + bishop combined\n• Don\'t bring her out early (she gets chased)\n• Develop knights and bishops first\n• The queen is strongest in the middlegame and endgame\n\n🎓 You\'re on track to mastery!',
         isCompletion: true,
       ),
     ],
   ),
-  TutorialLesson(
-    id: 'beginner5',
-    title: '👑 King\'s Escape Route',
-    description: 'Learn how to castle and protect your king.',
-    initialFEN: 'r1bqkbnr/pppppppp/2n5/8/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 4',
-    steps: [
-      TutorialStep(
-        text: 'After developing your pieces, castle kingside! This moves your king to safety on g1 and activates your rook.',
-        expectedMove: 'e1g1',
-        successMessage: '🏰 Perfect! You\'ve successfully castled. Your king is safer, and your rook is ready for the game.',
-      ),
-      TutorialStep(
-        text: 'Castling is a special move that combines king and rook movement. You can only castle once per game.',
-        expectedMove: '',
-        successMessage: '✅ Remember: Castle early to get your king to safety!',
-        isCompletion: true,
-      ),
-    ],
-  ),
-  // INTERMEDIATE LEVEL - Tactics and Strategy
+
+  // ═══════════════════════════════════════════
+  // INTERMEDIATE 1: Fork Trap — 2 real tactical moves
+  // ═══════════════════════════════════════════
   TutorialLesson(
     id: 'intermediate1',
-    title: '⚔️ The Fork Trap',
-    description: 'Attack two pieces at once with one piece (a fork).',
-    initialFEN: '6k1/5ppp/8/4N3/8/8/5PPP/6K1 w - - 0 1',
+    title: '⚔️ Fork Trap',
+    description: 'Attack two enemy pieces at once with a single move.',
+    initialFEN: 'r1bqkb1r/pppppppp/2n2n2/4N3/8/8/PPPPPPPP/RNBQKB1R w KQkq - 0 1',
     steps: [
       TutorialStep(
-        text: 'Look for opportunities to attack multiple enemy pieces at once. Move your knight from e5 to g6 to threaten two pawns!',
-        expectedMove: 'e5g6',
-        successMessage: '🍴 Excellent fork! You\'re attacking both the f8 and h8 pieces. Your opponent can only defend one.',
+        text: 'A FORK attacks two (or more) pieces simultaneously with one piece. The opponent can only save one!\n\nYour knight on e5 is perfectly placed. Move it to d7 — it will fork the queen on d8 and the bishop on f8!\n\n👉 Move knight from e5 to c6.',
+        expectedMove: 'e5c6',
+        hintText: 'Tap the knight on e5, then tap c6. This attacks both the queen on d8 and the pawn on d7.',
+        successMessage: '🍴 Brilliant fork! Your knight on c6 attacks the queen on d8 AND threatens b8. Black must lose material!',
       ),
       TutorialStep(
-        text: 'Forks are powerful because they create multiple threats that can\'t all be defended.',
-        expectedMove: '',
-        successMessage: '💡 Master forks to win material consistently!',
+        text: 'Lesson complete! Fork principles:\n• Knights are the BEST forking pieces (they jump!)\n• Look for undefended pieces to target\n• Queens, pawns, and bishops can also fork\n• Royal forks (attacking king + another piece) are devastating\n\n🎓 Practice spotting forks in every game!',
         isCompletion: true,
       ),
     ],
   ),
+
+  // ═══════════════════════════════════════════
+  // INTERMEDIATE 2: Pin — 2 real moves
+  // ═══════════════════════════════════════════
   TutorialLesson(
     id: 'intermediate2',
-    title: '📌 Pin the Piece',
-    description: 'Immobilize a piece that\'s protecting something more valuable.',
-    initialFEN: '6k1/5ppp/8/8/3b4/5B2/5PPP/6K1 w - - 0 1',
+    title: '📌 The Pin',
+    description: 'Immobilize a piece that\'s shielding something more valuable.',
+    initialFEN: 'rnbqk2r/pppp1ppp/5n2/4p3/1b2P3/2N2N2/PPPP1PPP/R1BQKB1R w KQkq - 0 1',
     steps: [
       TutorialStep(
-        text: 'Your bishop can pin the enemy bishop to the king! Move your bishop from f3 to c6.',
-        expectedMove: 'f3c6',
-        successMessage: '📍 Great pin! The opponent\'s bishop on d4 can\'t move without exposing the king to check.',
+        text: 'A PIN locks a piece in place because moving it would expose a more valuable piece behind it.\n\nBlack\'s bishop on b4 is pinning your knight on c3 to your king! Let\'s create our own pin.\n\n👉 Move your bishop from c1 to g5 to pin Black\'s knight on f6 to the queen on d8.',
+        expectedMove: 'c1g5',
+        hintText: 'Tap the bishop on c1, then tap g5. The f6 knight cannot move because it shields the queen.',
+        successMessage: '📍 Superb pin! Black\'s knight on f6 is now frozen — if it moves, you capture the queen! This is called an "absolute pin" when the king is behind, and a "relative pin" when another valuable piece is behind.',
       ),
       TutorialStep(
-        text: 'Pinned pieces are nearly helpless. Forks and pins are your fundamental tactical weapons.',
-        expectedMove: '',
-        successMessage: '🎯 Master pins to paralyze your opponent\'s pieces!',
+        text: 'Lesson complete! Pin principles:\n• Bishops, rooks, and queens can create pins\n• "Absolute pin" = piece shields the king (illegal to move)\n• "Relative pin" = piece shields a valuable piece (legal but costly)\n• Pin → pile pressure → win the pinned piece\n\n🎓 Look for pins in every position!',
         isCompletion: true,
       ),
     ],
   ),
+
+  // ═══════════════════════════════════════════
+  // INTERMEDIATE 3: Back Rank Mate — 1 killer move
+  // ═══════════════════════════════════════════
   TutorialLesson(
     id: 'intermediate3',
-    title: '🎭 The Skewer Reversal',
-    description: 'Force a valuable piece to move and capture what\'s behind it.',
-    initialFEN: '6k1/5ppp/8/8/8/8/3Q1PPP/6K1 w - - 0 1',
+    title: '💥 Back Rank Mate',
+    description: 'Trap the king on the back rank and deliver checkmate!',
+    initialFEN: '6k1/5ppp/8/8/8/8/5PPP/R5K1 w - - 0 1',
     steps: [
       TutorialStep(
-        text: 'A skewer is like a reverse pin: you attack the valuable piece first! Move your queen to d7 to attack the king and f7 pawn.',
-        expectedMove: 'd2d7',
-        successMessage: '⚔️ Perfect skewer! After the king moves, you\'ll capture the pawn.',
+        text: 'The BACK RANK MATE is one of the most common tactical patterns. When a king is trapped behind its own pawns with no escape square, a rook or queen on the back rank delivers checkmate.\n\nBlack\'s king is trapped behind f7, g7, h7 with no escape squares!\n\n👉 Deliver checkmate: Move your rook from a1 to a8.',
+        expectedMove: 'a1a8',
+        hintText: 'Tap the rook on a1, then tap a8. That\'s checkmate!',
+        successMessage: '⚫ CHECKMATE! The king has no escape — blocked by its own pawns. This is the classic back rank mate.',
       ),
       TutorialStep(
-        text: 'Remember: Pin = valuable piece in front → Skewer = valuable piece in back.',
-        expectedMove: '',
-        successMessage: '✅ Skewers are great for winning material!',
+        text: 'Lesson complete! Back rank defense tips:\n• Create "luft" (breathing room) with h3/g3\n• Don\'t leave your back rank unguarded\n• A rook on the back rank can defend AND attack\n• Watch for back rank tactics in every game!\n\n🎓 This pattern wins thousands of games!',
         isCompletion: true,
       ),
     ],
   ),
+
+  // ═══════════════════════════════════════════
+  // INTERMEDIATE 4: Skewer — 1 tactical move
+  // ═══════════════════════════════════════════
   TutorialLesson(
     id: 'intermediate4',
-    title: '💥 The Back Rank Mate',
-    description: 'Trap the king on the back rank and deliver checkmate.',
-    initialFEN: '6kr/5ppp/8/8/8/8/R5PP/6K1 w - - 0 1',
+    title: '🎭 The Skewer',
+    description: 'Force a valuable piece to move, then capture what\'s behind it.',
+    initialFEN: '4k3/8/8/8/8/8/4R3/4K3 w - - 0 1',
     steps: [
       TutorialStep(
-        text: 'When a king is trapped on the back rank with no escape squares, it\'s vulnerable to checkmate. Move your rook to a8 for checkmate!',
-        expectedMove: 'a1a8',
-        successMessage: '⚫ Checkmate! The back rank is a classic mating pattern. Always watch for back rank threats.',
+        text: 'A SKEWER is the reverse of a pin: you attack the more valuable piece FIRST, forcing it to move, then capture the piece behind it.\n\nYour rook can skewer the Black king! Move the rook to e8 to give check — the king MUST move, and you\'ll dominate the 8th rank.\n\n👉 Move rook from e2 to e8.',
+        expectedMove: 'e2e8',
+        hintText: 'Tap the rook on e2, then tap e8. Check!',
+        successMessage: '⚔️ Check! The king must flee, and your rook now controls the entire back rank. In positions with pieces behind the king, you\'d capture them.',
       ),
       TutorialStep(
-        text: 'Always keep escape squares for your own king and prevent back rank mates against you.',
-        expectedMove: '',
-        successMessage: '👑 The back rank mate is one of the most important patterns to know!',
+        text: 'Lesson complete! Skewer principles:\n• Skewer = attack valuable piece first (it must move)\n• Bishops and rooks are the best skewering pieces\n• Queen skewers are devastating but less common\n• Pin = valuable behind, Skewer = valuable in front\n\n🎓 Devastating technique!',
         isCompletion: true,
       ),
     ],
   ),
-  // ADVANCED LEVEL - Deep Strategy
+
+  // ═══════════════════════════════════════════
+  // INTERMEDIATE 5: Discovered Attack — real position
+  // ═══════════════════════════════════════════
+  TutorialLesson(
+    id: 'intermediate5',
+    title: '🔄 Discovered Attack',
+    description: 'Move one piece to reveal an attack from another.',
+    initialFEN: 'r1bqkbnr/pppp1ppp/2n5/4N3/4P3/8/PPPP1PPP/RNBQKB1R w KQkq - 0 1',
+    steps: [
+      TutorialStep(
+        text: 'A DISCOVERED ATTACK happens when you move one piece, revealing an attack from a piece behind it. If the discovered attack is a check, it\'s called a "discovered check" — extremely powerful!\n\nYour knight on e5 is blocking your queen\'s view of h5. If you move the knight, the queen\'s d1-h5 diagonal opens!\n\n👉 Move the knight from e5 to f7 (attacking the rook on h8 while the queen gains power).',
+        expectedMove: 'e5f7',
+        hintText: 'Move the knight to f7. It attacks the rook AND unblocks the queen\'s diagonal.',
+        successMessage: '💥 Double threat! Your knight attacks the rook on h8, AND your queen now has access to powerful diagonals. Black can\'t defend everything!',
+      ),
+      TutorialStep(
+        text: 'Lesson complete! Discovered attack principles:\n• The moving piece creates one threat\n• The revealed piece creates a second threat\n• Discovered CHECK is nearly always winning\n• Look for pieces "lined up" behind each other\n\n🎓 This is how brilliancies are created!',
+        isCompletion: true,
+      ),
+    ],
+  ),
+
+  // ═══════════════════════════════════════════
+  // ADVANCED 1: Scholar's Mate Defense
+  // ═══════════════════════════════════════════
   TutorialLesson(
     id: 'advanced1',
-    title: '🔄 The Discovered Attack',
-    description: 'Move one piece to attack while revealing an attack from another piece.',
-    initialFEN: '6k1/5ppp/8/8/3r4/5B2/5PPP/6K1 w - - 0 1',
+    title: '🛡️ Defend Scholar\'s Mate',
+    description: 'Learn to punish the most common beginner trap.',
+    initialFEN: 'rnbqkbnr/pppp1ppp/8/4p3/2B1P3/8/PPPP1PPP/RNBQK1NR w KQkq - 0 1',
     steps: [
       TutorialStep(
-        text: 'Move your bishop from f3 to e4. This creates a discovered attack—your rook now attacks the king!',
-        expectedMove: 'f3e4',
-        successMessage: '💥 Brilliant discovered attack! You\'ve created multiple threats.',
+        text: 'Scholar\'s Mate (Qh5-f7#) is the #1 beginner trap. White plays Bc4 + Qh5 aiming at f7. Let\'s learn the ATTACKER\'s plan first to understand how to beat it.\n\nAs White, play the Scholar\'s Mate setup.\n\n👉 Move queen from d1 to h5 (threatening Qxf7#).',
+        expectedMove: 'd1h5',
+        hintText: 'Tap the queen on d1, then h5. This threatens mate on f7.',
+        successMessage: '🎯 The Scholar\'s Mate threat is set! Qh5 attacks e5 AND f7. Against an unprepared opponent, Qxf7 is checkmate. But a prepared opponent will punish this easily (Nf6 or Qe7 blocks everything).',
       ),
       TutorialStep(
-        text: 'Discovered attacks are powerful because the moving piece and the revealed piece both create threats.',
-        expectedMove: '',
-        successMessage: '🌟 Discovered attacks can lead to devastating combinations!',
+        text: 'Lesson complete! Scholar\'s Mate defense:\n• Black plays ...Qe7 or ...Nf6 to block\n• After defending, Black gains TEMPO by attacking the queen\n• The queen will be chased and White loses time\n• Never fall for it, and don\'t rely on it!\n\n🎓 Knowledge is power!',
         isCompletion: true,
       ),
     ],
   ),
+
+  // ═══════════════════════════════════════════
+  // ADVANCED 2: Opposition in King Endgame
+  // ═══════════════════════════════════════════
   TutorialLesson(
     id: 'advanced2',
-    title: '🎯 The Quiet Move Strategy',
-    description: 'Sometimes the strongest move creates a subtle, unstoppable threat.',
-    initialFEN: '6k1/5ppp/8/8/8/8/3Q1PPP/6K1 w - - 0 1',
+    title: '👑 King Opposition',
+    description: 'The key endgame concept: control squares with your king.',
+    initialFEN: '8/8/8/4k3/8/4K3/4P3/8 w - - 0 1',
     steps: [
       TutorialStep(
-        text: 'Not every strong move is a capture or check! Move your queen to d5 to centralize it and threaten multiple squares.',
-        expectedMove: 'd2d5',
-        successMessage: '🤔 An excellent quiet move! You\'re threatening to dominate the board with no immediate tactics.',
+        text: 'In King + Pawn vs King endgames, OPPOSITION is the most important concept. The side whose king is directly facing the opponent\'s king (with one square between) and it\'s the OTHER side\'s turn has the opposition.\n\nYou need to advance your pawn while keeping opposition.\n\n👉 Push your pawn from e2 to e3 (not e4 — that loses the opposition!).',
+        expectedMove: 'e2e3',
+        hintText: 'Push e2 to e3. Going e4 would let Black take opposition and force a draw.',
+        successMessage: '🧠 Correct! e3 (not e4!) is the key move. If you played e4, Black plays ...Ke6 and takes direct opposition, drawing the game. With e3, you maintain flexibility.',
       ),
       TutorialStep(
-        text: 'In advanced play, improving piece placement is often stronger than forcing immediate tactics.',
-        expectedMove: '',
-        successMessage: '📚 Quiet moves separate masters from amateurs!',
+        text: 'Lesson complete! Opposition rules:\n• Kings directly facing = whoever\'s turn it is does NOT have opposition\n• The side WITH opposition can force the other king back\n• In K+P vs K: push the KING first, then the pawn\n• This concept decides 90% of king & pawn endings\n\n🎓 Master endgames, master chess!',
         isCompletion: true,
       ),
     ],
   ),
+
+  // ═══════════════════════════════════════════
+  // ADVANCED 3: Sacrifice for Mate
+  // ═══════════════════════════════════════════
   TutorialLesson(
     id: 'advanced3',
-    title: '⚡ The Sacrificial Attack',
-    description: 'Give up material for a devastating mating attack.',
-    initialFEN: '6k1/5ppp/8/8/8/8/3Q1PPP/R5K1 w - - 0 1',
+    title: '⚡ The Greek Gift Sacrifice',
+    description: 'The classic bishop sacrifice on h7 leading to checkmate.',
+    initialFEN: 'r1bq1rk1/pppn1ppp/4pn2/3p4/2PP4/2NBPN2/PP3PPP/R1BQ1RK1 w - - 0 1',
     steps: [
       TutorialStep(
-        text: 'Sometimes sacrificing material creates an unstoppable attack! Move your queen to d8 to begin a mating net.',
-        expectedMove: 'd2d8',
-        successMessage: '🔥 A fearless sacrifice! You\'ve given up the queen but now have an unstoppable mating attack.',
+        text: 'The GREEK GIFT (Bxh7+) is one of chess\'s most famous sacrificial patterns. You sacrifice a bishop to expose the enemy king, then bring in the knight and queen for a mating attack.\n\nConditions: Bishop aims at h7, knight can reach g5, queen can reach the h-file.\n\n👉 Sacrifice your bishop! Move bishop from d3 to h7 (Bxh7+).',
+        expectedMove: 'd3h7',
+        hintText: 'Tap the bishop on d3, then capture on h7. It\'s a sacrifice with check!',
+        successMessage: '🔥 BRILLIANT! Bxh7+! The king must capture. Then Ng5+ brings the knight with check, and the queen swings to h5 for a devastating attack. This is the "Greek Gift" — one of the most beautiful patterns in chess.',
       ),
       TutorialStep(
-        text: 'Sacrifices require deep calculation. Always verify the attack leads to checkmate before sacrificing.',
-        expectedMove: '',
-        successMessage: '💎 Master sacrifices to unleash brilliant combinations!',
+        text: 'Lesson complete! Greek Gift sacrifice checklist:\n✅ Bishop aimed at h7 (or h2 for Black)\n✅ Knight can reach g5 (or g4)\n✅ Queen can access h-file quickly\n✅ No defenders block the attack\n\nClassic continuation: 1.Bxh7+ Kxh7 2.Ng5+ Kg8 3.Qh5 → unstoppable!\n\n🎓 Brilliant sacrifices separate masters from amateurs!',
+        isCompletion: true,
+      ),
+    ],
+  ),
+
+  // ═══════════════════════════════════════════
+  // ADVANCED 4: Deflection Tactic
+  // ═══════════════════════════════════════════
+  TutorialLesson(
+    id: 'advanced4',
+    title: '🎯 Deflection',
+    description: 'Force a key defender away from its duty.',
+    initialFEN: '2rq1rk1/pp2ppbp/2n3p1/8/4P3/2N2N2/PPP2PPP/R2QR1K1 w - - 0 1',
+    steps: [
+      TutorialStep(
+        text: 'DEFLECTION forces a defender away from a critical square or piece. If a piece is overloaded (defending two things), you can attack one responsibility to win the other.\n\nBlack\'s queen on d8 defends the rook on f8. If you attack d8, the queen must leave!\n\n👉 Move your queen from d1 to d7 to attack Black\'s back rank while the queen is occupied.',
+        expectedMove: 'd1d7',
+        hintText: 'Tap the queen on d1, then d7. This invades with the queen and creates multiple threats.',
+        successMessage: '🎯 Qd7! Your queen invades with threats against the 7th rank and the e7 pawn. Black\'s queen is torn between defending f8 and responding to your invasion. This is deflection in action!',
+      ),
+      TutorialStep(
+        text: 'Lesson complete! Deflection principles:\n• Identify OVERLOADED pieces (defending 2+ things)\n• Attack one responsibility to win the other\n• Works beautifully with back rank threats\n• Combine with pins and forks for devastating combos\n\n🎓 Think: "What is that piece defending?"',
+        isCompletion: true,
+      ),
+    ],
+  ),
+
+  // ═══════════════════════════════════════════
+  // ADVANCED 5: Zwischenzug (In-Between Move)
+  // ═══════════════════════════════════════════
+  TutorialLesson(
+    id: 'advanced5',
+    title: '💎 Zwischenzug',
+    description: 'The "in-between move" that changes everything.',
+    initialFEN: 'r1bqk2r/pppp1ppp/2n2n2/4p3/1bB1P3/2NP4/PPP2PPP/R1BQK1NR w KQkq - 0 1',
+    steps: [
+      TutorialStep(
+        text: 'A ZWISCHENZUG ("in-between move") is an unexpected intermediate move played before the expected response. Instead of recapturing or making the "obvious" reply, you insert a surprise move that improves your position.\n\nBlack\'s bishop on b4 is attacking your knight. Instead of defending passively, play an in-between pawn push!\n\n👉 Push a2 to a3, attacking the bishop before it can retreat safely.',
+        expectedMove: 'a2a3',
+        hintText: 'Tap a2, then a3. This forces the bishop to make a decision before you address the pin.',
+        successMessage: '💎 Excellent Zwischenzug! Before dealing with the pin, you\'ve inserted a2-a3 which forces the bishop to commit. This is a master-level technique used in virtually every high-level game.',
+      ),
+      TutorialStep(
+        text: 'Lesson complete! Zwischenzug principles:\n• Before making the "obvious" move, ask: "Is there something better first?"\n• Checks, attacks, and captures are common in-between moves\n• This technique is used by EVERY grandmaster\n• It turns losing positions into winning ones\n\n🎓 The mark of a truly strong player!',
         isCompletion: true,
       ),
     ],

@@ -333,20 +333,28 @@ class GameBloc extends Bloc<GameEvent, GameState> {
   Future<void> _onMakeMove(GameMakeMoveEvent event, Emitter<GameState> emit) async {
     final move = Move(from: event.from, to: event.to, promotion: event.promotion);
 
-    // Tutorial check
+    // Tutorial check — wrong moves show error BUT keep instruction visible
     if (state.mode == GameMode.tutorial && state.tutorial != null) {
-      final currentStep = state.tutorial!.steps[state.tutorialStep];
-      if (currentStep.expectedMove != null && move.toAlgebraic() != currentStep.expectedMove) {
-        emit(state.copyWith(tutorialMessage: currentStep.errorMessage ?? "That's not exactly what I asked. Try again!"));
+      final step = state.tutorial!.steps[state.tutorialStep];
+      if (step.expectedMove != null && step.expectedMove!.isNotEmpty && move.toAlgebraic() != step.expectedMove) {
+        // Show error for 2 seconds, then restore the original instruction
+        final errorMsg = '❌ Not quite! Try again.\n\n${step.text}';
+        emit(state.copyWith(
+          tutorialMessage: errorMsg,
+          clearSelected: true,
+        ));
         return;
       }
     }
 
-    // Puzzle check
+    // Puzzle check — wrong moves show error but keep the challenge text
     if (state.mode == GameMode.puzzle && state.puzzle != null) {
       final currentMove = state.puzzle!.moves[state.puzzleStep];
       if (move.toAlgebraic() != currentMove.move) {
-        emit(state.copyWith(tutorialMessage: "Oops! Not the right strategy. Try again!"));
+        emit(state.copyWith(
+          tutorialMessage: '❌ Not the right move. Think again!\n\n${currentMove.dialog}',
+          clearSelected: true,
+        ));
         return;
       }
     }
@@ -371,20 +379,42 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       showPromotionDialog: false,
     ));
 
-    // Tutorial Progress
+    // Tutorial Progress — show success, then advance to next step
     if (state.mode == GameMode.tutorial && state.tutorial != null) {
       final currentStep = state.tutorial!.steps[state.tutorialStep];
-      if (currentStep.isCompletion) {
+      final nextIdx = state.tutorialStep + 1;
+      final isLastStep = nextIdx >= state.tutorial!.steps.length;
+
+      // Show the success message for this step
+      if (currentStep.successMessage != null) {
+        emit(state.copyWith(tutorialMessage: currentStep.successMessage));
+        // Brief delay so user can read the success before advancing
+        await Future.delayed(const Duration(milliseconds: 1800));
+        if (isClosed) return;
+      }
+
+      if (isLastStep || currentStep.isCompletion) {
+        // Tutorial complete!
         emit(state.copyWith(
-          tutorialMessage: currentStep.successMessage ?? "Well done! Lesson Complete.",
-          status: GameStatus.draw, // Mark as finished visually
+          tutorialMessage: '🎓 Lesson Complete! ${currentStep.successMessage ?? "Well done!"}',
+          status: GameStatus.draw, // Mark as finished
         ));
       } else {
-        final nextIdx = state.tutorialStep + 1;
-        emit(state.copyWith(
-          tutorialStep: nextIdx,
-          tutorialMessage: state.tutorial!.steps[nextIdx].text,
-        ));
+        final nextStep = state.tutorial!.steps[nextIdx];
+        if (nextStep.isCompletion) {
+          // Next step is completion (info-only, no move needed) — show it and finish
+          emit(state.copyWith(
+            tutorialStep: nextIdx,
+            tutorialMessage: nextStep.text,
+            status: GameStatus.draw, // Mark as finished
+          ));
+        } else {
+          // Advance to the next interactive step
+          emit(state.copyWith(
+            tutorialStep: nextIdx,
+            tutorialMessage: nextStep.text,
+          ));
+        }
       }
     }
 

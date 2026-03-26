@@ -382,11 +382,13 @@ class LearnScreen extends StatelessWidget {
 
   Widget _buildQuickQuiz(BuildContext context) {
     const quizItems = [
-      ('⚔️ Fork Trap', 'Beginner', 'intermediate1', AppTheme.goldPrimary),
-      ('📌 Pin the Piece', 'Intermediate', 'intermediate2', AppTheme.accentPurple),
-      ('🎭 Skewer Reversal', 'Intermediate', 'intermediate3', AppTheme.skyBlue),
-      ('💥 Back Rank Mate', 'Intermediate', 'intermediate4', AppTheme.accentCyan),
-      ('🔄 Discovered Attack', 'Advanced', 'advanced1', Color(0xFF6BCB77)),
+      ('⚔️ Fork Trap', 'Intermediate', 'intermediate1', AppTheme.goldPrimary),
+      ('📌 The Pin', 'Intermediate', 'intermediate2', AppTheme.accentPurple),
+      ('💥 Back Rank Mate', 'Intermediate', 'intermediate3', AppTheme.skyBlue),
+      ('🎭 The Skewer', 'Intermediate', 'intermediate4', AppTheme.accentCyan),
+      ('🔄 Discovered Attack', 'Intermediate', 'intermediate5', Color(0xFF6BCB77)),
+      ('🛡️ Scholar\\'s Mate', 'Advanced', 'advanced1', AppTheme.accentRed),
+      ('💎 Zwischenzug', 'Advanced', 'advanced5', AppTheme.lavender),
     ];
 
     return SizedBox(
