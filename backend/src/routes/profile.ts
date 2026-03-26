@@ -26,6 +26,8 @@ profileRoutes.put('/:id', async (c) => {
   const allowedUpdates: Record<string, any> = {}
   if (body.username) allowedUpdates.username = body.username
   if (body.avatarUrl) allowedUpdates.avatar_url = body.avatarUrl
+  if (body.isGhibli !== undefined) allowedUpdates.is_ghibli = body.isGhibli ? 1 : 0
+  if (body.localAvatar !== undefined) allowedUpdates.local_avatar = body.localAvatar
 
   if (Object.keys(allowedUpdates).length === 0) {
     return c.json({ error: 'No valid fields to update' }, 400)
@@ -56,7 +58,7 @@ profileRoutes.get('/:id', async (c) => {
 
 async function getFullProfile(c: any, userId: string) {
   const { results: userRes } = await c.env.DB.prepare(
-    'SELECT id, username, avatar_url, xp, created_at FROM users WHERE id = ?'
+    'SELECT id, username, avatar_url, is_ghibli, local_avatar, xp, created_at FROM users WHERE id = ?'
   ).bind(userId).all()
 
   if (!userRes.length) {

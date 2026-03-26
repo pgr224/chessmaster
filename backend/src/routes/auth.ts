@@ -14,6 +14,8 @@ const RegisterSchema = z.object({
   deviceId: z.string().min(8).max(256),   // device fingerprint
   deviceModel: z.string().optional(),
   avatarUrl: z.string().url().optional(),
+  isGhibli: z.boolean().optional(),
+  localAvatar: z.string().optional(),
 })
 
 const LoginSchema = z.object({
@@ -42,7 +44,7 @@ auth.post('/register', async (c) => {
     return c.json({ error: 'Validation failed', details: parsed.error.flatten() }, 400)
   }
 
-  const { username, deviceId, deviceModel, avatarUrl } = parsed.data
+  const { username, deviceId, deviceModel, avatarUrl, isGhibli, localAvatar } = parsed.data
   const db = c.env.DB
 
   // Check if device already registered
@@ -72,9 +74,9 @@ auth.post('/register', async (c) => {
 
   // Create user
   await db.prepare(`
-    INSERT INTO users (id, username, device_id, device_model, avatar_url, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).bind(userId, username, deviceId, deviceModel ?? null, avatarUrl ?? null, now, now).run()
+    INSERT INTO users (id, username, device_id, device_model, avatar_url, is_ghibli, local_avatar, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).bind(userId, username, deviceId, deviceModel ?? null, avatarUrl ?? null, isGhibli ? 1 : 0, localAvatar ?? null, now, now).run()
 
   // Create stats record
   await db.prepare(
