@@ -228,14 +228,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _buildPieceThemeChips() {
     final themes = [
-      {'id': 'classic3d', 'name': 'Classic 3D'},
-      {'id': 'marble3d', 'name': 'Marble 3D'},
+      {'id': 'classic_3d', 'name': 'Classic 3D'},
+      {'id': 'modern_flat', 'name': 'Modern Flat'},
+      {'id': 'light_flat', 'name': 'Light Flat'},
+      {'id': 'pixel_art', 'name': 'Pixel Art'},
+      {'id': 'fantasy', 'name': 'Fantasy'},
+      {'id': 'line_art', 'name': 'Line Art'},
       {'id': 'metal3d', 'name': 'Metal 3D'},
       {'id': 'letters', 'name': 'Letters'},
-      {'id': '8-bit', 'name': '8-Bit'},
-      {'id': 'angular', 'name': 'Angular'},
-      {'id': 'mexico', 'name': 'Mexico'},
-      {'id': 'lewis', 'name': 'Lewis'},
       {'id': 'video', 'name': 'Neon/Video'},
     ];
 

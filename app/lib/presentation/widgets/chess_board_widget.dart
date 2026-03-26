@@ -432,6 +432,7 @@ class _PieceWidget extends StatelessWidget {
       theme: theme,
       size: size,
       color: baseColor,
+      isWhite: isWhite,
     );
   }
 
@@ -466,12 +467,14 @@ class _ObjectPiece extends StatelessWidget {
   final String theme;
   final double size;
   final Color color;
+  final bool isWhite;
 
   const _ObjectPiece({
     required this.piece,
     required this.theme,
     required this.size,
     required this.color,
+    required this.isWhite,
   });
 
   @override
@@ -484,6 +487,7 @@ class _ObjectPiece extends StatelessWidget {
           piece: piece,
           theme: theme,
           color: color,
+          isWhite: isWhite,
         ),
       ),
     );
@@ -494,11 +498,13 @@ class _ObjectPiecePainter extends CustomPainter {
   final ChessPiece piece;
   final String theme;
   final Color color;
+  final bool isWhite;
 
   _ObjectPiecePainter({
     required this.piece,
     required this.theme,
     required this.color,
+    required this.isWhite,
   });
 
   @override
@@ -517,14 +523,26 @@ class _ObjectPiecePainter extends CustomPainter {
 
     // 2. Select material / theme
     switch (theme) {
+      case 'modern_flat':
+        _drawModernFlat(canvas, size, color);
+        break;
+      case 'light_flat':
+        _drawLightFlat(canvas, size, color);
+        break;
+      case 'fantasy':
+        _drawFantasy(canvas, size);
+        break;
+      case 'line_art':
+        _drawLineArt(canvas, size, color);
+        break;
+      case 'pixel_art':
+        _drawPixelArt(canvas, size, color);
+        break;
+      case 'classic_3d':
+        _drawClassic3D(canvas, size);
+        break;
       case 'lewis':
         _drawLewis(canvas, size);
-        break;
-      case 'mexico':
-        _drawMexico(canvas, size);
-        break;
-      case 'angular':
-        _drawAngular(canvas, size);
         break;
       default:
         _drawClassic(canvas, size);
@@ -583,9 +601,124 @@ class _ObjectPiecePainter extends CustomPainter {
     canvas.drawPath(path, mainPaint);
   }
 
+  void _drawClassic3D(Canvas canvas, Size s) {
+    final w = s.width; final h = s.height;
+    final ivory = const Color(0xFFFDFCF0);
+    final gold = const Color(0xFFD4AF37);
+    final silver = const Color(0xFFC0C0C0);
+    final obsidian = const Color(0xFF1A1A1A);
+
+    final baseColor = isWhite ? ivory : obsidian;
+    final trimColor = isWhite ? gold : silver;
+    final highlight = isWhite ? Colors.white : silver.withValues(alpha: 0.5);
+
+    // Main Body
+    final mainPaint = Paint()
+      ..shader = RadialGradient(
+        center: const Alignment(-0.3, -0.4),
+        radius: 1.0,
+        colors: [highlight, baseColor, Colors.black.withValues(alpha: 0.7)],
+        stops: const [0.0, 0.5, 1.0],
+      ).createShader(Rect.fromLTWH(0, 0, w, h));
+
+    final path = _getPathForType(piece.type, s);
+    canvas.drawPath(path, mainPaint);
+
+    // Gold/Silver Trim
+    final trimPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = w * 0.04
+      ..color = trimColor;
+    canvas.drawPath(path, trimPaint);
+
+    // Extra glossy highlight
+    final glossPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topLeft, end: Alignment.bottomRight,
+        colors: [Colors.white.withValues(alpha: 0.4), Colors.white.withValues(alpha: 0.0)],
+      ).createShader(Rect.fromLTWH(w*0.2, h*0.2, w*0.4, h*0.4));
+    canvas.drawPath(path, glossPaint);
+  }
+
+  void _drawModernFlat(Canvas canvas, Size s, Color color) {
+    final w = s.width; final h = s.height;
+    final baseColor = isWhite ? const Color(0xFFE0E0E0) : const Color(0xFF333333);
+    final accent = isWhite ? const Color(0xFFBDBDBD) : const Color(0xFF212121);
+
+    final path = _getPathForType(piece.type, s);
+    
+    // Slight Offset Shadow
+    canvas.drawPath(path.shift(Offset(w*0.03, h*0.03)), Paint()..color = Colors.black.withValues(alpha: 0.2));
+    
+    // Main
+    canvas.drawPath(path, Paint()..color = baseColor);
+    
+    // Bottom shade
+    final clipPath = Path()..addRect(Rect.fromLTWH(0, h*0.6, w, h*0.4));
+    canvas.save();
+    canvas.clipPath(path);
+    canvas.drawPath(clipPath, Paint()..color = accent.withValues(alpha: 0.5));
+    canvas.restore();
+  }
+
+  void _drawLightFlat(Canvas canvas, Size s, Color color) {
+    final w = s.width; final h = s.height;
+    final path = _getPathForType(piece.type, s);
+    
+    // Pure silhouette with inner glow
+    canvas.drawPath(path, Paint()..color = color);
+    canvas.drawPath(
+      path, 
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2
+        ..color = Colors.white.withValues(alpha: 0.2)
+    );
+  }
+
+  void _drawFantasy(Canvas canvas, Size s) {
+    final w = s.width; final h = s.height;
+    final iron = isWhite ? const Color(0xFFEFEFEF) : const Color(0xFF454545);
+    final shadow = isWhite ? const Color(0xFF999999) : Colors.black;
+
+    final paint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter, end: Alignment.bottomCenter,
+        colors: [iron, shadow],
+      ).createShader(Rect.fromLTWH(0, 0, w, h));
+
+    final path = _getFantasyPath(piece.type, s);
+    canvas.drawPath(path, paint);
+    
+    final detailPaint = Paint()..style = PaintingStyle.stroke..strokeWidth = 1.0..color = Colors.white.withValues(alpha: 0.2);
+    canvas.drawPath(path, detailPaint);
+  }
+
+  void _drawLineArt(Canvas canvas, Size s, Color color) {
+    final w = s.width; final h = s.height;
+    final path = _getPathForType(piece.type, s);
+    
+    canvas.drawPath(
+      path, 
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = w * 0.08
+        ..strokeCap = StrokeCap.round
+        ..color = color
+    );
+    
+    // Inner accent
+    canvas.drawPath(
+      path, 
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = w * 0.02
+        ..color = color.withValues(alpha: 0.4)
+    );
+  }
+
   void _drawClassic(Canvas canvas, Size s) {
     final w = s.width; final h = s.height;
-    final isWhite = piece.color == PieceColor.white;
     final baseColor = color;
     final light = isWhite ? Colors.white : color.withValues(alpha: 0.8);
     final dark = Colors.black.withValues(alpha: 0.8);
@@ -749,6 +882,87 @@ class _ObjectPiecePainter extends CustomPainter {
         break;
     }
     return p;
+  }
+
+  Path _getFantasyPath(PieceType type, Size s) {
+    final w = s.width; final h = s.height;
+    final p = Path();
+    switch (type) {
+      case PieceType.king:
+        // Spartan Helmet with plume
+        p.moveTo(w*0.5, h*0.05); p.lineTo(w*0.6, h*0.2); p.lineTo(w*0.4, h*0.2); p.close(); // Plume
+        p.addRRect(RRect.fromRectXY(Rect.fromLTWH(w*0.3, h*0.25, w*0.4, h*0.45), 18, 12)); // Helm
+        p.moveTo(w*0.5, h*0.35); p.lineTo(w*0.5, h*0.7); // T-slit
+        p.moveTo(w*0.35, h*0.45); p.lineTo(w*0.65, h*0.45);
+        break;
+      case PieceType.queen:
+        // Valkyrie / Crowned helm
+        p.addOval(Rect.fromLTWH(w*0.35, h*0.25, w*0.3, h*0.4));
+        p.moveTo(w*0.2, h*0.2); p.lineTo(w*0.35, h*0.4); // Wing L
+        p.moveTo(w*0.8, h*0.2); p.lineTo(w*0.65, h*0.4); // Wing R
+        p.addRect(Rect.fromLTWH(w*0.3, h*0.65, w*0.4, h*0.25));
+        break;
+      case PieceType.bishop:
+        // Cleric / Pointed helm
+        p.moveTo(w*0.5, h*0.1); p.lineTo(w*0.7, h*0.5); p.lineTo(w*0.6, h*0.9); p.lineTo(w*0.4, h*0.9); p.lineTo(w*0.3, h*0.5); p.close();
+        p.addOval(Rect.fromCircle(center: Offset(w*0.5, h*0.35), radius: w*0.05));
+        break;
+      case PieceType.knight:
+        // Knight Helm (Side Profile Horse-like)
+        p.moveTo(w*0.3, h*0.3); p.quadraticBezierTo(w*0.7, h*0.2, w*0.7, h*0.5);
+        p.lineTo(w*0.3, h*0.7); p.lineTo(w*0.2, h*0.5); p.close();
+        p.addRect(Rect.fromLTWH(w*0.3, h*0.7, w*0.4, h*0.2));
+        break;
+      case PieceType.rook:
+        // Tower Castle Wall
+        p.addRect(Rect.fromLTWH(w*0.25, h*0.3, w*0.5, h*0.6));
+        p.addRect(Rect.fromLTWH(w*0.2, h*0.2, w*0.15, h*0.15));
+        p.addRect(Rect.fromLTWH(w*0.425, h*0.2, w*0.15, h*0.15));
+        p.addRect(Rect.fromLTWH(w*0.65, h*0.2, w*0.15, h*0.15));
+        break;
+      case PieceType.pawn:
+        // Shield
+        p.moveTo(w*0.5, h*0.9); p.quadraticBezierTo(w*0.8, h*0.6, w*0.8, h*0.2);
+        p.lineTo(w*0.2, h*0.2); p.quadraticBezierTo(w*0.2, h*0.6, w*0.5, h*0.9); p.close();
+        break;
+    }
+    return p;
+  }
+
+  void _drawPixelArt(Canvas canvas, Size s, Color color) {
+    final w = s.width; final h = s.height;
+    final pixelSize = w / 10;
+    final paint = Paint()..color = color;
+    final detailPaint = Paint()..color = Colors.black.withValues(alpha: 0.3);
+
+    void drawPx(int x, int y) {
+      canvas.drawRect(Rect.fromLTWH(x * pixelSize, y * pixelSize, pixelSize, pixelSize), paint);
+    }
+    void drawDetail(int x, int y) {
+      canvas.drawRect(Rect.fromLTWH(x * pixelSize, y * pixelSize, pixelSize, pixelSize), detailPaint);
+    }
+
+    switch (piece.type) {
+      case PieceType.king:
+        for(int x=3;x<=6;x++) for(int y=2;y<=8;y++) drawPx(x,y);
+        drawPx(4,1); drawPx(5,1); drawPx(2,3); drawPx(7,3);
+        break;
+      case PieceType.queen:
+        for(int x=3;x<=6;x++) for(int y=3;y<=8;y++) drawPx(x,y);
+        drawPx(2,2); drawPx(4,2); drawPx(5,2); drawPx(7,2);
+        break;
+      case PieceType.pawn:
+        for(int x=4;x<=5;x++) for(int y=3;y<=5;y++) drawPx(x,y);
+        for(int x=3;x<=6;x++) for(int y=6;y<=8;y++) drawPx(x,y);
+        break;
+      case PieceType.rook:
+        for(int x=3;x<=6;x++) for(int y=3;y<=8;y++) drawPx(x,y);
+        drawPx(3,2); drawPx(5,2); drawPx(6,2);
+        break;
+      default:
+        // Simple blocky shape for others
+        for(int x=3;x<=6;x++) for(int y=3;y<=8;y++) drawPx(x,y);
+    }
   }
 
   @override
