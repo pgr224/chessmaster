@@ -23,8 +23,10 @@ class AuthRegisterEvent extends AuthEvent {
 class AuthUpdateProfileEvent extends AuthEvent {
   final String? username;
   final String? avatarPath;
-  const AuthUpdateProfileEvent({this.username, this.avatarPath});
-  @override List<Object?> get props => [username, avatarPath];
+  final String? localAvatar;
+  final bool? isGhibli;
+  const AuthUpdateProfileEvent({this.username, this.avatarPath, this.localAvatar, this.isGhibli});
+  @override List<Object?> get props => [username, avatarPath, localAvatar, isGhibli];
 }
 
 class AuthSignOutEvent extends AuthEvent {}
@@ -107,6 +109,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         userId: current.user.id,
         username: event.username,
         avatarPath: event.avatarPath,
+        localAvatar: event.localAvatar,
+        isGhibli: event.isGhibli,
       );
       emit(AuthAuthenticatedState(updated));
     } catch (e) {

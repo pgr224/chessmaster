@@ -22,6 +22,7 @@ import '../../presentation/screens/settings/settings_screen.dart';
 import '../../presentation/screens/tutorial/tutorial_screen.dart';
 import '../../presentation/screens/learn/learn_screen.dart';
 import '../../presentation/screens/learn/article_screen.dart';
+import '../../presentation/screens/learn/week_screen.dart';
 import '../../data/models/game_config.dart';
 import '../../data/models/tutorial_model.dart';
 export '../../data/models/game_config.dart';
@@ -81,6 +82,13 @@ class AppRouter {
                 name: 'article',
                 builder: (context, state) => ArticleScreen(
                   articleId: state.pathParameters['id']!,
+                ),
+              ),
+              GoRoute(
+                path: 'week/:number',
+                name: 'week_detail',
+                builder: (context, state) => WeekScreen(
+                  weekNumber: int.parse(state.pathParameters['number']!),
                 ),
               ),
             ],

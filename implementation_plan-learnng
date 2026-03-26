@@ -1,0 +1,113 @@
+# Chess Academy — Rich Content Population
+
+## Goal
+
+Transform the Chess Academy from a skeleton UI into a fully populated, engaging, interactive learning experience covering 5 categories and a 12-week study plan.
+
+---
+
+## Current State
+
+| Area | Current | Problem |
+|------|---------|---------|
+| [LearnScreen](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/presentation/screens/learn/learn_screen.dart#50-503) | 5 categories + 12-week plan (data only) | Categories link to missing articles |
+| [ArticleScreen](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/presentation/screens/learn/article_screen.dart#217-731) | Registry has only `sicilian` | 4 of 5 category articles don't exist |
+| [tutorial_model.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/data/models/tutorial_model.dart) | 11 interactive board lessons | Not linked from Academy categories |
+| `12-Week Plan` | List of text rows | No expandable detail, no practice links |
+
+---
+
+## Proposed Changes
+
+### Component 1 — Article Content Registry
+
+#### [MODIFY] [article_screen.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/presentation/screens/learn/article_screen.dart)
+
+Add 4 missing articles to the `_articles` registry (each with full data matching [_ArticleData](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/presentation/screens/learn/article_screen.dart#10-33) structure):
+
+| Article ID | Title | Category |
+|-----------|-------|----------|
+| `fundamentals` | Piece Values & Movement | 🎓 Fundamentals |
+| `tactics` | Chess Tactics Masterclass | ⚡ Tactics |
+| `endgames` | Essential Endgames | ⏳ Endgames |
+| `strategy` | Positional Strategy | 🏆 Strategy |
+
+Each article includes:
+- 4–5 rich prose sections (history, concepts, examples)
+- 3–4 key move sequences in PGN notation
+- 7-day study schedule
+- 5+ real references (Lichess, Chess.com, books)
+- Contact/source info
+
+---
+
+### Component 2 — Week Detail Screen (NEW)
+
+#### [NEW] [week_screen.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/presentation/screens/learn/week_screen.dart)
+
+A dedicated screen for each of the 12 study weeks that shows:
+- **Hero banner** with week number, topic, and estimated time
+- **Daily breakdown** — 7 daily tasks with checkboxes (saved locally via `SharedPreferences`)
+- **Concept card** — illustrated explanation of the week's core idea
+- **Key positions** — 3 FEN diagrams with static board preview widget (reuse [ChessBoardWidget](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/presentation/widgets/chess_board_widget.dart#9-52))
+- **Practice button** — deep-links to a matching [TutorialLesson](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/data/models/tutorial_model.dart#3-21) ID from [tutorial_model.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/data/models/tutorial_model.dart)
+- **Resource links** — 2–3 curated external links (Lichess, Chess.com, YouTube)
+
+#### [MODIFY] [learn_screen.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/presentation/screens/learn/learn_screen.dart)
+
+- Make each week row tappable → navigate to `/learn/week/:weekNumber`
+- Add a **progress tracker** bar at the top of the 12-week section showing % of weeks completed
+- Expand the [_WeekPlan](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/presentation/screens/learn/learn_screen.dart#40-47) model to include `description`, `tutorialId`, and `resourceLinks`
+
+#### [MODIFY] [app_router.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/core/router/app_router.dart)
+
+Add route: `path: 'week/:number'` inside the `/learn` shell route.
+
+---
+
+### Component 3 — Enhanced Category Detail Cards
+
+#### [MODIFY] [learn_screen.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/presentation/screens/learn/learn_screen.dart)
+
+- Add a **progress indicator** on each category card (e.g., `3/12 lessons`)
+- Add a **"What You'll Learn"** expandable bullet list to each category card
+- Add an **"Instant Practice"** button on Tactics & Fundamentals that launches an interactive tutorial directly
+
+---
+
+### Component 4 — Interactive "Quick Quiz" Mini-Cards
+
+#### [MODIFY] [learn_screen.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/presentation/screens/learn/learn_screen.dart)
+
+Add a new **"Quick Tactics Quiz"** horizontal scroll section between categories and the weekly plan. Contains 5 mini-cards, each with:
+- A memorable position name (e.g., "Morphy's Opera Game")
+- Difficulty badge
+- A "Try It" button that routes to the matching interactive tutorial game
+
+---
+
+## Verification Plan
+
+### Automated Tests
+No existing unit tests for UI screens found in the project (`flutter test` has no relevant cases for `learn_screen` or `article_screen`). No new automated tests will be added; this is pure UI/content.
+
+### Manual Verification
+
+**Step 1 — Run the app**
+```
+cd d:\PP942920DRIVE\PROJECTS\chess\app
+flutter run -d chrome
+```
+
+**Step 2 — Category articles all load**
+- Go to **Learn** tab → tap each of the 5 categories
+- Verify each opens an article with: title, content sections, key moves, study schedule, references
+
+**Step 3 — 12-week plan rows are tappable**  
+- Tap any week in the 12-week plan → verify a detail screen opens with daily tasks & practice button
+
+**Step 4 — Progress tracker visible**  
+- After tapping a daily task checkbox → return to learn screen → verify progress bar shows completed %
+
+**Step 5 — Quick tactics quiz links to game**
+- In the Quick Tactics Quiz section → tap "Try It" → verify the interactive tutorial board opens with the correct position

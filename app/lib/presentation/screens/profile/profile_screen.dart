@@ -1,13 +1,19 @@
+import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:image_cropper/image_cropper.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../blocs/auth/auth_bloc.dart';
 import '../../../data/models/achievement_model.dart';
 import '../../../data/models/user_model.dart';
 import '../../../data/models/game_record_model.dart';
+import '../../../data/repositories/auth_repository.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -48,17 +54,8 @@ class ProfileScreen extends StatelessWidget {
             Stack(
               alignment: Alignment.bottomRight,
               children: [
-                CircleAvatar(
-                  radius: 56,
-                  backgroundColor: AppTheme.goldPrimary.withValues(alpha: 0.15),
-                  backgroundImage: user.avatarUrl != null ? NetworkImage(user.avatarUrl!) : null,
-                  child: user.avatarUrl == null ? Text(
-                    user.username[0].toUpperCase(),
-                    style: GoogleFonts.fredoka(
-                      fontSize: 48, fontWeight: FontWeight.w700, color: AppTheme.goldPrimary,
-                    ),
-                  ) : null,
-                ).animate().scale(duration: 600.ms, curve: Curves.easeOutBack),
+                _buildAvatarCircle(user, 56, isCartoon: user.isGhibli)
+                  .animate().scale(duration: 600.ms, curve: Curves.easeOutBack),
                 GestureDetector(
                   onTap: () => _showEditProfile(context, user),
                   child: Container(
@@ -380,6 +377,41 @@ class ProfileScreen extends StatelessWidget {
     ).animate().fadeIn(delay: (index * 100).ms).slideY(begin: 0.1);
   }
 
+  Widget _buildAvatarCircle(UserModel user, double radius, {String? previewData, bool isCartoon = false}) {
+    final hasAvatar = previewData != null || user.localAvatar != null || user.avatarUrl != null;
+    
+    Widget avatar;
+    if (previewData != null) {
+      avatar = CircleAvatar(radius: radius, backgroundImage: MemoryImage(base64Decode(previewData)));
+    } else if (user.localAvatar != null) {
+      avatar = CircleAvatar(radius: radius, backgroundImage: MemoryImage(base64Decode(user.localAvatar!)));
+    } else if (user.avatarUrl != null) {
+      avatar = CircleAvatar(radius: radius, backgroundImage: NetworkImage(user.avatarUrl!));
+    } else {
+      avatar = CircleAvatar(
+        radius: radius,
+        backgroundColor: AppTheme.goldPrimary.withValues(alpha: 0.15),
+        child: Text(
+          user.username[0].toUpperCase(),
+          style: GoogleFonts.fredoka(
+            fontSize: radius * 0.8, fontWeight: FontWeight.w700, color: AppTheme.goldPrimary,
+          ),
+        ),
+      );
+    }
+
+    if (isCartoon) {
+      return ColorFiltered(
+        colorFilter: const ColorFilter.mode(
+          Color(0x33FFD700), // Warm Ghibli tint
+          BlendMode.colorBurn,
+        ),
+        child: avatar,
+      );
+    }
+    return avatar;
+  }
+
   void _shareAchievement(Achievement a) {
     SharePlus.instance.share(ShareParams(
       text: '${a.icon} I just unlocked "${a.title}" in Chess Master!\n'
@@ -392,13 +424,11 @@ class ProfileScreen extends StatelessWidget {
 
   void _showEditProfile(BuildContext context, UserModel user) {
     final nameController = TextEditingController(text: user.username);
-    final avatars = [
-      'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix',
-      'https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka',
-      'https://api.dicebear.com/7.x/avataaars/svg?seed=King',
-      'https://api.dicebear.com/7.x/avataaars/svg?seed=Viking',
-    ];
-    String selectedAvatar = user.avatarUrl ?? avatars[0];
+    String? localAvatarPreview = user.localAvatar;
+    bool isCartoon = user.isGhibli;
+    bool checkingName = false;
+    bool? nameAvailable;
+    String? nameError;
 
     showModalBottomSheet(
       context: context,
@@ -406,68 +436,123 @@ class ProfileScreen extends StatelessWidget {
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (ctx) => StatefulBuilder(
-        builder: (context, setLocalState) => Padding(
-          padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(context).viewInsets.bottom + 40),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('⚙️ Profile Settings', style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 22, fontWeight: FontWeight.w700)),
-              const SizedBox(height: 24),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: avatars.map((url) {
-                    final isSel = selectedAvatar == url;
-                    return GestureDetector(
-                      onTap: () => setLocalState(() => selectedAvatar = url),
-                      child: Container(
-                        margin: const EdgeInsets.only(right: 12),
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: isSel ? AppTheme.goldPrimary : Colors.transparent, width: 3),
-                        ),
-                        child: CircleAvatar(radius: 32, backgroundImage: NetworkImage(url)),
+        builder: (context, setLocalState) {
+          Future<void> _pickImage() async {
+            final picker = ImagePicker();
+            final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+            if (image == null) return;
+
+            final cropped = await ImageCropper().cropImage(
+              sourcePath: image.path,
+              aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
+              uiSettings: [
+                WebUiSettings(
+                  context: context,
+                ),
+              ],
+            );
+
+            if (cropped != null) {
+              final bytes = await cropped.readAsBytes();
+              setLocalState(() => localAvatarPreview = base64Encode(bytes));
+            }
+          }
+
+          Future<void> _checkName(String val) async {
+            if (val == user.username) {
+              setLocalState(() => nameAvailable = null);
+              return;
+            }
+            if (val.length < 2) return;
+            setLocalState(() => checkingName = true);
+            final available = await context.read<AuthRepository>().checkUsername(val);
+            setLocalState(() {
+              checkingName = false;
+              nameAvailable = available;
+            });
+          }
+
+          return Padding(
+            padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(context).viewInsets.bottom + 40),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('⚙️ Profile Settings', style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 22, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 24),
+                
+                // Avatar Preview & Upload
+                GestureDetector(
+                  onTap: _pickImage,
+                  child: Stack(
+                    alignment: Alignment.bottomRight,
+                    children: [
+                      _buildAvatarCircle(user, 56, previewData: localAvatarPreview, isCartoon: isCartoon),
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: const BoxDecoration(color: AppTheme.goldPrimary, shape: BoxShape.circle),
+                        child: const Icon(Icons.camera_alt_rounded, size: 16, color: AppTheme.midnight),
                       ),
-                    );
-                  }).toList(),
-                ).animate().slideX(begin: 0.1),
-              ),
-              const SizedBox(height: 24),
-              TextField(
-                controller: nameController,
-                style: GoogleFonts.fredoka(color: AppTheme.textPrimary),
-                decoration: InputDecoration(
-                  labelText: 'Username',
-                  labelStyle: GoogleFonts.fredoka(color: AppTheme.textSecondary),
-                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.white10)),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: AppTheme.goldPrimary)),
-                  prefixIcon: const Icon(Icons.person_pin_rounded, color: AppTheme.goldPrimary),
-                ),
-              ),
-              const SizedBox(height: 32),
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: () {
-                    ctx.read<AuthBloc>().add(AuthUpdateProfileEvent(
-                      username: nameController.text,
-                      avatarPath: selectedAvatar,
-                    ));
-                    Navigator.pop(ctx);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.goldPrimary,
-                    foregroundColor: AppTheme.midnight,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                    ],
                   ),
-                  child: Text('Save Changes', style: GoogleFonts.fredoka(fontSize: 18, fontWeight: FontWeight.w600)),
                 ),
-              ),
-            ],
-          ),
-        ),
+                const SizedBox(height: 16),
+                
+                // Cartoonify Toggle
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text('✨ Ghibli Filter', style: GoogleFonts.baloo2(color: AppTheme.textSecondary)),
+                    Switch.adaptive(
+                      value: isCartoon,
+                      activeColor: AppTheme.goldPrimary,
+                      onChanged: (v) => setLocalState(() => isCartoon = v),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 20),
+                TextField(
+                  controller: nameController,
+                  style: GoogleFonts.fredoka(color: AppTheme.textPrimary),
+                  onChanged: _checkName,
+                  decoration: InputDecoration(
+                    labelText: 'Username',
+                    labelStyle: GoogleFonts.fredoka(color: AppTheme.textSecondary),
+                    errorText: nameError,
+                    suffixIcon: checkingName 
+                        ? const SizedBox(width: 20, height: 20, child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator(strokeWidth: 2)))
+                        : (nameAvailable == null ? null : (nameAvailable! ? const Icon(Icons.check_circle, color: Colors.green) : const Icon(Icons.error, color: Colors.red))),
+                    hintText: nameAvailable == false ? 'Name already taken!' : null,
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.white10)),
+                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: AppTheme.goldPrimary)),
+                    prefixIcon: const Icon(Icons.person_pin_rounded, color: AppTheme.goldPrimary),
+                  ),
+                ),
+                const SizedBox(height: 32),
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton(
+                    onPressed: (nameAvailable == false || checkingName) ? null : () {
+                      context.read<AuthBloc>().add(AuthUpdateProfileEvent(
+                        username: nameController.text,
+                        localAvatar: localAvatarPreview,
+                        isGhibli: isCartoon,
+                      ));
+                      Navigator.pop(ctx);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.goldPrimary,
+                      foregroundColor: AppTheme.midnight,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                    ),
+                    child: Text('Save Changes', style: GoogleFonts.fredoka(fontSize: 18, fontWeight: FontWeight.w600)),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }

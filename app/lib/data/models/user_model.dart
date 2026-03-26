@@ -4,21 +4,25 @@ class UserModel {
   final String id;
   final String username;
   final String? avatarUrl;
+  final String? localAvatar;
   final int xp;
   final bool isOnline;
   final UserStats stats;
   final String deviceId;
   final List<GameRecord> recentGames;
+  final bool isGhibli;
 
   const UserModel({
     required this.id,
     required this.username,
     this.avatarUrl,
+    this.localAvatar,
     required this.xp,
     required this.isOnline,
     required this.stats,
     required this.deviceId,
     this.recentGames = const [],
+    this.isGhibli = false,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -26,10 +30,12 @@ class UserModel {
       id: json['id'] as String,
       username: json['username'] as String,
       avatarUrl: json['avatar_url'] as String?,
+      localAvatar: json['local_avatar'] as String?,
       xp: json['xp'] as int? ?? 0,
       isOnline: (json['is_online'] as int? ?? 0) == 1,
       stats: UserStats.fromJson(json['stats'] as Map<String, dynamic>? ?? {}),
       deviceId: json['device_id'] as String? ?? '',
+      isGhibli: json['is_ghibli'] as bool? ?? false,
       recentGames: (json['recent_games'] as List? ?? [])
           .map((g) => GameRecord.fromJson(g as Map<String, dynamic>))
           .toList(),
@@ -40,9 +46,11 @@ class UserModel {
     'id': id,
     'username': username,
     'avatar_url': avatarUrl,
+    'local_avatar': localAvatar,
     'xp': xp,
     'is_online': isOnline ? 1 : 0,
     'device_id': deviceId,
+    'is_ghibli': isGhibli,
     'stats': {
       'games_played': stats.gamesPlayed,
       'wins': stats.wins,

@@ -4,6 +4,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/router/app_router.dart';
+import '../../../data/models/tutorial_model.dart';
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 
@@ -136,6 +138,8 @@ class LearnScreen extends StatelessWidget {
               _buildFeaturedCard(context),
               _buildSectionHeader('🗂️ Explore Categories'),
               ..._categories.map((c) => _buildCategoryCard(context, c)),
+              _buildSectionHeader('⚡ Quick Tactics Quiz'),
+              _buildQuickQuiz(context),
               _buildSectionHeader('📅 12-Week Study Plan'),
               _buildTimetable(context),
               _buildSectionHeader('🔗 Reference Resources'),
@@ -308,15 +312,17 @@ class LearnScreen extends StatelessWidget {
             ),
           ),
           const Divider(color: Colors.white10, height: 1),
-          ...List.generate(_weekPlan.length, (i) => _buildWeekRow(_weekPlan[i], i == _weekPlan.length - 1)),
+          ...List.generate(_weekPlan.length, (i) => _buildWeekRow(context, _weekPlan[i], i == _weekPlan.length - 1)),
         ],
       ),
     ).animate().fadeIn(delay: 100.ms);
   }
 
-  Widget _buildWeekRow(_WeekPlan plan, bool isLast) {
+  Widget _buildWeekRow(BuildContext context, _WeekPlan plan, bool isLast) {
     final isEven = plan.week % 2 == 0;
-    return Container(
+    return GestureDetector(
+      onTap: () => context.push('/learn/week/${plan.week}'),
+      child: Container(
       decoration: BoxDecoration(
         color: isEven ? Colors.white.withValues(alpha: 0.02) : Colors.transparent,
         borderRadius: isLast ? const BorderRadius.only(
@@ -364,7 +370,79 @@ class LearnScreen extends StatelessWidget {
               color: AppTheme.accentCyan, fontSize: 11, fontWeight: FontWeight.w700,
             )),
           ),
+          const SizedBox(width: 6),
+          const Icon(Icons.chevron_right_rounded, color: AppTheme.textMuted, size: 18),
         ],
+      ),
+    ),
+    );
+  }
+
+  // ── Quick Tactics Quiz ─────────────────────────────────────────────────────
+
+  Widget _buildQuickQuiz(BuildContext context) {
+    const quizItems = [
+      ('⚔️ Fork Trap', 'Beginner', 'intermediate1', AppTheme.goldPrimary),
+      ('📌 Pin the Piece', 'Intermediate', 'intermediate2', AppTheme.accentPurple),
+      ('🎭 Skewer Reversal', 'Intermediate', 'intermediate3', AppTheme.skyBlue),
+      ('💥 Back Rank Mate', 'Intermediate', 'intermediate4', AppTheme.accentCyan),
+      ('🔄 Discovered Attack', 'Advanced', 'advanced1', Color(0xFF6BCB77)),
+    ];
+
+    return SizedBox(
+      height: 140,
+      child: ListView.builder(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        scrollDirection: Axis.horizontal,
+        itemCount: quizItems.length,
+        itemBuilder: (ctx, i) {
+          final (title, diff, tutId, color) = quizItems[i];
+          return GestureDetector(
+            onTap: () {
+              final lesson = tutorialLessons.firstWhere(
+                (l) => l.id == tutId,
+                orElse: () => tutorialLessons.first,
+              );
+              context.push('/game/play', extra: GameRouteExtra(
+                config: const GameConfig(mode: GameMode.tutorial),
+                tutorial: lesson,
+              ));
+            },
+            child: Container(
+              width: 170,
+              margin: const EdgeInsets.only(right: 14),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: AppTheme.cardGradient,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: color.withValues(alpha: 0.3)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: GoogleFonts.fredoka(
+                    color: AppTheme.textPrimary, fontSize: 15, fontWeight: FontWeight.w700,
+                  )),
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(diff, style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w800)),
+                  ),
+                  const Spacer(),
+                  Row(children: [
+                    Icon(Icons.play_circle_fill_rounded, color: color, size: 20),
+                    const SizedBox(width: 6),
+                    Text('Try It!', style: GoogleFonts.fredoka(color: color, fontSize: 13, fontWeight: FontWeight.w600)),
+                  ]),
+                ],
+              ),
+            ),
+          ).animate().fadeIn(delay: (80 * i).ms).slideX(begin: 0.08);
+        },
       ),
     );
   }

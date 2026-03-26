@@ -101,6 +101,15 @@ class AuthRepository {
     return profile;
   }
 
+  Future<bool> checkUsername(String username) async {
+    try {
+      final response = await _dio.get('/api/auth/check-username', queryParameters: {'username': username});
+      return response.data['available'] == true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<UserModel> register({required String username, String? avatarPath}) async {
     final normalizedUsername = _normalizeUsername(username);
     if (!_usernamePattern.hasMatch(normalizedUsername)) {
@@ -233,6 +242,8 @@ class AuthRepository {
     required String userId,
     String? username,
     String? avatarPath,
+    String? localAvatar,
+    bool? isGhibli,
   }) async {
     final response = await _dio.put(
       '/api/profile/$userId',
@@ -242,8 +253,17 @@ class AuthRepository {
       },
     );
     
-    final updated = UserModel.fromJson(response.data as Map<String, dynamic>);
+    final updatedData = response.data as Map<String, dynamic>;
+    
+    // Merge local data
     final prefs = await SharedPreferences.getInstance();
+    final userData = prefs.getString(_userKey);
+    final current = userData != null ? jsonDecode(userData) : {};
+
+    updatedData['local_avatar'] = localAvatar ?? current['local_avatar'];
+    updatedData['is_ghibli'] = isGhibli ?? current['is_ghibli'] ?? false;
+
+    final updated = UserModel.fromJson(updatedData);
     await prefs.setString(_userKey, jsonEncode(updated.toJson()));
     return updated;
   }
