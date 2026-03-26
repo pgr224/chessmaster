@@ -427,6 +427,9 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
       {'id': 'classic3d', 'name': 'Classic 3D', 'emoji': '♔', 'desc': 'Balanced glossy look'},
       {'id': 'marble3d', 'name': 'Marble 3D', 'emoji': '◈', 'desc': 'Smooth stone finish'},
       {'id': 'metal3d', 'name': 'Metal 3D', 'emoji': '⚙', 'desc': 'Polished metallic style'},
+      {'id': 'lewis', 'name': 'Lewis 3D', 'emoji': '🗿', 'desc': 'Historical ivory carvings'},
+      {'id': 'mexico', 'name': 'Mexican 3D', 'emoji': '🌵', 'desc': 'Aztec obsidian style'},
+      {'id': 'angular', 'name': 'Angular', 'emoji': '📐', 'desc': 'Sharp modern geometric'},
     ];
 
     return Column(
@@ -536,6 +539,36 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
           stops: const [0.0, 0.57, 1.0],
         ),
         Colors.white.withValues(alpha: 0.9),
+      );
+    }
+
+    if (styleId == 'lewis') {
+      final base = isWhite ? const Color(0xFFF5E6CA) : const Color(0xFF8B6B4A);
+      return (
+        RadialGradient(
+          colors: [base.withValues(alpha: 0.8), base, base.withValues(alpha: 0.6)],
+        ),
+        isWhite ? const Color(0xFF4A3728) : const Color(0xFFF5E6CA),
+      );
+    }
+
+    if (styleId == 'mexico') {
+      final base = isWhite ? const Color(0xFFE6B325) : const Color(0xFF0F3D3E);
+      return (
+        RadialGradient(
+          colors: [base.withValues(alpha: 0.9), base, Colors.black],
+        ),
+        isWhite ? Colors.black : const Color(0xFF2ECC71),
+      );
+    }
+
+    if (styleId == 'angular') {
+      final base = isWhite ? const Color(0xFFBFC8D6) : const Color(0xFF2C3E50);
+      return (
+        LinearGradient(
+          colors: [Colors.white30, base, Colors.black45],
+        ),
+        isWhite ? Colors.black : Colors.white,
       );
     }
 

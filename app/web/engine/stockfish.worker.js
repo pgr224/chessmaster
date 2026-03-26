@@ -27,9 +27,11 @@ async function loadStockfish() {
     importScripts('https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js');
 
     if (typeof Stockfish === 'function') {
-      stockfishEngine = Stockfish();
+      const result = Stockfish();
+      stockfishEngine = result instanceof Promise ? await result : result;
     } else if (typeof INIT_ENGINE === 'function') {
-      stockfishEngine = await INIT_ENGINE();
+      const result = INIT_ENGINE();
+      stockfishEngine = result instanceof Promise ? await result : result;
     } else {
       // Fallback: try the global postMessage-based Stockfish
       stockfishEngine = {

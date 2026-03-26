@@ -5,12 +5,10 @@ export interface LobbyPlayer {
   name: string
   rating: number
   status: 'idle' | 'searching' | 'in_game'
-  socket: WebSocket
 }
 
-export class Lobby {
+export class Lobby implements DurableObject {
   private state: DurableObjectState
-  private players: Map<string, LobbyPlayer> = new Map()
   private matchmaker: Matchmaker = new Matchmaker()
 
   constructor(state: DurableObjectState) {
@@ -19,36 +17,26 @@ export class Lobby {
 
   async fetch(request: Request): Promise<Response> {
     const { 0: client, 1: server } = new WebSocketPair()
-    server.accept()
-
+    
     const url = new URL(request.url)
     const userId = url.searchParams.get('userId') ?? 'anon'
     const username = url.searchParams.get('username') ?? 'Player'
     const rating = parseInt(url.searchParams.get('rating') ?? '1200')
 
-    const player: LobbyPlayer = {
+    const playerMeta: LobbyPlayer = {
       id: userId,
       name: username,
       rating,
-      status: 'idle',
-      socket: server
+      status: 'idle'
     }
 
-    this.players.set(userId, player)
+    // Accept and tag with metadata
+    this.state.acceptWebSocket(server, [userId])
+    
+    // Store metadata in the socket itself
+    server.serializeAttachment({ ...playerMeta })
 
-    server.addEventListener('message', async (event) => {
-      try {
-        const msg = JSON.parse(event.data as string)
-        await this.handleMessage(userId, msg)
-      } catch (_) {}
-    })
-
-    server.addEventListener('close', () => {
-      this.players.delete(userId)
-      this.matchmaker.remove(userId)
-      this.broadcastUpdate()
-    })
-
+    // Broadcast update to everyone
     this.broadcastUpdate()
 
     return new Response(null, {
@@ -57,29 +45,68 @@ export class Lobby {
     })
   }
 
-  private async handleMessage(userId: string, msg: any) {
-    const player = this.players.get(userId)
-    if (!player) return
+  async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer) {
+    const meta = ws.deserializeAttachment() as LobbyPlayer
+    if (!meta) return
 
-    switch (msg.type) {
-      case 'FIND_MATCH':
-        player.status = 'searching'
-        this.matchmaker.add({
-          id: player.id,
-          username: player.name,
-          rating: player.rating,
-          joinedAt: Date.now(),
-          socket: player.socket
-        })
-        this.checkMatches()
-        break
+    try {
+      const msg = JSON.parse(message as string)
+      
+      switch (msg.type) {
+        case 'FIND_MATCH':
+          meta.status = 'searching'
+          ws.serializeAttachment(meta)
+          
+          this.matchmaker.add({
+            id: meta.id,
+            username: meta.name,
+            rating: meta.rating,
+            joinedAt: Date.now(),
+            socket: ws
+          })
+          this.checkMatches()
+          break
 
-      case 'CANCEL_FIND_MATCH':
-        player.status = 'idle'
-        this.matchmaker.remove(userId)
-        this.broadcastUpdate()
-        break
+        case 'CANCEL_FIND_MATCH':
+          meta.status = 'idle'
+          ws.serializeAttachment(meta)
+          this.matchmaker.remove(meta.id)
+          this.broadcastUpdate()
+          break
+
+        case 'CHALLENGE': {
+          const { opponentId, mode, timeControl } = msg
+          const sockets = this.state.getWebSockets()
+          const opponent = sockets.find(s => (s.deserializeAttachment() as LobbyPlayer)?.id === opponentId)
+          if (opponent) {
+            opponent.send(JSON.stringify({
+              type: 'CHALLENGE_RECEIVED',
+              data: {
+                challengerId: meta.id,
+                challengerName: meta.name,
+                mode,
+                timeControl
+              }
+            }))
+          }
+          break
+        }
+      }
+    } catch (e) {
+      console.error('Lobby DO error:', e)
     }
+  }
+
+  async webSocketClose(ws: WebSocket) {
+    const meta = ws.deserializeAttachment() as LobbyPlayer
+    if (meta) {
+      this.matchmaker.remove(meta.id)
+    }
+    this.broadcastUpdate()
+  }
+
+  async webSocketError(ws: WebSocket) {
+    await this.webSocketClose(ws)
   }
 
   private checkMatches() {
@@ -100,27 +127,46 @@ export class Lobby {
       p1.socket.send(payload('white', p2))
       p2.socket.send(payload('black', p1))
 
-      // Update status in lobby
-      if (this.players.has(p1.id)) this.players.get(p1.id)!.status = 'in_game'
-      if (this.players.has(p2.id)) this.players.get(p2.id)!.status = 'in_game'
+      // Update metadata to in_game
+      const meta1 = p1.socket.deserializeAttachment() as LobbyPlayer
+      if (meta1) {
+        meta1.status = 'in_game'
+        p1.socket.serializeAttachment(meta1)
+      }
+      const meta2 = p2.socket.deserializeAttachment() as LobbyPlayer
+      if (meta2) {
+        meta2.status = 'in_game'
+        p2.socket.serializeAttachment(meta2)
+      }
     }
     this.broadcastUpdate()
   }
 
   private broadcastUpdate() {
+    const sockets = this.state.getWebSockets()
+    const allPlayers: LobbyPlayer[] = []
+    
+    for (const ws of sockets) {
+      const meta = ws.deserializeAttachment() as LobbyPlayer
+      if (meta) {
+        allPlayers.push(meta)
+      }
+    }
+
     const data = JSON.stringify({
       type: 'LOBBY_UPDATE',
       data: {
-        onlinePlayers: this.players.size,
-        searchingPlayers: this.matchmaker.getQueueCount()
+        onlinePlayers: allPlayers.length,
+        searchingPlayers: this.matchmaker.getQueueCount(),
+        players: allPlayers
       }
     })
 
-    for (const p of this.players.values()) {
+    for (const ws of sockets) {
       try {
-        p.socket.send(data)
+        ws.send(data)
       } catch (_) {
-        this.players.delete(p.id)
+        ws.close()
       }
     }
   }

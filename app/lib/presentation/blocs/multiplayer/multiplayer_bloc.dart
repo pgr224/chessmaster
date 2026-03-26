@@ -79,6 +79,10 @@ class MpSendChallengeEvent extends MultiplayerEvent {
 }
 
 class MpResignEvent extends MultiplayerEvent {}
+class MpLobbyNoticeEvent extends MultiplayerEvent {
+  final String message;
+  const MpLobbyNoticeEvent(this.message);
+}
 class MpDisconnectLobbyEvent extends MultiplayerEvent {}
 
 // STATE
@@ -181,8 +185,7 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
     on<MpChatReceivedEvent>(_onChatReceived);
     on<MpResignEvent>((event, emit) => _service.resign());
     on<MpSendChallengeEvent>((event, emit) {
-      // Direct challenge logic - using lobby DO or similar
-      _service.sendChat("Challenge to ${event.opponent.name} (${event.mode})"); // Placeholder logic
+      _service.sendChallenge(event.opponent.id, event.mode.name, event.timeControl);
       emit(state.copyWith(lobbyNotice: 'Challenge sent to ${event.opponent.name}!'));
     });
     on<MpDisconnectLobbyEvent>((event, emit) {
@@ -192,6 +195,7 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
       emit(const MultiplayerState());
     });
     on<MpGameOverEvent>((event, emit) => emit(state.copyWith(status: MultiplayerStatus.gameOver, gameResult: event.result, gameReason: event.reason)));
+    on<MpLobbyNoticeEvent>((event, emit) => emit(state.copyWith(lobbyNotice: event.message)));
   }
 
   Future<void> _onConnectLobby(MpConnectLobbyEvent event, Emitter<MultiplayerState> emit) async {
@@ -201,14 +205,21 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
     _lobbySub = _service.lobbyUpdates.listen((msg) {
       if (msg['type'] == 'LOBBY_UPDATE') {
         // Handle optional player list if sent
-        final list = (msg['data']['players'] as List?)?.map((p) => OnlineLobbyUser(
-          id: p['id'],
-          name: p['name'],
-          xp: p['rating'] ?? 0,
-        )).toList() ?? [];
+        final list = (msg['data']['players'] as List?)
+          ?.where((p) => p['id'] != _myUserId)
+          .map((p) => OnlineLobbyUser(
+            id: p['id'],
+            name: p['name'],
+            xp: p['rating'] ?? 0,
+            isAvailable: p['status'] == 'idle',
+            flair: p['status'] == 'searching' ? 'Searching...' : (p['status'] == 'idle' ? 'Ready!' : 'Playing'),
+          )).toList() ?? [];
         add(MpLobbyUpdateEvent(msg['data']['onlinePlayers'], msg['data']['searchingPlayers'], list));
       } else if (msg['type'] == 'MATCH_FOUND') {
         add(MpGameFoundEvent(msg['data']['gameId'], msg['data']['color'], msg['data']['opponentName']));
+      } else if (msg['type'] == 'CHALLENGE_RECEIVED') {
+        final d = msg['data'];
+        add(MpLobbyNoticeEvent('${d['challengerName']} invited you to ${d['mode']} (${d['timeControl']})!'));
       }
     });
     emit(state.copyWith(status: MultiplayerStatus.inLobby));

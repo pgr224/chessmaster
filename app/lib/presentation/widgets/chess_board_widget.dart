@@ -380,394 +380,208 @@ class _PieceWidget extends StatelessWidget {
   Widget _buildPieceVisual() {
     final isWhite = piece.color == PieceColor.white;
     final baseColor = isWhite ? whitePieceColor : blackPieceColor;
-    final style = _styleForTheme(theme, baseColor);
 
     // Filter themes
     if (theme == 'letters') return _buildLetterPiece(isWhite, baseColor);
     if (theme == '8-bit') return _build8BitPiece(isWhite, baseColor);
-    if (theme == 'angular') return _buildAngularPiece(isWhite, baseColor);
-    if (theme == 'mexico') return _buildMexicoPiece(isWhite, baseColor);
-    if (theme == 'lewis') return _buildLewisPiece(isWhite, baseColor);
-    if (theme == 'video') return _buildVideoPiece(isWhite, baseColor);
 
-    // Default: Classic 3D
-    return SizedBox(
-      width: size * 0.85,
-      height: size * 0.85,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Positioned(
-            bottom: size * 0.02,
-            child: Container(
-              width: size * 0.55,
-              height: size * 0.1,
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: style.shadowOpacity),
-                borderRadius: BorderRadius.circular(size * 0.05),
-              ),
-            ),
-          ),
-          Container(
-            width: size * 0.8,
-            height: size * 0.8,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(
-                center: const Alignment(-0.25, -0.3),
-                radius: 0.9,
-                colors: [style.light, style.mid, style.dark],
-                stops: const [0.0, 0.6, 1.0],
-              ),
-              border: Border.all(color: style.rim, width: 1.2),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.25),
-                  blurRadius: 6,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-          ),
-          CustomPaint(
-            size: Size.square(size * 0.6),
-            painter: _PieceSilhouettePainter(
-              type: piece.type,
-              fill: style.silhouetteFill,
-              stroke: style.silhouetteStroke,
-            ),
-          ),
-        ],
-      ),
+    return _ObjectPiece(
+      piece: piece,
+      theme: theme,
+      size: size,
+      color: baseColor,
     );
   }
 
-  Widget _buildLetterPiece(bool isWhite, Color color) {
-    return Center(
-      child: Text(
-        piece.symbol.toUpperCase(),
-        style: GoogleFonts.jura(
-          fontSize: size * 0.7,
-          fontWeight: FontWeight.bold,
-          color: color,
-        ),
-      ),
-    );
-  }
+class _ObjectPiece extends StatelessWidget {
+  final ChessPiece piece;
+  final String theme;
+  final double size;
+  final Color color;
 
-  Widget _build8BitPiece(bool isWhite, Color color) {
-    return Center(
-      child: Text(
-        piece.symbol.toUpperCase(),
-        style: GoogleFonts.vt323(
-          fontSize: size * 0.5,
-          color: color,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAngularPiece(bool isWhite, Color color) {
-    return Center(
-      child: Icon(
-        _iconDataForType(piece.type),
-        size: size * 0.8,
-        color: color,
-      ),
-    );
-  }
-
-  Widget _buildMexicoPiece(bool isWhite, Color color) {
-    return Center(
-      child: Text(
-        piece.symbol.toUpperCase(),
-        style: GoogleFonts.monoton(
-          fontSize: size * 0.65,
-          color: color,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLewisPiece(bool isWhite, Color color) {
-    return Center(
-      child: Text(
-        piece.symbol.toUpperCase(),
-        style: GoogleFonts.notoSerif(
-          fontSize: size * 0.75,
-          fontWeight: FontWeight.w900,
-          color: color,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildVideoPiece(bool isWhite, Color color) {
-    return Center(
-      child: Text(
-        piece.symbol.toUpperCase(),
-        style: GoogleFonts.orbitron(
-          fontSize: size * 0.55,
-          fontWeight: FontWeight.bold,
-          color: color,
-          shadows: [
-            Shadow(color: color.withValues(alpha: 0.5), blurRadius: 10),
-          ],
-        ),
-      ),
-    );
-  }
-
-  IconData _iconDataForType(PieceType type) {
-    switch (type) {
-      case PieceType.pawn:   return Icons.change_history;
-      case PieceType.rook:   return Icons.crop_square;
-      case PieceType.knight: return Icons.details;
-      case PieceType.bishop: return Icons.architecture;
-      case PieceType.queen:  return Icons.brightness_high;
-      case PieceType.king:   return Icons.star;
-    }
-  }
-
-  _PieceMaterialStyle _styleForTheme(String rawTheme, Color baseColor) {
-    final normalized = rawTheme == 'classic' ? 'classic3d' : rawTheme;
-    final contrast = _bestTextColor(baseColor);
-
-    switch (normalized) {
-      case 'marble3d':
-        final marbleBase = Color.lerp(baseColor, const Color(0xFFE5E8ED), 0.45)!;
-        return _PieceMaterialStyle(
-          light: _lighten(marbleBase, 0.18),
-          mid: marbleBase,
-          dark: _darken(marbleBase, 0.26),
-          rim: contrast.withValues(alpha: 0.18),
-          silhouetteFill: contrast.withValues(alpha: 0.88),
-          silhouetteStroke: Colors.white.withValues(alpha: 0.2),
-          highlightOpacity: 0.38,
-          shadowOpacity: 0.2,
-        );
-      case 'metal3d':
-        final metalBase = Color.lerp(baseColor, const Color(0xFF8A94A6), 0.5)!;
-        return _PieceMaterialStyle(
-          light: _lighten(metalBase, 0.26),
-          mid: metalBase,
-          dark: _darken(metalBase, 0.33),
-          rim: Colors.white.withValues(alpha: 0.2),
-          silhouetteFill: Colors.white.withValues(alpha: 0.9),
-          silhouetteStroke: const Color(0xFF1E2733).withValues(alpha: 0.22),
-          highlightOpacity: 0.46,
-          shadowOpacity: 0.28,
-        );
-      default:
-        return _PieceMaterialStyle(
-          light: _lighten(baseColor, 0.22),
-          mid: baseColor,
-          dark: _darken(baseColor, 0.28),
-          rim: contrast.withValues(alpha: 0.22),
-          silhouetteFill: contrast.withValues(alpha: 0.92),
-          silhouetteStroke: contrast.withValues(alpha: 0.25),
-          highlightOpacity: 0.32,
-          shadowOpacity: 0.24,
-        );
-    }
-  }
-
-  Color _lighten(Color c, double amount) {
-    final hsl = HSLColor.fromColor(c);
-    return hsl.withLightness((hsl.lightness + amount).clamp(0.0, 1.0)).toColor();
-  }
-
-  Color _darken(Color c, double amount) {
-    final hsl = HSLColor.fromColor(c);
-    return hsl.withLightness((hsl.lightness - amount).clamp(0.0, 1.0)).toColor();
-  }
-
-  Color _bestTextColor(Color background) {
-    return background.computeLuminance() > 0.5 ? Colors.black : Colors.white;
-  }
-}
-
-class _PieceMaterialStyle {
-  final Color light;
-  final Color mid;
-  final Color dark;
-  final Color rim;
-  final Color silhouetteFill;
-  final Color silhouetteStroke;
-  final double highlightOpacity;
-  final double shadowOpacity;
-
-  const _PieceMaterialStyle({
-    required this.light,
-    required this.mid,
-    required this.dark,
-    required this.rim,
-    required this.silhouetteFill,
-    required this.silhouetteStroke,
-    required this.highlightOpacity,
-    required this.shadowOpacity,
+  const _ObjectPiece({
+    required this.piece,
+    required this.theme,
+    required this.size,
+    required this.color,
   });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: CustomPaint(
+        painter: _ObjectPiecePainter(
+          piece: piece,
+          theme: theme,
+          color: color,
+        ),
+      ),
+    );
+  }
 }
 
-class _PieceSilhouettePainter extends CustomPainter {
-  final PieceType type;
-  final Color fill;
-  final Color stroke;
+class _ObjectPiecePainter extends CustomPainter {
+  final ChessPiece piece;
+  final String theme;
+  final Color color;
 
-  const _PieceSilhouettePainter({
-    required this.type,
-    required this.fill,
-    required this.stroke,
+  _ObjectPiecePainter({
+    required this.piece,
+    required this.theme,
+    required this.color,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
-    final fillPaint = Paint()
-      ..style = PaintingStyle.fill
-      ..color = fill;
-    final strokePaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = size.width * 0.02
-      ..color = stroke;
+    final w = size.width;
+    final h = size.height;
+    final center = Offset(w / 2, h / 2);
 
-    final path = switch (type) {
-      PieceType.pawn => _pawnPath(size),
-      PieceType.knight => _knightPath(size),
-      PieceType.bishop => _bishopPath(size),
-      PieceType.rook => _rookPath(size),
-      PieceType.queen => _queenPath(size),
-      PieceType.king => _kingPath(size),
-    };
+    // 1. Shadow
+    final shadowPaint = Paint()
+      ..color = Colors.black.withValues(alpha: 0.3)
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, w * 0.08);
+    canvas.drawOval(
+      Rect.fromCenter(center: Offset(w/2, h*0.9), width: w * 0.5, height: h * 0.1),
+      shadowPaint,
+    );
 
-    canvas.drawPath(path, fillPaint);
-    canvas.drawPath(path, strokePaint);
+    // 2. Select material / theme
+    switch (theme) {
+      case 'lewis':
+        _drawLewis(canvas, size);
+        break;
+      case 'mexico':
+        _drawMexico(canvas, size);
+        break;
+      case 'angular':
+        _drawAngular(canvas, size);
+        break;
+      default:
+        _drawClassic(canvas, size);
+    }
   }
 
-  Path _pawnPath(Size s) {
-    final w = s.width;
-    final h = s.height;
+  void _drawLewis(Canvas canvas, Size s) {
+    final w = s.width; final h = s.height;
+    final isWhite = piece.color == PieceColor.white;
+    final baseColor = isWhite ? const Color(0xFFF5E6CA) : const Color(0xFF8B6B4A);
+    final highlightColor = isWhite ? Colors.white : const Color(0xFFD4B483);
+    final shadeColor = isWhite ? const Color(0xFFD7C4A5) : const Color(0xFF4A3728);
+
+    final mainPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topLeft, end: Alignment.bottomRight,
+        colors: [highlightColor, baseColor, shadeColor],
+      ).createShader(Rect.fromLTWH(0, 0, w, h));
+
+    final path = _getLewisPath(piece.type, s);
+    canvas.drawPath(path, mainPaint);
+    
+    final detailPaint = Paint()..style = PaintingStyle.stroke..strokeWidth = 0.8..color = shadeColor.withValues(alpha: 0.4);
+    canvas.drawPath(path, detailPaint);
+  }
+
+  void _drawMexico(Canvas canvas, Size s) {
+    final w = s.width; final h = s.height;
+    final isWhite = piece.color == PieceColor.white;
+    final baseColor = isWhite ? const Color(0xFFE6B325) : const Color(0xFF0F3D3E);
+    final highlightColor = isWhite ? const Color(0xFFFFD93D) : const Color(0xFF2ECC71);
+
+    final mainPaint = Paint()
+      ..shader = RadialGradient(
+        colors: [highlightColor, baseColor, Colors.black],
+        center: const Alignment(-0.3, -0.4),
+      ).createShader(Rect.fromLTWH(0, 0, w, h));
+
+    final path = _getMexicoPath(piece.type, s);
+    canvas.drawPath(path, mainPaint);
+  }
+
+  void _drawAngular(Canvas canvas, Size s) {
+    final w = s.width; final h = s.height;
+    final isWhite = piece.color == PieceColor.white;
+    final baseColor = isWhite ? const Color(0xFFBFC8D6) : const Color(0xFF2C3E50);
+    
+    final mainPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topLeft, end: Alignment.bottomRight,
+        colors: [Colors.white.withValues(alpha: 0.9), baseColor, Colors.black.withValues(alpha: 0.8)],
+        stops: const [0.0, 0.4, 1.0],
+      ).createShader(Rect.fromLTWH(0, 0, w, h));
+
+    final path = _getAngularPath(piece.type, s);
+    canvas.drawPath(path, mainPaint);
+  }
+
+  void _drawClassic(Canvas canvas, Size s) {
+    final w = s.width; final h = s.height;
+    final isWhite = piece.color == PieceColor.white;
+    final baseColor = color;
+    final light = isWhite ? Colors.white : color.withValues(alpha: 0.8);
+    final dark = Colors.black.withValues(alpha: 0.8);
+
+    final mainPaint = Paint()
+      ..shader = RadialGradient(
+        center: const Alignment(-0.25, -0.35),
+        radius: 0.8,
+        colors: [light, baseColor, dark],
+      ).createShader(Rect.fromLTWH(0, 0, w, h));
+
+    final path = _getPathForType(piece.type, s);
+    canvas.drawPath(path, mainPaint);
+  }
+
+  Path _getLewisPath(PieceType type, Size s) {
+    final w = s.width; final h = s.height;
     final p = Path();
-    p.addOval(Rect.fromCircle(center: Offset(w * 0.5, h * 0.27), radius: w * 0.12));
-    p.addRRect(RRect.fromRectAndRadius(
-      Rect.fromLTWH(w * 0.39, h * 0.36, w * 0.22, h * 0.22),
-      Radius.circular(w * 0.09),
-    ));
-    p.addRRect(RRect.fromRectAndRadius(
-      Rect.fromLTWH(w * 0.3, h * 0.57, w * 0.4, h * 0.12),
-      Radius.circular(w * 0.06),
-    ));
-    p.addRRect(RRect.fromRectAndRadius(
-      Rect.fromLTWH(w * 0.22, h * 0.72, w * 0.56, h * 0.12),
-      Radius.circular(w * 0.06),
-    ));
+    switch (type) {
+      case PieceType.king:
+        p.addRRect(RRect.fromRectXY(Rect.fromLTWH(w*0.25, h*0.2, w*0.5, h*0.7), 4, 4));
+        p.addRect(Rect.fromLTWH(w*0.35, h*0.1, w*0.3, h*0.15));
+        break;
+      case PieceType.pawn:
+        p.addOval(Rect.fromCenter(center: Offset(w*0.5, h*0.6), width: w*0.4, height: h*0.5));
+        break;
+      default:
+        p.addRRect(RRect.fromRectXY(Rect.fromLTWH(w*0.3, h*0.3, w*0.4, h*0.6), 8, 8));
+    }
     return p;
   }
 
-  Path _rookPath(Size s) {
-    final w = s.width;
-    final h = s.height;
+  Path _getMexicoPath(PieceType type, Size s) {
+    final w = s.width; final h = s.height;
     final p = Path();
-    p.addRRect(RRect.fromRectAndRadius(
-      Rect.fromLTWH(w * 0.24, h * 0.24, w * 0.52, h * 0.12),
-      Radius.circular(w * 0.03),
-    ));
-    p.addRect(Rect.fromLTWH(w * 0.28, h * 0.18, w * 0.08, h * 0.08));
-    p.addRect(Rect.fromLTWH(w * 0.46, h * 0.16, w * 0.08, h * 0.1));
-    p.addRect(Rect.fromLTWH(w * 0.64, h * 0.18, w * 0.08, h * 0.08));
-    p.addRRect(RRect.fromRectAndRadius(
-      Rect.fromLTWH(w * 0.33, h * 0.36, w * 0.34, h * 0.3),
-      Radius.circular(w * 0.05),
-    ));
-    p.addRRect(RRect.fromRectAndRadius(
-      Rect.fromLTWH(w * 0.27, h * 0.68, w * 0.46, h * 0.13),
-      Radius.circular(w * 0.06),
-    ));
+    p.addRRect(RRect.fromRectAndRadius(Rect.fromLTWH(w*0.3, h*0.3, w*0.4, h*0.6), Radius.circular(w*0.05)));
     return p;
   }
 
-  Path _bishopPath(Size s) {
-    final w = s.width;
-    final h = s.height;
+  Path _getAngularPath(PieceType type, Size s) {
+    final w = s.width; final h = s.height;
     final p = Path();
-    p.addOval(Rect.fromCenter(center: Offset(w * 0.5, h * 0.25), width: w * 0.2, height: h * 0.22));
-    p.moveTo(w * 0.52, h * 0.18);
-    p.lineTo(w * 0.44, h * 0.32);
-    p.lineTo(w * 0.48, h * 0.34);
-    p.close();
-    p.addRRect(RRect.fromRectAndRadius(
-      Rect.fromLTWH(w * 0.37, h * 0.34, w * 0.26, h * 0.28),
-      Radius.circular(w * 0.12),
-    ));
-    p.addRRect(RRect.fromRectAndRadius(
-      Rect.fromLTWH(w * 0.28, h * 0.66, w * 0.44, h * 0.14),
-      Radius.circular(w * 0.06),
-    ));
+    p.moveTo(w*0.5, h*0.1); p.lineTo(w*0.8, h*0.8); p.lineTo(w*0.2, h*0.8); p.close();
     return p;
   }
 
-  Path _knightPath(Size s) {
-    final w = s.width;
-    final h = s.height;
+  Path _getPathForType(PieceType type, Size s) {
+    final w = s.width; final h = s.height;
     final p = Path();
-    p.moveTo(w * 0.3, h * 0.78);
-    p.lineTo(w * 0.68, h * 0.78);
-    p.lineTo(w * 0.63, h * 0.64);
-    p.quadraticBezierTo(w * 0.72, h * 0.52, w * 0.66, h * 0.39);
-    p.quadraticBezierTo(w * 0.58, h * 0.2, w * 0.41, h * 0.23);
-    p.lineTo(w * 0.48, h * 0.34);
-    p.lineTo(w * 0.36, h * 0.42);
-    p.lineTo(w * 0.42, h * 0.52);
-    p.lineTo(w * 0.3, h * 0.62);
-    p.close();
-    p.addOval(Rect.fromCircle(center: Offset(w * 0.56, h * 0.34), radius: w * 0.018));
-    return p;
-  }
-
-  Path _queenPath(Size s) {
-    final w = s.width;
-    final h = s.height;
-    final p = Path();
-    p.addOval(Rect.fromCircle(center: Offset(w * 0.3, h * 0.21), radius: w * 0.05));
-    p.addOval(Rect.fromCircle(center: Offset(w * 0.42, h * 0.17), radius: w * 0.05));
-    p.addOval(Rect.fromCircle(center: Offset(w * 0.58, h * 0.17), radius: w * 0.05));
-    p.addOval(Rect.fromCircle(center: Offset(w * 0.7, h * 0.21), radius: w * 0.05));
-    p.moveTo(w * 0.24, h * 0.27);
-    p.lineTo(w * 0.76, h * 0.27);
-    p.lineTo(w * 0.66, h * 0.59);
-    p.lineTo(w * 0.34, h * 0.59);
-    p.close();
-    p.addRRect(RRect.fromRectAndRadius(
-      Rect.fromLTWH(w * 0.27, h * 0.61, w * 0.46, h * 0.18),
-      Radius.circular(w * 0.06),
-    ));
-    return p;
-  }
-
-  Path _kingPath(Size s) {
-    final w = s.width;
-    final h = s.height;
-    final p = Path();
-    p.addRRect(RRect.fromRectAndRadius(
-      Rect.fromLTWH(w * 0.45, h * 0.08, w * 0.1, h * 0.16),
-      Radius.circular(w * 0.03),
-    ));
-    p.addRRect(RRect.fromRectAndRadius(
-      Rect.fromLTWH(w * 0.4, h * 0.12, w * 0.2, h * 0.08),
-      Radius.circular(w * 0.03),
-    ));
-    p.addRRect(RRect.fromRectAndRadius(
-      Rect.fromLTWH(w * 0.35, h * 0.24, w * 0.3, h * 0.34),
-      Radius.circular(w * 0.08),
-    ));
-    p.addRRect(RRect.fromRectAndRadius(
-      Rect.fromLTWH(w * 0.27, h * 0.62, w * 0.46, h * 0.18),
-      Radius.circular(w * 0.06),
-    ));
+    switch (type) {
+      case PieceType.pawn:
+        p.addOval(Rect.fromCircle(center: Offset(w * 0.5, h * 0.3), radius: w * 0.15));
+        p.addRRect(RRect.fromRectXY(Rect.fromLTWH(w * 0.3, h * 0.45, w * 0.4, h * 0.45), 8, 8));
+        break;
+      case PieceType.rook:
+        p.addRRect(RRect.fromRectXY(Rect.fromLTWH(w * 0.25, h * 0.2, w * 0.5, h * 0.75), 4, 4));
+        break;
+      default:
+        p.addOval(Rect.fromCircle(center: Offset(w * 0.5, h * 0.5), radius: w * 0.4));
+    }
     return p;
   }
 
   @override
-  bool shouldRepaint(covariant _PieceSilhouettePainter oldDelegate) {
-    return oldDelegate.type != type || oldDelegate.fill != fill || oldDelegate.stroke != stroke;
-  }
+  bool shouldRepaint(covariant _ObjectPiecePainter oldDelegate) => true;
 }

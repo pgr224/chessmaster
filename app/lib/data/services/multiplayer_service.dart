@@ -85,6 +85,16 @@ class MultiplayerService {
     }));
   }
 
+  /// Send a direct challenge to another player in the lobby
+  void sendChallenge(String opponentId, String mode, String timeControl) {
+    _lobbyChannel?.sink.add(jsonEncode({
+      'type': 'CHALLENGE',
+      'opponentId': opponentId,
+      'mode': mode,
+      'timeControl': timeControl,
+    }));
+  }
+
   /// Resign game
   void resign() {
     _gameChannel?.sink.add(jsonEncode({'type': 'RESIGN'}));
