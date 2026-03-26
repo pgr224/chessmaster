@@ -7,6 +7,7 @@ enum WsMessageType {
   join, move, chat, resign, drawOffer, drawAccept, drawDecline,
   playerJoined, playerLeft, gameStart, gameOver, error, ping, pong,
   matchFound, challenge, challengeAccept, challengeDecline, tournamentUpdate,
+  gameState, stateUpdate,
 }
 
 class WsMessage {

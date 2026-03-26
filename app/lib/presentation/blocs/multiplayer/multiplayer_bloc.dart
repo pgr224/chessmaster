@@ -379,6 +379,13 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
             reason: '${msg.data['reason'] ?? 'unknown'}',
           ));
           break;
+        case WsMessageType.gameState:
+        case WsMessageType.stateUpdate:
+          final players = _playersFromPayload(msg.data);
+          if (players.isNotEmpty) {
+            add(MpLobbyUsersUpdatedEvent(players));
+          }
+          break;
         default:
           break;
       }

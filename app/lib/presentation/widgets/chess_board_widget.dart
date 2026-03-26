@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../domain/engine/chess_engine.dart';
 
@@ -458,7 +459,7 @@ class _PieceWidget extends StatelessWidget {
     return Center(
       child: Text(
         piece.symbol.toUpperCase(),
-        style: GoogleFonts.pressStart2p(
+        style: GoogleFonts.vt323(
           fontSize: size * 0.5,
           color: color,
         ),
@@ -492,7 +493,7 @@ class _PieceWidget extends StatelessWidget {
     return Center(
       child: Text(
         piece.symbol.toUpperCase(),
-        style: GoogleFonts.noticiasText(
+        style: GoogleFonts.notoSerif(
           fontSize: size * 0.75,
           fontWeight: FontWeight.w900,
           color: color,
@@ -579,6 +580,10 @@ class _PieceWidget extends StatelessWidget {
   Color _darken(Color c, double amount) {
     final hsl = HSLColor.fromColor(c);
     return hsl.withLightness((hsl.lightness - amount).clamp(0.0, 1.0)).toColor();
+  }
+
+  Color _bestTextColor(Color background) {
+    return background.computeLuminance() > 0.5 ? Colors.black : Colors.white;
   }
 }
 

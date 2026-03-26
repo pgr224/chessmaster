@@ -254,7 +254,7 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
           const SizedBox(height: 10),
           Row(
             children: [
-              Expanded(child: _colorPill('Start As', _customStartColor == 'white' ? AppTheme.lightSquare : AppTheme.darkSquare, () {
+              Expanded(child: _colorPill('Start As', _customStartColor == 'white' ? AppTheme.boardThemes['classic']!.light : AppTheme.boardThemes['classic']!.dark, () {
                 setState(() {
                   _customStartColor = _customStartColor == 'white' ? 'black' : 'white';
                 });

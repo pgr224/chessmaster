@@ -140,7 +140,7 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                           ),
                         ],
                       ),
-                    ).animate().scale(delay: 800.ms, duration: 400.ms, curve: Curves.backOut),
+                    ).animate().scale(delay: 800.ms, duration: 400.ms, curve: Curves.easeOutBack),
                   ],
 
                   const SizedBox(height: 40),
@@ -234,5 +234,4 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
     if (widget.puzzle != null) return 'Puzzle solved with brilliance! 🧠';
     return '$winner wins the battle! 🥳';
   }
-}
 }

@@ -144,35 +144,50 @@
         const timeout = TIMEOUT_CONFIG[activeEngine] || 5000;
 
         if (activeEngine === ENGINE_VALIDATION) {
-          // No AI for multiplayer/two-player
           resolve(null);
           return;
         }
 
-        // Cancel any pending request
         if (pendingResolve) {
           pendingResolve(null);
           clearTimeout(pendingTimeout);
         }
 
-        pendingResolve = resolve;
+        const executeRequest = (engineType) => {
+          pendingResolve = resolve;
+          pendingTimeout = setTimeout(() => {
+            console.warn(`[EngineService] Search timeout (${timeout}ms) for request ${id} using ${engineType}`);
+            if (pendingResolve === resolve) {
+              pendingResolve = null;
+              resolve(null);
+            }
+          }, timeout);
 
-        // Set timeout fallback
-        pendingTimeout = setTimeout(() => {
-          console.warn(`[EngineService] Search timeout (${timeout}ms) for request ${id}`);
-          if (pendingResolve === resolve) {
-            pendingResolve = null;
-            resolve(null);
+          if (engineType === ENGINE_SUNFISH) {
+            const worker = createSunfishWorker();
+            worker.postMessage({ type: 'search', fen, depth: Math.min(depth, 5), timeout });
+          } else if (engineType === ENGINE_STOCKFISH) {
+            try {
+              const worker = createStockfishWorker();
+              // Listen for one-time error for fallback
+              const errorHandler = (e) => {
+                if (e.data && e.data.type === 'error') {
+                  console.warn('[EngineService] Stockfish failed, falling back to Sunfish');
+                  worker.removeEventListener('message', errorHandler);
+                  clearTimeout(pendingTimeout);
+                  executeRequest(ENGINE_SUNFISH);
+                }
+              };
+              worker.addEventListener('message', errorHandler);
+              worker.postMessage({ type: 'search', fen, depth });
+            } catch (err) {
+              console.warn('[EngineService] Could not start Stockfish worker, falling back to Sunfish');
+              executeRequest(ENGINE_SUNFISH);
+            }
           }
-        }, timeout);
+        };
 
-        if (activeEngine === ENGINE_SUNFISH) {
-          const worker = createSunfishWorker();
-          worker.postMessage({ type: 'search', fen, depth, timeout });
-        } else if (activeEngine === ENGINE_STOCKFISH) {
-          const worker = createStockfishWorker();
-          worker.postMessage({ type: 'search', fen, depth });
-        }
+        executeRequest(activeEngine);
       });
     },
 
