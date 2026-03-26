@@ -29,6 +29,11 @@ class AuthUpdateProfileEvent extends AuthEvent {
 
 class AuthSignOutEvent extends AuthEvent {}
 
+class AuthClearAllDataEvent extends AuthEvent {
+  /// Debug event: clears all session + device data and returns to unauthenticated state
+  const AuthClearAllDataEvent();
+}
+
 // ═══════════════════════════════════════════
 // STATES
 // ═══════════════════════════════════════════
@@ -64,6 +69,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthRegisterEvent>(_onRegister);
     on<AuthUpdateProfileEvent>(_onUpdateProfile);
     on<AuthSignOutEvent>(_onSignOut);
+    on<AuthClearAllDataEvent>(_onClearAllData);
   }
 
   Future<void> _onInitialize(AuthInitializeEvent event, Emitter<AuthState> emit) async {
@@ -110,6 +116,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   Future<void> _onSignOut(AuthSignOutEvent event, Emitter<AuthState> emit) async {
     await _repository.signOut();
+    emit(AuthUnauthenticatedState());
+  }
+
+  Future<void> _onClearAllData(AuthClearAllDataEvent event, Emitter<AuthState> emit) async {
+    /// Debug handler: clears all stored user session, device fingerprint, and auth token
+    /// Forces app to show onboarding on next restart
+    /// Useful for testing session persistence and cleanup flows
+    await _repository.clearAllData();
     emit(AuthUnauthenticatedState());
   }
 }

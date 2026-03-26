@@ -24,7 +24,9 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _navigate() async {
-    await Future.delayed(3.seconds);
+    // Extended delay to ensure AuthInitializeEvent completes before redirect
+    // This prevents race condition where redirect fires before auth state resolves
+    await Future.delayed(const Duration(seconds: 5));
     if (mounted) context.go('/home');
   }
 

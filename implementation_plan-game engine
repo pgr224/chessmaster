@@ -1,0 +1,164 @@
+# Hybrid Chess Engine Architecture — Implementation Plan
+
+## Overview
+
+Replace the single Dart-only AI engine with a **hybrid architecture** that routes to the optimal engine based on difficulty mode:
+
+| Mode | Engine | Runs In | Communication |
+|------|--------|---------|---------------|
+| Basic / Intermediate | **Sunfish** (JS minimax) | Web Worker / Dart Isolate | postMessage / Isolate.run |
+| Advanced / Impossible | **Stockfish WASM** | Web Worker | UCI protocol via postMessage |
+| Two Player / Multiplayer | **chess.js** (rules only) | Main thread / Backend | Direct calls / WebSocket |
+
+```mermaid
+graph TD
+    subgraph Flutter App
+        GBloc[GameBloc] --> EC[EngineController]
+        EC -->|web| JB[JS Bridge]
+        EC -->|mobile| NE[Native Engine]
+    end
+    subgraph Web Workers
+        JB --> ES[engine_service.js]
+        ES -->|basic/intermediate| SW[sunfish.worker.js]
+        ES -->|advanced/impossible| STW[stockfish.worker.js]
+        ES -->|multiplayer| CJ[chess_logic.js]
+    end
+    subgraph Mobile
+        NE -->|basic/intermediate| AI[ai_engine.dart Isolate]
+        NE -->|advanced/impossible| AI
+    end
+    subgraph Backend
+        WS[GameRoom DO] --> VS[validation_service.ts]
+        VS --> CJS[chess.js server-side]
+    end
+```
+
+---
+
+## Proposed Changes
+
+### Web Workers (New Files)
+
+#### [NEW] [sunfish_engine.js](file:///d:/PP942920DRIVE/PROJECTS/chess/app/web/engine/sunfish_engine.js)
+Lightweight chess AI engine in JS implementing:
+- Board representation (mailbox 10×12)
+- Move generation with piece-square tables
+- Minimax search with alpha-beta pruning
+- Depth 1–5 (suitable for Basic & Intermediate)
+- Target response time: **<200ms**
+
+#### [NEW] [sunfish.worker.js](file:///d:/PP942920DRIVE/PROJECTS/chess/app/web/engine/sunfish.worker.js)
+Web Worker wrapper that:
+- Listens for `{type:'init'}` and `{type:'search', fen, depth}` messages
+- Runs Sunfish search in background thread
+- Returns `{type:'bestmove', move}` via postMessage
+
+#### [NEW] [stockfish.worker.js](file:///d:/PP942920DRIVE/PROJECTS/chess/app/web/engine/stockfish.worker.js)
+Web Worker wrapper for Stockfish WASM:
+- Loads `stockfish.wasm` lazily on first use
+- Communicates via UCI protocol:
+  - `uci`, `isready`, `position fen <FEN>`, `go depth <N>`
+- Parses `bestmove` from UCI output
+- Depth config: Advanced → 10–15, Impossible → 18+
+- Target response time: **<500ms**
+
+#### [NEW] [chess_logic.js](file:///d:/PP942920DRIVE/PROJECTS/chess/app/web/engine/chess_logic.js)
+chess.js wrapper for move validation (multiplayer/two-player):
+- `validateMove(fen, from, to, promotion)`
+- `getGameState(fen)` → check/checkmate/stalemate/draw
+- [getLegalMoves(fen, square)](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/domain/engine/chess_engine.dart#276-280) → array of legal moves
+- No AI computation
+
+#### [NEW] [engine_service.js](file:///d:/PP942920DRIVE/PROJECTS/chess/app/web/engine/engine_service.js)
+Unified façade exposed to Flutter via `window.ChessEngineService`:
+- `initEngine(mode, difficulty)` — spins up the right worker
+- [getBestMove(fen)](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/domain/engine/ai_engine.dart#25-42) → Promise\<string\>
+- `validateMove(fen, from, to, promotion)` → Promise\<bool\>
+- [dispose()](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/data/services/multiplayer_service.dart#166-170) — terminates workers
+- Internally routes: Sunfish for basic/intermediate, Stockfish for advanced/impossible, chess.js for multiplayer
+
+---
+
+### Flutter Integration (New Files)
+
+#### [NEW] [engine_controller.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/domain/engine/engine_controller.dart)
+Platform-aware engine controller:
+- On **web**: calls `window.ChessEngineService` via `dart:js_interop`
+- On **mobile**: delegates to existing [AIEngine](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/domain/engine/ai_engine.dart#6-197) (Dart isolate)
+- Unified API:
+  - `Future<void> init(GameMode mode, AIDifficulty? difficulty)`
+  - `Future<String?> getBestMove(String fen)`
+  - `Future<bool> validateMove(String fen, String from, String to, String? promo)`
+  - `void dispose()`
+- Timeout fallback: 5s for Sunfish, 10s for Stockfish
+
+#### [NEW] [js_engine_bridge.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/domain/engine/js_engine_bridge.dart)
+Web-only file using `dart:js_interop` to call `window.ChessEngineService` methods.
+
+#### [NEW] [native_engine_bridge.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/domain/engine/native_engine_bridge.dart)
+Mobile-only stub that falls back to the existing `AIEngine.getBestMove()` on Dart isolates.
+
+---
+
+### Modifications to Existing Files
+
+#### [MODIFY] [game_bloc.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/presentation/blocs/game/game_bloc.dart)
+- Import and instantiate `EngineController` instead of calling [AIEngine](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/domain/engine/ai_engine.dart#6-197) directly
+- In [_onStart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/presentation/blocs/game/game_bloc.dart#248-278): call `_engineController.init(mode, difficulty)`
+- In [_onMakeMove](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/presentation/blocs/game/game_bloc.dart#328-430) (AI turn): call `_engineController.getBestMove(fen)` instead of `AIEngine.getBestMove()`
+- In `close()`: call `_engineController.dispose()`
+
+#### [MODIFY] [index.html](file:///d:/PP942920DRIVE/PROJECTS/chess/app/web/index.html)
+- Add `<script src="engine/engine_service.js">` before `flutter_bootstrap.js`
+
+#### [MODIFY] [injection_container.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/core/di/injection_container.dart)
+- Register `EngineController` as a factory (one per game instance)
+
+---
+
+### Backend Validation
+
+#### [NEW] [validation_service.ts](file:///d:/PP942920DRIVE/PROJECTS/chess/backend/src/services/validation_service.ts)
+chess.js-based validation on the server:
+- `isLegalMove(fen, from, to, promotion)` → boolean
+- `getGameStatus(fen)` → 'active' | 'check' | 'checkmate' | 'stalemate' | 'draw'
+- Used by [GameRoom](file:///d:/PP942920DRIVE/PROJECTS/chess/backend/src/index.ts#81-402) before broadcasting moves
+
+#### [MODIFY] [index.ts](file:///d:/PP942920DRIVE/PROJECTS/chess/backend/src/index.ts)
+- In [handleMessage](file:///d:/PP942920DRIVE/PROJECTS/chess/backend/src/index.ts#141-251) case `'move'`: validate with `ValidationService.isLegalMove()` before broadcasting
+- Reject illegal moves with `{type:'error', data:{message:'Illegal move'}}`
+
+---
+
+## Performance Optimizations
+
+1. **Lazy loading**: Stockfish WASM only loaded when Advanced/Impossible is selected
+2. **Worker caching**: Workers persist across moves, only terminated on [dispose()](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/data/services/multiplayer_service.dart#166-170)
+3. **Debounce**: Ignore duplicate move requests within 100ms
+4. **Background threads**: All computation off main thread (Workers on web, Isolates on mobile)
+5. **Opening book**: Sunfish checks opening book before search (instant response)
+
+---
+
+## User Review Required
+
+> [!IMPORTANT]
+> **Stockfish WASM binary**: The Stockfish WASM file (~2MB) needs to be downloaded from the official repo and placed in `web/engine/`. This is a one-time setup.
+
+> [!WARNING]
+> **Mobile Stockfish**: On mobile (Android/iOS), Stockfish requires native binary compilation via FFI. For now, Advanced/Impossible on mobile will use the existing Dart AI at deeper depths (8–10). Full native Stockfish integration can be added later as a separate task.
+
+---
+
+## Verification Plan
+
+### Automated
+- `cd app && flutter analyze` — no errors
+- `cd backend && npx tsc --noEmit` — no TypeScript errors
+
+### Manual Testing
+1. Start game on **Basic** → verify Sunfish worker responds <200ms
+2. Start game on **Advanced** → verify Stockfish worker responds with stronger play <500ms
+3. Start **Two Player** → verify chess.js validates moves, no AI invoked
+4. Start **Multiplayer** → verify server-side validation rejects illegal moves
+5. Check browser DevTools → confirm Workers are spawned, no main thread blocking

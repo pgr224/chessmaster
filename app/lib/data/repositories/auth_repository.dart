@@ -218,7 +218,7 @@ class AuthRepository {
       id: userId,
       username: fallbackUsername,
       avatarUrl: null,
-      rating: 1200,
+      xp: 0,
       isOnline: true,
       stats: const UserStats(),
       deviceId: deviceId,
@@ -246,5 +246,17 @@ class AuthRepository {
 
   String _normalizeToken(String token) {
     return token.replaceFirst(RegExp(r'^Bearer\s+', caseSensitive: false), '').trim();
+  }
+
+  /// Debug/cleanup method: Remove ALL user session & device data
+  /// WARNING: This clears auth token, user profile, and device fingerprint
+  /// User will need to enter new username/re-authenticate on next launch
+  /// Used for testing session persistence across app restarts
+  Future<void> clearAllData() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_tokenKey);    // Clear auth token
+    await prefs.remove(_userKey);     // Clear user profile
+    await prefs.remove(_deviceIdKey); // Clear device fingerprint
+    _dio.options.headers.remove('Authorization');
   }
 }

@@ -80,6 +80,8 @@ class _ChatWidgetState extends State<ChatWidget> {
               },
             ),
           ),
+          const Divider(color: Colors.white12, height: 1),
+          _buildEmojiRow(),
           // Input field
           _buildInput(),
         ],
@@ -156,6 +158,29 @@ class _ChatWidgetState extends State<ChatWidget> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildEmojiRow() {
+    final emojis = ['♟️', '🔥', '😂', '🤝', '👋', '🏆', '👀', '🤯'];
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+      height: 48,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: emojis.length,
+        itemBuilder: (context, index) => GestureDetector(
+          onTap: () {
+            _controller.text += emojis[index];
+            _send();
+          },
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 10),
+            alignment: Alignment.center,
+            child: Text(emojis[index], style: const TextStyle(fontSize: 22)),
+          ),
+        ),
       ),
     );
   }

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/app_router.dart';
 import '../../blocs/game/game_bloc.dart';
 import '../../blocs/multiplayer/multiplayer_bloc.dart';
+import '../../blocs/theme/theme_bloc.dart';
 import '../game/game_screen.dart';
 import '../../widgets/chat_widget.dart';
 import '../../../core/theme/app_theme.dart';
@@ -18,11 +19,18 @@ class GameRoomScreen extends StatelessWidget {
     return BlocConsumer<MultiplayerBloc, MultiplayerState>(
       listenWhen: (prev, current) => 
           prev.opponentLeft != current.opponentLeft || 
-          prev.status != current.status,
+          prev.status != current.status ||
+          prev.gameEndCause != current.gameEndCause,
       listener: (context, mpState) {
         if (mpState.opponentLeft) {
+          final cause = _friendlyCause(mpState.gameEndCause);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Opponent disconnected!')),
+            SnackBar(content: Text('Opponent left: $cause')),
+          );
+        }
+        if (mpState.status == MultiplayerStatus.gameOver && mpState.gameEndCause != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Match ended: ${_friendlyCause(mpState.gameEndCause)}')),
           );
         }
         if (mpState.status == MultiplayerStatus.disconnected) {
@@ -37,6 +45,8 @@ class GameRoomScreen extends StatelessWidget {
         final config = GameConfig(
           mode: GameMode.multiplayer,
           playerColor: mpState.playerColor?.name ?? 'white',
+          boardTheme: context.read<ThemeBloc>().state.boardTheme,
+          pieceTheme: context.read<ThemeBloc>().state.pieceTheme,
         );
 
         return MultiBlocListener(
@@ -101,5 +111,20 @@ class GameRoomScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _friendlyCause(String? cause) {
+    switch (cause) {
+      case 'resignation_user_quit':
+      case 'resign':
+        return 'resignation';
+      case 'agreement':
+        return 'draw agreement';
+      case 'network_disconnect':
+      case 'network_disconnect_or_app_crash':
+        return 'network disconnect / app crash';
+      default:
+        return cause ?? 'unknown reason';
+    }
   }
 }

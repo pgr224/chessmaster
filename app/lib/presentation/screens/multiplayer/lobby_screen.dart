@@ -39,9 +39,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
         }
 
         if (state.lobbyNotice != null) {
-          ScaffoldMessenger.of(context)
-            ..hideCurrentSnackBar()
-            ..showSnackBar(SnackBar(content: Text(state.lobbyNotice!)));
+          if (state.lobbyNotice!.contains('invited you')) {
+             _showChallengeDialog(context, state.lobbyNotice!);
+          } else {
+            ScaffoldMessenger.of(context)
+              ..hideCurrentSnackBar()
+              ..showSnackBar(SnackBar(content: Text(state.lobbyNotice!)));
+          }
         }
       },
       builder: (context, state) {
@@ -265,68 +269,138 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
   Widget _buildTimeGrid(double width) {
     final times = [
-      {'label': 'Bullet', 'time': '1+0', 'icon': Icons.flash_on_rounded},
-      {'label': 'Blitz', 'time': '3+0', 'icon': Icons.local_fire_department_rounded},
-      {'label': 'Blitz', 'time': '5+0', 'icon': Icons.bolt_rounded},
-      {'label': 'Rapid', 'time': '10+0', 'icon': Icons.timer_rounded},
-      {'label': 'Rapid', 'time': '15+10', 'icon': Icons.hourglass_top_rounded},
-      {'label': 'Classic', 'time': '30+0', 'icon': Icons.account_balance_rounded},
+      {
+        'label': 'Bullet',
+        'time': '1+0',
+        'icon': Icons.flash_on_rounded,
+        'color': Colors.red,
+        'info': 'Super fast. 1 min per side. Perfect for quick matches.',
+      },
+      {
+        'label': 'Blitz',
+        'time': '3+0',
+        'icon': Icons.local_fire_department_rounded,
+        'color': Colors.orange,
+        'info': '3 min per side. Rapid decision making needed.',
+      },
+      {
+        'label': 'Blitz',
+        'time': '5+0',
+        'icon': Icons.bolt_rounded,
+        'color': Colors.amber,
+        'info': '5 min per side. Fast-paced tactical battles.',
+      },
+      {
+        'label': 'Rapid',
+        'time': '10+0',
+        'icon': Icons.timer_rounded,
+        'color': AppTheme.skyBlue,
+        'info': '10 min per side. Time for strategy & tactics.',
+      },
+      {
+        'label': 'Rapid',
+        'time': '15+10',
+        'icon': Icons.hourglass_top_rounded,
+        'color': AppTheme.accentCyan,
+        'info': '15 min + 10 sec increment. Balanced gameplay.',
+      },
+      {
+        'label': 'Classic',
+        'time': '30+0',
+        'icon': Icons.account_balance_rounded,
+        'color': AppTheme.goldPrimary,
+        'info': '30 min per side. Thoughtful, classical chess.',
+      },
     ];
+    
     final crossAxisCount = width < 520 ? 2 : 3;
-    final aspectRatio = width < 520 ? 1.5 : 1.0;
+    final aspectRatio = width < 520 ? 2.2 : 2.0;
 
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: crossAxisCount,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
         childAspectRatio: aspectRatio,
       ),
       itemCount: times.length,
       itemBuilder: (context, index) {
         final item = times[index];
         final isSelected = _selectedTime == item['time'];
+        final accentColor = item['color'] as Color;
+        
         return GestureDetector(
           onTap: () => setState(() => _selectedTime = item['time'] as String),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             decoration: BoxDecoration(
-              gradient: isSelected ? AppTheme.cardGradient : null,
-              color: isSelected ? null : AppTheme.surface,
-              borderRadius: BorderRadius.circular(20),
+              gradient: isSelected 
+                ? LinearGradient(
+                    colors: [accentColor.withValues(alpha: 0.15), accentColor.withValues(alpha: 0.05)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  )
+                : null,
+              color: isSelected ? null : AppTheme.surface.withValues(alpha: 0.6),
+              borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                color: isSelected ? AppTheme.goldPrimary : Colors.transparent,
-                width: 2,
+                color: isSelected ? accentColor : AppTheme.textMuted.withValues(alpha: 0.1),
+                width: isSelected ? 2 : 1,
               ),
-              boxShadow: isSelected ? AppTheme.goldShadow : [],
+              boxShadow: isSelected 
+                ? [BoxShadow(color: accentColor.withValues(alpha: 0.2), blurRadius: 8, offset: const Offset(0, 2))]
+                : null,
             ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(item['icon'] as IconData, 
-                  color: isSelected ? AppTheme.goldPrimary : AppTheme.textMuted,
-                  size: 28,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  item['time'] as String,
-                  style: GoogleFonts.fredoka(
-                    color: isSelected ? AppTheme.textPrimary : AppTheme.textSecondary,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Icon
+                  Icon(
+                    item['icon'] as IconData,
+                    color: isSelected ? accentColor : AppTheme.textMuted,
+                    size: 18,
                   ),
-                ),
-                Text(
-                  item['label'] as String,
-                  style: GoogleFonts.baloo2(
-                    color: isSelected ? AppTheme.goldPrimary : AppTheme.textMuted,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
+                  // Time control
+                  Column(
+                    children: [
+                      Text(
+                        item['time'] as String,
+                        style: GoogleFonts.fredoka(
+                          color: isSelected ? AppTheme.textPrimary : AppTheme.textSecondary,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        item['label'] as String,
+                        style: GoogleFonts.baloo2(
+                          color: isSelected ? accentColor : AppTheme.textMuted,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
+                  // Info text - smaller and subtle
+                  Text(
+                    item['info'] as String,
+                    style: GoogleFonts.baloo2(
+                      color: isSelected ? AppTheme.textSecondary : AppTheme.textMuted.withValues(alpha: 0.7),
+                      fontSize: 9,
+                      fontWeight: FontWeight.w500,
+                      height: 1.2,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -434,7 +508,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(player.name, style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
-                Text('${player.rating} ELO • ${player.flair}', style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 13)),
+                Text('${player.xp} XP • ${player.flair}', style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 13)),
               ],
             ),
           ),
@@ -549,7 +623,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(player.name, style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.w700)),
-                    Text('${player.rating} ELO • ${player.flair}', style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 14)),
+                    Text('${player.xp} XP • ${player.flair}', style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 14)),
                   ],
                 ),
               ),
@@ -626,6 +700,33 @@ class _LobbyScreenState extends State<LobbyScreen> {
               ),
             ],
           ),
+    );
+  }
+
+  void _showChallengeDialog(BuildContext context, String message) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.midnight,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Text('⚔️ New Challenge!', style: GoogleFonts.fredoka(color: AppTheme.goldPrimary)),
+        content: Text(message, style: GoogleFonts.baloo2(color: AppTheme.textPrimary, fontSize: 16)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Decline', style: GoogleFonts.fredoka(color: AppTheme.accentRed, fontWeight: FontWeight.w600)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.goldPrimary, 
+              foregroundColor: AppTheme.midnight,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Accept', style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -1,0 +1,69 @@
+﻿Resolving dependencies...
+Downloading packages...
+  _fe_analyzer_shared 93.0.0 (98.0.0 available)
+  analyzer 10.0.1 (12.0.0 available)
+  bloc 8.1.4 (9.2.0 available)
+  bloc_test 9.1.7 (10.0.0 available)
+  connectivity_plus 6.1.5 (7.0.0 available)
+  dart_style 3.1.7 (3.1.8 available)
+  device_info_plus 10.1.2 (12.3.0 available)
+  flutter_bloc 8.1.6 (9.1.1 available)
+  flutter_dotenv 5.2.1 (6.0.0 available)
+  flutter_lints 4.0.0 (6.0.0 available)
+  get_it 7.7.0 (9.2.1 available)
+  go_router 14.8.1 (17.1.0 available)
+  intl 0.19.0 (0.20.2 available)
+  lints 4.0.0 (6.1.0 available)
+  meta 1.17.0 (1.18.2 available)
+  network_info_plus 5.0.3 (7.0.0 available)
+  test 1.30.0 (1.31.0 available)
+  test_api 0.7.10 (0.7.11 available)
+  test_core 0.6.16 (0.6.17 available)
+  vector_math 2.2.0 (2.3.0 available)
+  vibration 2.1.0 (3.1.8 available)
+  vibration_platform_interface 0.0.3 (0.1.1 available)
+  win32 5.15.0 (6.0.0 available)
+  win32_registry 1.1.5 (3.0.2 available)
+Got dependencies!
+24 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+Analyzing app...                                                
+
+   info - Unnecessary 'const' keyword - lib\core\router\app_router.dart:195:19 - unnecessary_const
+   info - Unnecessary 'const' keyword - lib\core\router\app_router.dart:200:17 - unnecessary_const
+   info - Use 'const' with the constructor to improve performance - lib\data\models\tutorial_model.dart:42:3 - prefer_const_constructors
+   info - Use 'const' literals as arguments to constructors of '@immutable' classes - lib\data\models\tutorial_model.dart:47:12 - prefer_const_literals_to_create_immutables
+   info - Use 'const' with the constructor to improve performance - lib\data\models\tutorial_model.dart:48:8 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\data\models\tutorial_model.dart:53:7 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\data\models\tutorial_model.dart:61:3 - prefer_const_constructors
+   info - Use 'const' literals as arguments to constructors of '@immutable' classes - lib\data\models\tutorial_model.dart:66:12 - prefer_const_literals_to_create_immutables
+   info - Use 'const' with the constructor to improve performance - lib\data\models\tutorial_model.dart:67:7 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\domain\engine\ai_engine.dart:72:14 - prefer_const_constructors
+   info - Dangling library doc comment - lib\domain\engine\chess_engine.dart:1:1 - dangling_library_doc_comments
+   info - The private field _moveHistory could be 'final' - lib\domain\engine\chess_engine.dart:129:14 - prefer_final_fields
+   info - The private field _positionHistory could be 'final' - lib\domain\engine\chess_engine.dart:130:16 - prefer_final_fields
+warning - The declaration '_resetCastlingRights' isn't referenced - lib\domain\engine\chess_engine.dart:502:8 - unused_element
+warning - The declaration '_findKing' isn't referenced - lib\domain\engine\chess_engine.dart:677:10 - unused_element
+   info - Use 'const' with the constructor to improve performance - lib\presentation\blocs\game\game_bloc.dart:241:11 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\presentation\blocs\game\game_bloc.dart:241:29 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\presentation\blocs\game\game_bloc.dart:241:43 - prefer_const_constructors
+warning - The value of the field '_timeControl' isn't used - lib\presentation\screens\game\game_setup_screen.dart:20:8 - unused_field
+   info - 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre - lib\presentation\screens\game\game_setup_screen.dart:255:7 - deprecated_member_use
+   info - Use 'const' with the constructor to improve performance - lib\presentation\screens\home\home_screen.dart:76:37 - prefer_const_constructors
+   info - Use 'const' literals as arguments to constructors of '@immutable' classes - lib\presentation\screens\home\home_screen.dart:77:37 - prefer_const_literals_to_create_immutables
+   info - Use 'const' with the constructor to improve performance - lib\presentation\screens\learn\article_screen.dart:50:16 - prefer_const_constructors
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\screens\learn\article_screen.dart:62:66 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\screens\learn\article_screen.dart:93:61 - deprecated_member_use
+   info - Use 'const' with the constructor to improve performance - lib\presentation\screens\news\chess_world_screen.dart:23:15 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\presentation\screens\news\chess_world_screen.dart:37:15 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\presentation\screens\news\chess_world_screen.dart:51:15 - prefer_const_constructors
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\screens\tutorial\tutorial_screen.dart:55:50 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\screens\tutorial\tutorial_screen.dart:63:45 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\chat_widget.dart:45:34 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\chat_widget.dart:48:41 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\chat_widget.dart:98:52 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\chat_widget.dart:103:71 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\chat_widget.dart:141:64 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\chat_widget.dart:144:46 - deprecated_member_use
+   info - Use 'const' with the constructor to improve performance - lib\presentation\widgets\chess_board_widget.dart:180:29 - prefer_const_constructors
+

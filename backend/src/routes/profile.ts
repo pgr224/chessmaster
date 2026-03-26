@@ -11,7 +11,7 @@ profileRoutes.use('*', authMiddleware)
 profileRoutes.get('/', async (c) => {
   const userId = c.get('user').sub
   const { results } = await c.env.DB.prepare(
-    'SELECT id, username, avatar_url, rating, created_at FROM users WHERE id = ?'
+    'SELECT id, username, avatar_url, xp, created_at FROM users WHERE id = ?'
   ).bind(userId).all()
 
   if (!results.length) {
@@ -63,7 +63,7 @@ profileRoutes.put('/', async (c) => {
 profileRoutes.get('/:id', async (c) => {
   const targetId = c.req.param('id')
   const { results } = await c.env.DB.prepare(
-    'SELECT id, username, avatar_url, rating, is_online, last_seen, created_at FROM users WHERE id = ?'
+    'SELECT id, username, avatar_url, xp, is_online, last_seen, created_at FROM users WHERE id = ?'
   ).bind(targetId).all()
 
   if (!results.length) {

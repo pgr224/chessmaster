@@ -29,22 +29,26 @@ class AppTheme {
   static const Color textSecondary = Color(0xFFB8C5E8);
   static const Color textMuted     = Color(0xFF6B7DB3);
 
-  // Board Colors
-  static const Color lightSquare  = Color(0xFFF5E6CA);
-  static const Color darkSquare   = Color(0xFF8B6B4A);
+  // ═══════════════════════════════════════════
+  // BOARD THEMES
+  // ═══════════════════════════════════════════
+  static Map<String, _BoardThemeData> boardThemes = {
+    'classic': _BoardThemeData(light: Color(0xFFF5E6CA), dark: Color(0xFF8B6B4A), notation: Color(0xFF8B6B4A)),
+    'grey':    _BoardThemeData(light: Color(0xFFB2B2B2), dark: Color(0xFF808080), notation: Color(0xFF808080)),
+    'dark':    _BoardThemeData(light: Color(0xFF444444), dark: Color(0xFF333333), notation: Color(0xFFCCCCCC)),
+    'amoled':  _BoardThemeData(light: Color(0xFF222222), dark: Color(0xFF000000), notation: Color(0xFF888888)),
+    'lewis':   _BoardThemeData(light: Color(0xFFDBD1C1), dark: Color(0xFFAB3848), notation: Color(0xFFAB3848)),
+    'cherry':  _BoardThemeData(light: Color(0xFFDB5E5C), dark: Color(0xFF645183), notation: Color(0xFFFFFFFF)),
+    'sage':    _BoardThemeData(light: Color(0xFFB2AD91), dark: Color(0xFF83886F), notation: Color(0xFF83886F)),
+    'tan':     _BoardThemeData(light: Color(0xFFD3A373), dark: Color(0xFF866749), notation: Color(0xFF866749)),
+    'jade':    _BoardThemeData(light: Color(0xFF85B39F), dark: Color(0xFF517970), notation: Color(0xFFD0F0E0)),
+  };
+
   static const Color selectedSq   = Color(0xFF7BC67B);
   static const Color legalMoveSq  = Color(0x6000FF88);
   static const Color lastMoveSq   = Color(0x60FFD700);
   static const Color checkSq      = Color(0x90FF6B9D);
   static const Color hintSq       = Color(0x7074B9FF);
-
-  // Neon board variant
-  static const Color neonLight    = Color(0xFF1A1A2E);
-  static const Color neonDark     = Color(0xFF0F0F1A);
-
-  // Wood board variant
-  static const Color woodLight    = Color(0xFFF0D9B5);
-  static const Color woodDark     = Color(0xFFB58863);
 
   // ═══════════════════════════════════════════
   // GRADIENTS — Warm & Playful
@@ -54,6 +58,29 @@ class AppTheme {
     end: Alignment.bottomRight,
     colors: [Color(0xFF1A1A2E), Color(0xFF16213E), Color(0xFF0F3460)],
   );
+
+  static const Map<String, LinearGradient> backgroundGradients = {
+    'midnight': LinearGradient(
+      begin: Alignment.topLeft, end: Alignment.bottomRight,
+      colors: [Color(0xFF1A1A2E), Color(0xFF16213E), Color(0xFF0F3460)],
+    ),
+    'ocean': LinearGradient(
+      begin: Alignment.topLeft, end: Alignment.bottomRight,
+      colors: [Color(0xFF0D1B2A), Color(0xFF1B3A4B), Color(0xFF006D77)],
+    ),
+    'forest': LinearGradient(
+      begin: Alignment.topLeft, end: Alignment.bottomRight,
+      colors: [Color(0xFF1A1C16), Color(0xFF1E3A2F), Color(0xFF2D6A4F)],
+    ),
+    'sunset': LinearGradient(
+      begin: Alignment.topLeft, end: Alignment.bottomRight,
+      colors: [Color(0xFF2D1B33), Color(0xFF4A1942), Color(0xFF6B1D3F)],
+    ),
+  };
+
+  static LinearGradient getBackground(String key) {
+    return backgroundGradients[key] ?? backgroundGradient;
+  }
 
   static const LinearGradient goldGradient = LinearGradient(
     colors: [Color(0xFFF0C929), Color(0xFFFFD93D), Color(0xFFFFE66D), Color(0xFFFFD93D)],
@@ -117,19 +144,19 @@ class AppTheme {
       headlineLarge: GoogleFonts.fredoka(
         fontSize: 34, fontWeight: FontWeight.w700, color: textPrimary,
       ),
-      headlineMedium: GoogleFonts.fredoka(
+      headlineMedium: GoogleFonts.jura(
         fontSize: 30, fontWeight: FontWeight.w600, color: textPrimary,
       ),
-      headlineSmall: GoogleFonts.fredoka(
+      headlineSmall: GoogleFonts.jura(
         fontSize: 26, fontWeight: FontWeight.w600, color: textPrimary,
       ),
       titleLarge: GoogleFonts.fredoka(
         fontSize: 24, fontWeight: FontWeight.w600, color: textPrimary,
       ),
-      titleMedium: GoogleFonts.fredoka(
+      titleMedium: GoogleFonts.jura(
         fontSize: 18, fontWeight: FontWeight.w600, color: textPrimary, letterSpacing: 0.15,
       ),
-      titleSmall: GoogleFonts.fredoka(
+      titleSmall: GoogleFonts.jura(
         fontSize: 16, fontWeight: FontWeight.w500, color: textSecondary, letterSpacing: 0.1,
       ),
       bodyLarge: GoogleFonts.baloo2(
@@ -252,4 +279,11 @@ class AppTheme {
       ),
     );
   }
+}
+
+class _BoardThemeData {
+  final Color light;
+  final Color dark;
+  final Color notation;
+  const _BoardThemeData({required this.light, required this.dark, required this.notation});
 }

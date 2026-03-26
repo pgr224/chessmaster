@@ -2,7 +2,7 @@ class UserModel {
   final String id;
   final String username;
   final String? avatarUrl;
-  final int rating;
+  final int xp;
   final bool isOnline;
   final UserStats stats;
   final String deviceId;
@@ -11,7 +11,7 @@ class UserModel {
     required this.id,
     required this.username,
     this.avatarUrl,
-    required this.rating,
+    required this.xp,
     required this.isOnline,
     required this.stats,
     required this.deviceId,
@@ -22,7 +22,7 @@ class UserModel {
       id: json['id'] as String,
       username: json['username'] as String,
       avatarUrl: json['avatar_url'] as String?,
-      rating: json['rating'] as int? ?? 1200,
+      xp: json['xp'] as int? ?? 0,
       isOnline: (json['is_online'] as int? ?? 0) == 1,
       stats: UserStats.fromJson(json['stats'] as Map<String, dynamic>? ?? {}),
       deviceId: json['device_id'] as String? ?? '',
@@ -33,9 +33,22 @@ class UserModel {
     'id': id,
     'username': username,
     'avatar_url': avatarUrl,
-    'rating': rating,
+    'xp': xp,
     'is_online': isOnline ? 1 : 0,
     'device_id': deviceId,
+    'stats': {
+      'games_played': stats.gamesPlayed,
+      'wins': stats.wins,
+      'losses': stats.losses,
+      'draws': stats.draws,
+      'longest_streak': stats.longestStreak,
+      'current_streak': stats.currentStreak,
+      'ai_games': stats.aiGames,
+      'ai_wins': stats.aiWins,
+      'multiplayer_games': stats.multiplayerGames,
+      'multiplayer_wins': stats.multiplayerWins,
+      'tournament_wins': stats.tournamentWins,
+    },
   };
 }
 

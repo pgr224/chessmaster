@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:uuid/uuid.dart';
@@ -20,10 +21,15 @@ class GameRepository {
       mode: game.mode,
       status: game.status,
       result: game.result,
+      termination: game.termination,
+      whiteUserId: game.whiteUserId,
+      blackUserId: game.blackUserId,
+      whiteUsername: game.whiteUsername,
+      blackUsername: game.blackUsername,
       moveCount: game.moveCount,
       updatedAt: DateTime.now(),
     );
-    await box.put(id, _gameToJson(updatedGame));
+    await box.put(id, jsonEncode(updatedGame.toJson()));
 
     // Try server sync
     try {
@@ -41,7 +47,7 @@ class GameRepository {
   Future<List<GameModel>> getSavedGames() async {
     final box = await Hive.openBox<String>(_boxName);
     return box.values
-        .map((json) => GameModel.fromJson(_jsonFromString(json)))
+        .map((json) => GameModel.fromJson(jsonDecode(json) as Map<String, dynamic>))
         .toList()
       ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
   }
@@ -50,7 +56,7 @@ class GameRepository {
     final box = await Hive.openBox<String>(_boxName);
     final json = box.get(id);
     if (json == null) return null;
-    return GameModel.fromJson(_jsonFromString(json));
+    return GameModel.fromJson(jsonDecode(json) as Map<String, dynamic>);
   }
 
   Future<void> deleteGame(String id) async {
@@ -58,11 +64,16 @@ class GameRepository {
     await box.delete(id);
   }
 
-  String _gameToJson(GameModel g) =>
-      '{"id":"${g.id}","fen":"${g.fen}","mode":"${g.mode}","status":"${g.status}","result":"${g.result}","move_count":${g.moveCount},"updated_at":"${g.updatedAt.toIso8601String()}"}';
-
-  Map<String, dynamic> _jsonFromString(String s) {
-    // Simple JSON decode — use dart:convert in production
-    return Map<String, dynamic>.from({});
+  Future<List<GameModel>> getRecentGames(String userId, {int limit = 10}) async {
+    try {
+      final res = await _dio.get('/api/game/user/$userId', queryParameters: {'limit': limit});
+      final rows = (res.data['games'] as List?) ?? const [];
+      return rows
+          .whereType<Map<String, dynamic>>()
+          .map(GameModel.fromJson)
+          .toList(growable: false);
+    } catch (_) {
+      return const [];
+    }
   }
 }

@@ -10,29 +10,84 @@ class SettingsLoadEvent extends SettingsEvent {}
 class SettingsSoundEvent extends SettingsEvent { final bool enabled; const SettingsSoundEvent(this.enabled); @override List<Object?> get props => [enabled]; }
 class SettingsVibrationEvent extends SettingsEvent { final bool enabled; const SettingsVibrationEvent(this.enabled); @override List<Object?> get props => [enabled]; }
 class SettingsNotificationsEvent extends SettingsEvent { final bool enabled; const SettingsNotificationsEvent(this.enabled); @override List<Object?> get props => [enabled]; }
+class SettingsShowCoordinatesEvent extends SettingsEvent { final bool enabled; const SettingsShowCoordinatesEvent(this.enabled); @override List<Object?> get props => [enabled]; }
+class SettingsShowLegalMovesEvent extends SettingsEvent { final bool enabled; const SettingsShowLegalMovesEvent(this.enabled); @override List<Object?> get props => [enabled]; }
+class SettingsAutoFlipBoardEvent extends SettingsEvent { final bool enabled; const SettingsAutoFlipBoardEvent(this.enabled); @override List<Object?> get props => [enabled]; }
+class SettingsMoveAnimationSpeedEvent extends SettingsEvent {
+  final String speed;
+  const SettingsMoveAnimationSpeedEvent(this.speed);
+  @override List<Object?> get props => [speed];
+}
+class SettingsConfirmResignEvent extends SettingsEvent { final bool enabled; const SettingsConfirmResignEvent(this.enabled); @override List<Object?> get props => [enabled]; }
+class SettingsConfirmDrawOfferEvent extends SettingsEvent { final bool enabled; const SettingsConfirmDrawOfferEvent(this.enabled); @override List<Object?> get props => [enabled]; }
+class SettingsBackgroundEvent extends SettingsEvent { final String theme; const SettingsBackgroundEvent(this.theme); @override List<Object?> get props => [theme]; }
 
 class SettingsState extends Equatable {
   final bool soundEnabled;
   final bool vibrationEnabled;
   final bool notificationsEnabled;
+  final bool showCoordinates;
+  final bool showLegalMoves;
+  final bool autoFlipBoard;
+  final String moveAnimationSpeed;
+  final bool confirmResign;
+  final bool confirmDrawOffer;
+  final String backgroundTheme;
   final bool isLoaded;
 
   const SettingsState({
     this.soundEnabled = true,
     this.vibrationEnabled = true,
     this.notificationsEnabled = true,
+    this.showCoordinates = true,
+    this.showLegalMoves = true,
+    this.autoFlipBoard = false,
+    this.moveAnimationSpeed = 'normal',
+    this.confirmResign = true,
+    this.confirmDrawOffer = true,
+    this.backgroundTheme = 'midnight',
     this.isLoaded = false,
   });
 
-  SettingsState copyWith({bool? soundEnabled, bool? vibrationEnabled, bool? notificationsEnabled, bool? isLoaded}) =>
+  SettingsState copyWith({
+    bool? soundEnabled,
+    bool? vibrationEnabled,
+    bool? notificationsEnabled,
+    bool? showCoordinates,
+    bool? showLegalMoves,
+    bool? autoFlipBoard,
+    String? moveAnimationSpeed,
+    bool? confirmResign,
+    bool? confirmDrawOffer,
+    String? backgroundTheme,
+    bool? isLoaded,
+  }) =>
       SettingsState(
         soundEnabled: soundEnabled ?? this.soundEnabled,
         vibrationEnabled: vibrationEnabled ?? this.vibrationEnabled,
         notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
+        showCoordinates: showCoordinates ?? this.showCoordinates,
+        showLegalMoves: showLegalMoves ?? this.showLegalMoves,
+        autoFlipBoard: autoFlipBoard ?? this.autoFlipBoard,
+        moveAnimationSpeed: moveAnimationSpeed ?? this.moveAnimationSpeed,
+        confirmResign: confirmResign ?? this.confirmResign,
+        confirmDrawOffer: confirmDrawOffer ?? this.confirmDrawOffer,
+        backgroundTheme: backgroundTheme ?? this.backgroundTheme,
         isLoaded: isLoaded ?? this.isLoaded,
       );
 
-  @override List<Object?> get props => [soundEnabled, vibrationEnabled, notificationsEnabled];
+  @override List<Object?> get props => [
+    soundEnabled,
+    vibrationEnabled,
+    notificationsEnabled,
+    showCoordinates,
+    showLegalMoves,
+    autoFlipBoard,
+    moveAnimationSpeed,
+    confirmResign,
+    confirmDrawOffer,
+    backgroundTheme,
+  ];
 }
 
 class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
@@ -50,6 +105,35 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
       (await SharedPreferences.getInstance()).setBool('notifications', e.enabled);
       emit(state.copyWith(notificationsEnabled: e.enabled));
     });
+    on<SettingsShowCoordinatesEvent>((e, emit) async {
+      (await SharedPreferences.getInstance()).setBool('show_coordinates', e.enabled);
+      emit(state.copyWith(showCoordinates: e.enabled));
+    });
+    on<SettingsShowLegalMovesEvent>((e, emit) async {
+      (await SharedPreferences.getInstance()).setBool('show_legal_moves', e.enabled);
+      emit(state.copyWith(showLegalMoves: e.enabled));
+    });
+    on<SettingsAutoFlipBoardEvent>((e, emit) async {
+      (await SharedPreferences.getInstance()).setBool('auto_flip_board', e.enabled);
+      emit(state.copyWith(autoFlipBoard: e.enabled));
+    });
+    on<SettingsMoveAnimationSpeedEvent>((e, emit) async {
+      final normalized = (e.speed == 'off' || e.speed == 'fast') ? e.speed : 'normal';
+      (await SharedPreferences.getInstance()).setString('move_animation_speed', normalized);
+      emit(state.copyWith(moveAnimationSpeed: normalized));
+    });
+    on<SettingsConfirmResignEvent>((e, emit) async {
+      (await SharedPreferences.getInstance()).setBool('confirm_resign', e.enabled);
+      emit(state.copyWith(confirmResign: e.enabled));
+    });
+    on<SettingsConfirmDrawOfferEvent>((e, emit) async {
+      (await SharedPreferences.getInstance()).setBool('confirm_draw_offer', e.enabled);
+      emit(state.copyWith(confirmDrawOffer: e.enabled));
+    });
+    on<SettingsBackgroundEvent>((e, emit) async {
+      (await SharedPreferences.getInstance()).setString('background_theme', e.theme);
+      emit(state.copyWith(backgroundTheme: e.theme));
+    });
   }
 
   Future<void> _onLoad(SettingsLoadEvent event, Emitter<SettingsState> emit) async {
@@ -58,6 +142,13 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
       soundEnabled: prefs.getBool('sound') ?? true,
       vibrationEnabled: prefs.getBool('vibration') ?? true,
       notificationsEnabled: prefs.getBool('notifications') ?? true,
+      showCoordinates: prefs.getBool('show_coordinates') ?? true,
+      showLegalMoves: prefs.getBool('show_legal_moves') ?? true,
+      autoFlipBoard: prefs.getBool('auto_flip_board') ?? false,
+      moveAnimationSpeed: prefs.getString('move_animation_speed') ?? 'normal',
+      confirmResign: prefs.getBool('confirm_resign') ?? true,
+      confirmDrawOffer: prefs.getBool('confirm_draw_offer') ?? true,
+      backgroundTheme: prefs.getString('background_theme') ?? 'midnight',
       isLoaded: true,
     ));
   }

@@ -119,7 +119,7 @@ auth.post('/refresh', async (c) => {
   }
 
   try {
-    const payload = await verify(authHeader.slice(7), c.env.JWT_SECRET)
+    const payload = await verify(authHeader.slice(7), c.env.JWT_SECRET, 'HS256')
     const newToken = await sign(
       { sub: payload.sub, username: payload.username, deviceId: payload.deviceId,
         exp: Math.floor(Date.now() / 1000) + 86400 * 30 },
@@ -139,7 +139,7 @@ auth.post('/logout', async (c) => {
   if (!authHeader?.startsWith('Bearer ')) return c.json({ ok: true })
 
   try {
-    const payload = await verify(authHeader.slice(7), c.env.JWT_SECRET)
+    const payload = await verify(authHeader.slice(7), c.env.JWT_SECRET, 'HS256')
     await c.env.DB.prepare(
       'UPDATE users SET is_online = 0, last_seen = ? WHERE id = ?'
     ).bind(new Date().toISOString(), payload.sub).run()

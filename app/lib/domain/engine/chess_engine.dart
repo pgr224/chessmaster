@@ -100,7 +100,17 @@ class Move {
   bool? prevBlackQueenside;
   int? prevHalfMoveClock;
 
-  String toAlgebraic() => '${from.toAlgebraic()}${to.toAlgebraic()}';
+  String toAlgebraic() {
+    final s = '${from.toAlgebraic()}${to.toAlgebraic()}';
+    if (promotion != null) {
+      final p = {
+        PieceType.queen: 'q', PieceType.rook: 'r',
+        PieceType.bishop: 'b', PieceType.knight: 'n'
+      }[promotion];
+      return '$s$p';
+    }
+    return s;
+  }
 
   Move({
     required this.from,
@@ -112,8 +122,23 @@ class Move {
     this.algebraic,
   });
 
+  factory Move.fromAlgebraic(String s) {
+    if (s.length < 4) throw ArgumentError('Invalid algebraic move: $s');
+    final from = Square.fromString(s.substring(0, 2));
+    final to = Square.fromString(s.substring(2, 4));
+    PieceType? promo;
+    if (s.length > 4) {
+      final pChar = s[4].toLowerCase();
+      promo = {
+        'q': PieceType.queen, 'r': PieceType.rook,
+        'b': PieceType.bishop, 'n': PieceType.knight
+      }[pChar];
+    }
+    return Move(from: from, to: to, promotion: promo);
+  }
+
   @override
-  String toString() => algebraic ?? '${from.toAlgebraic()}${to.toAlgebraic()}';
+  String toString() => algebraic ?? toAlgebraic();
 }
 
 enum GameResult { ongoing, whiteWins, blackWins, draw }
@@ -215,7 +240,7 @@ class ChessEngine {
     final piece = pieceAt(legalMove.from)!;
     legalMove.algebraic = _buildAlgebraic(legalMove, piece);
 
-    _applyMove(legalMove);
+    applyMoveInternal(legalMove);
     _updateStatus();
     return true;
   }
@@ -629,7 +654,8 @@ class ChessEngine {
     final savedEP = _enPassantTarget;
 
     _simulateMove(move);
-    final inCheck = _isKingInCheck(_opponent(_currentTurn));
+    // Validate that the moving side does not leave its own king in check.
+    final inCheck = _isKingInCheck(_currentTurn);
 
     // Restore
     _board = savedBoard;

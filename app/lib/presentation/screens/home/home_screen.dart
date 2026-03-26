@@ -3,10 +3,15 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../core/di/injection_container.dart' as di;
 import '../../../core/theme/app_theme.dart';
 import '../../../core/router/app_router.dart';
 import '../../../presentation/blocs/auth/auth_bloc.dart';
+import '../../../presentation/blocs/settings/settings_bloc.dart';
+import '../../../data/models/game_model.dart';
 import '../../../data/models/user_model.dart';
+import '../../../data/repositories/game_repository.dart';
+import '../../../data/repositories/puzzle_repository.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -16,15 +21,25 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  final GameRepository _gameRepository = di.sl<GameRepository>();
+  final PuzzleRepository _puzzleRepository = di.sl<PuzzleRepository>();
+  Future<List<GameModel>>? _recentGamesFuture;
+  String? _recentForUser;
+
   @override
   Widget build(BuildContext context) {
+    final bgTheme = context.watch<SettingsBloc>().state.backgroundTheme;
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, authState) {
         final user = authState is AuthAuthenticatedState ? authState.user : null;
+        if (user != null && _recentForUser != user.id) {
+          _recentForUser = user.id;
+          _recentGamesFuture = _gameRepository.getRecentGames(user.id, limit: 8);
+        }
         return Scaffold(
           backgroundColor: Colors.transparent,
           body: Container(
-            decoration: const BoxDecoration(gradient: AppTheme.backgroundGradient),
+            decoration: BoxDecoration(gradient: AppTheme.getBackground(bgTheme)),
             child: SafeArea(
               child: CustomScrollView(
                 physics: const BouncingScrollPhysics(),
@@ -97,7 +112,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   SliverToBoxAdapter(child: _buildSectionTitle('🧩 Daily Puzzle')),
                   SliverToBoxAdapter(child: _buildDailyPuzzle()),
                   SliverToBoxAdapter(child: _buildSectionTitle('🕹️ Recent Games')),
-                  SliverToBoxAdapter(child: _buildRecentGames()),
+                  SliverToBoxAdapter(child: _buildRecentGames(user)),
                   const SliverToBoxAdapter(child: SizedBox(height: 32)),
                 ],
               ),
@@ -186,7 +201,7 @@ class _HomeScreenState extends State<HomeScreen> {
             '📈 Rate', AppTheme.accentCyan,
           ),
           _divider(),
-          _statItem('${user?.rating ?? 1200}', '⭐ ELO', AppTheme.skyBlue),
+          _statItem('${user?.xp ?? 0}', '🔥 XP', AppTheme.skyBlue),
         ],
       ),
     ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.1);
@@ -373,7 +388,16 @@ class _HomeScreenState extends State<HomeScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             ),
-            onPressed: () {},
+            onPressed: () async {
+              final puzzle = await _puzzleRepository.getDailyPuzzle();
+              if (mounted) {
+                context.go('/game/play', extra: GameConfig(
+                  mode: GameMode.puzzle,
+                  puzzle: puzzle,
+                  playerColor: 'white',
+                ));
+              }
+            },
             child: Text('Solve!', style: GoogleFonts.fredoka(fontWeight: FontWeight.w600, fontSize: 16)),
           ),
         ],
@@ -381,7 +405,84 @@ class _HomeScreenState extends State<HomeScreen> {
     ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.1);
   }
 
-  Widget _buildRecentGames() {
+  Widget _buildRecentGames(UserModel? user) {
+    if (user == null) {
+      return _emptyRecentGames('Sign in to see recent matches.');
+    }
+
+    final future = _recentGamesFuture ?? _gameRepository.getRecentGames(user.id, limit: 8);
+    _recentGamesFuture = future;
+
+    return FutureBuilder<List<GameModel>>(
+      future: future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Container(
+            height: 110,
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: BoxDecoration(
+              color: AppTheme.navyCard.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+            ),
+            child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+          );
+        }
+
+        final games = snapshot.data ?? const <GameModel>[];
+        if (games.isEmpty) {
+          return _emptyRecentGames('No recent games. Start playing!');
+        }
+
+        return Container(
+          height: 152,
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: AppTheme.navyCard.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+          ),
+          child: ListView.separated(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            itemCount: games.length.clamp(0, 4),
+            separatorBuilder: (_, __) => const Divider(color: Colors.white10, height: 8),
+            itemBuilder: (context, index) {
+              final g = games[index];
+              final outcome = _outcomeLabel(g, user.id);
+              final cause = _causeLabel(g.termination);
+              return Row(
+                children: [
+                  Text(outcome.$1, style: const TextStyle(fontSize: 18)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${g.mode} • ${outcome.$2}',
+                          style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w600),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          'Cause: $cause',
+                          style: GoogleFonts.baloo2(color: AppTheme.textMuted, fontSize: 12),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _emptyRecentGames(String message) {
     return Container(
       height: 110,
       margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -397,13 +498,38 @@ class _HomeScreenState extends State<HomeScreen> {
             const Text('🕹️', style: TextStyle(fontSize: 32)),
             const SizedBox(height: 8),
             Text(
-              'No recent games. Start playing!',
+              message,
               style: GoogleFonts.baloo2(color: AppTheme.textMuted, fontSize: 16),
             ),
           ],
         ),
       ),
     );
+  }
+
+  (String, String) _outcomeLabel(GameModel game, String userId) {
+    if (game.status == 'abandoned') return ('⚠️', 'Abandoned');
+    if (game.result == 'draw') return ('🤝', 'Draw');
+    final isWhite = game.whiteUserId == userId;
+    final win = game.result == 'white' ? isWhite : !isWhite;
+    return win ? ('🏆', 'Win') : ('💥', 'Loss');
+  }
+
+  String _causeLabel(String? cause) {
+    switch (cause) {
+      case 'resignation_user_quit':
+        return 'Opponent resigned';
+      case 'agreement':
+        return 'Draw agreement';
+      case 'network_disconnect_or_app_crash':
+      case 'network_disconnect':
+        return 'Network disconnect/app crash';
+      case null:
+      case '':
+        return 'Normal completion';
+      default:
+        return cause.replaceAll('_', ' ');
+    }
   }
 
   String _greeting() {

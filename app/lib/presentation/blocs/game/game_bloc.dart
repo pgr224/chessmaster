@@ -1,13 +1,16 @@
 import 'dart:async';
+import 'package:flutter/material.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:vibration/vibration.dart';
 import '../../../domain/engine/chess_engine.dart';
 import '../../../domain/engine/ai_engine.dart';
+import '../../../domain/engine/engine_controller.dart';
 import '../../../data/repositories/game_repository.dart';
 import '../../../data/models/game_model.dart';
 import '../../../data/models/game_config.dart';
 import '../../../data/models/tutorial_model.dart';
+import '../../../data/models/puzzle_model.dart';
 
 // ═══════════════════════════════════════════
 // EVENTS
@@ -74,6 +77,9 @@ class GameState extends Equatable {
   final GameMode mode;
   final AIDifficulty? aiDifficulty;
   final String? boardTheme;
+  final String pieceTheme;
+  final Color whitePieceColor;
+  final Color blackPieceColor;
   final List<ChessPiece> capturedWhite;
   final List<ChessPiece> capturedBlack;
   final String currentFEN;
@@ -84,6 +90,9 @@ class GameState extends Equatable {
   final TutorialLesson? tutorial;
   final int tutorialStep;
   final String? tutorialMessage;
+  final Puzzle? puzzle;
+  final int puzzleStep;
+  final bool isPuzzleHintUsed;
 
   const GameState({
     required this.board,
@@ -102,6 +111,9 @@ class GameState extends Equatable {
     this.mode = GameMode.singlePlayer,
     this.aiDifficulty,
     this.boardTheme,
+    this.pieceTheme = 'classic3d',
+    this.whitePieceColor = Colors.white,
+    this.blackPieceColor = Colors.black,
     this.capturedWhite = const [],
     this.capturedBlack = const [],
     this.currentFEN = '',
@@ -112,6 +124,9 @@ class GameState extends Equatable {
     this.tutorial,
     this.tutorialStep = 0,
     this.tutorialMessage,
+    this.puzzle,
+    this.puzzleStep = 0,
+    this.isPuzzleHintUsed = false,
   });
 
   bool get isGameOver => status == GameStatus.checkmate ||
@@ -138,6 +153,9 @@ class GameState extends Equatable {
     GameMode? mode,
     AIDifficulty? aiDifficulty,
     String? boardTheme,
+    String? pieceTheme,
+    Color? whitePieceColor,
+    Color? blackPieceColor,
     List<ChessPiece>? capturedWhite,
     List<ChessPiece>? capturedBlack,
     String? currentFEN,
@@ -148,6 +166,9 @@ class GameState extends Equatable {
     TutorialLesson? tutorial,
     int? tutorialStep,
     String? tutorialMessage,
+    Puzzle? puzzle,
+    int? puzzleStep,
+    bool? isPuzzleHintUsed,
     bool clearSelected = false,
     bool clearHint = false,
     bool clearDrawOffer = false,
@@ -169,6 +190,9 @@ class GameState extends Equatable {
       mode: mode ?? this.mode,
       aiDifficulty: aiDifficulty ?? this.aiDifficulty,
       boardTheme: boardTheme ?? this.boardTheme,
+      pieceTheme: pieceTheme ?? this.pieceTheme,
+      whitePieceColor: whitePieceColor ?? this.whitePieceColor,
+      blackPieceColor: blackPieceColor ?? this.blackPieceColor,
       capturedWhite: capturedWhite ?? this.capturedWhite,
       capturedBlack: capturedBlack ?? this.capturedBlack,
       currentFEN: currentFEN ?? this.currentFEN,
@@ -179,6 +203,9 @@ class GameState extends Equatable {
       tutorial: tutorial ?? this.tutorial,
       tutorialStep: tutorialStep ?? this.tutorialStep,
       tutorialMessage: clearTutorialMessage ? null : (tutorialMessage ?? this.tutorialMessage),
+      puzzle: puzzle ?? this.puzzle,
+      puzzleStep: puzzleStep ?? this.puzzleStep,
+      isPuzzleHintUsed: isPuzzleHintUsed ?? this.isPuzzleHintUsed,
     );
   }
 
@@ -186,7 +213,8 @@ class GameState extends Equatable {
   List<Object?> get props => [
     board, currentTurn, selectedSquare, legalMoves, moveHistory,
     status, result, isAIThinking, hintMove, hintsUsed, currentFEN,
-    showPromotionDialog, tutorial, tutorialStep, tutorialMessage,
+    showPromotionDialog, tutorial, tutorialStep, tutorialMessage, pieceTheme,
+    puzzle, puzzleStep, isPuzzleHintUsed,
   ];
 }
 
@@ -195,10 +223,13 @@ class GameState extends Equatable {
 // ═══════════════════════════════════════════
 class GameBloc extends Bloc<GameEvent, GameState> {
   late ChessEngine _engine;
+  final EngineController _engineController = EngineController();
   final GameRepository _gameRepository;
   String? _gameId;
+  int _aiRequestEpoch = 0;
 
   ChessEngine get engine => _engine;
+  EngineController get engineController => _engineController;
 
   GameBloc(this._gameRepository) : super(GameState(
     board: List.generate(8, (_) => List.filled(8, null)),
@@ -218,8 +249,12 @@ class GameBloc extends Bloc<GameEvent, GameState> {
   }
 
   void _onStart(GameStartEvent event, Emitter<GameState> emit) {
-    _engine = ChessEngine.fromFEN(event.tutorial?.initialFEN ?? 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
+    // Invalidate any pending AI response from a previous game lifecycle.
+    _aiRequestEpoch++;
+    _engine = ChessEngine.fromFEN(event.config.puzzle?.initialFEN ?? event.tutorial?.initialFEN ?? 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
     final config = event.config;
+
+    _engineController.init(config.mode, config.difficulty);
 
     final playerColor = config.playerColor == 'black'
         ? PieceColor.black : PieceColor.white;
@@ -231,9 +266,13 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       mode: config.mode,
       aiDifficulty: config.difficulty,
       boardTheme: config.boardTheme ?? 'classic',
+      pieceTheme: _normalizePieceTheme(config.pieceTheme),
+      whitePieceColor: config.whitePieceColor ?? Colors.white,
+      blackPieceColor: config.blackPieceColor ?? Colors.black,
       currentFEN: _engine.toFEN(),
       tutorial: event.tutorial,
-      tutorialMessage: event.tutorial?.steps.first.text,
+      tutorialMessage: config.puzzle?.moves.first.dialog ?? event.tutorial?.steps.first.text,
+      puzzle: config.puzzle,
     ));
 
     // If AI plays first (player chose black)
@@ -303,6 +342,15 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       }
     }
 
+    // Puzzle check
+    if (state.mode == GameMode.puzzle && state.puzzle != null) {
+      final currentMove = state.puzzle!.moves[state.puzzleStep];
+      if (move.toAlgebraic() != currentMove.move) {
+        emit(state.copyWith(tutorialMessage: "Oops! Not the right strategy. Try again!"));
+        return;
+      }
+    }
+
     final success = _engine.makeMove(move);
     if (!success && !(event.from == event.to)) return; // Invalid move
 
@@ -340,6 +388,25 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       }
     }
 
+    // Puzzle Progress
+    if (state.mode == GameMode.puzzle && state.puzzle != null) {
+      final currentMove = state.puzzle!.moves[state.puzzleStep];
+      final isLastMove = state.puzzleStep == state.puzzle!.moves.length - 1;
+
+      if (isLastMove) {
+        emit(state.copyWith(
+          tutorialMessage: currentMove.successDialog,
+          status: GameStatus.checkmate, // Mark as win
+        ));
+      } else {
+        final nextIdx = state.puzzleStep + 1;
+        emit(state.copyWith(
+          puzzleStep: nextIdx,
+          tutorialMessage: state.puzzle!.moves[nextIdx].dialog,
+        ));
+      }
+    }
+
     // Vibrate on check
     if (_engine.status == GameStatus.check) {
       Vibration.vibrate(duration: 200);
@@ -349,13 +416,18 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     if (!state.isGameOver &&
         state.mode == GameMode.singlePlayer &&
         _engine.currentTurn != state.playerColor) {
+      final aiRequestEpoch = ++_aiRequestEpoch;
       emit(state.copyWith(isAIThinking: true));
       await Future.delayed(const Duration(milliseconds: 400));
 
-      final aiMove = await AIEngine.getBestMove(_engine, state.aiDifficulty!);
-      emit(state.copyWith(isAIThinking: false));
+      // Use the hybrid EngineController instead of AIDirectly
+      final moveStr = await _engineController.getBestMove(_engine.toFEN(), engine: _engine);
+      
+      if (isClosed || aiRequestEpoch != _aiRequestEpoch) return;
+      emit(this.state.copyWith(isAIThinking: false));
 
-      if (aiMove != null && !state.isGameOver) {
+      if (moveStr != null && !this.state.isGameOver && _engine.status == GameStatus.active) {
+        final aiMove = Move.fromAlgebraic(moveStr);
         add(GameMakeMoveEvent(aiMove.from, aiMove.to, promotion: aiMove.promotion));
       }
     }
@@ -383,10 +455,13 @@ class GameBloc extends Bloc<GameEvent, GameState> {
   }
 
   void _onResign(GameResignEvent event, Emitter<GameState> emit) {
+    // Explicitly cancel any in-flight AI result.
+    _aiRequestEpoch++;
     emit(state.copyWith(
       result: state.currentTurn == PieceColor.white
           ? GameResult.blackWins : GameResult.whiteWins,
       status: GameStatus.checkmate,
+      isAIThinking: false,
     ));
   }
 
@@ -424,20 +499,45 @@ class GameBloc extends Bloc<GameEvent, GameState> {
   }
 
   Future<void> _onRequestHint(GameRequestHintEvent event, Emitter<GameState> emit) async {
+    // Puzzle Hint Logic
+    if (state.mode == GameMode.puzzle && state.puzzle != null) {
+      final currentMove = state.puzzle!.moves[state.puzzleStep];
+      emit(state.copyWith(
+        tutorialMessage: "💡 Hint: ${currentMove.hint}",
+        isPuzzleHintUsed: true,
+      ));
+      return;
+    }
+
     if (state.hintsRemaining <= 0) return;
     if (state.mode != GameMode.singlePlayer) return;
     if (!state.isPlayerTurn) return;
 
+    final aiRequestEpoch = ++_aiRequestEpoch;
     emit(state.copyWith(isAIThinking: true));
-    final hint = await AIEngine.getBestMove(
-      _engine, AIDifficulty.advanced,
-      timeout: const Duration(seconds: 5),
+    
+    // Hints use the unified engine controller
+    final moveStr = await _engineController.getBestMove(
+      _engine.toFEN(), 
+      engine: _engine,
     );
-    emit(state.copyWith(
-      isAIThinking: false,
-      hintMove: hint,
-      hintsUsed: state.hintsUsed + 1,
-    ));
+
+    if (isClosed || aiRequestEpoch != _aiRequestEpoch) return;
+    emit(state.copyWith(isAIThinking: false));
+
+    if (moveStr != null) {
+      final hintMove = Move.fromAlgebraic(moveStr);
+      emit(state.copyWith(
+        hintMove: hintMove,
+        hintsUsed: state.hintsUsed + 1,
+      ));
+    }
+  }
+
+  @override
+  Future<void> close() {
+    _engineController.dispose();
+    return super.close();
   }
 
   void _onPromotionRequired(GamePromotionRequiredEvent event, Emitter<GameState> emit) {
@@ -479,5 +579,11 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     }
 
     return (capturedWhite, capturedBlack);
+  }
+
+  String _normalizePieceTheme(String? theme) {
+    if (theme == null || theme.isEmpty) return 'classic3d';
+    if (theme == 'classic') return 'classic3d';
+    return theme;
   }
 }

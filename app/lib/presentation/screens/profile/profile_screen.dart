@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../blocs/auth/auth_bloc.dart';
 import '../../../data/models/achievement_model.dart';
@@ -24,6 +25,7 @@ class ProfileScreen extends StatelessWidget {
               slivers: [
                 _buildHeader(user),
                 _buildStats(user),
+                _buildModeStats(user),
                 _buildAchievementsHeader(),
                 _buildAchievementsGrid(),
               ],
@@ -82,7 +84,7 @@ class ProfileScreen extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            _statCard('⭐ ELO', '${user.rating}', AppTheme.skyBlue),
+            _statCard('🔥 XP', '${user.xp}', AppTheme.skyBlue),
             _statCard('🎮 GAMES', '${user.stats.gamesPlayed}', AppTheme.goldPrimary),
             _statCard('🏆 WIN %', '${user.stats.winRate.toStringAsFixed(0)}%', AppTheme.accentCyan),
           ],
@@ -115,6 +117,71 @@ class ProfileScreen extends StatelessWidget {
         ],
       ),
     ).animate().fadeIn().scale(begin: const Offset(0.9, 0.9));
+  }
+
+  Widget _buildModeStats(dynamic user) {
+    double _modeWinRate(int wins, int games) => games > 0 ? wins / games * 100 : 0;
+    final aiRate = _modeWinRate(user.stats.aiWins, user.stats.aiGames);
+    final mpRate = _modeWinRate(user.stats.multiplayerWins, user.stats.multiplayerGames);
+    final tGames = user.stats.gamesPlayed - user.stats.aiGames - user.stats.multiplayerGames;
+    final tWins = user.stats.tournamentWins;
+    final tRate = _modeWinRate(tWins, tGames > 0 ? tGames : 0);
+
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        child: Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            gradient: AppTheme.cardGradient,
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: AppTheme.accentPurple.withValues(alpha: 0.15)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('📊 Win Rate by Mode', style: GoogleFonts.fredoka(
+                color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.w700,
+              )),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Expanded(child: _modeStatTile('🤖 AI', aiRate, user.stats.aiGames, AppTheme.accentCyan)),
+                  const SizedBox(width: 10),
+                  Expanded(child: _modeStatTile('🌍 Online', mpRate, user.stats.multiplayerGames, AppTheme.goldPrimary)),
+                  const SizedBox(width: 10),
+                  Expanded(child: _modeStatTile('🏆 Tourney', tRate, tGames > 0 ? tGames : 0, AppTheme.accentPurple)),
+                ],
+              ),
+            ],
+          ),
+        ).animate().fadeIn(delay: 200.ms),
+      ),
+    );
+  }
+
+  Widget _modeStatTile(String label, double rate, int games, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          Text('${rate.toStringAsFixed(0)}%', style: GoogleFonts.fredoka(
+            color: color, fontSize: 22, fontWeight: FontWeight.w700,
+          )),
+          const SizedBox(height: 4),
+          Text(label, style: GoogleFonts.fredoka(
+            color: AppTheme.textSecondary, fontSize: 12, fontWeight: FontWeight.w600,
+          )),
+          Text('$games games', style: GoogleFonts.baloo2(
+            color: AppTheme.textMuted, fontSize: 10,
+          )),
+        ],
+      ),
+    );
   }
 
   Widget _buildAchievementsHeader() {
@@ -194,12 +261,32 @@ class ProfileScreen extends StatelessWidget {
           ),
           if (a.isUnlocked) ...[
             const Spacer(),
-            Text('✅ UNLOCKED', style: GoogleFonts.fredoka(
-              color: AppTheme.goldPrimary, fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 1,
-            )),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text('✅ UNLOCKED', style: GoogleFonts.fredoka(
+                  color: AppTheme.goldPrimary, fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 1,
+                )),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: () => _shareAchievement(a),
+                  child: Icon(Icons.share_rounded, color: AppTheme.goldPrimary.withValues(alpha: 0.7), size: 18),
+                ),
+              ],
+            ),
           ],
         ],
       ),
     ).animate().fadeIn(delay: (index * 100).ms).slideY(begin: 0.1);
+  }
+
+  void _shareAchievement(Achievement a) {
+    SharePlus.instance.share(ShareParams(
+      text: '${a.icon} I just unlocked "${a.title}" in Chess Master!\n'
+            '${a.description}\n\n'
+            '🔥 Think you can beat me? Download now:\n'
+            'https://play.google.com/store/apps/details?id=com.chessmaster.app',
+      subject: 'Chess Master Achievement: ${a.title}',
+    ));
   }
 }

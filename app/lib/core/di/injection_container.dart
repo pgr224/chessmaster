@@ -4,6 +4,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../router/app_router.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/game_repository.dart';
+import '../../data/repositories/puzzle_repository.dart';
 import '../../data/services/multiplayer_service.dart';
 import '../../presentation/blocs/auth/auth_bloc.dart';
 import '../../presentation/blocs/game/game_bloc.dart';
@@ -56,6 +57,7 @@ Future<void> init() async {
   // ── Repositories ──
   sl.registerLazySingleton<AuthRepository>(() => AuthRepository(sl<Dio>()));
   sl.registerLazySingleton<GameRepository>(() => GameRepository(sl<Dio>()));
+  sl.registerLazySingleton<PuzzleRepository>(() => PuzzleRepository());
   sl.registerSingleton<MultiplayerService>(MultiplayerService());
 
   // ── BLoCs ──

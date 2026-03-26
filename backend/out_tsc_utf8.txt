@@ -1,0 +1,37 @@
+﻿
+> chess-master-backend@1.0.0 type-check
+> tsc --noEmit
+
+src/middleware/auth.ts(13,27): error TS2554: Expected 3 arguments, but got 2.
+src/middleware/auth.ts(14,11): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(key: never, value: unknown): void', gave the following error.
+    Argument of type '"user"' is not assignable to parameter of type 'never'.
+  Overload 2 of 2, '(key: "jwtPayload", value: unknown): void', gave the following error.
+    Argument of type '"user"' is not assignable to parameter of type '"jwtPayload"'.
+src/routes/auth.ts(4,30): error TS7016: Could not find a declaration file for module 'uuid'. 'D:/PP942920DRIVE/PROJECTS/chess/backend/node_modules/uuid/dist/esm-browser/index.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/uuid` if it exists or add a new declaration (.d.ts) file containing `declare module 'uuid';`
+src/routes/auth.ts(122,27): error TS2554: Expected 3 arguments, but got 2.
+src/routes/auth.ts(142,27): error TS2554: Expected 3 arguments, but got 2.
+src/routes/challenge.ts(5,30): error TS7016: Could not find a declaration file for module 'uuid'. 'D:/PP942920DRIVE/PROJECTS/chess/backend/node_modules/uuid/dist/esm-browser/index.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/uuid` if it exists or add a new declaration (.d.ts) file containing `declare module 'uuid';`
+src/routes/challenge.ts(105,15): error TS2339: Property 'changes' does not exist on type 'Record<string, unknown>[]'.
+src/routes/game.ts(3,30): error TS7016: Could not find a declaration file for module 'uuid'. 'D:/PP942920DRIVE/PROJECTS/chess/backend/node_modules/uuid/dist/esm-browser/index.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/uuid` if it exists or add a new declaration (.d.ts) file containing `declare module 'uuid';`
+src/routes/game.ts(24,22): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(key: never): unknown', gave the following error.
+    Argument of type '"user"' is not assignable to parameter of type 'never'.
+  Overload 2 of 2, '(key: "jwtPayload"): unknown', gave the following error.
+    Argument of type '"user"' is not assignable to parameter of type '"jwtPayload"'.
+src/routes/game.ts(39,43): error TS18046: 'user' is of type 'unknown'.
+src/routes/game.ts(40,43): error TS18046: 'user' is of type 'unknown'.
+src/routes/game.ts(42,43): error TS18046: 'user' is of type 'unknown'.
+src/routes/game.ts(43,43): error TS18046: 'user' is of type 'unknown'.
+src/routes/game.ts(74,22): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(key: never): unknown', gave the following error.
+    Argument of type '"user"' is not assignable to parameter of type 'never'.
+  Overload 2 of 2, '(key: "jwtPayload"): unknown', gave the following error.
+    Argument of type '"user"' is not assignable to parameter of type '"jwtPayload"'.
+src/routes/game.ts(94,49): error TS18046: 'user' is of type 'unknown'.
+src/routes/game.ts(95,49): error TS18046: 'user' is of type 'unknown'.
+src/routes/tournament.ts(5,30): error TS7016: Could not find a declaration file for module 'uuid'. 'D:/PP942920DRIVE/PROJECTS/chess/backend/node_modules/uuid/dist/esm-browser/index.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/uuid` if it exists or add a new declaration (.d.ts) file containing `declare module 'uuid';`

@@ -12,7 +12,7 @@ challengeRoutes.use('*', authMiddleware)
 challengeRoutes.get('/', async (c) => {
   const userId = c.get('user').sub
   const { results } = await c.env.DB.prepare(
-    `SELECT c.*, u.username as challenger_username, u.rating as challenger_rating 
+    `SELECT c.*, u.username as challenger_username, u.xp as challenger_xp 
      FROM challenges c 
      JOIN users u ON c.challenger_id = u.id 
      WHERE c.challenged_id = ? AND c.status = 'pending' 
@@ -97,12 +97,12 @@ challengeRoutes.post('/:id/decline', async (c) => {
   const userId = c.get('user').sub
   const challengeId = c.req.param('id')
 
-  const { results } = await c.env.DB.prepare(
+  const result = await c.env.DB.prepare(
     `UPDATE challenges SET status = 'declined' 
      WHERE id = ? AND challenged_id = ? AND status = 'pending'`
   ).bind(challengeId, userId).run()
 
-  if (results.changes === 0) {
+  if (result.meta.changes === 0) {
     return c.json({ error: 'Challenge not found or already processed' }, 404)
   }
 

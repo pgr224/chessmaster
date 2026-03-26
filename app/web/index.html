@@ -41,6 +41,11 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
+  <!-- Chess Engine Service (loaded before Flutter for JS interop) -->
+  <script src="engine/sunfish_engine.js"></script>
+  <script src="engine/chess_logic.js"></script>
+  <script src="engine/engine_service.js"></script>
+
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

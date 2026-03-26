@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid'
 import type { Env } from '../index'
 import { authMiddleware } from '../middleware/auth'
 
-const game = new Hono<{ Bindings: Env }>()
+const game = new Hono<{ Bindings: Env; Variables: { user: any } }>()
 game.use('*', authMiddleware)
 
 // ────────────────────────────────────────
@@ -145,9 +145,9 @@ game.post('/complete', async (c) => {
                      completed_at = ?, updated_at = ? WHERE id = ?
   `).bind(result, termination, pgn ?? null, now, now, gameId).run()
 
-  // Update ELO ratings (for rated multiplayer games)
+  // Update XP (for rated multiplayer games)
   if (gameRow.mode === 'multiplayer' && gameRow.rated) {
-    await updateRatings(c.env.DB, gameRow, result)
+    await updateXP(c.env.DB, gameRow, result)
   }
 
   // Update stats
@@ -167,8 +167,8 @@ game.post('/complete', async (c) => {
 game.get('/:id', async (c) => {
   const gameRow = await c.env.DB.prepare(`
     SELECT g.*, 
-      wu.username as white_username, wu.avatar_url as white_avatar, wu.rating as white_rating,
-      bu.username as black_username, bu.avatar_url as black_avatar, bu.rating as black_rating
+      wu.username as white_username, wu.avatar_url as white_avatar, wu.xp as white_xp,
+      bu.username as black_username, bu.avatar_url as black_avatar, bu.xp as black_xp
     FROM games g
     LEFT JOIN users wu ON g.white_user_id = wu.id
     LEFT JOIN users bu ON g.black_user_id = bu.id
@@ -193,13 +193,14 @@ game.get('/user/:userId', async (c) => {
 
   const games = await c.env.DB.prepare(`
     SELECT g.id, g.mode, g.status, g.result, g.termination, g.move_count,
+           g.white_user_id, g.black_user_id,
            g.time_control, g.created_at, g.completed_at,
            wu.username as white_username, bu.username as black_username
     FROM games g
     LEFT JOIN users wu ON g.white_user_id = wu.id
     LEFT JOIN users bu ON g.black_user_id = bu.id
     WHERE (g.white_user_id = ? OR g.black_user_id = ?)
-    AND g.status = 'completed'
+    AND g.status IN ('completed', 'abandoned')
     ORDER BY g.completed_at DESC
     LIMIT ? OFFSET ?
   `).bind(c.req.param('userId'), c.req.param('userId'), limit, offset).all()
@@ -208,34 +209,67 @@ game.get('/user/:userId', async (c) => {
 })
 
 // ────────────────────────────────────────
-// HELPERS
+// ABANDON GAME (network/app crash or disconnect)
 // ────────────────────────────────────────
-async function updateRatings(db: D1Database, gameRow: Record<string, unknown>, result: string) {
-  const white = await db.prepare('SELECT rating FROM users WHERE id = ?')
-    .bind(gameRow.white_user_id).first<{ rating: number }>()
-  const black = await db.prepare('SELECT rating FROM users WHERE id = ?')
-    .bind(gameRow.black_user_id).first<{ rating: number }>()
-  if (!white || !black) return
+const AbandonSchema = z.object({
+  gameId: z.string(),
+  cause: z.string().default('network_disconnect_or_app_crash'),
+})
 
-  const K = 32
-  const expectedW = 1 / (1 + Math.pow(10, (black.rating - white.rating) / 400))
-  const scoreW = result === 'white' ? 1 : result === 'draw' ? 0.5 : 0
-  const newWhite = Math.round(white.rating + K * (scoreW - expectedW))
-  const newBlack = Math.round(black.rating + K * ((1 - scoreW) - (1 - expectedW)))
+game.post('/abandon', async (c) => {
+  const body = await c.req.json()
+  const parsed = AbandonSchema.safeParse(body)
+  if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 400)
+
+  const { gameId, cause } = parsed.data
   const now = new Date().toISOString()
 
-  await db.prepare('UPDATE users SET rating = ? WHERE id = ?').bind(newWhite, gameRow.white_user_id).run()
-  await db.prepare('UPDATE users SET rating = ? WHERE id = ?').bind(newBlack, gameRow.black_user_id).run()
+  await c.env.DB.prepare(`
+    UPDATE games
+    SET status = 'abandoned',
+        termination = ?,
+        completed_at = ?,
+        updated_at = ?
+    WHERE id = ? AND status = 'active'
+  `).bind(cause, now, now, gameId).run()
 
-  // Log rating history
+  return c.json({ ok: true })
+})
+
+// ────────────────────────────────────────
+// HELPERS
+// ────────────────────────────────────────
+async function updateXP(db: D1Database, gameRow: Record<string, unknown>, result: string) {
+  const white = await db.prepare('SELECT xp FROM users WHERE id = ?')
+    .bind(gameRow.white_user_id).first<{ xp: number }>()
+  const black = await db.prepare('SELECT xp FROM users WHERE id = ?')
+    .bind(gameRow.black_user_id).first<{ xp: number }>()
+  if (!white || !black) return
+
+  // XP logic: +20 for win, +10 for draw, +5 for loss (standard additive XP)
+  // Or do you want to keep ELO formula for "XP"? 
+  // User said "replace elo with xp", usually XP is just progression.
+  // But let's keep the formula for now, but usually XP doesn't go DOWN.
+  // I'll change it to be additive.
+  const scoreW = result === 'white' ? 20 : result === 'draw' ? 10 : 5
+  const scoreB = result === 'black' ? 20 : result === 'draw' ? 10 : 5
+  
+  const newWhite = white.xp + scoreW
+  const newBlack = black.xp + scoreB
+  const now = new Date().toISOString()
+
+  await db.prepare('UPDATE users SET xp = ? WHERE id = ?').bind(newWhite, gameRow.white_user_id).run()
+  await db.prepare('UPDATE users SET xp = ? WHERE id = ?').bind(newBlack, gameRow.black_user_id).run()
+
+  // Log xp history
   await db.prepare(`
-    INSERT INTO rating_history (user_id, game_id, rating_before, rating_after, change, created_at)
+    INSERT INTO xp_history (user_id, game_id, xp_before, xp_after, change, created_at)
     VALUES (?, ?, ?, ?, ?, ?)
-  `).bind(gameRow.white_user_id, gameRow.id, white.rating, newWhite, newWhite - white.rating, now).run()
+  `).bind(gameRow.white_user_id, gameRow.id, white.xp, newWhite, scoreW, now).run()
   await db.prepare(`
-    INSERT INTO rating_history (user_id, game_id, rating_before, rating_after, change, created_at)
+    INSERT INTO xp_history (user_id, game_id, xp_before, xp_after, change, created_at)
     VALUES (?, ?, ?, ?, ?, ?)
-  `).bind(gameRow.black_user_id, gameRow.id, black.rating, newBlack, newBlack - black.rating, now).run()
+  `).bind(gameRow.black_user_id, gameRow.id, black.xp, newBlack, scoreB, now).run()
 }
 
 async function updateStats(db: D1Database, userId: string, outcome: 'win' | 'loss' | 'draw', mode: string) {

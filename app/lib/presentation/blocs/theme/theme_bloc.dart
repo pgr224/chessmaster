@@ -17,7 +17,7 @@ class ThemeChangeEvent extends ThemeEvent {
 class ThemeState extends Equatable {
   final String boardTheme;
   final String pieceTheme;
-  const ThemeState({this.boardTheme = 'classic', this.pieceTheme = 'classic'});
+  const ThemeState({this.boardTheme = 'classic', this.pieceTheme = 'classic3d'});
   ThemeState copyWith({String? boardTheme, String? pieceTheme}) =>
       ThemeState(boardTheme: boardTheme ?? this.boardTheme, pieceTheme: pieceTheme ?? this.pieceTheme);
   @override List<Object?> get props => [boardTheme, pieceTheme];
@@ -31,9 +31,10 @@ class ThemeBloc extends Bloc<ThemeEvent, ThemeState> {
 
   Future<void> _onLoad(ThemeLoadEvent event, Emitter<ThemeState> emit) async {
     final prefs = await SharedPreferences.getInstance();
+    final storedPieceTheme = prefs.getString('piece_theme') ?? 'classic3d';
     emit(ThemeState(
       boardTheme: prefs.getString('board_theme') ?? 'classic',
-      pieceTheme: prefs.getString('piece_theme') ?? 'classic',
+      pieceTheme: storedPieceTheme == 'classic' ? 'classic3d' : storedPieceTheme,
     ));
   }
 

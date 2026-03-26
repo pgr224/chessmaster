@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS users (
   device_id     TEXT NOT NULL UNIQUE,       -- device fingerprint (offline auth)
   device_model  TEXT,
   avatar_url    TEXT,
-  rating        INTEGER NOT NULL DEFAULT 1200,
+  xp            INTEGER NOT NULL DEFAULT 0,
   is_online     INTEGER NOT NULL DEFAULT 0, -- 0=offline, 1=online
   last_seen     TEXT,                       -- ISO8601
   created_at    TEXT NOT NULL DEFAULT (datetime('now')),
@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 CREATE INDEX idx_users_device ON users(device_id);
-CREATE INDEX idx_users_rating ON users(rating DESC);
+CREATE INDEX idx_users_xp     ON users(xp DESC);
 
 -- ────────────────────────────────────────
 -- USER STATS
@@ -169,6 +169,8 @@ CREATE TABLE IF NOT EXISTS challenges (
   created_at      TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+CREATE INDEX idx_challenges_status ON challenges(status);
+
 -- ────────────────────────────────────────
 -- CHAT MESSAGES
 -- ────────────────────────────────────────
@@ -241,16 +243,16 @@ CREATE TABLE IF NOT EXISTS saved_games (
 );
 
 -- ────────────────────────────────────────
--- PLAYER RATINGS HISTORY
+-- PLAYER XP HISTORY
 -- ────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS rating_history (
+CREATE TABLE IF NOT EXISTS xp_history (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id     TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   game_id     TEXT REFERENCES games(id),
-  rating_before INTEGER NOT NULL,
-  rating_after  INTEGER NOT NULL,
-  change        INTEGER NOT NULL,
-  created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+  xp_before   INTEGER NOT NULL,
+  xp_after    INTEGER NOT NULL,
+  change      INTEGER NOT NULL,
+  created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 -- ────────────────────────────────────────

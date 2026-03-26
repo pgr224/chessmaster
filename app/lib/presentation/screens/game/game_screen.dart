@@ -12,6 +12,8 @@ import '../../../core/router/app_router.dart';
 import '../../../data/models/game_config.dart';
 import '../../../data/models/tutorial_model.dart';
 import '../../../presentation/blocs/game/game_bloc.dart';
+import '../../../presentation/blocs/settings/settings_bloc.dart';
+import '../../../presentation/blocs/multiplayer/multiplayer_bloc.dart';
 import '../../../domain/engine/chess_engine.dart';
 import '../../widgets/chess_board_widget.dart';
 import '../../widgets/captured_pieces_widget.dart';
@@ -42,6 +44,15 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     context.read<GameBloc>().add(GameStartEvent(widget.config, tutorial: widget.tutorial));
   }
 
+  /// Handle system back button (Android hardware or gesture back)
+  /// Returns true to prevent default pop, false/null to allow
+  Future<bool> _onPopInvoked(bool didPop) async {
+    if (didPop) return true; // Already popped, don't do anything further
+    // Show exit dialog instead of just popping
+    await _showExitDialog(context);
+    return true; // Prevent default pop (dialog handles nav)
+  }
+
   @override
   void dispose() {
     _confettiController.dispose();
@@ -51,13 +62,16 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    return BlocConsumer<GameBloc, GameState>(
-      listener: (context, state) {
-        if (state.isGameOver) {
-          final isWin = state.result == GameResult.whiteWins &&
-              state.playerColor == PieceColor.white ||
-              state.result == GameResult.blackWins &&
-              state.playerColor == PieceColor.black;
+    return PopScope(
+      canPop: false, // Prevent default pop behavior
+      onPopInvoked: _onPopInvoked,
+      child: BlocConsumer<GameBloc, GameState>(
+        listener: (context, state) {
+          if (state.isGameOver) {
+            final isWin = state.result == GameResult.whiteWins &&
+                state.playerColor == PieceColor.white ||
+                state.result == GameResult.blackWins &&
+                state.playerColor == PieceColor.black;
           if (isWin) _confettiController.play();
         }
         if (state.status == GameStatus.check) {
@@ -65,6 +79,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         }
       },
       builder: (context, state) {
+        final minimalMotion = context.select<SettingsBloc, bool>(
+          (bloc) => bloc.state.moveAnimationSpeed == 'off',
+        );
         return Scaffold(
           backgroundColor: AppTheme.midnight,
           body: Stack(
@@ -83,14 +100,15 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               if (state.showPromotionDialog) _buildPromotionOverlay(context, state),
               if (state.isGameOver) _buildGameOverOverlay(context, state),
               _buildConfetti(),
-              if (state.status == GameStatus.check) _buildCheckAlert(state),
-              if (state.isPlayerTurn && !state.isGameOver) _buildTurnOverlay(state),
+              if (state.status == GameStatus.check) _buildCheckAlert(state, minimalMotion),
+              if (state.isPlayerTurn && !state.isGameOver) _buildTurnOverlay(state, minimalMotion),
               if (_showMoves) _buildMoveHistoryOverlay(state),
-              if (state.tutorialMessage != null) _buildTutorialOverlay(state),
+              if (state.tutorialMessage != null && _tutorialVisible) _buildTutorialOverlay(state),
             ],
           ),
         );
       },
+    ),
     );
   }
 
@@ -148,8 +166,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildTurnOverlay(GameState state) {
-    return Positioned(
+  Widget _buildTurnOverlay(GameState state, bool minimalMotion) {
+    final overlay = Positioned(
       bottom: 120,
       left: 0, right: 0,
       child: Center(
@@ -178,55 +196,81 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           ),
         ),
       ),
-    ).animate(onPlay: (c) => c.repeat(reverse: true))
+    );
+
+    if (minimalMotion) return overlay;
+
+    return overlay
+        .animate(onPlay: (c) => c.repeat(reverse: true))
         .scale(begin: const Offset(1, 1), end: const Offset(1.05, 1.05), duration: 800.ms)
         .shimmer(delay: 2.seconds, duration: 1200.ms);
   }
 
   Widget _buildTutorialOverlay(GameState state) {
     return Positioned(
-      bottom: 140,
-      left: 16, right: 16,
-      child: Container(
-        padding: const EdgeInsets.all(22),
-        decoration: BoxDecoration(
-          color: AppTheme.navyCard.withValues(alpha: 0.96),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.5), width: 2),
-          boxShadow: [
-            BoxShadow(color: AppTheme.goldPrimary.withValues(alpha: 0.15), blurRadius: 24),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.school_rounded, color: AppTheme.goldPrimary, size: 24),
-                const SizedBox(width: 10),
-                Text(
-                  '🎓 TUTORIAL STEP ${state.tutorialStep + 1}',
-                  style: GoogleFonts.fredoka(
-                    color: AppTheme.goldPrimary, fontSize: 14, fontWeight: FontWeight.w700,
-                    letterSpacing: 1.2,
+      top: 60,
+      left: 12, right: 12,
+      child: IgnorePointer(
+        ignoring: false, // Allow taps to be processed by dismiss button
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppTheme.navyCard.withValues(alpha: 0.95),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.5), width: 2),
+            boxShadow: [
+              BoxShadow(color: AppTheme.goldPrimary.withValues(alpha: 0.2), blurRadius: 16, offset: const Offset(0, 4)),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header with close button
+              Row(
+                children: [
+                  const Icon(Icons.psychology_rounded, color: AppTheme.goldPrimary, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      state.mode == GameMode.puzzle ? 'CHALLENGE' : 'STEP ${state.tutorialStep + 1}',
+                      style: GoogleFonts.fredoka(
+                        color: AppTheme.goldPrimary, fontSize: 12, fontWeight: FontWeight.w700,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            Text(
-              state.tutorialMessage!,
-              style: GoogleFonts.baloo2(
-                color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.w600,
-                height: 1.4,
+                  GestureDetector(
+                    onTap: () => setState(() => _tutorialVisible = false),
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: AppTheme.textSecondary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Icon(
+                        Icons.close_rounded,
+                        color: AppTheme.textSecondary,
+                        size: 18,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              textAlign: TextAlign.center,
-            ),
-          ],
+              const SizedBox(height: 12),
+              // Tutorial text
+              Text(
+                state.tutorialMessage!,
+                style: GoogleFonts.baloo2(
+                  color: AppTheme.textPrimary, fontSize: 14, fontWeight: FontWeight.w500,
+                  height: 1.4,
+                ),
+                textAlign: TextAlign.left,
+              ),
+            ],
+          ),
         ),
       ),
-    ).animate().fadeIn().slideY(begin: 0.2);
+    ).animate().fadeIn().slideY(begin: -0.15);
   }
 
   Widget _buildBackground() {
@@ -339,6 +383,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   }
 
   bool _showMoves = false;
+  bool _tutorialVisible = true;
 
   Widget _buildCompactLayout(BuildContext context, GameState state, BoxConstraints constraints) {
     return Column(
@@ -421,17 +466,27 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
   Widget _buildBoardFrame(BuildContext context, GameState state, {required double maxDimension}) {
     final dimension = math.max(300.0, math.min(maxDimension, 860.0));
+    final settings = context.watch<SettingsBloc>().state;
+    final perspective = settings.autoFlipBoard
+        ? state.currentTurn
+        : (state.playerColor ?? PieceColor.white);
+
     return ConstrainedBox(
       constraints: BoxConstraints.tightFor(width: dimension, height: dimension),
       child: ChessBoardWidget(
         board: state.board,
-        perspective: state.playerColor ?? PieceColor.white,
+        perspective: perspective,
         selectedSquare: state.selectedSquare,
-        legalMoves: state.legalMoves,
+        legalMoves: settings.showLegalMoves ? state.legalMoves : const [],
         lastMove: state.moveHistory.isNotEmpty ? state.moveHistory.last : null,
         hintMove: state.hintMove,
         status: state.status,
         boardTheme: state.boardTheme ?? 'classic',
+        pieceTheme: state.pieceTheme,
+        moveAnimationSpeed: settings.moveAnimationSpeed,
+        showCoordinates: settings.showCoordinates,
+        whitePieceColor: state.whitePieceColor,
+        blackPieceColor: state.blackPieceColor,
         onSquareTap: state.isGameOver
             ? null
             : (sq) {
@@ -443,6 +498,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildActionBar(BuildContext context, GameState state) {
+    final settings = context.watch<SettingsBloc>().state;
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
       decoration: BoxDecoration(
@@ -471,7 +527,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             label: 'Draw',
             color: AppTheme.skyBlue,
             onTap: !state.isGameOver
-                ? () => context.read<GameBloc>().add(GameDrawOfferEvent())
+                ? () => _offerDraw(context, settings.confirmDrawOffer)
                 : null,
           ),
           // Resign
@@ -480,7 +536,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             label: 'Resign',
             color: AppTheme.accentRed,
             onTap: !state.isGameOver
-                ? () => _showResignDialog(context)
+                ? () => _resign(context, settings.confirmResign)
                 : null,
           ),
           // Save
@@ -580,6 +636,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       result: state.result,
       drawReason: state.drawReason,
       playerColor: state.playerColor,
+      puzzle: state.puzzle,
       onPlayAgain: () {
         context.read<GameBloc>().add(GameStartEvent(widget.config));
       },
@@ -595,7 +652,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   Future<void> _sharePgn(String pgn, String intro, String subject) {
     return SharePlus.instance.share(
       ShareParams(
-        text: '$intro\n\n$pgn',
+        text: '$intro\n\n$pgn\n\n🔥 Think you can beat me? Play Chess Master now:\nhttps://play.google.com/store/apps/details?id=com.chessmaster.app',
         subject: subject,
       ),
     );
@@ -617,39 +674,64 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildCheckAlert(GameState state) {
-    return Positioned(
+  Widget _buildCheckAlert(GameState state, bool minimalMotion) {
+    final alert = Positioned(
       top: 100,
       left: 0, right: 0,
       child: Center(
-        child: AnimatedBuilder(
-          animation: _checkAnimController,
-          builder: (_, __) => Opacity(
-            opacity: (1 - _checkAnimController.value).clamp(0, 1),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-              decoration: BoxDecoration(
-                color: AppTheme.accentRed.withValues(alpha: 0.95),
-                borderRadius: BorderRadius.circular(28),
-                boxShadow: [
-                  BoxShadow(color: AppTheme.accentRed.withValues(alpha: 0.5), blurRadius: 24, spreadRadius: 4),
-                ],
+        child: minimalMotion
+            ? Container(
+                padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+                decoration: BoxDecoration(
+                  color: AppTheme.accentRed.withValues(alpha: 0.95),
+                  borderRadius: BorderRadius.circular(28),
+                  boxShadow: [
+                    BoxShadow(color: AppTheme.accentRed.withValues(alpha: 0.45), blurRadius: 18, spreadRadius: 2),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.warning_rounded, color: Colors.white, size: 24),
+                    const SizedBox(width: 10),
+                    Text('OH NO! CHECK!', style: GoogleFonts.fredoka(
+                      color: Colors.white, fontWeight: FontWeight.w800, fontSize: 20,
+                    )),
+                  ],
+                ),
+              )
+            : AnimatedBuilder(
+                animation: _checkAnimController,
+                builder: (_, __) => Opacity(
+                  opacity: (1 - _checkAnimController.value).clamp(0, 1),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: AppTheme.accentRed.withValues(alpha: 0.95),
+                      borderRadius: BorderRadius.circular(28),
+                      boxShadow: [
+                        BoxShadow(color: AppTheme.accentRed.withValues(alpha: 0.5), blurRadius: 24, spreadRadius: 4),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.warning_rounded, color: Colors.white, size: 24),
+                        const SizedBox(width: 10),
+                        Text('OH NO! CHECK!', style: GoogleFonts.fredoka(
+                          color: Colors.white, fontWeight: FontWeight.w800, fontSize: 20,
+                        )),
+                      ],
+                    ),
+                  ),
+                ),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.warning_rounded, color: Colors.white, size: 24),
-                  const SizedBox(width: 10),
-                  Text('OH NO! CHECK!', style: GoogleFonts.fredoka(
-                    color: Colors.white, fontWeight: FontWeight.w800, fontSize: 20,
-                  )),
-                ],
-              ),
-            ),
-          ),
-        ),
       ),
-    ).animate().scale(begin: const Offset(0.5, 0.5)).fadeIn();
+    );
+
+    if (minimalMotion) return alert;
+
+    return alert.animate().scale(begin: const Offset(0.5, 0.5)).fadeIn();
   }
 
   String _modeName(GameMode mode) => switch (mode) {
@@ -657,9 +739,95 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     GameMode.singlePlayer => '🤖 VS ROBOT',
     GameMode.twoPlayer    => '👥 2 PLAYER',
     GameMode.multiplayer  => '🌍 ONLINE',
+    GameMode.puzzle       => '🧩 DAILY PUZZLE',
   };
 
   Future<void> _showExitDialog(BuildContext context) async {
+    final gameState = context.read<GameBloc>().state;
+    final isLocalMode = gameState.mode == GameMode.singlePlayer || gameState.mode == GameMode.twoPlayer;
+
+    if (isLocalMode) {
+      final action = await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: AppTheme.navyCard,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+          title: Text('Leave Game? 👋', style: GoogleFonts.fredoka(color: AppTheme.textPrimary)),
+          content: Text(
+            'Choose how you want to exit. Local games are not counted as losses when you quit.',
+            style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 16),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, 'cancel'),
+              child: Text('Keep Playing', style: GoogleFonts.fredoka(color: AppTheme.textMuted)),
+            ),
+            OutlinedButton(
+              onPressed: () => Navigator.pop(ctx, 'quit_no_save'),
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(color: AppTheme.textMuted.withValues(alpha: 0.35)),
+              ),
+              child: Text('Quit Without Save', style: GoogleFonts.fredoka(color: AppTheme.textSecondary)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.accentCyan,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+              onPressed: () => Navigator.pop(ctx, 'save_quit'),
+              child: Text('Save & Quit', style: GoogleFonts.fredoka(color: AppTheme.midnight)),
+            ),
+          ],
+        ),
+      );
+
+      if (!context.mounted) return;
+
+      if (action == 'save_quit') {
+        context.read<GameBloc>().add(GameSaveEvent());
+        context.go('/home');
+      } else if (action == 'quit_no_save') {
+        context.go('/home');
+      }
+      return;
+    }
+
+    if (gameState.mode == GameMode.multiplayer) {
+      final forfeit = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: AppTheme.navyCard,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+          title: Text('Forfeit Match? ⚠️', style: GoogleFonts.fredoka(color: AppTheme.accentRed)),
+          content: Text(
+            'Leaving an online or tournament game counts as a loss for you.',
+            style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 16),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text('Stay', style: GoogleFonts.fredoka(color: AppTheme.textMuted)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.accentRed,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text('Forfeit', style: GoogleFonts.fredoka(color: Colors.white)),
+            ),
+          ],
+        ),
+      );
+
+      if (forfeit == true && context.mounted) {
+        context.read<MultiplayerBloc>().add(MpResignEvent());
+        context.read<GameBloc>().add(GameResignEvent());
+        context.go('/home');
+      }
+      return;
+    }
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -721,6 +889,52 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     );
     if (confirmed == true && context.mounted) {
       context.read<GameBloc>().add(GameResignEvent());
+    }
+  }
+
+  void _resign(BuildContext context, bool requireConfirm) {
+    if (requireConfirm) {
+      _showResignDialog(context);
+      return;
+    }
+    context.read<GameBloc>().add(GameResignEvent());
+  }
+
+  Future<void> _offerDraw(BuildContext context, bool requireConfirm) async {
+    if (!requireConfirm) {
+      context.read<GameBloc>().add(GameDrawOfferEvent());
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.navyCard,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Text('Offer Draw?', style: GoogleFonts.fredoka(color: AppTheme.skyBlue)),
+        content: Text(
+          'Send a draw offer to your opponent now?',
+          style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 15),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Cancel', style: GoogleFonts.fredoka(color: AppTheme.textMuted)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.skyBlue,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('Offer', style: GoogleFonts.fredoka(color: AppTheme.midnight)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && context.mounted) {
+      context.read<GameBloc>().add(GameDrawOfferEvent());
     }
   }
 }

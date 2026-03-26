@@ -1,3 +1,4 @@
+import 'dart:isolate';
 import 'dart:math';
 import '../engine/chess_engine.dart';
 import '../../data/models/game_config.dart';
@@ -17,7 +18,7 @@ class AIEngine {
   static const Map<String, String> _openingBook = {
     'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1': 'e2e4', // King's Pawn
     'rnbqkbnr/pppppppp/8/8/4P3/8/PPPPPPPP/RNBQKBNR b KQkq e3 0 1': 'c7c5', // Sicilian Defense
-    'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1': 'd2d4', // Queen's Pawn
+    'rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq d3 0 1': 'd7d5', // Queen's Gambit setup
     'rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2': 'g1f3', // Open Sicilian
   };
 
@@ -26,6 +27,24 @@ class AIEngine {
     AIDifficulty difficulty, {
     Duration timeout = const Duration(seconds: 5),
   }) async {
+    // Run AI search on a background isolate so UI actions stay responsive.
+    final fenSnapshot = engine.toFEN();
+    final bestMoveAlg = await Isolate.run<String?>(() {
+      final isolatedEngine = ChessEngine.fromFEN(fenSnapshot);
+      final move = _getBestMoveSync(isolatedEngine, difficulty, timeout: timeout);
+      return move?.toAlgebraic();
+    });
+
+    if (bestMoveAlg == null) return null;
+    final legalMoves = engine.allLegalMoves();
+    return legalMoves.where((m) => m.toAlgebraic() == bestMoveAlg).firstOrNull;
+  }
+
+  static Move? _getBestMoveSync(
+    ChessEngine engine,
+    AIDifficulty difficulty, {
+    Duration timeout = const Duration(seconds: 5),
+  }) {
     final startTime = DateTime.now();
     final config = _configs[difficulty]!;
     final fen = engine.toFEN();
