@@ -114,6 +114,8 @@ class GameState extends Equatable {
   final bool confirmMoves;
   final bool autoQueen;
   final Move? pendingMove;
+  final int mpUndosUsed;
+  final DateTime? lastMoveTimestamp;
 
   const GameState({
     required this.board,

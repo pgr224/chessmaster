@@ -12,6 +12,7 @@ import '../../../data/models/achievement_model.dart';
 import '../../../data/models/user_model.dart';
 import '../../../data/models/game_record_model.dart';
 import '../../../data/repositories/auth_repository.dart';
+import 'package:go_router/go_router.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -325,7 +326,7 @@ class ProfileScreen extends StatelessWidget {
                     const SizedBox(width: 10),
                     _modeStatTile('👥 Local', localRate, user.stats.twoPlayerGames, AppTheme.skyBlue),
                     const SizedBox(width: 10),
-                    _modeStatTile('🏆 Tournament', tRate, tGames > 0 ? tGames : 0, AppTheme.accentPurple),
+                    _modeStatTile('🏆 Tournament', tRate.toDouble(), tGames > 0 ? tGames : 0, AppTheme.accentPurple),
                   ],
                 ),
               ),
@@ -628,6 +629,38 @@ class ProfileScreen extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+
+  static Widget userAvatar(UserModel user, double size, {String? previewData, bool isCartoon = false}) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: AppTheme.midnight,
+        border: Border.all(color: AppTheme.goldPrimary, width: 3),
+      ),
+      child: ClipOval(
+        child: previewData != null
+            ? Image.memory(base64Decode(previewData), fit: BoxFit.cover)
+            : (user.avatarUrl != null && user.avatarUrl!.isNotEmpty
+                ? CachedNetworkImage(
+                    imageUrl: user.avatarUrl!,
+                    fit: BoxFit.cover,
+                    placeholder: (context, url) => Container(color: Colors.white10),
+                    errorWidget: (context, url, error) => Container(color: Colors.white10),
+                  )
+                : Container(
+                    color: AppTheme.goldPrimary,
+                    child: Center(
+                      child: Text(
+                        user.username.isNotEmpty ? user.username[0].toUpperCase() : 'U',
+                        style: GoogleFonts.fredoka(fontSize: size * 0.5, fontWeight: FontWeight.w700, color: AppTheme.midnight),
+                      ),
+                    ),
+                  )),
       ),
     );
   }
