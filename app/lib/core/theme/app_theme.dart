@@ -104,6 +104,10 @@ class AppTheme {
     colors: [Color(0xFFFF6B9D), Color(0xFFFFD93D), Color(0xFF6BCB77), Color(0xFF74B9FF), Color(0xFFA29BFE)],
   );
 
+  static const LinearGradient errorGradient = LinearGradient(
+    colors: [Color(0xFFFF8A5C), Color(0xFFFF6B9D)],
+  );
+
   // ═══════════════════════════════════════════
   // SHADOWS
   // ═══════════════════════════════════════════
