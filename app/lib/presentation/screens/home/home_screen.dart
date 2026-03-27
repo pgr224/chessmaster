@@ -25,8 +25,18 @@ class _HomeScreenState extends State<HomeScreen> {
   final PuzzleRepository _puzzleRepository = di.sl<PuzzleRepository>();
   Future<List<GameModel>>? _recentGamesFuture;
   String? _recentForUser;
+  String? _lastActiveGameId;
 
   @override
+  void initState() {
+    super.initState();
+    _checkActiveGame();
+  }
+
+  Future<void> _checkActiveGame() async {
+    final id = await _gameRepository.getLastActiveGameId();
+    if (mounted) setState(() => _lastActiveGameId = id);
+  }
   Widget build(BuildContext context) {
     final bgTheme = context.watch<SettingsBloc>().state.backgroundTheme;
     return BlocBuilder<AuthBloc, AuthState>(
@@ -46,6 +56,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 slivers: [
                   SliverToBoxAdapter(child: _buildHeader(user)),
                   SliverToBoxAdapter(child: _buildQuickStats(user)),
+                  if (_lastActiveGameId != null) SliverToBoxAdapter(child: _buildResumeCard()),
                   SliverToBoxAdapter(child: _buildSectionTitle('🎮 Game Modes')),
                   SliverPadding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -537,5 +548,44 @@ class _HomeScreenState extends State<HomeScreen> {
     if (hour < 12) return 'Good morning ☀️';
     if (hour < 17) return 'Good afternoon 🌤️';
     return 'Good evening 🌙';
+  }
+
+  Widget _buildResumeCard() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: AppTheme.rainbowGradient,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(color: AppTheme.goldPrimary.withValues(alpha: 0.3), blurRadius: 15, offset: const Offset(0, 5)),
+        ],
+      ),
+      child: Row(
+        children: [
+          const Text('🔥', style: TextStyle(fontSize: 32)),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('UNFINISHED BATTLE!', style: GoogleFonts.fredoka(color: AppTheme.midnight, fontSize: 13, fontWeight: FontWeight.w800, letterSpacing: 1.2)),
+                Text('Your last game is waiting...', style: GoogleFonts.baloo2(color: AppTheme.midnight.withValues(alpha: 0.8), fontSize: 16, fontWeight: FontWeight.w600)),
+              ],
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.midnight,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
+            onPressed: () => context.go('/game/play', extra: GameConfig(mode: GameMode.singlePlayer, activeGameId: _lastActiveGameId)),
+            child: Text('RESUME', style: GoogleFonts.fredoka(fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    ).animate().shimmer(duration: 2.seconds).scale(begin: const Offset(0.95, 0.95), duration: 400.ms, curve: Curves.easeOutBack);
   }
 }

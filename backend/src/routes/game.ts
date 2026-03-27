@@ -36,6 +36,7 @@ game.post('/create', async (c) => {
   let blackId: string | null = null
 
   const userId = user.sub || user.id || null
+  if (!userId) return c.json({ error: 'User ID missing from token' }, 401)
   const resolvedColor = color === 'random' ? (Math.random() > 0.5 ? 'white' : 'black') : color
   if (mode === 'singlePlayer' || mode === 'twoPlayer') {
     whiteId = resolvedColor === 'white' ? userId : (opponentId ?? null)
@@ -45,18 +46,23 @@ game.post('/create', async (c) => {
     blackId = resolvedColor === 'black' ? userId : (opponentId ?? null)
   }
 
-  await c.env.DB.prepare(`
-    INSERT INTO games (id, white_user_id, black_user_id, mode, status, time_control,
-                       ai_difficulty, tournament_id, initial_fen, created_at, updated_at)
-    VALUES (?, ?, ?, ?, 'active', ?, ?, ?, ?, ?, ?)
-  `).bind(
-    gameId, whiteId, blackId, mode, timeControl,
-    aiDifficulty ?? null, tournamentId ?? null,
-    initialFen ?? 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
-    now, now
-  ).run()
+  try {
+    await c.env.DB.prepare(`
+      INSERT INTO games (id, white_user_id, black_user_id, mode, status, time_control,
+                         ai_difficulty, tournament_id, initial_fen, created_at, updated_at)
+      VALUES (?, ?, ?, ?, 'active', ?, ?, ?, ?, ?, ?)
+    `).bind(
+      gameId, whiteId, blackId, mode, timeControl,
+      aiDifficulty ?? null, tournamentId ?? null,
+      initialFen ?? 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+      now, now
+    ).run()
 
-  return c.json({ gameId, whiteId, blackId, color: resolvedColor }, 201)
+    return c.json({ gameId, whiteId, blackId, color: resolvedColor }, 201)
+  } catch (err: any) {
+    console.error('Game creation error:', err)
+    return c.json({ error: 'Failed to create game', details: err.message, stack: err.stack }, 500)
+  }
 })
 
 // ────────────────────────────────────────

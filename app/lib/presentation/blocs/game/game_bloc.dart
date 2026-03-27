@@ -27,6 +27,14 @@ class GameStartEvent extends GameEvent {
   @override List<Object?> get props => [config, tutorial];
 }
 
+class GameResumeEvent extends GameEvent {
+  final String gameId;
+  const GameResumeEvent(this.gameId);
+  @override List<Object?> get props => [gameId];
+}
+
+class GameExitEvent extends GameEvent {}
+
 class GameSelectPieceEvent extends GameEvent {
   final Square square;
   const GameSelectPieceEvent(this.square);
@@ -289,6 +297,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     currentTurn: PieceColor.white,
   )) {
     on<GameStartEvent>(_onStart);
+    on<GameResumeEvent>(_onResume);
+    on<GameExitEvent>(_onExit);
     on<GameSelectPieceEvent>(_onSelectPiece);
     on<GameMakeMoveEvent>(_onMakeMove);
     on<GameUndoEvent>(_onUndo);
@@ -344,12 +354,44 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       moveCount: 0,
       updatedAt: DateTime.now(),
     );
-    _gameRepository.saveGame(firstGame).then((id) => _gameId = id);
+    _gameRepository.saveGame(firstGame).then((id) {
+      _gameId = id;
+      _gameRepository.setLastActiveGameId(id);
+    });
  
     // If AI plays first (player chose black)
     if (config.mode == GameMode.singlePlayer && playerColor == PieceColor.black) {
       add(GameMakeMoveEvent(Square(0, 0), Square(0, 0)));
     }
+  }
+
+  Future<void> _onResume(GameResumeEvent event, Emitter<GameState> emit) async {
+    final game = await _gameRepository.getSavedGame(event.gameId);
+    if (game == null) return;
+
+    _aiRequestEpoch++;
+    _engine = ChessEngine.fromFEN(game.fen);
+    _gameId = game.id;
+    _gameRepository.setLastActiveGameId(game.id);
+
+    final mode = GameMode.values.firstWhere((m) => m.name == game.mode, orElse: () => GameMode.singlePlayer);
+    
+    _engineController.init(mode, AIDifficulty.intermediate);
+
+    emit(GameState(
+      board: _engine.board,
+      currentTurn: _engine.currentTurn,
+      playerColor: (game.whiteUserId != null && game.blackUserId != null) 
+          ? (game.whiteUserId == 'me' ? PieceColor.white : PieceColor.black)
+          : null,
+      mode: mode,
+      moveHistory: _engine.moveHistory,
+      currentFEN: game.fen,
+    ));
+  }
+
+  void _onExit(GameExitEvent event, Emitter<GameState> emit) {
+    _gameRepository.setLastActiveGameId(null);
   }
 
   void _onSelectPiece(GameSelectPieceEvent event, Emitter<GameState> emit) {
@@ -579,6 +621,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     // Auto-save
     if (_gameId != null) {
       if (state.isGameOver) {
+        _gameRepository.setLastActiveGameId(null);
         final game = GameModel(
           id: _gameId!,
           fen: state.currentFEN,

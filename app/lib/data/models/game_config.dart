@@ -16,6 +16,7 @@ class GameConfig {
   final Color? blackPieceColor;
   final bool hintsEnabled;
   final int? timeControl;
+  final String? activeGameId;
 
   const GameConfig({
     required this.mode,
@@ -28,5 +29,6 @@ class GameConfig {
     this.blackPieceColor,
     this.hintsEnabled = false,
     this.timeControl,
+    this.activeGameId,
   });
 }

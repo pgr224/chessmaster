@@ -28,6 +28,10 @@ const app = new Hono<{ Bindings: Env }>()
 // MIDDLEWARE
 // ════════════════════════════════════════
 app.use('*', logger())
+app.onError((err, c) => {
+  console.error(`[Global Error] ${c.req.method} ${c.req.url}:`, err)
+  return c.json({ error: 'Internal Server Error', message: err.message, stack: err.stack }, 500)
+})
 app.use('*', cors({
   origin: (origin) => {
     if (!origin) return null;

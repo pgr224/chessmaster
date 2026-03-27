@@ -85,6 +85,22 @@ class GameRepository {
     await box.delete(id);
   }
 
+  static const _lastActiveKey = 'last_active_game_id';
+
+  Future<void> setLastActiveGameId(String? id) async {
+    final box = await Hive.openBox<String>(_boxName);
+    if (id == null) {
+      await box.delete(_lastActiveKey);
+    } else {
+      await box.put(_lastActiveKey, id);
+    }
+  }
+
+  Future<String?> getLastActiveGameId() async {
+    final box = await Hive.openBox<String>(_boxName);
+    return box.get(_lastActiveKey);
+  }
+
   Future<List<GameModel>> getRecentGames(String userId, {int limit = 10}) async {
     try {
       final res = await _dio.get('/api/game/user/$userId', queryParameters: {'limit': limit});
