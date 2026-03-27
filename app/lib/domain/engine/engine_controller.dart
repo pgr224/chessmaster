@@ -6,6 +6,7 @@
 ///
 /// Provides a single async API for GameBloc regardless of platform.
 
+import 'dart:math' as math;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'chess_engine.dart';
 import 'ai_engine.dart';
@@ -19,6 +20,8 @@ class EngineController {
   GameMode _mode = GameMode.singlePlayer;
   AIDifficulty _difficulty = AIDifficulty.basic;
   bool _initialized = false;
+  
+  static final math.Random _rng = math.Random();
 
   /// Initialize engine for the current game session
   void init(GameMode mode, AIDifficulty? difficulty) {
@@ -27,30 +30,51 @@ class EngineController {
     _initialized = true;
 
     if (kIsWeb) {
-      // On web: initialize the JS engine service which spawns Web Workers
       js_bridge.jsEngineInit(mode.name, _difficulty.name);
     }
-    // On mobile: no separate init needed, AIEngine runs stateless on isolates
   }
 
-  /// Get the best move for the current position
-  /// [fen] — current board state in FEN notation
-  /// [engine] — ChessEngine instance (needed for mobile Dart AI)
-  /// Returns move in algebraic format (e.g. "e2e4") or null
-  Future<String?> getBestMove(String fen, {ChessEngine? engine}) async {
+  /// Get the best move for the current position, optionally humanized
+  Future<String?> getBestMove(String fen, {ChessEngine? engine, bool humanized = true}) async {
     if (!_initialized) return null;
 
-    // No AI for two-player or multiplayer
     if (_mode == GameMode.twoPlayer || _mode == GameMode.multiplayer) {
       return null;
     }
 
+    // 1. Simulate Human Thinking Delay
+    if (humanized) {
+      final baseDelay = switch (_difficulty) {
+        AIDifficulty.basic => 800,
+        AIDifficulty.intermediate => 1200,
+        AIDifficulty.advanced => 2000,
+        AIDifficulty.impossible => 500,
+      };
+      final randomDelay = (baseDelay * (0.8 + (math.Random().nextDouble() * 0.4))).toInt();
+      await Future.delayed(Duration(milliseconds: randomDelay));
+    }
+
     if (kIsWeb) {
-      // Web: delegate to JS Web Worker (non-blocking)
       return await js_bridge.jsEngineGetBestMove(fen);
     } else {
-      // Mobile: use Dart isolate via AIEngine
       if (engine != null) {
+        // 2. Suboptimal Move Selection for Beginners (Adaptive Humanization)
+        if (humanized && (_difficulty == AIDifficulty.basic || _difficulty == AIDifficulty.intermediate)) {
+          final topMoves = await AIEngine.getTopMoves(engine, _difficulty, count: 3);
+          if (topMoves.isNotEmpty) {
+            // Logic: Basic difficulty picks best only 40% of time, Intermediate 80%
+            final p = math.Random().nextDouble();
+            final threshold = _difficulty == AIDifficulty.basic ? 0.4 : 0.8;
+            
+            if (p > threshold && topMoves.length > 1) {
+              // Pick 2nd best move if it's not absolutely terrible
+              final diff = topMoves[0].$2 - topMoves[1].$2;
+              if (diff < 500) return topMoves[1].$1.toAlgebraic();
+            }
+            return topMoves[0].$1.toAlgebraic();
+          }
+        }
+
         final timeout = (_difficulty == AIDifficulty.advanced ||
                 _difficulty == AIDifficulty.impossible)
             ? const Duration(seconds: 10)

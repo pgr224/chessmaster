@@ -40,6 +40,47 @@ class AIEngine {
     return legalMoves.where((m) => m.toAlgebraic() == bestMoveAlg).firstOrNull;
   }
 
+  /// Get multiple top moves for humanization/styling (Isolate-safe)
+  static Future<List<(Move, int)>> getTopMoves(
+    ChessEngine engine,
+    AIDifficulty difficulty, {
+    int count = 3,
+  }) async {
+    final fenSnapshot = engine.toFEN();
+    final results = await Isolate.run<List<(String, int)>>(() {
+      final isolatedEngine = ChessEngine.fromFEN(fenSnapshot);
+      final config = _configs[difficulty]!;
+      
+      final moves = isolatedEngine.allLegalMoves();
+      final List<(String, int)> scored = [];
+
+      for (final move in moves) {
+        isolatedEngine.applyMoveInternal(move);
+        final score = -_search(isolatedEngine, config.depth, -999999, 999999).score;
+        isolatedEngine.undoMove();
+        scored.add((move.toAlgebraic(), score));
+      }
+      
+      scored.sort((a, b) => b.$2.compareTo(a.$2));
+      return scored.take(count).toList();
+    });
+
+    final legal = engine.allLegalMoves();
+    return results.map((r) {
+      final m = legal.firstWhere((lm) => lm.toAlgebraic() == r.$1);
+      return (m, r.$2);
+    }).toList();
+  }
+
+  /// Synchronously evaluate position score (Isolate-safe)
+  static Future<int> evaluatePosition(ChessEngine engine) async {
+    final fenSnapshot = engine.toFEN();
+    return await Isolate.run<int>(() {
+      final isolatedEngine = ChessEngine.fromFEN(fenSnapshot);
+      return _evaluate(isolatedEngine);
+    });
+  }
+
   static Move? _getBestMoveSync(
     ChessEngine engine,
     AIDifficulty difficulty, {

@@ -1,0 +1,43 @@
+# Piece Architecture Refactoring Plan
+
+This plan details the steps to decouple chess piece **Shape** from **Style**, rendering them dynamically using Flutter's mathematical `Path` and `Canvas` API, and consolidating user selections solely into the Settings screen.
+
+## User Review Required
+> [!IMPORTANT]
+> - By adopting dynamic combinations, the SVGs generated in the previous step will be replaced by native math-based Flutter `<CustomPainter>` classes. This guarantees every **Shape** (e.g., Classic, Angular) can be combined perfectly with every **Style** (e.g., Neon, Glass, Wood). 
+> - The `pieceTheme` variable in `ThemeBloc` will be replaced by `pieceShape` and `pieceStyle`. This will require a minor migration or reset for existing users' local themes.
+
+## Proposed Changes
+
+### `app/lib/presentation/blocs/theme/`
+#### [MODIFY] theme_bloc.dart
+- **Replace** `pieceTheme` with `pieceShape` and `pieceStyle` inside `ThemeState`.
+- **Update** `ThemeChangeEvent` to accept `pieceShape` and `pieceStyle`.
+- **Implement** `SharedPreferences` logic to save both `piece_shape` and `piece_style`.
+
+### `app/lib/presentation/widgets/`
+#### [MODIFY] chess_board_widget.dart
+- **Restore & Refactor** `CustomPainter` to handle dynamic matrices of Shape × Style combinations natively.
+- **Implement Shape Providers:** Mathematics/paths for `Classic`, `Angular`, `Modern Flat`.
+- **Implement Style Painters:** Mathematics for `Neon`, `Metallic Gold`, `Minimal Flat`, `Glass / Crystal`, `Classic Wood`, `Luxury Gold & Black`, `Royal`.
+- **Connect** `ChessBoardWidget` properties to receive `pieceShape` and `pieceStyle`.
+
+### `app/lib/presentation/screens/settings/`
+#### [MODIFY] settings_screen.dart
+- **Add** a dual-selector UI: one `ChoiceChip` list for **Shapes** and another for **Styles**.
+- **Dispatch** `ThemeChangeEvent` independently combining the selected shape and style.
+
+### `app/lib/presentation/screens/game/`
+#### [MODIFY] game_setup_screen.dart
+- **Remove** all `Piece Theme` chip selections and references.
+- **Remove** UI elements that duplicate the piece configuration found in `SettingsScreen`.
+
+## Verification Plan
+### Automated Tests
+- Run `flutter analyze` to guarantee compilation success with the new `ThemeBloc` properties spanning `GameSetupScreen`, `GameRoomScreen`, and `ChessBoardWidget`.
+
+### Manual Verification
+1. Open the **Settings Screen** and observe the two new sections: *Piece Shape* and *Piece Style*.
+2. Select combinations (e.g., *Angular* shape with *Neon* style, or *Classic* shape with *Classic Wood* style).
+3. Open a local/bot match; ensure the `GameSetupScreen` no longer offers the piece settings.
+4. Verify the board loads the mathematical shapes and beautiful styles correctly across Web/Mobile platforms.

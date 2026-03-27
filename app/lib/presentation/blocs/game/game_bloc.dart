@@ -41,6 +41,8 @@ class GameSelectPieceEvent extends GameEvent {
   @override List<Object?> get props => [square];
 }
 
+class GameDiscardEvent extends GameEvent {}
+
 class GameMakeMoveEvent extends GameEvent {
   final Square from;
   final Square to;
@@ -125,6 +127,15 @@ class GameState extends Equatable {
   final Move? pendingMove;
   final int mpUndosUsed;
   final DateTime? lastMoveTimestamp;
+  
+  // Analytics & Rewards
+  final double accuracy;
+  final int mistakes;
+  final int blunders;
+  final int missedWins;
+  final int bestMoves;
+  final int xpGained;
+  final String? analysisMessage;
 
   const GameState({
     required this.board,
@@ -166,6 +177,13 @@ class GameState extends Equatable {
     this.confirmMoves = false,
     this.autoQueen = false,
     this.pendingMove,
+    this.accuracy = 0.0,
+    this.mistakes = 0,
+    this.blunders = 0,
+    this.missedWins = 0,
+    this.bestMoves = 0,
+    this.xpGained = 0,
+    this.analysisMessage,
   });
 
   bool get isGameOver => status == GameStatus.checkmate ||
@@ -225,6 +243,13 @@ class GameState extends Equatable {
     bool? confirmMoves,
     bool? autoQueen,
     Move? pendingMove,
+    double? accuracy,
+    int? mistakes,
+    int? blunders,
+    int? missedWins,
+    int? bestMoves,
+    int? xpGained,
+    String? analysisMessage,
     bool clearSelected = false,
     bool clearHint = false,
     bool clearDrawOffer = false,
@@ -270,6 +295,13 @@ class GameState extends Equatable {
       confirmMoves: confirmMoves ?? this.confirmMoves,
       autoQueen: autoQueen ?? this.autoQueen,
       pendingMove: clearPendingMove ? null : (pendingMove ?? this.pendingMove),
+      accuracy: accuracy ?? this.accuracy,
+      mistakes: mistakes ?? this.mistakes,
+      blunders: blunders ?? this.blunders,
+      missedWins: missedWins ?? this.missedWins,
+      bestMoves: bestMoves ?? this.bestMoves,
+      xpGained: xpGained ?? this.xpGained,
+      analysisMessage: analysisMessage ?? this.analysisMessage,
     );
   }
 
@@ -281,6 +313,7 @@ class GameState extends Equatable {
     pieceShape, pieceStyle,
     lastMoveTimestamp, opponentName,
     confirmMoves, autoQueen, pendingMove,
+    accuracy, mistakes, blunders, missedWins, bestMoves, xpGained,
   ];
 }
 
@@ -317,6 +350,15 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     on<GameConfirmMoveEvent>(_onConfirmMove);
     on<GameUpdateSettingsEvent>((e, emit) => emit(state.copyWith(confirmMoves: e.confirmMoves, autoQueen: e.autoQueen)));
     on<GameSetOpponentNameEvent>((event, emit) => emit(state.copyWith(opponentName: event.name)));
+    on<GameDiscardEvent>(_onDiscard);
+  }
+
+  Future<void> _onDiscard(GameDiscardEvent event, Emitter<GameState> emit) async {
+    if (_gameId != null) {
+      await _gameRepository.deleteGame(_gameId!);
+      await _gameRepository.setLastActiveGameId(null);
+      _gameId = null;
+    }
   }
 
   void _onStart(GameStartEvent event, Emitter<GameState> emit) {
@@ -357,6 +399,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       mode: initialState.mode.name,
       status: initialState.status.name,
       result: initialState.result.name,
+      whiteUserId: initialState.playerColor == PieceColor.white ? 'me' : 'ai',
+      blackUserId: initialState.playerColor == PieceColor.black ? 'me' : 'ai',
       moveCount: 0,
       updatedAt: DateTime.now(),
     );
@@ -384,16 +428,22 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     
     _engineController.init(mode, AIDifficulty.intermediate);
 
+    final playerColorStr = (game.whiteUserId == 'me') ? PieceColor.white : PieceColor.black;
+
     emit(GameState(
       board: _engine.board,
       currentTurn: _engine.currentTurn,
-      playerColor: (game.whiteUserId != null && game.blackUserId != null) 
-          ? (game.whiteUserId == 'me' ? PieceColor.white : PieceColor.black)
-          : null,
+      playerColor: (mode == GameMode.singlePlayer || mode == GameMode.multiplayer) ? playerColorStr : null,
       mode: mode,
       moveHistory: _engine.moveHistory,
       currentFEN: game.fen,
+      // Restore other properties if needed, but these are essential for turn logic
     ));
+
+    // After resume, if it's AI turn, trigger it
+    if (mode == GameMode.singlePlayer && _engine.currentTurn != playerColorStr && !state.isGameOver) {
+      add(const GameMakeMoveEvent(Square(0, 0), Square(0, 0)));
+    }
   }
 
   void _onExit(GameExitEvent event, Emitter<GameState> emit) {
@@ -520,8 +570,40 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       }
     }
 
+    // --- MOVE ANALYSIS ---
+    // Get evaluation BEFORE the move (relative to current player)
+    final topMoves = await AIEngine.getTopMoves(_engine, state.aiDifficulty ?? AIDifficulty.intermediate, count: 1);
+    final bestScoreBefore = topMoves.isNotEmpty ? topMoves[0].$2 : await AIEngine.evaluatePosition(_engine);
+
     final success = _engine.makeMove(move);
     if (!success && !(event.from == event.to)) return; // Invalid move
+
+    // Get evaluation AFTER the move (now from opponent's perspective, so negate)
+    final evaluationAfter = -(await AIEngine.evaluatePosition(_engine));
+    final cpLoss = bestScoreBefore - evaluationAfter;
+
+    // Categorize
+    int mistakes = state.mistakes;
+    int blunders = state.blunders;
+    int bestMoves = state.bestMoves;
+    int missedWins = state.missedWins;
+
+    if (cpLoss <= 10) {
+      bestMoves++;
+    } else if (cpLoss > 300) {
+      blunders++;
+    } else if (cpLoss > 150) {
+      mistakes++;
+    }
+
+    if (bestScoreBefore > 500 && evaluationAfter < 0) {
+      missedWins++;
+    }
+
+    // Accuracy Calculation (simplified: 100 - average centipawn loss / 10)
+    final moveCount = state.moveHistory.length + 1;
+    final double accuracy = math.max(0.0, 100.0 - (cpLoss / 10.0));
+    final double cumulativeAccuracy = (state.accuracy * (moveCount - 1) + accuracy) / moveCount;
 
     final captured = _collectCaptured();
 
@@ -539,6 +621,11 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       clearHint: true,
       showPromotionDialog: false,
       lastMoveTimestamp: DateTime.now(),
+      accuracy: cumulativeAccuracy,
+      mistakes: mistakes,
+      blunders: blunders,
+      bestMoves: bestMoves,
+      missedWins: missedWins,
     ));
 
     // Tutorial Progress — show success, then advance to next step
@@ -624,10 +711,40 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       }
     }
 
-    // Auto-save
+    // Auto-save & Post-Game Analysis
     if (_gameId != null) {
       if (state.isGameOver) {
         _gameRepository.setLastActiveGameId(null);
+
+        // Calculate XP Rewards
+        int xp = 0;
+        if (state.accuracy >= 90) {
+          xp = 1000;
+        } else if (state.accuracy >= 50) {
+          xp = 500;
+        } else if (state.accuracy >= 25) {
+          xp = 100;
+        }
+
+        // Generate Encouraging Message & Engine Suggestion
+        String msg = '';
+        if (state.accuracy >= 80) {
+          msg = '🚀 Incredible! Your precision was professional level.';
+          if (state.aiDifficulty != AIDifficulty.impossible) {
+            msg += '\nReady to try the next level?';
+          }
+        } else if (state.accuracy >= 60) {
+          msg = '🔥 Solid game! You had some great highlights.';
+        } else {
+          msg = '💎 Good effort! Keep practicing to master the patterns.';
+        }
+
+        // Update with rewards
+        emit(state.copyWith(
+          xpGained: xp,
+          analysisMessage: msg,
+        ));
+
         final game = GameModel(
           id: _gameId!,
           fen: state.currentFEN,
@@ -639,6 +756,13 @@ class GameBloc extends Bloc<GameEvent, GameState> {
           updatedAt: DateTime.now(),
         );
         _gameRepository.completeGame(game);
+        
+        // Persist XP to user profile (if repository supports it)
+        try {
+          // Assuming user profile exists or we handle it via a different service
+          // _userRepository.addXP(xp);
+        } catch (_) {}
+
       } else {
         add(GameSaveEvent());
       }
@@ -723,6 +847,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         mode: state.mode.name,
         status: state.status.name,
         result: state.result.name,
+        whiteUserId: state.playerColor == PieceColor.white ? 'me' : 'ai',
+        blackUserId: state.playerColor == PieceColor.black ? 'me' : 'ai',
         moveCount: state.moveHistory.length,
         updatedAt: DateTime.now(),
       );

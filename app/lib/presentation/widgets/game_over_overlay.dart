@@ -18,6 +18,11 @@ class GameOverOverlay extends StatefulWidget {
   final String? opponentName;
   final int? moveCount;
   final GameMode? gameMode;
+  final double accuracy;
+  final int mistakes;
+  final int blunders;
+  final int xpGained;
+  final String? analysisMessage;
 
   const GameOverOverlay({
     super.key,
@@ -31,6 +36,11 @@ class GameOverOverlay extends StatefulWidget {
     this.opponentName,
     this.moveCount,
     this.gameMode,
+    this.accuracy = 0.0,
+    this.mistakes = 0,
+    this.blunders = 0,
+    this.xpGained = 0,
+    this.analysisMessage,
   });
 
   @override
@@ -74,7 +84,7 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
       children: [
         // Semi-transparent background so the board is visible behind
         Container(
-          color: Colors.black.withValues(alpha: 0.55),
+          color: Colors.black.withOpacity(0.55),
         ),
         // Result panel at the bottom, not covering the entire board
         Positioned(
@@ -86,9 +96,9 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
             decoration: BoxDecoration(
               gradient: AppTheme.cardGradient,
               borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: statusColor.withValues(alpha: 0.6), width: 3),
+              border: Border.all(color: statusColor.withOpacity(0.6), width: 3),
               boxShadow: [
-                BoxShadow(color: statusColor.withValues(alpha: 0.3), blurRadius: 40, spreadRadius: 4),
+                BoxShadow(color: statusColor.withOpacity(0.3), blurRadius: 40, spreadRadius: 4),
               ],
             ),
             child: Column(
@@ -101,7 +111,7 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: statusColor.withValues(alpha: 0.15),
+                        color: statusColor.withOpacity(0.15),
                         shape: BoxShape.circle,
                       ),
                       child: Text(
@@ -136,52 +146,65 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
 
                 const SizedBox(height: 16),
 
-                // Game info row
+                // PERFORMANCE DASHBOARD
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: AppTheme.surface.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(14),
+                    color: AppTheme.surface.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: AppTheme.skyBlue.withOpacity(0.1)),
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  child: Column(
                     children: [
-                      _infoChip(Icons.sports_esports_rounded, _modeLabel()),
-                      if (widget.opponentName != null)
-                        _infoChip(Icons.person_rounded, 'vs ${widget.opponentName}'),
-                      if (widget.moveCount != null && widget.moveCount! > 0)
-                        _infoChip(Icons.grid_on_rounded, '${widget.moveCount} moves'),
-                    ],
-                  ),
-                ).animate().fadeIn(delay: 400.ms),
-
-                if (widget.puzzle != null && isWin) ...[
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                    decoration: BoxDecoration(
-                      color: AppTheme.goldPrimary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.3)),
-                    ),
-                    child: Column(
-                      children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          _statItem('Accuracy', '${widget.accuracy.toStringAsFixed(1)}%', AppTheme.accentCyan),
+                          _statItem('Mistakes', '${widget.mistakes}', AppTheme.accentPurple),
+                          _statItem('Blunders', '${widget.blunders}', AppTheme.accentRed),
+                        ],
+                      ),
+                      if (widget.analysisMessage != null) ...[
+                        const Divider(height: 24, color: AppTheme.textMuted),
                         Text(
-                          '🎁 REWARD UNLOCKED!',
-                          style: GoogleFonts.fredoka(color: AppTheme.goldPrimary, fontSize: 14, fontWeight: FontWeight.w700),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          widget.puzzle!.reward,
-                          style: GoogleFonts.baloo2(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
+                          widget.analysisMessage!,
+                          style: GoogleFonts.baloo2(
+                            color: AppTheme.textPrimary,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            height: 1.3,
+                          ),
                           textAlign: TextAlign.center,
                         ),
                       ],
-                    ),
-                  ).animate().scale(delay: 800.ms, duration: 400.ms, curve: Curves.easeOutBack),
-                ],
+                    ],
+                  ),
+                ).animate().fadeIn(delay: 450.ms).slideX(begin: 0.1),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
+
+                // XP AND REWARDS
+                if (widget.xpGained > 0)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(colors: [AppTheme.goldPrimary.withOpacity(0.3), AppTheme.goldPrimary.withOpacity(0.1)]),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppTheme.goldPrimary.withOpacity(0.4)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.star_rounded, color: AppTheme.goldPrimary, size: 24),
+                        const SizedBox(width: 8),
+                        Text(
+                          '+${widget.xpGained} XP GAINED!',
+                          style: GoogleFonts.fredoka(color: AppTheme.goldPrimary, fontSize: 18, fontWeight: FontWeight.w800),
+                        ),
+                      ],
+                    ),
+                  ).animate().scale(delay: 700.ms, duration: 400.ms, curve: Curves.easeOutBack),
 
                 // Action buttons
                 Row(
@@ -190,7 +213,7 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                       child: OutlinedButton(
                         style: OutlinedButton.styleFrom(
                           foregroundColor: AppTheme.textPrimary,
-                          side: BorderSide(color: AppTheme.textMuted.withValues(alpha: 0.3), width: 2),
+                          side: BorderSide(color: AppTheme.textMuted.withOpacity(0.3), width: 2),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                           padding: const EdgeInsets.symmetric(vertical: 14),
                         ),
@@ -247,6 +270,21 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
               gravity: 0.2,
             ),
           ),
+      ],
+    );
+  }
+
+  Widget _statItem(String label, String value, Color color) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: GoogleFonts.fredoka(color: color, fontSize: 22, fontWeight: FontWeight.w800),
+        ),
+        Text(
+          label,
+          style: GoogleFonts.baloo2(color: AppTheme.textMuted, fontSize: 12, fontWeight: FontWeight.w600),
+        ),
       ],
     );
   }

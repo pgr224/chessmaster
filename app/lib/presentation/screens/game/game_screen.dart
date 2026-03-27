@@ -816,6 +816,11 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       gameMode: state.mode,
       opponentName: state.opponentName,
       moveCount: state.moveHistory.length,
+      accuracy: state.accuracy,
+      mistakes: state.mistakes,
+      blunders: state.blunders,
+      xpGained: state.xpGained,
+      analysisMessage: state.analysisMessage,
       onPlayAgain: () {
         context.read<GameBloc>().add(GameStartEvent(widget.config));
       },
@@ -985,36 +990,47 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       return;
     }
 
-    final confirmed = await showDialog<bool>(
+  Future<void> _showExitDialog(BuildContext context) async {
+    final result = await showDialog<int>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.navyCard,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
         title: Text('Leave Game? 👋', style: GoogleFonts.fredoka(color: AppTheme.textPrimary)),
         content: Text(
-          'Your current game will be saved for later. Play again soon? 😊',
+          'Do you want to save your progress or discard this game?',
           style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 16),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Keep Playing', style: GoogleFonts.fredoka(color: AppTheme.textMuted)),
+            onPressed: () => Navigator.pop(ctx, 0),
+            child: Text('Cancel', style: GoogleFonts.fredoka(color: AppTheme.textMuted)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, 2),
+            child: Text('Discard & Quit', style: GoogleFonts.fredoka(color: AppTheme.accentRed)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.accentRed,
+              backgroundColor: AppTheme.accentCyan,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text('Exit!', style: GoogleFonts.fredoka(color: Colors.white)),
+            onPressed: () => Navigator.pop(ctx, 1),
+            child: Text('Save & Exit', style: GoogleFonts.fredoka(color: Colors.white)),
           ),
         ],
       ),
     );
-    if (confirmed == true && context.mounted) {
+
+    if (!context.mounted) return;
+    if (result == 1) {
       context.read<GameBloc>().add(GameSaveEvent());
       context.go('/home');
+    } else if (result == 2) {
+      context.read<GameBloc>().add(GameDiscardEvent());
+      context.go('/home');
     }
+  }
   }
 
   Future<void> _showResignDialog(BuildContext context) async {

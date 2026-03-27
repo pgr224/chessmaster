@@ -1,0 +1,54 @@
+# AI Engine Enhancements & Post-Game Analysis Plan
+
+This plan details the implementation of a robust, "human-like" AI environment and a comprehensive post-game analysis system to keep players in the "flow zone" and stimulate improvement.
+
+## Goal Description
+Enhance the single-player experience by providing concrete feedback on player performance (Accuracy, Mistakes, Blunders) and adjusting the AI's behavior to feel more natural and appropriately challenging. The AI will adapt its difficulty based on win/loss heuristics and simulate human delays and occasional errors on lower difficulties.
+
+## User Review Required
+> [!IMPORTANT]
+> - **Adaptive AI Logic**: We will need to store a hidden or explicit "AI MMR" or adjust the [difficulty](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/presentation/screens/game/game_setup_screen.dart#441-447) enum dynamically after single-player matches.
+> - **Move Evaluation**: Real-time evaluation of *every* move requires running the Stockfish engine in the background constantly to compare the player's move against the engine's top choice. This may impact battery life on mobile devices. I will implement a lightweight evaluation throttle.
+> - Please review the proposed metrics for Post-Game Analysis to ensure they match your vision.
+
+## Proposed Changes
+
+### 1. Move Evaluation & Analysis Engine
+#### [MODIFY] [app/lib/domain/engine/chess_engine.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/domain/engine/chess_engine.dart) (or similar engine wrapper)
+- **Add** functionality to evaluate the centipawn score of a position.
+- **Implement** logic to compare the evaluation *before* and *after* a player's move to categorize the move:
+  - **Best Move**: matches engine's top choice or negligible eval drop (e.g., < 0.2).
+  - **Inaccuracy**: slight eval drop (e.g., 0.5 - 1.0).
+  - **Mistake**: moderate eval drop (e.g., 1.0 - 2.5).
+  - **Blunder**: severe eval drop (e.g., > 2.5).
+  - **Missed Win**: Eval was +M (mate in X) but dropped to a non-mate score.
+
+#### [MODIFY] [app/lib/presentation/blocs/game/game_bloc.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/presentation/blocs/game/game_bloc.dart)
+- **Add** state variables to track player's move categories (count of best moves, mistakes, blunders) and overall Accuracy %.
+- **Trigger** evaluation in the background after each player move.
+
+### 2. Post-Game Analysis UI
+#### [MODIFY] [app/lib/presentation/widgets/game_over_overlay.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/presentation/widgets/game_over_overlay.dart) (or create new screen)
+- **Add** an "Analysis" tab or section upon game completion.
+- **Display**: Overall Accuracy %, mistakes, blunders, and highlights (Best Move / Missed Win alerts).
+
+### 3. Humanized AI Behavior
+#### [MODIFY] [app/lib/domain/engine/chess_engine.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/domain/engine/chess_engine.dart) (or similar AI logic)
+- **Implement Delays**: Add variable `Future.delayed` before the AI moves, scaled by the complexity of the position and the difficulty level.
+- **Suboptimal Moves**: Modulate Stockfish's `Skill Level` or limit its `Depth`. For "beginner" difficulty, introduce a random chance to pick the 2nd or 3rd best move instead of the top engine line, simulating human error.
+
+### 4. Adaptive Difficulty
+#### [MODIFY] [app/lib/presentation/blocs/game/game_bloc.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/presentation/blocs/game/game_bloc.dart)
+- **Post-Game Adjustment**: Upon game over against the AI:
+  - If player won cleanly (high accuracy), seamlessly suggest or automatically bump the difficulty level for the next match.
+  - If player lost, drop the difficulty level to keep them engaged.
+
+## Verification Plan
+
+### Automated Tests
+- Validate that the move categorization logic correctly identifies a blunder (e.g., hanging a queen) vs. a best move.
+
+### Manual Verification
+1. Play a game against the 'Beginner' AI; observe variable move delays and occasional suboptimal moves.
+2. Complete a game and view the Game Over overlay; verify that Accuracy %, Mistakes, and Blunders are displayed.
+3. Verify that repeatedly winning/losing against the AI prompts or automatically adjusts the difficulty setting.
