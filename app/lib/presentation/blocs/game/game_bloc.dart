@@ -101,7 +101,8 @@ class GameState extends Equatable {
   final GameMode mode;
   final AIDifficulty? aiDifficulty;
   final String? boardTheme;
-  final String pieceTheme;
+  final String pieceShape;
+  final String pieceStyle;
   final Color whitePieceColor;
   final Color blackPieceColor;
   final List<ChessPiece> capturedWhite;
@@ -142,7 +143,8 @@ class GameState extends Equatable {
     this.mode = GameMode.singlePlayer,
     this.aiDifficulty,
     this.boardTheme,
-    this.pieceTheme = 'classic_3d',
+    this.pieceShape = 'classic',
+    this.pieceStyle = '3d',
     this.whitePieceColor = Colors.white,
     this.blackPieceColor = Colors.black,
     this.capturedWhite = const [],
@@ -200,7 +202,8 @@ class GameState extends Equatable {
     GameMode? mode,
     AIDifficulty? aiDifficulty,
     String? boardTheme,
-    String? pieceTheme,
+    String? pieceShape,
+    String? pieceStyle,
     Color? whitePieceColor,
     Color? blackPieceColor,
     List<ChessPiece>? capturedWhite,
@@ -244,7 +247,8 @@ class GameState extends Equatable {
       mode: mode ?? this.mode,
       aiDifficulty: aiDifficulty ?? this.aiDifficulty,
       boardTheme: boardTheme ?? this.boardTheme,
-      pieceTheme: pieceTheme ?? this.pieceTheme,
+      pieceShape: pieceShape ?? this.pieceShape,
+      pieceStyle: pieceStyle ?? this.pieceStyle,
       whitePieceColor: whitePieceColor ?? this.whitePieceColor,
       blackPieceColor: blackPieceColor ?? this.blackPieceColor,
       capturedWhite: capturedWhite ?? this.capturedWhite,
@@ -273,7 +277,8 @@ class GameState extends Equatable {
   List<Object?> get props => [
     board, currentTurn, selectedSquare, legalMoves, moveHistory,
     status, result, isAIThinking, hintMove, hintsUsed, currentFEN,
-    showPromotionDialog, tutorial, tutorialStep, tutorialMessage, pieceTheme,
+    showPromotionDialog, tutorial, tutorialStep, tutorialMessage, 
+    pieceShape, pieceStyle,
     lastMoveTimestamp, opponentName,
     confirmMoves, autoQueen, pendingMove,
   ];
@@ -332,7 +337,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       mode: config.mode,
       aiDifficulty: config.difficulty,
       boardTheme: config.boardTheme ?? 'classic',
-      pieceTheme: _normalizePieceTheme(config.pieceTheme),
+      pieceShape: config.pieceShape ?? 'classic',
+      pieceStyle: config.pieceStyle ?? '3d',
       whitePieceColor: config.whitePieceColor ?? Colors.white,
       blackPieceColor: config.blackPieceColor ?? Colors.black,
       currentFEN: _engine.toFEN(),
@@ -805,11 +811,5 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     }
 
     return (capturedWhite, capturedBlack);
-  }
-
-  String _normalizePieceTheme(String? theme) {
-    if (theme == null || theme.isEmpty) return 'classic3d';
-    if (theme == 'classic') return 'classic3d';
-    return theme;
   }
 }

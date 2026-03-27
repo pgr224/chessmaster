@@ -16,7 +16,8 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   late String _boardTheme;
-  late String _pieceTheme;
+  late String _pieceShape;
+  late String _pieceStyle;
   bool _loadedTheme = false;
 
   @override
@@ -25,7 +26,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (_loadedTheme) return;
     final themeState = context.read<ThemeBloc>().state;
     _boardTheme = themeState.boardTheme;
-    _pieceTheme = themeState.pieceTheme;
+    _pieceShape = themeState.pieceShape;
+    _pieceStyle = themeState.pieceStyle;
     _loadedTheme = true;
   }
 
@@ -89,9 +91,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const SizedBox(height: 10),
                       _buildBoardThemeChips(),
                       const SizedBox(height: 14),
+                      _subTitle('Piece Shape'),
+                      const SizedBox(height: 10),
+                      _buildPieceShapeChips(),
+                      const SizedBox(height: 20),
                       _subTitle('Piece Style'),
                       const SizedBox(height: 10),
-                      _buildPieceThemeChips(),
+                      _buildPieceStyleChips(),
                     ],
                   ),
                 ),
@@ -236,7 +242,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           selected: selected,
           onSelected: (_) {
             setState(() => _boardTheme = t);
-            context.read<ThemeBloc>().add(ThemeChangeEvent(boardTheme: _boardTheme, pieceTheme: _pieceTheme));
+            context.read<ThemeBloc>().add(ThemeChangeEvent(
+              boardTheme: _boardTheme, 
+              pieceShape: _pieceShape,
+              pieceStyle: _pieceStyle
+            ));
           },
           label: Text('${emoji[t] ?? '♟'} ${_cap(t)}', style: GoogleFonts.fredoka(fontSize: 12)),
           labelStyle: TextStyle(color: selected ? AppTheme.midnight : AppTheme.textPrimary),
@@ -247,40 +257,67 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildPieceThemeChips() {
-    final themes = [
-      {'id': 'classic_3d', 'name': 'Classic 3D'},
-      {'id': 'marble', 'name': 'Marble'},
-      {'id': 'metal', 'name': 'Metal'},
-      {'id': '8bit', 'name': '8-Bit'},
+  Widget _buildPieceShapeChips() {
+    final shapes = [
+      {'id': 'classic', 'name': 'Classic'},
+      {'id': 'modern', 'name': 'Modern'},
       {'id': 'angular', 'name': 'Angular'},
-      {'id': 'mexico', 'name': 'Mexico'},
-      {'id': 'lewis', 'name': 'Lewis'},
-      {'id': 'neon', 'name': 'Neon'},
-      {'id': 'letters', 'name': 'Letters'},
-      {'id': 'modern_flat', 'name': 'Modern'},
-      {'id': 'light_flat', 'name': 'Light'},
-      {'id': 'pixel_art', 'name': 'Pixel Art'},
+      {'id': 'neo', 'name': 'Neo'},
+      {'id': 'wood', 'name': 'Wood'},
       {'id': 'fantasy', 'name': 'Fantasy'},
-      {'id': 'line_art', 'name': 'Line Art'},
     ];
-
     return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: themes.map((t) {
-        final id = t['id']!;
-        final selected = _pieceTheme == id;
+      spacing: 8, runSpacing: 8,
+      children: shapes.map((s) {
+        final id = s['id']!;
+        final selected = _pieceShape == id;
         return ChoiceChip(
           selected: selected,
           onSelected: (_) {
-            setState(() => _pieceTheme = id);
-            context.read<ThemeBloc>().add(ThemeChangeEvent(boardTheme: _boardTheme, pieceTheme: _pieceTheme));
+            setState(() => _pieceShape = id);
+            context.read<ThemeBloc>().add(ThemeChangeEvent(
+              boardTheme: _boardTheme, 
+              pieceShape: _pieceShape, 
+              pieceStyle: _pieceStyle
+            ));
           },
-          label: Text(t['name']!, style: GoogleFonts.fredoka(fontSize: 12)),
+          label: Text(s['name']!, style: GoogleFonts.fredoka(fontSize: 12)),
           labelStyle: TextStyle(color: selected ? AppTheme.midnight : AppTheme.textPrimary),
           selectedColor: AppTheme.goldPrimary,
-          backgroundColor: AppTheme.surface.withValues(alpha: 0.7),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildPieceStyleChips() {
+    final styles = [
+      {'id': '3d', 'name': 'Classic 3D'},
+      {'id': 'neon', 'name': 'Neon'},
+      {'id': 'metal', 'name': 'Metallic Gold'},
+      {'id': 'flat', 'name': 'Minimal Flat'},
+      {'id': 'glass', 'name': 'Glass / Crystal'},
+      {'id': 'wood', 'name': 'Classic Wood'},
+      {'id': 'luxury', 'name': 'Luxury Gold & Black'},
+      {'id': 'royal', 'name': 'Royal'},
+    ];
+    return Wrap(
+      spacing: 8, runSpacing: 8,
+      children: styles.map((s) {
+        final id = s['id']!;
+        final selected = _pieceStyle == id;
+        return ChoiceChip(
+          selected: selected,
+          onSelected: (_) {
+            setState(() => _pieceStyle = id);
+            context.read<ThemeBloc>().add(ThemeChangeEvent(
+              boardTheme: _boardTheme, 
+              pieceShape: _pieceShape, 
+              pieceStyle: _pieceStyle
+            ));
+          },
+          label: Text(s['name']!, style: GoogleFonts.fredoka(fontSize: 12)),
+          labelStyle: TextStyle(color: selected ? AppTheme.midnight : AppTheme.textPrimary),
+          selectedColor: AppTheme.goldPrimary,
         );
       }).toList(),
     );

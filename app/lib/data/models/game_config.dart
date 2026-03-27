@@ -11,7 +11,8 @@ class GameConfig {
   final AIDifficulty? difficulty;
   final String? playerColor;
   final String? boardTheme;
-  final String? pieceTheme;
+  final String? pieceShape;
+  final String? pieceStyle;
   final Color? whitePieceColor;
   final Color? blackPieceColor;
   final bool hintsEnabled;
@@ -24,7 +25,8 @@ class GameConfig {
     this.difficulty,
     this.playerColor,
     this.boardTheme,
-    this.pieceTheme,
+    this.pieceShape,
+    this.pieceStyle,
     this.whitePieceColor,
     this.blackPieceColor,
     this.hintsEnabled = false,

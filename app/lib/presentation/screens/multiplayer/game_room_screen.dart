@@ -49,11 +49,13 @@ class GameRoomScreen extends StatelessWidget {
           return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }
 
+        final themeState = context.read<ThemeBloc>().state;
         final config = GameConfig(
           mode: GameMode.multiplayer,
           playerColor: mpState.playerColor?.name ?? 'white',
-          boardTheme: context.read<ThemeBloc>().state.boardTheme,
-          pieceTheme: context.read<ThemeBloc>().state.pieceTheme,
+          boardTheme: themeState.boardTheme,
+          pieceShape: themeState.pieceShape,
+          pieceStyle: themeState.pieceStyle,
         );
 
         return MultiBlocListener(

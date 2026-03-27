@@ -21,7 +21,6 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
   Color _whitePieceColor = Colors.white;
   Color _blackPieceColor = Colors.black;
   String _boardTheme = 'classic';
-  String _pieceTheme = 'classic3d';
   bool _hintsEnabled = true;
   int? _timeControl;
   bool _loadedThemePrefs = false;
@@ -32,7 +31,6 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
     if (_loadedThemePrefs) return;
     final themeState = context.read<ThemeBloc>().state;
     _boardTheme = themeState.boardTheme;
-    _pieceTheme = themeState.pieceTheme == 'classic' ? 'classic3d' : themeState.pieceTheme;
     _loadedThemePrefs = true;
   }
 
@@ -86,12 +84,7 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
 
                     const SizedBox(height: 18),
 
-                    _sectionCard(
-                      title: '🧩 Piece Style',
-                      child: _buildPieceStyleSelector(),
-                    ).animate().fadeIn(delay: 350.ms).slideY(begin: 0.1),
-
-                    const SizedBox(height: 18),
+                     const SizedBox(height: 18),
 
                     // ── OPTIONS ──
                     _sectionCard(
@@ -374,7 +367,11 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
           onTap: () {
             setState(() => _boardTheme = theme);
             context.read<ThemeBloc>().add(
-              ThemeChangeEvent(boardTheme: _boardTheme, pieceTheme: _pieceTheme),
+              ThemeChangeEvent(
+                boardTheme: _boardTheme, 
+                pieceShape: context.read<ThemeBloc>().state.pieceShape,
+                pieceStyle: context.read<ThemeBloc>().state.pieceStyle,
+              ),
             );
           },
           child: AnimatedContainer(
@@ -422,208 +419,19 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
     );
   }
 
-  Widget _buildPieceStyleSelector() {
-    final styles = [
-      {'id': 'classic3d', 'name': 'Classic 3D', 'emoji': '♔', 'desc': 'Balanced glossy look'},
-      {'id': 'marble3d', 'name': 'Marble 3D', 'emoji': '◈', 'desc': 'Smooth stone finish'},
-      {'id': 'metal3d', 'name': 'Metal 3D', 'emoji': '⚙', 'desc': 'Polished metallic style'},
-      {'id': 'lewis', 'name': 'Lewis 3D', 'emoji': '🗿', 'desc': 'Historical ivory carvings'},
-      {'id': 'mexico', 'name': 'Mexican 3D', 'emoji': '🌵', 'desc': 'Aztec obsidian style'},
-      {'id': 'angular', 'name': 'Angular', 'emoji': '📐', 'desc': 'Sharp modern geometric'},
-    ];
-
-    return Column(
-      children: styles.map((style) {
-        final id = style['id']!;
-        final isSelected = _pieceTheme == id;
-        return GestureDetector(
-          onTap: () {
-            setState(() => _pieceTheme = id);
-            context.read<ThemeBloc>().add(
-              ThemeChangeEvent(boardTheme: _boardTheme, pieceTheme: _pieceTheme),
-            );
-          },
-          child: AnimatedContainer(
-            duration: 250.ms,
-            margin: const EdgeInsets.only(bottom: 10),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            decoration: BoxDecoration(
-              color: isSelected
-                  ? AppTheme.goldPrimary.withValues(alpha: 0.16)
-                  : AppTheme.surface.withValues(alpha: 0.5),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: isSelected ? AppTheme.goldPrimary : Colors.transparent,
-                width: 2,
-              ),
-            ),
-            child: Row(
-              children: [
-                _pieceStylePreview(id),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text(style['emoji']!, style: const TextStyle(fontSize: 16)),
-                          const SizedBox(width: 6),
-                          Text(style['name']!, style: GoogleFonts.fredoka(
-                            color: isSelected ? AppTheme.goldPrimary : AppTheme.textPrimary,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 16,
-                          )),
-                        ],
-                      ),
-                      Text(style['desc']!, style: GoogleFonts.baloo2(
-                        color: AppTheme.textSecondary,
-                        fontSize: 13,
-                      )),
-                    ],
-                  ),
-                ),
-                if (isSelected)
-                  const Icon(Icons.check_circle_rounded, color: AppTheme.goldPrimary, size: 24),
-              ],
-            ),
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _pieceStylePreview(String styleId) {
-    final left = _previewColors(styleId, isWhite: true);
-    final right = _previewColors(styleId, isWhite: false);
-
-    return SizedBox(
-      width: 56,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          _miniKingToken(gradient: left.$1, glyphColor: left.$2),
-          _miniKingToken(gradient: right.$1, glyphColor: right.$2),
-        ],
-      ),
-    );
-  }
-
-  (Gradient, Color) _previewColors(String styleId, {required bool isWhite}) {
-    if (styleId == 'marble3d') {
-      final base = isWhite ? const Color(0xFFF1F3F6) : const Color(0xFFCDD3DE);
-      return (
-        RadialGradient(
-          center: const Alignment(-0.2, -0.3),
-          colors: [
-            Color.lerp(base, Colors.white, 0.35)!,
-            base,
-            Color.lerp(base, const Color(0xFF667085), 0.35)!,
-          ],
-          stops: const [0.0, 0.58, 1.0],
-        ),
-        const Color(0xFF2A3240),
-      );
-    }
-
-    if (styleId == 'metal3d') {
-      final base = isWhite ? const Color(0xFFBFC8D6) : const Color(0xFF6C7689);
-      return (
-        RadialGradient(
-          center: const Alignment(-0.25, -0.35),
-          colors: [
-            Color.lerp(base, Colors.white, 0.42)!,
-            base,
-            Color.lerp(base, const Color(0xFF1F2A37), 0.45)!,
-          ],
-          stops: const [0.0, 0.57, 1.0],
-        ),
-        Colors.white.withValues(alpha: 0.9),
-      );
-    }
-
-    if (styleId == 'lewis') {
-      final base = isWhite ? const Color(0xFFF5E6CA) : const Color(0xFF8B6B4A);
-      return (
-        RadialGradient(
-          colors: [base.withValues(alpha: 0.8), base, base.withValues(alpha: 0.6)],
-        ),
-        isWhite ? const Color(0xFF4A3728) : const Color(0xFFF5E6CA),
-      );
-    }
-
-    if (styleId == 'mexico') {
-      final base = isWhite ? const Color(0xFFE6B325) : const Color(0xFF0F3D3E);
-      return (
-        RadialGradient(
-          colors: [base.withValues(alpha: 0.9), base, Colors.black],
-        ),
-        isWhite ? Colors.black : const Color(0xFF2ECC71),
-      );
-    }
-
-    if (styleId == 'angular') {
-      final base = isWhite ? const Color(0xFFBFC8D6) : const Color(0xFF2C3E50);
-      return (
-        LinearGradient(
-          colors: [Colors.white30, base, Colors.black45],
-        ),
-        isWhite ? Colors.black : Colors.white,
-      );
-    }
-
-    // classic3d
-    final base = isWhite ? const Color(0xFFECECEC) : const Color(0xFF2C2C2C);
-    return (
-      RadialGradient(
-        center: const Alignment(-0.2, -0.3),
-        colors: [
-          Color.lerp(base, Colors.white, 0.3)!,
-          base,
-          Color.lerp(base, Colors.black, 0.32)!,
-        ],
-        stops: const [0.0, 0.58, 1.0],
-      ),
-      isWhite ? const Color(0xFF1B1B1B) : Colors.white,
-    );
-  }
-
-  Widget _miniKingToken({required Gradient gradient, required Color glyphColor}) {
-    return Container(
-      width: 24,
-      height: 24,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: gradient,
-        border: Border.all(color: glyphColor.withValues(alpha: 0.22), width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
-            blurRadius: 3,
-            offset: const Offset(0, 1),
-          ),
-        ],
-      ),
-      alignment: Alignment.center,
-      child: CustomPaint(
-        size: const Size.square(12),
-        painter: _MiniKingPainter(
-          fill: glyphColor.withValues(alpha: 0.95),
-          stroke: glyphColor.withValues(alpha: 0.22),
-        ),
-      ),
-    );
-  }
   void _startGame() {
     final useCustomColors = _playerColor == 'custom';
     final resolvedColor = useCustomColors ? _customStartColor : _playerColor;
+
+    final themeState = context.read<ThemeBloc>().state;
 
     context.go('/game/play', extra: GameConfig(
       mode: GameMode.singlePlayer,
       difficulty: _difficulty,
       playerColor: resolvedColor,
       boardTheme: _boardTheme,
-      pieceTheme: _pieceTheme,
+      pieceShape: themeState.pieceShape,
+      pieceStyle: themeState.pieceStyle,
       whitePieceColor: useCustomColors ? _whitePieceColor : null,
       blackPieceColor: useCustomColors ? _blackPieceColor : null,
       hintsEnabled: _hintsEnabled,

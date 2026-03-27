@@ -17,7 +17,8 @@ class ChessBoardWidget extends StatefulWidget {
   final GameStatus status;
   final bool isFlipped;
   final String boardTheme;
-  final String pieceTheme;
+  final String pieceShape;
+  final String pieceStyle;
   final String moveAnimationSpeed;
   final bool showCoordinates;
   final bool showSquareLabels;
@@ -38,7 +39,8 @@ class ChessBoardWidget extends StatefulWidget {
     this.status = GameStatus.active,
     this.isFlipped = false,
     this.boardTheme = 'classic',
-    this.pieceTheme = 'classic',
+    this.pieceShape = 'classic',
+    this.pieceStyle = '3d',
     this.moveAnimationSpeed = 'normal',
     this.showCoordinates = true,
     this.showSquareLabels = false,
@@ -71,7 +73,7 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.5),
+                    color: Colors.black.withOpacity(0.5),
                     blurRadius: 24,
                     offset: const Offset(0, 12),
                   ),
@@ -135,11 +137,11 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
         // Hint highlight
         if (widget.hintMove != null) ...[
           _highlight(widget.hintMove!.from, sqSize, AppTheme.hintSq),
-          _highlight(widget.hintMove!.to, sqSize, AppTheme.hintSq.withValues(alpha: 0.9)),
+          _highlight(widget.hintMove!.to, sqSize, AppTheme.hintSq.withOpacity(0.9)),
         ],
         // Selected piece
         if (widget.selectedSquare != null)
-          _highlight(widget.selectedSquare!, sqSize, AppTheme.selectedSq.withValues(alpha: 0.7)),
+          _highlight(widget.selectedSquare!, sqSize, AppTheme.selectedSq.withOpacity(0.7)),
         // Legal moves
         ...widget.legalMoves.map((m) => _legalMoveIndicator(m, sqSize)),
         // Check highlight
@@ -245,7 +247,8 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
         final (x, y) = _squareToPixel(sq, sqSize);
         final pieceChild = _PieceWidget(
           piece: piece,
-          theme: widget.pieceTheme,
+          shape: widget.pieceShape,
+          style: widget.pieceStyle,
           size: sqSize * 0.9,
           whitePieceColor: widget.whitePieceColor,
           blackPieceColor: widget.blackPieceColor,
@@ -283,7 +286,7 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
 
   Widget _buildCoordinates(double sqSize) {
     final themeData = AppTheme.boardThemes[widget.boardTheme] ?? AppTheme.boardThemes['classic']!;
-    final notationColor = themeData.notation.withValues(alpha: 0.8);
+    final notationColor = themeData.notation.withOpacity(0.8);
     
     return Stack(
       children: [
@@ -327,7 +330,7 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
 
   Widget _buildSquareLabels(double sqSize) {
     final themeData = AppTheme.boardThemes[widget.boardTheme] ?? AppTheme.boardThemes['classic']!;
-    final notationColor = themeData.notation.withValues(alpha: 0.35); // Subtle
+    final notationColor = themeData.notation.withOpacity(0.35); // Subtle
 
     return Positioned.fill(
       child: Stack(
@@ -405,14 +408,16 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
 
 class _PieceWidget extends StatelessWidget {
   final ChessPiece piece;
-  final String theme;
+  final String shape;
+  final String style;
   final double size;
   final Color whitePieceColor;
   final Color blackPieceColor;
 
   const _PieceWidget({
     required this.piece,
-    required this.theme,
+    required this.shape,
+    required this.style,
     required this.size,
     required this.whitePieceColor,
     required this.blackPieceColor,
@@ -429,13 +434,14 @@ class _PieceWidget extends StatelessWidget {
     final isWhite = piece.color == PieceColor.white;
     final baseColor = isWhite ? whitePieceColor : blackPieceColor;
 
-    // Filter themes
-    if (theme == 'letters') return _buildLetterPiece(isWhite, baseColor);
-    if (theme == '8-bit') return _build8BitPiece(isWhite, baseColor);
+    // Filter special text themes (legacy)
+    if (style == 'letters') return _buildLetterPiece(isWhite, baseColor);
+    if (style == '8-bit') return _build8BitPiece(isWhite, baseColor);
 
     return _ObjectPiece(
       piece: piece,
-      theme: theme,
+      shape: shape,
+      style: style,
       size: size,
       color: baseColor,
       isWhite: isWhite,
@@ -470,14 +476,16 @@ class _PieceWidget extends StatelessWidget {
 
 class _ObjectPiece extends StatelessWidget {
   final ChessPiece piece;
-  final String theme;
+  final String shape;
+  final String style;
   final double size;
   final Color color;
   final bool isWhite;
 
   const _ObjectPiece({
     required this.piece,
-    required this.theme,
+    required this.shape,
+    required this.style,
     required this.size,
     required this.color,
     required this.isWhite,
@@ -485,31 +493,299 @@ class _ObjectPiece extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // We generated matching SVGs for these themes:
-    const svgThemes = ['modern_flat', 'classic_3d', 'metal', 'neon', 'fantasy'];
-    
-    // Map unexpected themes to classic_3d (the default 3D glossy style matching the sample)
-    final mappedTheme = svgThemes.contains(theme) ? theme : 'classic_3d';
-    
-    final colorPrefix = isWhite ? 'white' : 'black';
-    final typeName = piece.type.name.toLowerCase(); // king, queen, etc.
-    
-    final assetPath = 'assets/pieces/$mappedTheme/${colorPrefix}_$typeName.svg';
-
     return SizedBox(
       width: size,
       height: size,
-      child: Center(
-        child: SvgPicture.asset(
-          assetPath,
-          width: size * 0.9,
-          height: size * 0.9,
-          fit: BoxFit.contain,
-          // Use a quick placeholder or error builder if needed, but assets should exist
-          placeholderBuilder: (context) => const SizedBox.shrink(),
+      child: CustomPaint(
+        size: Size(size, size),
+        painter: _ChessPiecePainter(
+          type: piece.type,
+          color: color,
+          isWhite: isWhite,
+          shape: shape,
+          style: style,
         ),
       ),
     );
   }
 }
+
+class _ChessPiecePainter extends CustomPainter {
+  final PieceType type;
+  final Color color;
+  final bool isWhite;
+  final String shape;
+  final String style;
+
+  _ChessPiecePainter({
+    required this.type,
+    required this.color,
+    required this.isWhite,
+    required this.shape,
+    required this.style,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final scale = size.width / 100;
+    
+    // 1. Get Path based on Shape
+    final path = _PiecePathProvider.getPath(type, shape);
+    
+    // Scale and center the path
+    final matrix = Matrix4.identity()
+      ..translate(center.dx, center.dy)
+      ..scale(scale);
+    final finalPath = path.transform(matrix.storage);
+
+    // 2. Apply Style logic
+    _drawStyledPiece(canvas, finalPath, size);
+  }
+
+  void _drawStyledPiece(Canvas canvas, Path path, Size size) {
+    final paint = Paint()..style = PaintingStyle.fill;
+    final strokePaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = size.width * 0.02;
+
+    switch (style) {
+      case 'neon':
+        // Inner glow
+        final glowPaint = Paint()
+          ..color = color.withOpacity(0.5)
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, size.width * 0.1);
+        canvas.drawPath(path, glowPaint);
+        
+        // Vibrant stroke
+        strokePaint.color = color;
+        strokePaint.strokeWidth = size.width * 0.04;
+        strokePaint.maskFilter = MaskFilter.blur(BlurStyle.outer, 4);
+        canvas.drawPath(path, strokePaint);
+        
+        // Base thin bright center
+        paint.color = Colors.white.withOpacity(0.8);
+        canvas.drawPath(path, paint);
+        break;
+
+      case 'metal':
+        final gradient = LinearGradient(
+          colors: isWhite 
+              ? [const Color(0xFFFFD700), const Color(0xfff9f9f9), const Color(0xFFB8860B)]
+              : [const Color(0xFF434343), const Color(0xFF000000)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
+        paint.shader = gradient.createShader(Offset.zero & size);
+        canvas.drawPath(path, paint);
+        
+        // Specular highlight
+        final highlightPath = Path();
+        final rect = path.getBounds();
+        highlightPath.addOval(Rect.fromLTWH(rect.left + rect.width*0.2, rect.top + rect.height*0.1, rect.width*0.3, rect.height*0.2));
+        canvas.drawPath(highlightPath, Paint()..color = Colors.white.withOpacity(0.3)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5));
+        break;
+
+      case 'glass':
+        paint.color = color.withOpacity(0.3);
+        canvas.drawPath(path, paint);
+        
+        strokePaint.color = Colors.white.withOpacity(0.5);
+        canvas.drawPath(path, strokePaint);
+        
+        // Refraction highlights
+        final highlightPaint = Paint()..color = Colors.white.withOpacity(0.4);
+        canvas.drawCircle(Offset(size.width * 0.4, size.height * 0.35), size.width * 0.1, highlightPaint);
+        break;
+
+      case 'wood':
+        final gradient = RadialGradient(
+          colors: isWhite ? [const Color(0xFFD2B48C), const Color(0xFF8B4513)] : [const Color(0xFF5D4037), const Color(0xFF212121)],
+          radius: 1.2,
+        );
+        paint.shader = gradient.createShader(Offset.zero & size);
+        canvas.drawPath(path, paint);
+        break;
+
+      case 'luxury':
+        paint.color = isWhite ? const Color(0xFFE8D5B5) : const Color(0xFF1A1A1A);
+        canvas.drawPath(path, paint);
+        
+        strokePaint.color = const Color(0xFFC5A059);
+        strokePaint.strokeWidth = 2.0;
+        canvas.drawPath(path, strokePaint);
+        break;
+
+      case 'royal':
+        paint.color = isWhite ? const Color(0xFFF5F5F5) : const Color(0xFF4A148C);
+        canvas.drawPath(path, paint);
+        
+        // Gold trim
+        strokePaint.color = const Color(0xFFFFD700);
+        strokePaint.strokeWidth = size.width * 0.05;
+        canvas.drawPath(path, strokePaint);
+        break;
+
+      case '3d':
+      default:
+        // Default shaded look
+        final gradient = RadialGradient(
+          colors: [color.withOpacity(0.8), color],
+          center: const Alignment(-0.3, -0.3),
+        );
+        paint.shader = gradient.createShader(Offset.zero & size);
+        canvas.drawPath(path, paint);
+        
+        // Drop shadow
+        canvas.drawPath(path.shift(const Offset(2, 2)), Paint()..color=Colors.black26..maskFilter=const MaskFilter.blur(BlurStyle.normal, 2));
+        break;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _ChessPiecePainter oldDelegate) => 
+    oldDelegate.type != type || oldDelegate.style != style || oldDelegate.shape != shape;
+}
+
+class _PiecePathProvider {
+  static Path getPath(PieceType type, String shape) {
+    switch (shape) {
+      case 'modern': return _getModernPath(type);
+      case 'angular': return _getAngularPath(type);
+      case 'wood': return _getWoodPath(type);
+      case 'fantasy': return _getFantasyPath(type);
+      case 'neo': return _getNeoPath(type);
+      case 'classic':
+      default: return _getClassicPath(type);
+    }
+  }
+
+  static Path _getClassicPath(PieceType type) {
+    final p = Path();
+    switch (type) {
+      case PieceType.pawn:
+        p.moveTo(-15, 30); p.lineTo(15, 30);
+        p.quadraticBezierTo(10, 25, 10, 10);
+        p.addOval(const Rect.fromLTWH(-12, -15, 24, 24));
+        break;
+      case PieceType.rook:
+        p.moveTo(-18, 30); p.lineTo(18, 30);
+        p.lineTo(15, -10); p.lineTo(18, -10); p.lineTo(18, -25);
+        p.lineTo(10, -25); p.lineTo(10, -20); p.lineTo(6, -20); p.lineTo(6, -25);
+        p.lineTo(-6, -25); p.lineTo(-6, -20); p.lineTo(-10, -20); p.lineTo(-10, -25);
+        p.lineTo(-18, -25); p.lineTo(-18, -10); p.lineTo(-15, -10); p.close();
+        break;
+      case PieceType.knight:
+        p.moveTo(-15, 30); p.lineTo(15, 30);
+        p.quadraticBezierTo(10, 10, 15, -10);
+        p.quadraticBezierTo(20, -25, 0, -30);
+        p.quadraticBezierTo(-25, -25, -15, -5);
+        p.lineTo(-5, -5); p.lineTo(-15, 10); p.close();
+        break;
+      case PieceType.bishop:
+        p.moveTo(-15, 30); p.lineTo(15, 30);
+        p.quadraticBezierTo(10, 15, 10, 0);
+        p.addOval(const Rect.fromLTWH(-12, -25, 24, 30));
+        p.moveTo(0, -25); p.lineTo(0, -32);
+        break;
+      case PieceType.queen:
+        p.moveTo(-18, 30); p.lineTo(18, 30);
+        p.lineTo(12, 0);
+        p.lineTo(20, -15); p.lineTo(8, -10); p.lineTo(0, -30); p.lineTo(-8, -10); p.lineTo(-20, -15);
+        p.lineTo(-12, 0); p.close();
+        break;
+      case PieceType.king:
+        p.moveTo(-18, 30); p.lineTo(18, 30);
+        p.lineTo(12, -10); p.lineTo(15, -10); p.lineTo(15, -20);
+        p.lineTo(5, -20); p.lineTo(5, -30); p.lineTo(-5, -30); p.lineTo(-5, -20);
+        p.lineTo(-15, -20); p.lineTo(-15, -10); p.lineTo(-12, -10); p.close();
+        break;
+    }
+    return p;
+  }
+
+  static Path _getModernPath(PieceType type) {
+    // Minimalist shapes
+    final p = Path();
+    switch (type) {
+      case PieceType.pawn:
+        p.addRect(const Rect.fromLTWH(-10, 0, 20, 30));
+        p.addOval(Rect.fromCircle(center: const Offset(0, -10), radius: 10));
+        break;
+      case PieceType.rook:
+        p.addRect(const Rect.fromLTWH(-15, -20, 30, 50));
+        break;
+      case PieceType.knight:
+        p.moveTo(-15, 30); p.lineTo(15, 30); p.lineTo(15, 0); p.lineTo(0, -30); p.lineTo(-15, 0); p.close();
+        break;
+      case PieceType.bishop:
+        p.moveTo(0, -30); p.lineTo(15, 30); p.lineTo(-15, 30); p.close();
+        break;
+      case PieceType.queen:
+        p.addOval(const Rect.fromLTWH(-20, -20, 40, 40));
+        p.addRect(const Rect.fromLTWH(-10, 10, 20, 20));
+        break;
+      case PieceType.king:
+        p.addRect(const Rect.fromLTWH(-20, -20, 40, 40));
+        p.moveTo(0, -35); p.lineTo(0, -15); p.moveTo(-10, -25); p.lineTo(10, -25);
+        break;
+    }
+    return p;
+  }
+
+  static Path _getAngularPath(PieceType type) {
+    // Sharp faceted geometry
+    final p = Path();
+    switch (type) {
+      case PieceType.pawn:
+        p.moveTo(0, -20); p.lineTo(12, 10); p.lineTo(8, 30); p.lineTo(-8, 30); p.lineTo(-12, 10); p.close();
+        break;
+      case PieceType.rook:
+        p.moveTo(-15, 30); p.lineTo(15, 30); p.lineTo(12, -15); p.lineTo(18, -15); p.lineTo(18, -30);
+        p.lineTo(-18, -30); p.lineTo(-18, -15); p.lineTo(-12, -15); p.close();
+        break;
+      default: return _getClassicPath(type); // Fallback for brevity in this step
+    }
+    return p;
+  }
+
+  static Path _getWoodPath(PieceType type) {
+    // Soft, rounded silhouettes
+    final p = Path();
+    switch (type) {
+      case PieceType.pawn:
+        p.addOval(const Rect.fromLTWH(-15, 5, 30, 25));
+        p.addOval(Rect.fromCircle(center: const Offset(0, -10), radius: 12));
+        break;
+      default: return _getClassicPath(type);
+    }
+    return p;
+  }
+  
+  static Path _getFantasyPath(PieceType type) {
+    // Spartan / Gothic
+    final p = Path();
+    switch (type) {
+      case PieceType.knight:
+        p.moveTo(-10, 30); p.lineTo(10, 30); p.lineTo(20, -10); p.lineTo(5, -35); p.lineTo(-15, -10); p.close();
+        break;
+      default: return _getClassicPath(type);
+    }
+    return p;
+  }
+
+  static Path _getNeoPath(PieceType type) {
+    // Sleek and tall
+    final p = Path();
+    switch (type) {
+      case PieceType.rook:
+        p.addRect(const Rect.fromLTWH(-10, -30, 20, 60));
+        p.addRect(const Rect.fromLTWH(-15, -35, 30, 5));
+        break;
+      default: return _getClassicPath(type);
+    }
+    return p;
+  }
+}
+
 
