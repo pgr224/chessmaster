@@ -41,6 +41,14 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     super.initState();
     _confettiController = ConfettiController(duration: const Duration(seconds: 3));
     _checkAnimController = AnimationController(vsync: this, duration: 500.ms);
+    
+    // Sync initial settings
+    final settings = context.read<SettingsBloc>().state;
+    context.read<GameBloc>().add(GameUpdateSettingsEvent(
+      confirmMoves: settings.confirmMoves,
+      autoQueen: settings.autoQueen,
+    ));
+    
     context.read<GameBloc>().add(GameStartEvent(widget.config, tutorial: widget.tutorial));
   }
 
@@ -64,20 +72,20 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     return PopScope(
       canPop: false, // Prevent default pop behavior
-      onPopInvoked: _onPopInvoked,
+      onPopInvokedWithResult: (didPop, result) => _onPopInvoked(didPop),
       child: BlocConsumer<GameBloc, GameState>(
         listener: (context, state) {
           if (state.isGameOver) {
-            final isWin = state.result == GameResult.whiteWins &&
-                state.playerColor == PieceColor.white ||
-                state.result == GameResult.blackWins &&
-                state.playerColor == PieceColor.black;
-          if (isWin) _confettiController.play();
-        }
-        if (state.status == GameStatus.check) {
-          _checkAnimController.forward(from: 0);
-        }
-      },
+            final isWin = (state.result == GameResult.whiteWins &&
+                    state.playerColor == PieceColor.white) ||
+                (state.result == GameResult.blackWins &&
+                    state.playerColor == PieceColor.black);
+            if (isWin) _confettiController.play();
+          }
+          if (state.status == GameStatus.check) {
+            _checkAnimController.forward(from: 0);
+          }
+        },
       builder: (context, state) {
         final minimalMotion = context.select<SettingsBloc, bool>(
           (bloc) => bloc.state.moveAnimationSpeed == 'off',
@@ -101,10 +109,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               if (state.isGameOver) _buildGameOverOverlay(context, state),
               _buildConfetti(),
               if (state.status == GameStatus.check) _buildCheckAlert(state, minimalMotion),
-              if (state.isPlayerTurn && !state.isGameOver) _buildTurnOverlay(state, minimalMotion),
+              if (!state.isGameOver) _buildTurnOverlay(state, minimalMotion),
+              if (state.pendingMove != null) _buildConfirmMoveOverlay(state),
               if (_showMoves) _buildMoveHistoryOverlay(state),
-              if (state.tutorialMessage != null && state.mode == GameMode.tutorial) _buildTutorialOverlay(state),
-              if (state.tutorialMessage != null && state.mode == GameMode.puzzle) _buildTutorialOverlay(state),
             ],
           ),
         );
@@ -168,28 +175,35 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildTurnOverlay(GameState state, bool minimalMotion) {
+    final isMyTurn = state.isPlayerTurn;
+    final label = isMyTurn ? 'YOUR TURN!' : "OPPONENT'S TURN";
+    final gradient = isMyTurn ? AppTheme.goldGradient : const LinearGradient(colors: [Color(0xFF6B7DB3), Color(0xFF4A5580)]);
+    final icon = isMyTurn ? Icons.star_rounded : Icons.hourglass_top_rounded;
+    final textColor = isMyTurn ? AppTheme.midnight : Colors.white;
+
     final overlay = Positioned(
-      bottom: 120,
+      bottom: isMyTurn ? 120 : null,
+      top: isMyTurn ? null : 75,
       left: 0, right: 0,
       child: Center(
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
           decoration: BoxDecoration(
-            gradient: AppTheme.goldGradient,
+            gradient: gradient,
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
-              BoxShadow(color: AppTheme.goldPrimary.withValues(alpha: 0.3), blurRadius: 15, offset: const Offset(0, 5)),
+              BoxShadow(color: (isMyTurn ? AppTheme.goldPrimary : AppTheme.textMuted).withValues(alpha: 0.3), blurRadius: 15, offset: const Offset(0, 5)),
             ],
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.star_rounded, color: AppTheme.midnight, size: 20),
+              Icon(icon, color: textColor, size: 20),
               const SizedBox(width: 8),
               Text(
-                'YOUR TURN!',
+                label,
                 style: GoogleFonts.fredoka(
-                  color: AppTheme.midnight, fontSize: 14, fontWeight: FontWeight.w800,
+                  color: textColor, fontSize: 14, fontWeight: FontWeight.w800,
                   letterSpacing: 1.0,
                 ),
               ),
@@ -201,13 +215,60 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
     if (minimalMotion) return overlay;
 
-    return overlay
-        .animate(onPlay: (c) => c.repeat(reverse: true))
-        .scale(begin: const Offset(1, 1), end: const Offset(1.05, 1.05), duration: 800.ms)
-        .shimmer(delay: 2.seconds, duration: 1200.ms);
+    if (isMyTurn) {
+      return overlay
+          .animate(onPlay: (c) => c.repeat(reverse: true))
+          .scale(begin: const Offset(1, 1), end: const Offset(1.05, 1.05), duration: 800.ms)
+          .shimmer(delay: 2.seconds, duration: 1200.ms);
+    }
+    return overlay.animate().fadeIn(duration: 300.ms);
   }
 
-  Widget _buildTutorialOverlay(GameState state) {
+  Widget _buildConfirmMoveOverlay(GameState state) {
+    return Positioned(
+      bottom: 120,
+      left: 0, right: 0,
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          decoration: BoxDecoration(
+            color: AppTheme.navyCard.withValues(alpha: 0.95),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.6), width: 2),
+            boxShadow: [
+              BoxShadow(color: AppTheme.goldPrimary.withValues(alpha: 0.2), blurRadius: 20, offset: const Offset(0, 8)),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                padding: EdgeInsets.zero,
+                icon: const Icon(Icons.close_rounded, color: Colors.redAccent, size: 28),
+                onPressed: () => context.read<GameBloc>().add(const GameSelectPieceEvent(Square(0, 0))), // Deselect
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Confirm Move?',
+                style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontWeight: FontWeight.w700, fontSize: 16),
+              ),
+              const SizedBox(width: 12),
+              Container(
+                decoration: const BoxDecoration(color: Colors.green, shape: BoxShape.circle),
+                child: IconButton(
+                  padding: EdgeInsets.zero,
+                  icon: const Icon(Icons.check_rounded, color: Colors.white, size: 28),
+                  onPressed: () => context.read<GameBloc>().add(GameConfirmMoveEvent()),
+                ),
+              ),
+            ],
+          ),
+        ).animate().scale(duration: 200.ms, curve: Curves.easeOutBack).fadeIn(),
+      ),
+    );
+  }
+
+  Widget _buildTutorialCard(GameState state) {
     final lesson = state.tutorial;
     final totalSteps = lesson?.steps.length ?? 1;
     final currentStep = state.tutorialStep + 1;
@@ -216,13 +277,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         ? lesson.steps[state.tutorialStep]
         : null;
 
-    return Positioned(
-      top: 60,
-      left: 12, right: 12,
-      child: IgnorePointer(
-        ignoring: false,
-        child: Container(
-          constraints: const BoxConstraints(maxHeight: 220),
+    return IgnorePointer(
+      ignoring: false,
+      child: Container(
+        constraints: const BoxConstraints(maxHeight: 220),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: AppTheme.navyCard.withValues(alpha: 0.97),
@@ -338,9 +396,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               ),
             ],
           ),
-        ),
       ),
-    ).animate().fadeIn().slideY(begin: -0.15);
+    ).animate().fadeIn().slideY(begin: 0.15);
   }
 
   Widget _buildBackground() {
@@ -380,8 +437,25 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             ),
           ),
           const Spacer(),
-          // Undo button
-          if (state.mode != GameMode.multiplayer)
+          // Undo button - show in multiplayer with conditions
+          if (state.mode == GameMode.multiplayer)
+            _glassButton(
+              icon: Icons.undo_rounded,
+              onTap: state.canMpUndo
+                  ? () {
+                      context.read<GameBloc>().add(GameUndoEvent());
+                      if (state.mpUndosUsed + 1 >= 2) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('⚠️ Undo attempts exhausted (2/2)', style: GoogleFonts.baloo2()),
+                            backgroundColor: AppTheme.accentRed,
+                          ),
+                        );
+                      }
+                    }
+                  : null,
+            )
+          else if (state.mode != GameMode.multiplayer)
             _glassButton(
               icon: Icons.undo_rounded,
               onTap: state.moveHistory.isNotEmpty
@@ -418,12 +492,15 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildOpponentInfo(GameState state) {
+    final opponentLabel = state.mode == GameMode.singlePlayer
+        ? '🤖 Chess Robot (${state.aiDifficulty?.name.capitalize() ?? ""})'
+        : state.mode == GameMode.multiplayer && state.opponentName != null
+            ? '🌍 ${state.opponentName}'
+            : '👤 Opponent';
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: PlayerInfoWidget(
-        name: state.mode == GameMode.singlePlayer
-            ? '🤖 Chess Robot (${state.aiDifficulty?.name.capitalize() ?? ""})'
-            : '👤 Opponent',
+        name: opponentLabel,
         isActive: state.currentTurn != state.playerColor,
         isAI: state.mode == GameMode.singlePlayer,
         isThinking: state.isAIThinking,
@@ -476,6 +553,11 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   ),
                 ),
                 _buildCapturedPieces(state, PieceColor.white),
+                if (state.tutorialMessage != null && (state.mode == GameMode.tutorial || state.mode == GameMode.puzzle))
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                    child: _buildTutorialCard(state),
+                  ),
                 _buildPlayerInfo(state),
               ],
             ),
@@ -519,6 +601,11 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   _buildCapturedPieces(state, PieceColor.black),
                   const SizedBox(height: 10),
                   if (state.moveHistory.isNotEmpty) _buildMoveHistoryCard(state),
+                  if (state.tutorialMessage != null && (state.mode == GameMode.tutorial || state.mode == GameMode.puzzle))
+                    Padding(
+                      padding: const EdgeInsets.only(top: 10),
+                      child: _buildTutorialCard(state),
+                    ),
                   const SizedBox(height: 10),
                   _buildCapturedPieces(state, PieceColor.white),
                   _buildPlayerInfo(state),
@@ -536,9 +623,15 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   Widget _buildBoardFrame(BuildContext context, GameState state, {required double maxDimension}) {
     final dimension = math.max(300.0, math.min(maxDimension, 860.0));
     final settings = context.watch<SettingsBloc>().state;
-    final perspective = settings.autoFlipBoard
-        ? state.currentTurn
-        : (state.playerColor ?? PieceColor.white);
+    // In multiplayer, always use playerColor for perspective (never auto-flip)
+    final PieceColor perspective;
+    if (state.mode == GameMode.multiplayer && state.playerColor != null) {
+      perspective = state.playerColor!;
+    } else if (settings.autoFlipBoard) {
+      perspective = state.currentTurn;
+    } else {
+      perspective = state.playerColor ?? PieceColor.white;
+    }
 
     return ConstrainedBox(
       constraints: BoxConstraints.tightFor(width: dimension, height: dimension),
@@ -557,6 +650,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         showSquareLabels: settings.showSquareLabels,
         whitePieceColor: state.whitePieceColor,
         blackPieceColor: state.blackPieceColor,
+        currentTurn: state.currentTurn,
         onSquareTap: state.isGameOver
             ? null
             : (sq) {
@@ -597,7 +691,13 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             label: 'Draw',
             color: AppTheme.skyBlue,
             onTap: !state.isGameOver
-                ? () => _offerDraw(context, settings.confirmDrawOffer)
+                ? () {
+                    if (state.mode == GameMode.multiplayer) {
+                      context.read<MultiplayerBloc>().add(MpDrawOfferEvent());
+                    } else {
+                      _offerDraw(context, settings.confirmDrawOffer);
+                    }
+                  }
                 : null,
           ),
           // Resign
@@ -707,6 +807,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       drawReason: state.drawReason,
       playerColor: state.playerColor,
       puzzle: state.puzzle,
+      gameMode: state.mode,
+      opponentName: state.opponentName,
+      moveCount: state.moveHistory.length,
       onPlayAgain: () {
         context.read<GameBloc>().add(GameStartEvent(widget.config));
       },
@@ -749,59 +852,37 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       top: 100,
       left: 0, right: 0,
       child: Center(
-        child: minimalMotion
-            ? Container(
-                padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-                decoration: BoxDecoration(
-                  color: AppTheme.accentRed.withValues(alpha: 0.95),
-                  borderRadius: BorderRadius.circular(28),
-                  boxShadow: [
-                    BoxShadow(color: AppTheme.accentRed.withValues(alpha: 0.45), blurRadius: 18, spreadRadius: 2),
-                  ],
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.warning_rounded, color: Colors.white, size: 24),
-                    const SizedBox(width: 10),
-                    Text('OH NO! CHECK!', style: GoogleFonts.fredoka(
-                      color: Colors.white, fontWeight: FontWeight.w800, fontSize: 20,
-                    )),
-                  ],
-                ),
-              )
-            : AnimatedBuilder(
-                animation: _checkAnimController,
-                builder: (_, __) => Opacity(
-                  opacity: (1 - _checkAnimController.value).clamp(0, 1),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-                    decoration: BoxDecoration(
-                      color: AppTheme.accentRed.withValues(alpha: 0.95),
-                      borderRadius: BorderRadius.circular(28),
-                      boxShadow: [
-                        BoxShadow(color: AppTheme.accentRed.withValues(alpha: 0.5), blurRadius: 24, spreadRadius: 4),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.warning_rounded, color: Colors.white, size: 24),
-                        const SizedBox(width: 10),
-                        Text('OH NO! CHECK!', style: GoogleFonts.fredoka(
-                          color: Colors.white, fontWeight: FontWeight.w800, fontSize: 20,
-                        )),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+          decoration: BoxDecoration(
+            color: AppTheme.accentRed.withValues(alpha: 0.95),
+            borderRadius: BorderRadius.circular(28),
+            boxShadow: [
+              BoxShadow(color: AppTheme.accentRed.withValues(alpha: 0.5), blurRadius: 24, spreadRadius: 4),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.warning_rounded, color: Colors.white, size: 24),
+              const SizedBox(width: 10),
+              Text('⚠️ CHECK!', style: GoogleFonts.fredoka(
+                color: Colors.white, fontWeight: FontWeight.w800, fontSize: 20,
+              )),
+            ],
+          ),
+        ),
       ),
     );
 
     if (minimalMotion) return alert;
 
-    return alert.animate().scale(begin: const Offset(0.5, 0.5)).fadeIn();
+    // Persistent blinking until check is resolved
+    return alert
+        .animate(onPlay: (c) => c.repeat(reverse: true))
+        .fadeIn(duration: 400.ms)
+        .then()
+        .fadeOut(duration: 400.ms);
   }
 
   String _modeName(GameMode mode) => switch (mode) {

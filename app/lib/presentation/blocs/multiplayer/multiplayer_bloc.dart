@@ -85,6 +85,10 @@ class MpAcceptChallengeEvent extends MultiplayerEvent {
 class MpClearNoticeEvent extends MultiplayerEvent {}
 
 class MpResignEvent extends MultiplayerEvent {}
+class MpDrawOfferEvent extends MultiplayerEvent {}
+class MpDrawReceivedEvent extends MultiplayerEvent {}
+class MpDrawAcceptEvent extends MultiplayerEvent {}
+class MpDrawDeclineEvent extends MultiplayerEvent {}
 class MpLobbyNoticeEvent extends MultiplayerEvent {
   final String message;
   final String? challengerId;
@@ -111,6 +115,7 @@ class MultiplayerState extends Equatable {
   final String? gameReason;
   final String? lobbyNotice;
   final String? challengerId;
+  final bool drawOfferPending;
 
   const MultiplayerState({
     this.status = MultiplayerStatus.disconnected,
@@ -128,6 +133,7 @@ class MultiplayerState extends Equatable {
     this.gameReason,
     this.lobbyNotice,
     this.challengerId,
+    this.drawOfferPending = false,
   });
 
   MultiplayerState copyWith({
@@ -146,6 +152,7 @@ class MultiplayerState extends Equatable {
     String? gameReason,
     String? lobbyNotice,
     String? challengerId,
+    bool? drawOfferPending,
   }) {
     return MultiplayerState(
       status: status ?? this.status,
@@ -163,13 +170,14 @@ class MultiplayerState extends Equatable {
       gameReason: gameReason ?? this.gameReason,
       lobbyNotice: (lobbyNotice == null && challengerId == null) ? null : (lobbyNotice ?? this.lobbyNotice),
       challengerId: (lobbyNotice == null && challengerId == null) ? null : (challengerId ?? this.challengerId),
+      drawOfferPending: drawOfferPending ?? this.drawOfferPending,
     );
   }
 
   @override List<Object?> get props => [
     status, onlineCount, searchingCount, availablePlayers.length, gameId, 
     playerColor, opponentName, chatMessages.length, lastMoveFrom, lastMoveTo, 
-    gameResult, lobbyNotice, challengerId
+    gameResult, lobbyNotice, challengerId, drawOfferPending
   ];
 }
 
@@ -195,6 +203,21 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
     on<MpSendChatEvent>(_onSendChat);
     on<MpChatReceivedEvent>(_onChatReceived);
     on<MpResignEvent>((event, emit) => _service.resign());
+    on<MpDrawOfferEvent>((event, emit) {
+      _service.sendDrawOffer();
+      emit(state.copyWith(lobbyNotice: 'Draw offer sent...'));
+    });
+    on<MpDrawReceivedEvent>((event, emit) {
+      emit(state.copyWith(drawOfferPending: true, lobbyNotice: 'Opponent offers a draw!'));
+    });
+    on<MpDrawAcceptEvent>((event, emit) {
+      _service.sendDrawAccept();
+      emit(state.copyWith(drawOfferPending: false));
+    });
+    on<MpDrawDeclineEvent>((event, emit) {
+      _service.sendDrawDecline();
+      emit(state.copyWith(drawOfferPending: false, lobbyNotice: 'Draw declined'));
+    });
     on<MpSendChallengeEvent>((event, emit) {
       _service.sendChallenge(event.opponent.id, event.mode.name, event.timeControl);
       emit(state.copyWith(lobbyNotice: 'Challenge sent to ${event.opponent.name}!'));
@@ -221,22 +244,35 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
     _lobbySub = _service.lobbyUpdates.listen((msg) {
       if (msg['type'] == 'LOBBY_UPDATE') {
         // Handle optional player list if sent
-        final list = (msg['data']['players'] as List?)
-          ?.where((p) => p['id'] != _myUserId)
-          .map((p) => OnlineLobbyUser(
-            id: p['id'],
-            name: p['name'],
-            xp: p['rating'] ?? 0,
-            isAvailable: p['status'] == 'idle',
-            flair: p['status'] == 'searching' ? 'Searching...' : (p['status'] == 'idle' ? 'Ready!' : 'Playing'),
-          )).toList() ?? [];
-        add(MpLobbyUpdateEvent(msg['data']['onlinePlayers'], msg['data']['searchingPlayers'], list));
+        final playersRaw = msg['data']['players'] as List?;
+        final list = playersRaw
+          ?.where((p) => (p as Map)['id'] != _myUserId)
+          .map((p) {
+            final player = p as Map;
+            return OnlineLobbyUser(
+              id: player['id']?.toString() ?? '',
+              name: player['name']?.toString() ?? 'Unknown',
+              xp: (player['rating'] is int) ? player['rating'] as int : int.tryParse(player['rating']?.toString() ?? '0') ?? 0,
+              isAvailable: player['status'] == 'idle',
+              flair: player['status'] == 'searching' ? 'Searching...' : (player['status'] == 'idle' ? 'Ready!' : 'Playing'),
+            );
+          }).toList() ?? <OnlineLobbyUser>[];
+        add(MpLobbyUpdateEvent(
+          msg['data']['onlinePlayers'] as int? ?? 0,
+          msg['data']['searchingPlayers'] as int? ?? 0,
+          list,
+        ));
       } else if (msg['type'] == 'MATCH_FOUND') {
-        add(MpGameFoundEvent(msg['data']['gameId'], msg['data']['color'], msg['data']['opponentName']));
+        final data = msg['data'] as Map;
+        add(MpGameFoundEvent(
+          data['gameId']?.toString() ?? '',
+          data['color']?.toString() ?? 'white',
+          data['opponentName']?.toString() ?? 'Unknown',
+        ));
       } else if (msg['type'] == 'CHALLENGE_RECEIVED') {
-        final d = msg['data'];
+        final d = msg['data'] as Map;
         add(MpLobbyNoticeEvent(
-          '${d['challengerName']} invited you to ${d['mode']} (${d['timeControl']})!',
+          '${d['challengerName']?.toString() ?? 'Someone'} invited you to ${d['mode']?.toString() ?? 'a game'} (${d['timeControl']?.toString() ?? '5+3'})!',
           challengerId: d['challengerId']?.toString(),
         ));
       }
@@ -258,21 +294,38 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
     await _service.joinRoom(event.gameId, event.color);
     _gameSub?.cancel();
     _gameSub = _service.gameUpdates.listen((msg) {
-      switch (msg['type']) {
+      final msgType = msg['type']?.toString();
+      switch (msgType) {
         case 'MOVE_UPDATE':
-          add(MpOpponentMoveEvent(msg['data']));
+          add(MpOpponentMoveEvent(msg['data'] as Map<String, dynamic>? ?? {}));
           break;
         case 'CHAT':
-          add(MpChatReceivedEvent(ChatMessage(
-            userId: msg['data']['userId'],
-            username: msg['data']['username'],
-            message: '${msg['data']['message']} ${msg['data']['emoji'] ?? ''}',
-            timestamp: DateTime.fromMillisecondsSinceEpoch(msg['data']['ts']),
-            isMe: msg['data']['userId'] == _myUserId,
-          )));
+          final chatData = msg['data'] as Map?;
+          if (chatData != null) {
+            add(MpChatReceivedEvent(ChatMessage(
+              userId: chatData['userId']?.toString() ?? '',
+              username: chatData['username']?.toString() ?? 'Unknown',
+              message: '${chatData['message']?.toString() ?? ''} ${chatData['emoji']?.toString() ?? ''}',
+              timestamp: DateTime.fromMillisecondsSinceEpoch(chatData['ts'] as int? ?? DateTime.now().millisecondsSinceEpoch),
+              isMe: chatData['userId']?.toString() == _myUserId,
+            )));
+          }
           break;
         case 'GAME_OVER':
-          add(MpGameOverEvent(msg['data']['result'], msg['data']['reason']));
+          final gameOverData = msg['data'] as Map?;
+          add(MpGameOverEvent(
+            gameOverData?['result']?.toString() ?? 'draw',
+            gameOverData?['reason']?.toString() ?? 'unknown',
+          ));
+          break;
+        case 'DRAW_OFFER':
+          add(MpDrawReceivedEvent());
+          break;
+        case 'DRAW_ACCEPT':
+          add(MpGameOverEvent('draw', 'agreement'));
+          break;
+        case 'DRAW_DECLINE':
+          add(MpClearNoticeEvent());
           break;
       }
     });

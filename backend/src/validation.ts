@@ -52,4 +52,8 @@ export class ChessValidator {
   public isGameOver(): boolean {
     return this.game.isGameOver();
   }
+
+  public getMoveCount(): number {
+    return this.game.moveNumber();
+  }
 }

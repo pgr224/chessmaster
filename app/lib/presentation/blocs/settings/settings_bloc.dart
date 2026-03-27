@@ -21,6 +21,8 @@ class SettingsMoveAnimationSpeedEvent extends SettingsEvent {
 }
 class SettingsConfirmResignEvent extends SettingsEvent { final bool enabled; const SettingsConfirmResignEvent(this.enabled); @override List<Object?> get props => [enabled]; }
 class SettingsConfirmDrawOfferEvent extends SettingsEvent { final bool enabled; const SettingsConfirmDrawOfferEvent(this.enabled); @override List<Object?> get props => [enabled]; }
+class SettingsConfirmMovesEvent extends SettingsEvent { final bool enabled; const SettingsConfirmMovesEvent(this.enabled); @override List<Object?> get props => [enabled]; }
+class SettingsAutoQueenEvent extends SettingsEvent { final bool enabled; const SettingsAutoQueenEvent(this.enabled); @override List<Object?> get props => [enabled]; }
 class SettingsBackgroundEvent extends SettingsEvent { final String theme; const SettingsBackgroundEvent(this.theme); @override List<Object?> get props => [theme]; }
 
 class SettingsState extends Equatable {
@@ -34,6 +36,8 @@ class SettingsState extends Equatable {
   final String moveAnimationSpeed;
   final bool confirmResign;
   final bool confirmDrawOffer;
+  final bool confirmMoves;
+  final bool autoQueen;
   final String backgroundTheme;
   final bool isLoaded;
 
@@ -48,6 +52,8 @@ class SettingsState extends Equatable {
     this.moveAnimationSpeed = 'normal',
     this.confirmResign = true,
     this.confirmDrawOffer = true,
+    this.confirmMoves = false,
+    this.autoQueen = false,
     this.backgroundTheme = 'midnight',
     this.isLoaded = false,
   });
@@ -63,6 +69,8 @@ class SettingsState extends Equatable {
     String? moveAnimationSpeed,
     bool? confirmResign,
     bool? confirmDrawOffer,
+    bool? confirmMoves,
+    bool? autoQueen,
     String? backgroundTheme,
     bool? isLoaded,
   }) =>
@@ -77,6 +85,8 @@ class SettingsState extends Equatable {
         moveAnimationSpeed: moveAnimationSpeed ?? this.moveAnimationSpeed,
         confirmResign: confirmResign ?? this.confirmResign,
         confirmDrawOffer: confirmDrawOffer ?? this.confirmDrawOffer,
+        confirmMoves: confirmMoves ?? this.confirmMoves,
+        autoQueen: autoQueen ?? this.autoQueen,
         backgroundTheme: backgroundTheme ?? this.backgroundTheme,
         isLoaded: isLoaded ?? this.isLoaded,
       );
@@ -86,12 +96,16 @@ class SettingsState extends Equatable {
     vibrationEnabled,
     notificationsEnabled,
     showCoordinates,
+    showSquareLabels,
     showLegalMoves,
     autoFlipBoard,
     moveAnimationSpeed,
     confirmResign,
     confirmDrawOffer,
+    confirmMoves,
+    autoQueen,
     backgroundTheme,
+    isLoaded,
   ];
 }
 
@@ -139,6 +153,14 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
       (await SharedPreferences.getInstance()).setBool('confirm_draw_offer', e.enabled);
       emit(state.copyWith(confirmDrawOffer: e.enabled));
     });
+    on<SettingsConfirmMovesEvent>((e, emit) async {
+      (await SharedPreferences.getInstance()).setBool('confirm_moves', e.enabled);
+      emit(state.copyWith(confirmMoves: e.enabled));
+    });
+    on<SettingsAutoQueenEvent>((e, emit) async {
+      (await SharedPreferences.getInstance()).setBool('auto_queen', e.enabled);
+      emit(state.copyWith(autoQueen: e.enabled));
+    });
     on<SettingsBackgroundEvent>((e, emit) async {
       (await SharedPreferences.getInstance()).setString('background_theme', e.theme);
       emit(state.copyWith(backgroundTheme: e.theme));
@@ -158,6 +180,8 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
       moveAnimationSpeed: prefs.getString('move_animation_speed') ?? 'normal',
       confirmResign: prefs.getBool('confirm_resign') ?? true,
       confirmDrawOffer: prefs.getBool('confirm_draw_offer') ?? true,
+      confirmMoves: prefs.getBool('confirm_moves') ?? false,
+      autoQueen: prefs.getBool('auto_queen') ?? false,
       backgroundTheme: prefs.getString('background_theme') ?? 'midnight',
       isLoaded: true,
     ));

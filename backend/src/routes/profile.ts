@@ -75,8 +75,9 @@ async function getFullProfile(c: any, userId: string) {
       g.id,
       g.created_at as date,
       CASE 
-        WHEN g.white_user_id = ? THEN (SELECT username FROM users WHERE id = g.black_user_id)
-        ELSE (SELECT username FROM users WHERE id = g.white_user_id)
+        WHEN g.mode = 'singlePlayer' THEN 'AI Master'
+        WHEN g.white_user_id = ? THEN COALESCE((SELECT username FROM users WHERE id = g.black_user_id), 'Guest')
+        ELSE COALESCE((SELECT username FROM users WHERE id = g.white_user_id), 'Guest')
       END as opponent,
       CASE 
         WHEN g.result = 'draw' THEN 'Draw'

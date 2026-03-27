@@ -99,6 +99,27 @@ export class GameRoom {
         this.broadcast({ type: 'GAME_OVER', data: { result: winner, reason: 'resignation' } })
         await this.saveGameToDB(winner)
         break
+
+      case 'DRAW_OFFER':
+        // Forward draw offer to the opponent only
+        this.broadcast({ type: 'DRAW_OFFER', data: { from: userId } }, userId)
+        break
+
+      case 'DRAW_ACCEPT':
+        this.status = 'finished'
+        this.broadcast({ type: 'DRAW_ACCEPT', data: {} })
+        this.broadcast({ type: 'GAME_OVER', data: { result: 'draw', reason: 'agreement' } })
+        await this.saveGameToDB('draw')
+        break
+
+      case 'DRAW_DECLINE':
+        this.broadcast({ type: 'DRAW_DECLINE', data: {} }, userId)
+        break
+
+      case 'UNDO':
+        // Notify opponent about undo; validation handled client-side
+        this.broadcast({ type: 'UNDO', data: { userId } }, userId)
+        break
     }
   }
 
@@ -134,13 +155,60 @@ export class GameRoom {
   private async saveGameToDB(winner?: string) {
     if (!this.env.DB) return
     try {
-      const players = Array.from(this.players.keys())
+      // Correctly map users to white/black based on their assigned color
+      let whiteUserId: string | null = null
+      let blackUserId: string | null = null
+      for (const [id, p] of this.players.entries()) {
+        if (p.color === 'white') whiteUserId = id
+        if (p.color === 'black') blackUserId = id
+      }
+
+      const moveCount = this.validator.getMoveCount()
+
       await this.env.DB.prepare(`
-        INSERT INTO games (id, white_user_id, black_user_id, mode, status, result, pgn, final_fen, completed_at)
-        VALUES (?, ?, ?, 'multiplayer', 'completed', ?, ?, ?, ?)
-      `).bind(this.gameId, players[0], players[1], winner, this.validator.getPgn(), this.validator.getFen(), new Date().toISOString()).run()
+        INSERT INTO games (id, white_user_id, black_user_id, mode, status, result, pgn, final_fen, move_count, completed_at, created_at, updated_at)
+        VALUES (?, ?, ?, 'multiplayer', 'completed', ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET 
+          status = 'completed', result = excluded.result, pgn = excluded.pgn, 
+          final_fen = excluded.final_fen, move_count = excluded.move_count,
+          completed_at = excluded.completed_at, updated_at = excluded.updated_at
+      `).bind(
+        this.gameId, whiteUserId, blackUserId, winner,
+        this.validator.getPgn(), this.validator.getFen(), moveCount,
+        new Date().toISOString(), new Date().toISOString(), new Date().toISOString()
+      ).run()
+
+      // Update user stats
+      if (whiteUserId) {
+        const whiteOutcome = winner === 'white' ? 'win' : winner === 'black' ? 'loss' : 'draw'
+        await this.updateUserStats(whiteUserId, whiteOutcome)
+      }
+      if (blackUserId) {
+        const blackOutcome = winner === 'black' ? 'win' : winner === 'white' ? 'loss' : 'draw'
+        await this.updateUserStats(blackUserId, blackOutcome)
+      }
     } catch (e) {
       console.error('[GameRoom] DB Save Failed:', e)
+    }
+  }
+
+  private async updateUserStats(userId: string, outcome: 'win' | 'loss' | 'draw') {
+    if (!this.env.DB) return
+    try {
+      const field = outcome === 'win' ? 'wins' : outcome === 'loss' ? 'losses' : 'draws'
+      await this.env.DB.prepare(`
+        UPDATE user_stats SET 
+          games_played = games_played + 1,
+          ${field} = ${field} + 1,
+          multiplayer_games = multiplayer_games + 1,
+          ${outcome === 'win' ? 'multiplayer_wins = multiplayer_wins + 1,' : ''}
+          current_streak = CASE WHEN ? = 'win' THEN current_streak + 1 ELSE 0 END,
+          longest_streak = CASE WHEN current_streak + 1 > longest_streak AND ? = 'win' THEN current_streak + 1 ELSE longest_streak END,
+          updated_at = ?
+        WHERE user_id = ?
+      `).bind(outcome, outcome, new Date().toISOString(), userId).run()
+    } catch (e) {
+      console.error('[GameRoom] Stats update failed:', e)
     }
   }
 }

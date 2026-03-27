@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../core/router/app_router.dart';
 import '../../blocs/auth/auth_bloc.dart';
 import '../../blocs/game/game_bloc.dart';
@@ -10,6 +11,7 @@ import '../game/game_screen.dart';
 import '../../widgets/chat_widget.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../domain/engine/chess_engine.dart';
+import '../../../data/models/game_config.dart';
 
 class GameRoomScreen extends StatelessWidget {
   final String gameId;
@@ -20,7 +22,8 @@ class GameRoomScreen extends StatelessWidget {
     return BlocConsumer<MultiplayerBloc, MultiplayerState>(
       listenWhen: (prev, current) => 
           prev.status != current.status ||
-          prev.gameReason != current.gameReason,
+          prev.gameReason != current.gameReason ||
+          prev.drawOfferPending != current.drawOfferPending,
       listener: (context, mpState) {
         if (mpState.gameReason == 'disconnect_timeout') {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -35,9 +38,14 @@ class GameRoomScreen extends StatelessWidget {
         if (mpState.status == MultiplayerStatus.disconnected) {
           context.go('/home');
         }
+        // Show draw offer dialog when received
+        if (mpState.drawOfferPending) {
+          _showDrawOfferDialog(context);
+        }
       },
       builder: (context, mpState) {
-        if (mpState.status != MultiplayerStatus.inGame) {
+        if (mpState.status != MultiplayerStatus.inGame &&
+            mpState.status != MultiplayerStatus.gameOver) {
           return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }
 
@@ -77,6 +85,13 @@ class GameRoomScreen extends StatelessWidget {
                 }
               },
             ),
+            // Set opponent name in game state
+            BlocListener<MultiplayerBloc, MultiplayerState>(
+              listenWhen: (prev, current) => prev.opponentName != current.opponentName && current.opponentName != null,
+              listener: (context, state) {
+                context.read<GameBloc>().add(GameSetOpponentNameEvent(state.opponentName!));
+              },
+            ),
           ],
           child: Scaffold(
             backgroundColor: Colors.transparent,
@@ -111,10 +126,48 @@ class GameRoomScreen extends StatelessWidget {
     );
   }
 
+  void _showDrawOfferDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.navyCard,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Text('🤝 Draw Offer', style: GoogleFonts.fredoka(color: AppTheme.skyBlue)),
+        content: Text(
+          'Your opponent is offering a draw. Do you accept?',
+          style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 16),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              context.read<MultiplayerBloc>().add(MpDrawDeclineEvent());
+            },
+            child: Text('Decline', style: GoogleFonts.fredoka(color: AppTheme.accentRed)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.accentCyan,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              context.read<MultiplayerBloc>().add(MpDrawAcceptEvent());
+              context.read<GameBloc>().add(GameDrawAcceptEvent());
+            },
+            child: Text('Accept Draw', style: GoogleFonts.fredoka(color: AppTheme.midnight)),
+          ),
+        ],
+      ),
+    );
+  }
+
   String _friendlyCause(String? cause) {
     switch (cause) {
       case 'resignation_user_quit':
       case 'resign':
+      case 'resignation':
         return 'resignation';
       case 'agreement':
         return 'draw agreement';

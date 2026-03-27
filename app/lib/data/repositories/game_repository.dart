@@ -36,12 +36,33 @@ class GameRepository {
       await _dio.post('/api/game/create', data: {
         'gameId': id,
         'mode': game.mode,
-        'fen': game.fen,
+        'initialFen': game.fen,
       });
-    } catch (_) {
-      // Offline — will sync later
-    }
+    } catch (_) {}
+
     return id;
+  }
+
+  /// Sync game completion with the server
+  Future<void> completeGame(GameModel game) async {
+    // 1. Update local DB
+    final box = await Hive.openBox<String>(_boxName);
+    await box.put(game.id, jsonEncode(game.toJson()));
+
+    // 2. Push to server
+    try {
+      final res = game.result.toLowerCase();
+      String winner = 'draw';
+      if (res.contains('whit')) winner = 'white';
+      if (res.contains('black')) winner = 'black';
+
+      await _dio.post('/api/game/complete', data: {
+        'gameId': game.id,
+        'result': winner,
+        'termination': game.status,
+        'pgn': game.pgn,
+      });
+    } catch (_) {}
   }
 
   Future<List<GameModel>> getSavedGames() async {

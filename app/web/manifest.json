@@ -1,11 +1,11 @@
 {
-    "name": "chess_master",
-    "short_name": "chess_master",
+    "name": "Chess Master",
+    "short_name": "Chess Master",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#1A1A2E",
+    "theme_color": "#FFD93D",
+    "description": "Premium Chess Academy & Multiplayer.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

@@ -49,6 +49,11 @@ class GameDrawAcceptEvent extends GameEvent {}
 class GameDrawDeclineEvent extends GameEvent {}
 class GameSaveEvent extends GameEvent {}
 class GameRequestHintEvent extends GameEvent {}
+class GameSetOpponentNameEvent extends GameEvent {
+  final String name;
+  const GameSetOpponentNameEvent(this.name);
+  @override List<Object?> get props => [name];
+}
 
 class GamePromotionRequiredEvent extends GameEvent {
   final Square from;
@@ -56,6 +61,17 @@ class GamePromotionRequiredEvent extends GameEvent {
   const GamePromotionRequiredEvent(this.from, this.to);
   @override List<Object?> get props => [from, to];
 }
+
+class GameUpdateSettingsEvent extends GameEvent {
+  final bool confirmMoves;
+  final bool autoQueen;
+  const GameUpdateSettingsEvent({this.confirmMoves = false, this.autoQueen = false});
+  @override List<Object?> get props => [confirmMoves, autoQueen];
+}
+
+class GameConfirmMoveEvent extends GameEvent {}
+
+class GameDrawReceiveEvent extends GameEvent { final String? fromId; const GameDrawReceiveEvent(this.fromId); }
 
 // ═══════════════════════════════════════════
 // STATE
@@ -93,6 +109,11 @@ class GameState extends Equatable {
   final Puzzle? puzzle;
   final int puzzleStep;
   final bool isPuzzleHintUsed;
+  // Multiplayer undo tracking
+  final String? opponentName;
+  final bool confirmMoves;
+  final bool autoQueen;
+  final Move? pendingMove;
 
   const GameState({
     required this.board,
@@ -111,7 +132,7 @@ class GameState extends Equatable {
     this.mode = GameMode.singlePlayer,
     this.aiDifficulty,
     this.boardTheme,
-    this.pieceTheme = 'classic3d',
+    this.pieceTheme = 'classic_3d',
     this.whitePieceColor = Colors.white,
     this.blackPieceColor = Colors.black,
     this.capturedWhite = const [],
@@ -127,6 +148,12 @@ class GameState extends Equatable {
     this.puzzle,
     this.puzzleStep = 0,
     this.isPuzzleHintUsed = false,
+    this.mpUndosUsed = 0,
+    this.lastMoveTimestamp,
+    this.opponentName,
+    this.confirmMoves = false,
+    this.autoQueen = false,
+    this.pendingMove,
   });
 
   bool get isGameOver => status == GameStatus.checkmate ||
@@ -136,6 +163,16 @@ class GameState extends Equatable {
       playerColor == null || currentTurn == playerColor;
 
   int get hintsRemaining => maxHints - hintsUsed;
+
+  /// Whether the player can still undo in multiplayer (under 5s and <2 undos used)
+  bool get canMpUndo {
+    if (mode != GameMode.multiplayer) return false;
+    if (mpUndosUsed >= 2) return false;
+    if (lastMoveTimestamp == null) return false;
+    if (!isPlayerTurn) return false; // can't undo on opponent's turn after they moved
+    final elapsed = DateTime.now().difference(lastMoveTimestamp!);
+    return elapsed.inSeconds < 5;
+  }
 
   GameState copyWith({
     List<List<ChessPiece?>>? board,
@@ -169,10 +206,17 @@ class GameState extends Equatable {
     Puzzle? puzzle,
     int? puzzleStep,
     bool? isPuzzleHintUsed,
+    int? mpUndosUsed,
+    DateTime? lastMoveTimestamp,
+    String? opponentName,
+    bool? confirmMoves,
+    bool? autoQueen,
+    Move? pendingMove,
     bool clearSelected = false,
     bool clearHint = false,
     bool clearDrawOffer = false,
     bool clearTutorialMessage = false,
+    bool clearPendingMove = false,
   }) {
     return GameState(
       board: board ?? this.board,
@@ -206,6 +250,12 @@ class GameState extends Equatable {
       puzzle: puzzle ?? this.puzzle,
       puzzleStep: puzzleStep ?? this.puzzleStep,
       isPuzzleHintUsed: isPuzzleHintUsed ?? this.isPuzzleHintUsed,
+      mpUndosUsed: mpUndosUsed ?? this.mpUndosUsed,
+      lastMoveTimestamp: lastMoveTimestamp ?? this.lastMoveTimestamp,
+      opponentName: opponentName ?? this.opponentName,
+      confirmMoves: confirmMoves ?? this.confirmMoves,
+      autoQueen: autoQueen ?? this.autoQueen,
+      pendingMove: clearPendingMove ? null : (pendingMove ?? this.pendingMove),
     );
   }
 
@@ -214,7 +264,8 @@ class GameState extends Equatable {
     board, currentTurn, selectedSquare, legalMoves, moveHistory,
     status, result, isAIThinking, hintMove, hintsUsed, currentFEN,
     showPromotionDialog, tutorial, tutorialStep, tutorialMessage, pieceTheme,
-    puzzle, puzzleStep, isPuzzleHintUsed,
+    lastMoveTimestamp, opponentName,
+    confirmMoves, autoQueen, pendingMove,
   ];
 }
 
@@ -246,6 +297,9 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     on<GameSaveEvent>(_onSave);
     on<GameRequestHintEvent>(_onRequestHint);
     on<GamePromotionRequiredEvent>(_onPromotionRequired);
+    on<GameConfirmMoveEvent>(_onConfirmMove);
+    on<GameUpdateSettingsEvent>((e, emit) => emit(state.copyWith(confirmMoves: e.confirmMoves, autoQueen: e.autoQueen)));
+    on<GameSetOpponentNameEvent>((event, emit) => emit(state.copyWith(opponentName: event.name)));
   }
 
   void _onStart(GameStartEvent event, Emitter<GameState> emit) {
@@ -258,11 +312,11 @@ class GameBloc extends Bloc<GameEvent, GameState> {
 
     final playerColor = config.playerColor == 'black'
         ? PieceColor.black : PieceColor.white;
-
-    emit(GameState(
+ 
+    final initialState = GameState(
       board: _engine.board,
       currentTurn: _engine.currentTurn,
-      playerColor: config.mode == GameMode.singlePlayer ? playerColor : null,
+      playerColor: (config.mode == GameMode.singlePlayer || config.mode == GameMode.multiplayer) ? playerColor : null,
       mode: config.mode,
       aiDifficulty: config.difficulty,
       boardTheme: config.boardTheme ?? 'classic',
@@ -273,8 +327,23 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       tutorial: event.tutorial,
       tutorialMessage: config.puzzle?.moves.first.dialog ?? event.tutorial?.steps.first.text,
       puzzle: config.puzzle,
-    ));
-
+    );
+    emit(initialState);
+ 
+    // Initialize game record
+    _gameId = null; // reset
+    final firstGame = GameModel(
+      id: '',
+      fen: initialState.currentFEN,
+      pgn: '',
+      mode: initialState.mode.name,
+      status: initialState.status.name,
+      result: initialState.result.name,
+      moveCount: 0,
+      updatedAt: DateTime.now(),
+    );
+    _gameRepository.saveGame(firstGame).then((id) => _gameId = id);
+ 
     // If AI plays first (player chose black)
     if (config.mode == GameMode.singlePlayer && playerColor == PieceColor.black) {
       add(GameMakeMoveEvent(Square(0, 0), Square(0, 0)));
@@ -283,20 +352,45 @@ class GameBloc extends Bloc<GameEvent, GameState> {
 
   void _onSelectPiece(GameSelectPieceEvent event, Emitter<GameState> emit) {
     final sq = event.square;
+    if (state.isAIThinking) return;
 
     // Deselect if clicking same square
     if (state.selectedSquare == sq) {
-      emit(state.copyWith(clearSelected: true, clearHint: true));
+      emit(state.copyWith(clearSelected: true, clearHint: true, clearPendingMove: true));
       return;
+    }
+
+    // In multiplayer, only allow controlling your own pieces
+    if (state.mode == GameMode.multiplayer && state.playerColor != null) {
+      if (!state.isPlayerTurn) return; // Not your turn
+      final clickedPiece = _engine.pieceAt(sq);
+      // If no piece selected yet, only allow selecting own color
+      if (state.selectedSquare == null) {
+        if (clickedPiece == null || clickedPiece.color != state.playerColor) {
+          emit(state.copyWith(clearSelected: true, clearPendingMove: true));
+          return;
+        }
+      }
     }
 
     // If a piece is already selected, try to make a move
     if (state.selectedSquare != null) {
       final isLegal = state.legalMoves.any((m) => m.to == sq);
       if (isLegal) {
-        // Check if pawn promotion needed
         final from = state.selectedSquare!;
         final piece = _engine.pieceAt(from);
+        
+        // Auto-Queen
+        if (state.autoQueen && piece?.type == PieceType.pawn) {
+          final toRank = sq.rank;
+          if ((piece!.color == PieceColor.white && toRank == 7) ||
+              (piece.color == PieceColor.black && toRank == 0)) {
+            add(GameMakeMoveEvent(from, sq, promotion: PieceType.queen));
+            return;
+          }
+        }
+
+        // Promotion Dialog
         if (piece?.type == PieceType.pawn) {
           final toRank = sq.rank;
           if ((piece!.color == PieceColor.white && toRank == 7) ||
@@ -305,10 +399,18 @@ class GameBloc extends Bloc<GameEvent, GameState> {
               showPromotionDialog: true,
               promotionFrom: from,
               promotionTo: sq,
+              clearPendingMove: true,
             ));
             return;
           }
         }
+
+        // Move Confirmation
+        if (state.confirmMoves) {
+          emit(state.copyWith(pendingMove: Move(from: from, to: sq)));
+          return;
+        }
+
         add(GameMakeMoveEvent(from, sq));
         return;
       }
@@ -317,7 +419,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     // Select new piece
     final piece = _engine.pieceAt(sq);
     if (piece == null || piece.color != _engine.currentTurn) {
-      emit(state.copyWith(clearSelected: true));
+      emit(state.copyWith(clearSelected: true, clearPendingMove: true));
       return;
     }
     if (!state.isPlayerTurn) return;
@@ -327,7 +429,16 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       selectedSquare: sq,
       legalMoves: moves,
       clearHint: true,
+      clearPendingMove: true,
     ));
+  }
+
+  void _onConfirmMove(GameConfirmMoveEvent event, Emitter<GameState> emit) {
+    if (state.pendingMove != null) {
+      final move = state.pendingMove!;
+      add(GameMakeMoveEvent(move.from, move.to, promotion: move.promotion));
+      emit(state.copyWith(clearPendingMove: true));
+    }
   }
 
   Future<void> _onMakeMove(GameMakeMoveEvent event, Emitter<GameState> emit) async {
@@ -377,6 +488,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       clearSelected: true,
       clearHint: true,
       showPromotionDialog: false,
+      lastMoveTimestamp: DateTime.now(),
     ));
 
     // Tutorial Progress — show success, then advance to next step
@@ -463,11 +575,50 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     }
 
     // Auto-save
-    if (_gameId != null) add(GameSaveEvent());
+    if (_gameId != null) {
+      if (state.isGameOver) {
+        final game = GameModel(
+          id: _gameId!,
+          fen: state.currentFEN,
+          pgn: _engine.toPGN(),
+          mode: state.mode.name,
+          status: state.status.name,
+          result: state.result.name,
+          moveCount: state.moveHistory.length,
+          updatedAt: DateTime.now(),
+        );
+        _gameRepository.completeGame(game);
+      } else {
+        add(GameSaveEvent());
+      }
+    }
   }
 
   void _onUndo(GameUndoEvent event, Emitter<GameState> emit) {
-    if (state.mode == GameMode.multiplayer) return;
+    // Multiplayer undo logic: 2 tries within 5s window
+    if (state.mode == GameMode.multiplayer) {
+      if (state.mpUndosUsed >= 2) return; // exhausted
+      if (state.lastMoveTimestamp == null) return;
+      if (!state.isPlayerTurn) return; // can't undo after opponent moved
+      final elapsed = DateTime.now().difference(state.lastMoveTimestamp!);
+      if (elapsed.inSeconds >= 5) return; // too late
+      if (_engine.moveHistory.isEmpty) return;
+      _engine.undoMove();
+      final captured = _collectCaptured();
+      emit(state.copyWith(
+        board: _engine.board,
+        currentTurn: _engine.currentTurn,
+        moveHistory: _engine.moveHistory,
+        status: _engine.status,
+        result: _engine.result,
+        currentFEN: _engine.toFEN(),
+        capturedWhite: captured.$1,
+        capturedBlack: captured.$2,
+        clearSelected: true,
+        mpUndosUsed: state.mpUndosUsed + 1,
+      ));
+      return;
+    }
     // Undo 2 moves if vs AI (take back player's move + AI's response)
     final undoCount = state.mode == GameMode.singlePlayer ? 2 : 1;
     for (int i = 0; i < undoCount; i++) {

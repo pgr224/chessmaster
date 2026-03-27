@@ -24,6 +24,7 @@ class ChessBoardWidget extends StatefulWidget {
   final Color blackPieceColor;
   final Function(Square)? onSquareTap;
   final bool isInteractive;
+  final PieceColor currentTurn;
 
   const ChessBoardWidget({
     super.key,
@@ -44,6 +45,7 @@ class ChessBoardWidget extends StatefulWidget {
     this.blackPieceColor = Colors.black,
     this.onSquareTap,
     this.isInteractive = true,
+    this.currentTurn = PieceColor.white,
   });
 
   @override
@@ -192,12 +194,13 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
   }
 
   Widget _buildCheckHighlight(double sqSize) {
-    // Find the king in check
+    // Find the king that is in check - it's the king whose turn it is
+    // (they need to get out of check)
+    final checkedColor = widget.currentTurn;
     for (int r = 0; r < 8; r++) {
       for (int f = 0; f < 8; f++) {
         final p = widget.board[r][f];
-        if (p?.type == PieceType.king) {
-          // Find which king is in check based on current turn
+        if (p?.type == PieceType.king && p?.color == checkedColor) {
           final sq = Square(f, r);
           return _buildPulsingCheck(sq, sqSize);
         }
@@ -325,38 +328,40 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
     final themeData = AppTheme.boardThemes[widget.boardTheme] ?? AppTheme.boardThemes['classic']!;
     final notationColor = themeData.notation.withValues(alpha: 0.35); // Subtle
 
-    return Stack(
-      children: List.generate(64, (index) {
-        final r = index ~/ 8;
-        final f = index % 8;
-        final rank = 7 - r;
-        final file = f;
-        
-        // Logical coordinates based on perspective
-        int displayFile, displayRank;
-        if (widget.perspective == PieceColor.white) {
-          displayFile = file;
-          displayRank = r;
-        } else {
-          displayFile = 7 - file;
-          displayRank = 7 - r;
-        }
+    return Positioned.fill(
+      child: Stack(
+        children: List.generate(64, (index) {
+          final r = index ~/ 8;
+          final f = index % 8;
+          final rank = 7 - r;
+          final file = f;
+          
+          // Logical coordinates based on perspective
+          int displayFile, displayRank;
+          if (widget.perspective == PieceColor.white) {
+            displayFile = file;
+            displayRank = r;
+          } else {
+            displayFile = 7 - file;
+            displayRank = 7 - r;
+          }
 
-        final label = '${String.fromCharCode(97 + file)}${rank + 1}';
-        
-        return Positioned(
-          left: displayFile * sqSize + 2,
-          top: displayRank * sqSize + 2,
-          child: Text(
-            label,
-            style: GoogleFonts.jura(
-              fontSize: sqSize * 0.14,
-              fontWeight: FontWeight.bold,
-              color: notationColor,
+          final label = '${String.fromCharCode(97 + file)}${rank + 1}';
+          
+          return Positioned(
+            left: displayFile * sqSize + 2,
+            top: displayRank * sqSize + 2,
+            child: Text(
+              label,
+              style: GoogleFonts.jura(
+                fontSize: sqSize * 0.14,
+                fontWeight: FontWeight.bold,
+                color: notationColor,
+              ),
             ),
-          ),
-        );
-      }),
+          );
+        }),
+      ),
     );
   }
 
@@ -538,106 +543,125 @@ class _ObjectPiecePainter extends CustomPainter {
       case 'pixel_art':
         _drawPixelArt(canvas, size, color);
         break;
-      case 'classic_3d':
-        _drawClassic3D(canvas, size);
+      case 'letters':
+        _drawLetters(canvas, size);
         break;
+      case 'classic_3d':
+      case 'marble':
+      case 'metal':
+      case '8bit':
+      case 'angular':
+      case 'mexico':
       case 'lewis':
-        _drawLewis(canvas, size);
+      case 'neon':
+        _draw2DInCircle(canvas, size, theme);
         break;
       default:
         _drawClassic(canvas, size);
     }
   }
 
-  void _drawLewis(Canvas canvas, Size s) {
+  void _drawLetters(Canvas canvas, Size s) {
     final w = s.width; final h = s.height;
-    final isWhite = piece.color == PieceColor.white;
-    final baseColor = isWhite ? const Color(0xFFF5E6CA) : const Color(0xFF8B6B4A);
-    final highlightColor = isWhite ? Colors.white : const Color(0xFFD4B483);
-    final shadeColor = isWhite ? const Color(0xFFD7C4A5) : const Color(0xFF4A3728);
-
-    final mainPaint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topLeft, end: Alignment.bottomRight,
-        colors: [highlightColor, baseColor, shadeColor],
-      ).createShader(Rect.fromLTWH(0, 0, w, h));
-
-    final path = _getLewisPath(piece.type, s);
-    canvas.drawPath(path, mainPaint);
     
-    final detailPaint = Paint()..style = PaintingStyle.stroke..strokeWidth = 0.8..color = shadeColor.withValues(alpha: 0.4);
-    canvas.drawPath(path, detailPaint);
-  }
-
-  void _drawMexico(Canvas canvas, Size s) {
-    final w = s.width; final h = s.height;
-    final isWhite = piece.color == PieceColor.white;
-    final baseColor = isWhite ? const Color(0xFFE6B325) : const Color(0xFF0F3D3E);
-    final highlightColor = isWhite ? const Color(0xFFFFD93D) : const Color(0xFF2ECC71);
-
-    final mainPaint = Paint()
-      ..shader = RadialGradient(
-        colors: [highlightColor, baseColor, Colors.black],
-        center: const Alignment(-0.3, -0.4),
-      ).createShader(Rect.fromLTWH(0, 0, w, h));
-
-    final path = _getMexicoPath(piece.type, s);
-    canvas.drawPath(path, mainPaint);
-  }
-
-  void _drawAngular(Canvas canvas, Size s) {
-    final w = s.width; final h = s.height;
-    final isWhite = piece.color == PieceColor.white;
-    final baseColor = isWhite ? const Color(0xFFBFC8D6) : const Color(0xFF2C3E50);
+    final char = piece.type == PieceType.knight ? 'N' : piece.type.name[0].toUpperCase();
+    final fullName = piece.type.name.toUpperCase();
     
-    final mainPaint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topLeft, end: Alignment.bottomRight,
-        colors: [Colors.white.withValues(alpha: 0.9), baseColor, Colors.black.withValues(alpha: 0.8)],
-        stops: const [0.0, 0.4, 1.0],
-      ).createShader(Rect.fromLTWH(0, 0, w, h));
+    final textColor = isWhite ? Colors.white : Colors.black;
+    final bgColor = isWhite ? Colors.black.withValues(alpha: 0.12) : Colors.white.withValues(alpha: 0.12);
+    final borderColor = isWhite ? Colors.white.withValues(alpha: 0.4) : Colors.black.withValues(alpha: 0.4);
 
-    final path = _getAngularPath(piece.type, s);
-    canvas.drawPath(path, mainPaint);
+    // Background tile
+    final rect = RRect.fromRectAndRadius(Rect.fromLTWH(w*0.1, h*0.1, w*0.8, h*0.8), const Radius.circular(10));
+    canvas.drawRRect(rect, Paint()..color = bgColor);
+    canvas.drawRRect(rect, Paint()..color = borderColor..style = PaintingStyle.stroke..strokeWidth = w*0.04);
+
+    // Capital letter
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: char,
+        style: TextStyle(
+          color: textColor,
+          fontSize: w * 0.45,
+          fontWeight: FontWeight.bold,
+          fontFamily: GoogleFonts.fredoka().fontFamily,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+      textAlign: TextAlign.center,
+    );
+    textPainter.layout();
+    textPainter.paint(canvas, Offset((w - textPainter.width) / 2, h * 0.2));
+
+    // Full name caption
+    final captionPainter = TextPainter(
+      text: TextSpan(
+        text: fullName,
+        style: TextStyle(
+          color: textColor.withValues(alpha: 0.9),
+          fontSize: w * 0.14,
+          fontWeight: FontWeight.w700,
+          fontFamily: GoogleFonts.fredoka().fontFamily,
+          letterSpacing: 0.5,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+      textAlign: TextAlign.center,
+    );
+    captionPainter.layout();
+    captionPainter.paint(canvas, Offset((w - captionPainter.width) / 2, h * 0.70));
   }
 
-  void _drawClassic3D(Canvas canvas, Size s) {
+  void _draw2DInCircle(Canvas canvas, Size s, String subTheme) {
     final w = s.width; final h = s.height;
-    final ivory = const Color(0xFFFDFCF0);
-    final gold = const Color(0xFFD4AF37);
-    final silver = const Color(0xFFC0C0C0);
-    final obsidian = const Color(0xFF1A1A1A);
+    
+    Color circleColor; Color iconColor;
+    
+    if (subTheme == 'neon') {
+      circleColor = isWhite ? const Color(0x4400FFFF) : const Color(0x44FF00FF);
+      iconColor = isWhite ? const Color(0xFF00FFFF) : const Color(0xFFFF00FF);
+    } else if (subTheme == 'marble') {
+      circleColor = isWhite ? const Color(0x44FFFFFF) : const Color(0x55000000);
+      iconColor = isWhite ? const Color(0xFFF5F5F5) : const Color(0xFF222222);
+    } else if (subTheme == 'metal') {
+      circleColor = isWhite ? const Color(0x44B0C4DE) : const Color(0x44708090);
+      iconColor = isWhite ? const Color(0xFFF0F8FF) : const Color(0xFF2F4F4F);
+    } else if (subTheme == '8bit') {
+      circleColor = isWhite ? const Color(0x448BC34A) : const Color(0x44F44336);
+      iconColor = isWhite ? const Color(0xFF8BC34A) : const Color(0xFFF44336);
+    } else if (subTheme == 'angular') {
+      circleColor = isWhite ? const Color(0x44BFC8D6) : const Color(0x442C3E50);
+      iconColor = isWhite ? const Color(0xFFFFFFFF) : const Color(0xFF1A1A1A);
+    } else if (subTheme == 'mexico') {
+      circleColor = isWhite ? const Color(0x44FFD93D) : const Color(0x442ECC71);
+      iconColor = isWhite ? const Color(0xFFFFD93D) : const Color(0xFF2ECC71);
+    } else if (subTheme == 'lewis') {
+      circleColor = isWhite ? const Color(0x44D4B483) : const Color(0x444A3728);
+      iconColor = isWhite ? const Color(0xFFF5E6CA) : const Color(0xFF8B6B4A);
+    } else {
+      circleColor = isWhite ? const Color(0x44FFFFFF) : const Color(0x66000000);
+      iconColor = isWhite ? const Color(0xFFFFFFFF) : const Color(0xFF222222);
+    }
 
-    final baseColor = isWhite ? ivory : obsidian;
-    final trimColor = isWhite ? gold : silver;
-    final highlight = isWhite ? Colors.white : silver.withValues(alpha: 0.5);
+    // Semitransparent circle background
+    canvas.drawCircle(Offset(w/2, h/2), w*0.45, Paint()..color = circleColor);
+    canvas.drawCircle(Offset(w/2, h/2), w*0.45, Paint()..color = isWhite ? Colors.white.withValues(alpha: 0.24) : Colors.black.withValues(alpha: 0.26)..style = PaintingStyle.stroke..strokeWidth=2);
 
-    // Main Body
-    final mainPaint = Paint()
-      ..shader = RadialGradient(
-        center: const Alignment(-0.3, -0.4),
-        radius: 1.0,
-        colors: [highlight, baseColor, Colors.black.withValues(alpha: 0.7)],
-        stops: const [0.0, 0.5, 1.0],
-      ).createShader(Rect.fromLTWH(0, 0, w, h));
+    // Flat 2D path inside the circle (scaled down 0.6)
+    final path = _getPathForType(piece.type, Size(w*0.6, h*0.6)).shift(Offset(w*0.2, h*0.2));
+    
+    // Drop shadow
+    canvas.drawPath(
+      path.shift(const Offset(0.5, 2)),
+      Paint()..color = Colors.black.withValues(alpha: 0.5)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2),
+    );
 
-    final path = _getPathForType(piece.type, s);
-    canvas.drawPath(path, mainPaint);
-
-    // Gold/Silver Trim
-    final trimPaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = w * 0.04
-      ..color = trimColor;
-    canvas.drawPath(path, trimPaint);
-
-    // Extra glossy highlight
-    final glossPaint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topLeft, end: Alignment.bottomRight,
-        colors: [Colors.white.withValues(alpha: 0.4), Colors.white.withValues(alpha: 0.0)],
-      ).createShader(Rect.fromLTWH(w*0.2, h*0.2, w*0.4, h*0.4));
-    canvas.drawPath(path, glossPaint);
+    canvas.drawPath(path, Paint()..color = iconColor);
+    
+    canvas.drawPath(
+      path, 
+      Paint()..color = isWhite ? Colors.black54 : Colors.white54..style = PaintingStyle.stroke..strokeWidth = 1.0
+    );
   }
 
   void _drawModernFlat(Canvas canvas, Size s, Color color) {

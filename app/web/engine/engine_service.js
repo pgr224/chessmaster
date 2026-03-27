@@ -23,7 +23,7 @@
     basic: 2,
     intermediate: 4,
     advanced: 12,
-    impossible: 20,
+    impossible: 15,
   };
 
   // Timeout config per engine (ms)
@@ -43,13 +43,14 @@
   let requestId = 0;
   let pendingResolve = null;
   let pendingTimeout = null;
+  let stockfishReady = false;
+  let stockfishReadyCallbacks = [];
 
   // ═══════════════════════════════════════
   // WORKER MANAGEMENT
   // ═══════════════════════════════════════
 
   function getWorkerBasePath() {
-    // Resolve path relative to the current page
     const base = document.querySelector('base');
     const href = base ? base.getAttribute('href') : '/';
     return href + 'engine/';
@@ -66,16 +67,48 @@
 
   function createStockfishWorker() {
     if (stockfishWorker) return stockfishWorker;
-    const path = getWorkerBasePath() + 'stockfish.worker.js';
+    stockfishReady = false;
+    const path = getWorkerBasePath() + 'stockfish_hybrid.worker.js';
     stockfishWorker = new Worker(path);
-    stockfishWorker.addEventListener('message', handleWorkerMessage);
+    stockfishWorker.addEventListener('message', handleStockfishMessage);
     stockfishWorker.postMessage({ type: 'init' });
+    console.log('[EngineService] Stockfish worker created, waiting for ready...');
     return stockfishWorker;
+  }
+
+  function handleStockfishMessage(e) {
+    const msg = e.data;
+
+    if (msg.type === 'ready') {
+      if (!stockfishReady) {
+        stockfishReady = true;
+        console.log('[EngineService] Stockfish WASM is READY');
+        // Fire a warmup search so WASM is fully compiled
+        stockfishWorker.postMessage({
+          type: 'search',
+          fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+          depth: 1,
+        });
+        // Resolve any callbacks waiting for ready
+        stockfishReadyCallbacks.forEach(cb => cb());
+        stockfishReadyCallbacks = [];
+      }
+      return;
+    }
+
+    // Forward bestmove and error to the shared handler
+    handleWorkerMessage(e);
+  }
+
+  function waitForStockfishReady() {
+    if (stockfishReady) return Promise.resolve();
+    return new Promise(resolve => {
+      stockfishReadyCallbacks.push(resolve);
+    });
   }
 
   function loadChessLogic() {
     if (chessLogic) return chessLogic;
-    // chess_logic.js and sunfish_engine.js are loaded via script tags in index.html
     if (typeof ChessLogic !== 'undefined') {
       chessLogic = new ChessLogic();
     } else {
@@ -124,7 +157,7 @@
       } else if (difficulty === 'advanced' || difficulty === 'impossible') {
         activeEngine = ENGINE_STOCKFISH;
         createStockfishWorker();
-        console.log(`[EngineService] Initialized: Stockfish WASM (depth ${DEPTH_CONFIG[difficulty]})`);
+        console.log(`[EngineService] Initialized: Stockfish 18 WASM (depth ${DEPTH_CONFIG[difficulty]})`);
       } else {
         activeEngine = ENGINE_SUNFISH;
         createSunfishWorker();
@@ -137,67 +170,68 @@
      * @param {string} fen - FEN position string
      * @returns {Promise<string|null>} - Move in algebraic format (e.g. "e2e4") or null
      */
-    getBestMove(fen) {
+    async getBestMove(fen) {
+      const id = ++requestId;
+      const depth = DEPTH_CONFIG[currentDifficulty] || 3;
+      const engineType = activeEngine;
+
+      if (engineType === ENGINE_VALIDATION) {
+        return null;
+      }
+
+      // Cancel any in-flight request
+      if (pendingResolve) {
+        pendingResolve(null);
+        clearTimeout(pendingTimeout);
+        pendingResolve = null;
+        pendingTimeout = null;
+      }
+
       return new Promise((resolve) => {
-        const id = ++requestId;
-        const depth = DEPTH_CONFIG[currentDifficulty] || 3;
-        const timeout = TIMEOUT_CONFIG[activeEngine] || 5000;
-
-        if (activeEngine === ENGINE_VALIDATION) {
-          resolve(null);
-          return;
-        }
-
-        if (pendingResolve) {
-          pendingResolve(null);
-          clearTimeout(pendingTimeout);
-        }
-
-        const executeRequest = (engineType) => {
+        const executeRequest = (engine) => {
+          const timeout = TIMEOUT_CONFIG[engine] || 5000;
           pendingResolve = resolve;
+
           pendingTimeout = setTimeout(() => {
-            console.warn(`[EngineService] Search timeout (${timeout}ms) for request ${id} using ${engineType}`);
+            console.warn(`[EngineService] Search timeout (${timeout}ms) for request ${id} using ${engine}`);
             if (pendingResolve === resolve) {
-              pendingResolve = null;
-              resolve(null);
+              if (engine === ENGINE_STOCKFISH) {
+                console.warn('[EngineService] Stockfish timed out, falling back to Sunfish');
+                // Stop the stuck search
+                if (stockfishWorker) stockfishWorker.postMessage({ type: 'stop' });
+                executeRequest(ENGINE_SUNFISH);
+              } else {
+                pendingResolve = null;
+                resolve(null);
+              }
             }
           }, timeout);
 
-          if (engineType === ENGINE_SUNFISH) {
+          if (engine === ENGINE_SUNFISH) {
             const worker = createSunfishWorker();
             worker.postMessage({ type: 'search', fen, depth: Math.min(depth, 5), timeout });
-          } else if (engineType === ENGINE_STOCKFISH) {
-            try {
-              const worker = createStockfishWorker();
-              // Listen for one-time error for fallback
-              const errorHandler = (e) => {
-                if (e.data && e.data.type === 'error') {
-                  console.warn('[EngineService] Stockfish failed, falling back to Sunfish');
-                  worker.removeEventListener('message', errorHandler);
-                  clearTimeout(pendingTimeout);
-                  executeRequest(ENGINE_SUNFISH);
-                }
-              };
-              worker.addEventListener('message', errorHandler);
+          } else if (engine === ENGINE_STOCKFISH) {
+            const worker = createStockfishWorker();
+            // Wait for engine to be ready, then search
+            if (stockfishReady) {
               worker.postMessage({ type: 'search', fen, depth });
-            } catch (err) {
-              console.warn('[EngineService] Could not start Stockfish worker, falling back to Sunfish');
-              executeRequest(ENGINE_SUNFISH);
+            } else {
+              waitForStockfishReady().then(() => {
+                // Double-check we're still the active request
+                if (pendingResolve === resolve) {
+                  worker.postMessage({ type: 'search', fen, depth });
+                }
+              });
             }
           }
         };
 
-        executeRequest(activeEngine);
+        executeRequest(engineType);
       });
     },
 
     /**
      * Validate if a move is legal (used for multiplayer/two-player)
-     * @param {string} fen
-     * @param {string} from
-     * @param {string} to
-     * @param {string|null} promotion
-     * @returns {boolean}
      */
     validateMove(fen, from, to, promotion) {
       const logic = loadChessLogic();
@@ -207,9 +241,6 @@
 
     /**
      * Get legal moves for a square
-     * @param {string} fen
-     * @param {string} square
-     * @returns {string[]}
      */
     getLegalMoves(fen, square) {
       const logic = loadChessLogic();
@@ -219,8 +250,6 @@
 
     /**
      * Get game state
-     * @param {string} fen
-     * @returns {{ status: string, turn: string, isCheck: boolean, isCheckmate: boolean, isStalemate: boolean, isDraw: boolean }}
      */
     getGameState(fen) {
       const logic = loadChessLogic();
@@ -230,7 +259,6 @@
 
     /**
      * Get the currently active engine type
-     * @returns {string}
      */
     getActiveEngine() {
       return activeEngine;
@@ -262,6 +290,8 @@
       }
       chessLogic = null;
       activeEngine = null;
+      stockfishReady = false;
+      stockfishReadyCallbacks = [];
       console.log('[EngineService] All engines disposed');
     },
   };

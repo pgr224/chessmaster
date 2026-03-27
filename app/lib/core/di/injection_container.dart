@@ -1,3 +1,4 @@
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:get_it/get_it.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -15,12 +16,16 @@ import '../../presentation/blocs/settings/settings_bloc.dart';
 final sl = GetIt.instance;
 
 Future<void> init() async {
+  // ── SharedPreferences ──
+  final prefs = await SharedPreferences.getInstance();
+  sl.registerSingleton<SharedPreferences>(prefs);
+
   // ── External services ──
   sl.registerLazySingleton<Dio>(() {
     var isRecoveringFrom401 = false;
 
     final dio = Dio(BaseOptions(
-      baseUrl: dotenv.env['API_URL'] ?? 'https://chess-api.yourdomain.com',
+      baseUrl: dotenv.env['API_URL'] ?? 'https://chess-master-api.pp942920.workers.dev',
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 30),
       headers: {'Content-Type': 'application/json'},
@@ -29,8 +34,11 @@ Future<void> init() async {
     // Interceptor to inject auth token
     dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) async {
-        final token = await sl<AuthRepository>().getToken();
-        if (token != null) options.headers['Authorization'] = 'Bearer $token';
+        final token = sl<SharedPreferences>().getString('auth_token');
+        if (token != null) {
+          final normalized = token.replaceFirst(RegExp(r'^Bearer\s+', caseSensitive: false), '').trim();
+          options.headers['Authorization'] = 'Bearer $normalized';
+        }
         handler.next(options);
       },
       onError: (DioException e, handler) async {
@@ -39,7 +47,9 @@ Future<void> init() async {
           if (hasAuthHeader && !isRecoveringFrom401) {
             isRecoveringFrom401 = true;
             try {
-              await sl<AuthRepository>().signOut();
+              // Manual cleanup to avoid dependencies
+              await sl<SharedPreferences>().remove('auth_token');
+              await sl<SharedPreferences>().remove('user_data');
               if (AppRouter.router.state.matchedLocation != '/onboarding') {
                 AppRouter.router.go('/onboarding?reason=session_expired');
               }

@@ -20,39 +20,39 @@ class _ChessWorldScreenState extends State<ChessWorldScreen> {
   String? _lastUpdated;
 
   // ── Static fallback content ──
-  static const _fallbackCards = [
+  static final _fallbackCards = <Map<String, dynamic>>[
     {
       'emoji': '🌍',
       'title': 'Global Tournament News',
       'subtitle': 'Fresh updates from around the chess world.',
-      'items': [
+      'items': <String>[
         'FIDE World Championship: final prep games are trending this week.',
         'Candidates Tournament watch: new young stars are climbing fast.',
         'Junior Chess Cup registrations opened in 20+ countries.',
       ],
-      'gradient': [Color(0xFF74B9FF), Color(0xFFA29BFE)],
+      'gradient': <Color>[Color(0xFF74B9FF), Color(0xFFA29BFE)],
     },
     {
       'emoji': '📅',
       'title': 'Upcoming & Participation',
       'subtitle': 'How to join kids and amateur events.',
-      'items': [
+      'items': <String>[
         'Kids Rapid Weekend: register via contact@chesskids.org.',
         'City Open (U-12 / U-16): ask your local chess club for qualifiers.',
         'Online Youth League: team signups at events@chessfuture.net.',
       ],
-      'gradient': [Color(0xFF6BCB77), Color(0xFF4ECDC4)],
+      'gradient': <Color>[Color(0xFF6BCB77), Color(0xFF4ECDC4)],
     },
     {
       'emoji': '🚀',
       'title': 'Career in Chess',
       'subtitle': 'Grow from beginner to champion with a clear path.',
-      'items': [
+      'items': <String>[
         'Learn ratings: start with local events, then national and FIDE-rated tournaments.',
         'Build your toolkit: tactics puzzles, endgame practice, and game review habits.',
         'Dream big: track your progress toward titled-player milestones.',
       ],
-      'gradient': [Color(0xFFFF6B9D), Color(0xFFFF8A5C)],
+      'gradient': <Color>[Color(0xFFFF6B9D), Color(0xFFFF8A5C)],
     },
   ];
 

@@ -40,7 +40,7 @@ class MultiplayerService {
     
     _lobbyChannel = WebSocketChannel.connect(Uri.parse(url));
     _lobbyChannel!.stream.listen((msg) {
-      final data = jsonDecode(msg);
+      final data = jsonDecode(msg) as Map<String, dynamic>;
       _lobbyStream.add(data);
     }, onDone: () => print('Lobby disconnected'));
   }
@@ -63,7 +63,7 @@ class MultiplayerService {
     await _gameChannel?.sink.close();
     _gameChannel = WebSocketChannel.connect(Uri.parse(url));
     _gameChannel!.stream.listen((msg) {
-      final data = jsonDecode(msg);
+      final data = jsonDecode(msg) as Map<String, dynamic>;
       _gameStream.add(data);
     }, onDone: () => print('Game session ended'));
   }
@@ -106,6 +106,26 @@ class MultiplayerService {
   /// Resign game
   void resign() {
     _gameChannel?.sink.add(jsonEncode({'type': 'RESIGN'}));
+  }
+
+  /// Send draw offer to opponent
+  void sendDrawOffer() {
+    _gameChannel?.sink.add(jsonEncode({'type': 'DRAW_OFFER'}));
+  }
+
+  /// Accept draw offer
+  void sendDrawAccept() {
+    _gameChannel?.sink.add(jsonEncode({'type': 'DRAW_ACCEPT'}));
+  }
+
+  /// Decline draw offer
+  void sendDrawDecline() {
+    _gameChannel?.sink.add(jsonEncode({'type': 'DRAW_DECLINE'}));
+  }
+
+  /// Send undo request (notify opponent)  
+  void sendUndo() {
+    _gameChannel?.sink.add(jsonEncode({'type': 'UNDO'}));
   }
 
   void dispose() {

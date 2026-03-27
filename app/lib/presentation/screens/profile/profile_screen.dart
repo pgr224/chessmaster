@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
@@ -7,7 +6,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:image_cropper/image_cropper.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../blocs/auth/auth_bloc.dart';
 import '../../../data/models/achievement_model.dart';
@@ -32,7 +30,7 @@ class ProfileScreen extends StatelessWidget {
             child: CustomScrollView(
               slivers: [
                 _buildHeader(context, user),
-                _buildStats(user),
+                _buildStats(context, user),
                 _buildRecentGames(context, user),
                 _buildModeStats(user),
                 _buildAchievementsHeader(),
@@ -54,18 +52,18 @@ class ProfileScreen extends StatelessWidget {
             Stack(
               alignment: Alignment.bottomRight,
               children: [
-                _buildAvatarCircle(user, 56, isCartoon: user.isGhibli)
+                buildAvatarCircle(user, 56, isCartoon: user.isGhibli)
                   .animate().scale(duration: 600.ms, curve: Curves.easeOutBack),
                 GestureDetector(
-                  onTap: () => _showEditProfile(context, user),
+                  onTap: () => context.push('/settings'),
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: AppTheme.accentCyan,
+                      color: AppTheme.goldPrimary,
                       shape: BoxShape.circle,
                       boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
                     ),
-                    child: const Icon(Icons.settings_suggest_rounded, size: 20, color: AppTheme.midnight),
+                    child: const Icon(Icons.settings_rounded, size: 20, color: AppTheme.midnight),
                   ),
                 ),
               ],
@@ -85,7 +83,7 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStats(UserModel user) {
+  Widget _buildStats(BuildContext context, UserModel user) {
     return SliverToBoxAdapter(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
@@ -94,11 +92,87 @@ class ProfileScreen extends StatelessWidget {
           children: [
             _statCard('🔥 XP', '${user.xp}', AppTheme.skyBlue),
             _statCard('🎮 GAMES', '${user.stats.gamesPlayed}', AppTheme.goldPrimary),
-            _statCard('🏆 WIN %', '${user.stats.winRate.toStringAsFixed(0)}%', AppTheme.accentCyan),
+            GestureDetector(
+              onTap: () => _showDetailedStats(context, user),
+              child: _statCard('🏆 WIN %', '${user.stats.winRate.toStringAsFixed(0)}%', AppTheme.accentCyan),
+            ),
           ],
         ),
       ),
     ).animate().fadeIn().scale(begin: const Offset(0.9, 0.9));
+  }
+
+  void _showDetailedStats(BuildContext context, UserModel user) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.midnight,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(32),
+        decoration: const BoxDecoration(
+          gradient: AppTheme.backgroundGradient,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('📊 Performance', style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 24, fontWeight: FontWeight.w700)),
+                IconButton(onPressed: () => Navigator.pop(ctx), icon: const Icon(Icons.close_rounded, color: AppTheme.textMuted)),
+              ],
+            ),
+            const SizedBox(height: 24),
+            _detailedStatRow('🤖 Solo vs AI', user.stats.aiWinRate, user.stats.aiGames, AppTheme.accentCyan),
+            _detailedStatRow('🌍 Online Multiplayer', user.stats.mpWinRate, user.stats.multiplayerGames, AppTheme.goldPrimary),
+            _detailedStatRow('👥 Local Two Player', user.stats.twoPlayerWinRate, user.stats.twoPlayerGames, AppTheme.skyBlue),
+            _detailedStatRow('🏆 Tournaments', user.stats.tournamentWins.toDouble(), 0, AppTheme.accentPurple, isCount: true),
+            const SizedBox(height: 16),
+            const Divider(color: Colors.white10),
+            const SizedBox(height: 16),
+            Text('Overall win rate: ${user.stats.winRate.toStringAsFixed(1)}%', style: GoogleFonts.baloo2(color: AppTheme.textSecondary)),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _detailedStatRow(String label, double rate, int games, Color color, {bool isCount = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(label, style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
+              Text(isCount ? '${rate.toInt()}' : '${rate.toStringAsFixed(0)}%', style: GoogleFonts.fredoka(color: color, fontSize: 18, fontWeight: FontWeight.w700)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: LinearProgressIndicator(
+              value: isCount ? 1.0 : rate / 100,
+              minHeight: 8,
+              backgroundColor: color.withValues(alpha: 0.1),
+              valueColor: AlwaysStoppedAnimation<Color>(color),
+            ),
+          ),
+          if (!isCount)
+            Align(
+              alignment: Alignment.centerRight,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text('$games games', style: GoogleFonts.baloo2(color: AppTheme.textMuted, fontSize: 11)),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 
   Widget _statCard(String label, String value, Color color) {
@@ -217,12 +291,12 @@ class ProfileScreen extends StatelessWidget {
   }
 
   Widget _buildModeStats(UserModel user) {
-    double _modeWinRate(int wins, int games) => games > 0 ? wins / games * 100 : 0;
-    final aiRate = _modeWinRate(user.stats.aiWins, user.stats.aiGames);
-    final mpRate = _modeWinRate(user.stats.multiplayerWins, user.stats.multiplayerGames);
-    final tGames = user.stats.gamesPlayed - user.stats.aiGames - user.stats.multiplayerGames;
+    final aiRate = user.stats.aiWinRate;
+    final mpRate = user.stats.mpWinRate;
+    final localRate = user.stats.twoPlayerWinRate;
+    final tGames = user.stats.gamesPlayed - user.stats.aiGames - user.stats.multiplayerGames - user.stats.twoPlayerGames;
     final tWins = user.stats.tournamentWins;
-    final tRate = _modeWinRate(tWins, tGames > 0 ? tGames : 0);
+    final tRate = tGames > 0 ? tWins / tGames * 100 : 0;
 
     return SliverToBoxAdapter(
       child: Padding(
@@ -241,14 +315,19 @@ class ProfileScreen extends StatelessWidget {
                 color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.w700,
               )),
               const SizedBox(height: 14),
-              Row(
-                children: [
-                  Expanded(child: _modeStatTile('🤖 AI', aiRate, user.stats.aiGames, AppTheme.accentCyan)),
-                  const SizedBox(width: 10),
-                  Expanded(child: _modeStatTile('🌍 Online', mpRate, user.stats.multiplayerGames, AppTheme.goldPrimary)),
-                  const SizedBox(width: 10),
-                  Expanded(child: _modeStatTile('🏆 Tourney', tRate, tGames > 0 ? tGames : 0, AppTheme.accentPurple)),
-                ],
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    _modeStatTile('🤖 AI', aiRate, user.stats.aiGames, AppTheme.accentCyan),
+                    const SizedBox(width: 10),
+                    _modeStatTile('🌍 Online', mpRate, user.stats.multiplayerGames, AppTheme.goldPrimary),
+                    const SizedBox(width: 10),
+                    _modeStatTile('👥 Local', localRate, user.stats.twoPlayerGames, AppTheme.skyBlue),
+                    const SizedBox(width: 10),
+                    _modeStatTile('🏆 Tournament', tRate, tGames > 0 ? tGames : 0, AppTheme.accentPurple),
+                  ],
+                ),
               ),
             ],
           ),
@@ -377,7 +456,7 @@ class ProfileScreen extends StatelessWidget {
     ).animate().fadeIn(delay: (index * 100).ms).slideY(begin: 0.1);
   }
 
-  Widget _buildAvatarCircle(UserModel user, double radius, {String? previewData, bool isCartoon = false}) {
+  static Widget buildAvatarCircle(UserModel user, double radius, {String? previewData, bool isCartoon = false}) {
     final hasAvatar = previewData != null || user.localAvatar != null || user.avatarUrl != null;
     
     Widget avatar;
@@ -422,7 +501,7 @@ class ProfileScreen extends StatelessWidget {
     ));
   }
 
-  void _showEditProfile(BuildContext context, UserModel user) {
+  static void showEditProfileModal(BuildContext context, UserModel user) {
     final nameController = TextEditingController(text: user.username);
     String? localAvatarPreview = user.localAvatar;
     bool isCartoon = user.isGhibli;
@@ -436,61 +515,57 @@ class ProfileScreen extends StatelessWidget {
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (ctx) => StatefulBuilder(
-        builder: (context, setLocalState) {
-          Future<void> _pickImage() async {
-            final picker = ImagePicker();
-            final XFile? image = await picker.pickImage(source: ImageSource.gallery);
-            if (image == null) return;
-
-            final cropped = await ImageCropper().cropImage(
-              sourcePath: image.path,
-              aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
-              uiSettings: [
-                WebUiSettings(
-                  context: context,
-                ),
-              ],
-            );
-
-            if (cropped != null) {
-              final bytes = await cropped.readAsBytes();
+        builder: (builderContext, setLocalState) {
+          Future<void> pickImage() async {
+            try {
+              final picker = ImagePicker();
+              final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+              if (image == null) return;
+              final bytes = await image.readAsBytes();
               setLocalState(() => localAvatarPreview = base64Encode(bytes));
+            } catch (e) {
+              if (kDebugMode) print('Avatar pick error: $e');
             }
           }
 
-          Future<void> _checkName(String val) async {
+          Future<void> checkName(String val) async {
             if (val == user.username) {
               setLocalState(() => nameAvailable = null);
               return;
             }
             if (val.length < 2) return;
             setLocalState(() => checkingName = true);
-            final available = await context.read<AuthRepository>().checkUsername(val);
-            setLocalState(() {
-              checkingName = false;
-              nameAvailable = available;
-            });
+            try {
+              final authRepo = context.read<AuthRepository>();
+              final available = await authRepo.checkUsername(val);
+              setLocalState(() {
+                checkingName = false;
+                nameAvailable = available;
+              });
+            } catch (e) {
+              setLocalState(() => checkingName = false);
+            }
           }
 
           return Padding(
-            padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(context).viewInsets.bottom + 40),
+            padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(builderContext).viewInsets.bottom + 40),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('⚙️ Profile Settings', style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 22, fontWeight: FontWeight.w700)),
+                Text('👤 Profile Identity', style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 22, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 24),
                 
                 // Avatar Preview & Upload
                 GestureDetector(
-                  onTap: _pickImage,
+                  onTap: pickImage,
                   child: Stack(
                     alignment: Alignment.bottomRight,
                     children: [
-                      _buildAvatarCircle(user, 56, previewData: localAvatarPreview, isCartoon: isCartoon),
+                      buildAvatarCircle(user, 56, previewData: localAvatarPreview, isCartoon: isCartoon),
                       Container(
                         padding: const EdgeInsets.all(6),
                         decoration: const BoxDecoration(color: AppTheme.goldPrimary, shape: BoxShape.circle),
-                        child: const Icon(Icons.camera_alt_rounded, size: 16, color: AppTheme.midnight),
+                        child: const Icon(Icons.edit_rounded, size: 16, color: AppTheme.midnight),
                       ),
                     ],
                   ),
@@ -501,7 +576,7 @@ class ProfileScreen extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text('✨ Ghibli Filter', style: GoogleFonts.baloo2(color: AppTheme.textSecondary)),
+                    Text('✨ Ghibli Aura', style: GoogleFonts.baloo2(color: AppTheme.textSecondary)),
                     Switch.adaptive(
                       value: isCartoon,
                       activeColor: AppTheme.goldPrimary,
@@ -514,7 +589,7 @@ class ProfileScreen extends StatelessWidget {
                 TextField(
                   controller: nameController,
                   style: GoogleFonts.fredoka(color: AppTheme.textPrimary),
-                  onChanged: _checkName,
+                  onChanged: checkName,
                   decoration: InputDecoration(
                     labelText: 'Username',
                     labelStyle: GoogleFonts.fredoka(color: AppTheme.textSecondary),
@@ -546,7 +621,7 @@ class ProfileScreen extends StatelessWidget {
                       foregroundColor: AppTheme.midnight,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                     ),
-                    child: Text('Save Changes', style: GoogleFonts.fredoka(fontSize: 18, fontWeight: FontWeight.w600)),
+                    child: Text('Save Identity', style: GoogleFonts.fredoka(fontSize: 18, fontWeight: FontWeight.w600)),
                   ),
                 ),
               ],

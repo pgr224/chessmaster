@@ -11,6 +11,7 @@ game.use('*', authMiddleware)
 // CREATE GAME
 // ────────────────────────────────────────
 const CreateGameSchema = z.object({
+  gameId: z.string().optional(),
   mode: z.enum(['singlePlayer', 'twoPlayer', 'multiplayer', 'tournament']),
   opponentId: z.string().optional(),
   timeControl: z.string().default('10+0'),
@@ -26,21 +27,22 @@ game.post('/create', async (c) => {
   const parsed = CreateGameSchema.safeParse(body)
   if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 400)
 
-  const { mode, opponentId, timeControl, color, aiDifficulty, tournamentId, initialFen } = parsed.data
-  const gameId = uuidv4()
+  const { gameId: clientGameId, mode, opponentId, timeControl, color, aiDifficulty, tournamentId, initialFen } = parsed.data
+  const gameId = clientGameId ?? uuidv4()
   const now = new Date().toISOString()
 
   // Determine colors
   let whiteId: string | null = null
   let blackId: string | null = null
 
+  const userId = user.sub || user.id || null
   const resolvedColor = color === 'random' ? (Math.random() > 0.5 ? 'white' : 'black') : color
   if (mode === 'singlePlayer' || mode === 'twoPlayer') {
-    whiteId = resolvedColor === 'white' ? user.sub : (opponentId ?? null)
-    blackId = resolvedColor === 'black' ? user.sub : (opponentId ?? null)
+    whiteId = resolvedColor === 'white' ? userId : (opponentId ?? null)
+    blackId = resolvedColor === 'black' ? userId : (opponentId ?? null)
   } else {
-    whiteId = resolvedColor === 'white' ? user.sub : (opponentId ?? null)
-    blackId = resolvedColor === 'black' ? user.sub : (opponentId ?? null)
+    whiteId = resolvedColor === 'white' ? userId : (opponentId ?? null)
+    blackId = resolvedColor === 'black' ? userId : (opponentId ?? null)
   }
 
   await c.env.DB.prepare(`
@@ -274,8 +276,12 @@ async function updateXP(db: D1Database, gameRow: Record<string, unknown>, result
 
 async function updateStats(db: D1Database, userId: string, outcome: 'win' | 'loss' | 'draw', mode: string) {
   const field = outcome === 'win' ? 'wins' : outcome === 'loss' ? 'losses' : 'draws'
-  const modeField = mode === 'multiplayer' ? 'multiplayer_games' : mode === 'tournament' ? 'tournament_games' : 'ai_games'
-  const modeWinField = mode === 'multiplayer' ? 'multiplayer_wins' : mode === 'tournament' ? 'tournament_wins' : 'ai_wins'
+  const modeField = mode === 'multiplayer' ? 'multiplayer_games' : 
+                    mode === 'tournament' ? 'tournament_games' : 
+                    mode === 'twoPlayer' ? 'two_player_games' : 'ai_games'
+  const modeWinField = mode === 'multiplayer' ? 'multiplayer_wins' : 
+                       mode === 'tournament' ? 'tournament_wins' : 
+                       mode === 'twoPlayer' ? 'two_player_wins' : 'ai_wins'
 
   await db.prepare(`
     UPDATE user_stats SET 

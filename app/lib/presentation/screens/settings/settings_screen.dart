@@ -4,6 +4,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../blocs/settings/settings_bloc.dart';
 import '../../blocs/theme/theme_bloc.dart';
+import '../../blocs/auth/auth_bloc.dart';
+import '../profile/profile_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -49,6 +51,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
             return ListView(
               padding: const EdgeInsets.all(16),
               children: [
+                BlocBuilder<AuthBloc, AuthState>(
+                  builder: (context, authState) {
+                    final user = authState is AuthAuthenticatedState ? authState.user : null;
+                    return _sectionCard(
+                      title: 'General',
+                      child: Column(
+                        children: [
+                          _listTile(
+                            icon: Icons.person_outline_rounded,
+                            title: 'Profile Settings',
+                            subtitle: 'Username, avatar, and account info',
+                            onTap: () {
+                              if (user != null) {
+                                ProfileScreen.showEditProfileModal(context, user);
+                              }
+                            },
+                          ),
+                          _switchTile(
+                            title: 'Notifications',
+                            subtitle: 'Match invites and multiplayer updates',
+                            value: settings.notificationsEnabled,
+                            onChanged: (v) => context.read<SettingsBloc>().add(SettingsNotificationsEvent(v)),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 14),
                 _sectionCard(
                   title: 'Theme',
                   child: Column(
@@ -61,6 +92,55 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       _subTitle('Piece Style'),
                       const SizedBox(height: 10),
                       _buildPieceThemeChips(),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+                _sectionCard(
+                  title: 'Board & Play',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _subTitle('Move Animation Speed'),
+                      const SizedBox(height: 8),
+                      _buildAnimationSpeedChips(settings.moveAnimationSpeed),
+                      const SizedBox(height: 6),
+                      _switchTile(
+                        title: 'Show Coordinates',
+                        subtitle: 'Display ranks/files on the board edge',
+                        value: settings.showCoordinates,
+                        onChanged: (v) => context.read<SettingsBloc>().add(SettingsShowCoordinatesEvent(v)),
+                      ),
+                      _switchTile(
+                        title: 'Show Legal Move Dots',
+                        subtitle: 'Display target hints for selected pieces',
+                        value: settings.showLegalMoves,
+                        onChanged: (v) => context.read<SettingsBloc>().add(SettingsShowLegalMovesEvent(v)),
+                      ),
+                      _switchTile(
+                        title: 'Confirm Moves',
+                        subtitle: 'Tap twice or press check to move',
+                        value: settings.confirmMoves,
+                        onChanged: (v) => context.read<SettingsBloc>().add(SettingsConfirmMovesEvent(v)),
+                      ),
+                      _switchTile(
+                        title: 'Auto-Queen',
+                        subtitle: 'Always promote pawns to queen',
+                        value: settings.autoQueen,
+                        onChanged: (v) => context.read<SettingsBloc>().add(SettingsAutoQueenEvent(v)),
+                      ),
+                      _switchTile(
+                        title: 'Auto-Flip Board (2 Player)',
+                        subtitle: 'Rotate board to side-to-move in local games',
+                        value: settings.autoFlipBoard,
+                        onChanged: (v) => context.read<SettingsBloc>().add(SettingsAutoFlipBoardEvent(v)),
+                      ),
+                      _switchTile(
+                        title: 'Confirm Before Resign',
+                        subtitle: 'Show confirmation dialog before resigning',
+                        value: settings.confirmResign,
+                        onChanged: (v) => context.read<SettingsBloc>().add(SettingsConfirmResignEvent(v)),
+                      ),
                     ],
                   ),
                 ),
@@ -86,55 +166,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const SizedBox(height: 14),
                 _sectionCard(
-                  title: 'Board & Play',
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _subTitle('Move Animation Speed'),
-                      const SizedBox(height: 8),
-                      _buildAnimationSpeedChips(settings.moveAnimationSpeed),
-                      const SizedBox(height: 6),
-                      _switchTile(
-                        title: 'Show Coordinates',
-                        subtitle: 'Display ranks/files on the board edge',
-                        value: settings.showCoordinates,
-                        onChanged: (v) => context.read<SettingsBloc>().add(SettingsShowCoordinatesEvent(v)),
-                      ),
-                      _switchTile(
-                        title: 'Show Square Labels',
-                        subtitle: 'Display notation (e.g. e4) inside each square',
-                        value: settings.showSquareLabels,
-                        onChanged: (v) => context.read<SettingsBloc>().add(SettingsShowSquareLabelsEvent(v)),
-                      ),
-                      _switchTile(
-                        title: 'Show Legal Move Dots',
-                        subtitle: 'Display target hints for selected pieces',
-                        value: settings.showLegalMoves,
-                        onChanged: (v) => context.read<SettingsBloc>().add(SettingsShowLegalMovesEvent(v)),
-                      ),
-                      _switchTile(
-                        title: 'Auto-Flip Board (2 Player)',
-                        subtitle: 'Rotate board to side-to-move in local games',
-                        value: settings.autoFlipBoard,
-                        onChanged: (v) => context.read<SettingsBloc>().add(SettingsAutoFlipBoardEvent(v)),
-                      ),
-                      _switchTile(
-                        title: 'Confirm Before Resign',
-                        subtitle: 'Show confirmation dialog before resigning',
-                        value: settings.confirmResign,
-                        onChanged: (v) => context.read<SettingsBloc>().add(SettingsConfirmResignEvent(v)),
-                      ),
-                      _switchTile(
-                        title: 'Confirm Before Offer Draw',
-                        subtitle: 'Show confirmation dialog before sending draw offer',
-                        value: settings.confirmDrawOffer,
-                        onChanged: (v) => context.read<SettingsBloc>().add(SettingsConfirmDrawOfferEvent(v)),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 14),
-                _sectionCard(
                   title: 'Background',
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -143,16 +174,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const SizedBox(height: 10),
                       _buildBackgroundThemeChips(settings.backgroundTheme),
                     ],
-                  ),
-                ),
-                const SizedBox(height: 14),
-                _sectionCard(
-                  title: 'Other',
-                  child: _switchTile(
-                    title: 'Notifications',
-                    subtitle: 'Match invites and multiplayer updates',
-                    value: settings.notificationsEnabled,
-                    onChanged: (v) => context.read<SettingsBloc>().add(SettingsNotificationsEvent(v)),
                   ),
                 ),
               ],
@@ -229,14 +250,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildPieceThemeChips() {
     final themes = [
       {'id': 'classic_3d', 'name': 'Classic 3D'},
-      {'id': 'modern_flat', 'name': 'Modern Flat'},
-      {'id': 'light_flat', 'name': 'Light Flat'},
+      {'id': 'marble', 'name': 'Marble'},
+      {'id': 'metal', 'name': 'Metal'},
+      {'id': '8bit', 'name': '8-Bit'},
+      {'id': 'angular', 'name': 'Angular'},
+      {'id': 'mexico', 'name': 'Mexico'},
+      {'id': 'lewis', 'name': 'Lewis'},
+      {'id': 'neon', 'name': 'Neon'},
+      {'id': 'letters', 'name': 'Letters'},
+      {'id': 'modern_flat', 'name': 'Modern'},
+      {'id': 'light_flat', 'name': 'Light'},
       {'id': 'pixel_art', 'name': 'Pixel Art'},
       {'id': 'fantasy', 'name': 'Fantasy'},
       {'id': 'line_art', 'name': 'Line Art'},
-      {'id': 'metal3d', 'name': 'Metal 3D'},
-      {'id': 'letters', 'name': 'Letters'},
-      {'id': 'video', 'name': 'Neon/Video'},
     ];
 
     return Wrap(
@@ -285,6 +311,42 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  Widget _listTile({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      onTap: onTap,
+      contentPadding: EdgeInsets.zero,
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: AppTheme.goldPrimary.withValues(alpha: 0.1),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, color: AppTheme.goldPrimary, size: 22),
+      ),
+      title: Text(
+        title,
+        style: GoogleFonts.fredoka(
+          color: AppTheme.textPrimary,
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: GoogleFonts.baloo2(
+          color: AppTheme.textMuted,
+          fontSize: 12,
+        ),
+      ),
+      trailing: const Icon(Icons.chevron_right_rounded, color: AppTheme.textMuted),
+    );
+  }
+
   Widget _switchTile({
     required String title,
     required String subtitle,
@@ -317,11 +379,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _cap(String s) => s.isEmpty ? s : '${s[0].toUpperCase()}${s.substring(1)}';
 
   Widget _buildBackgroundThemeChips(String selected) {
-    final themes = [
-      {'id': 'midnight', 'label': '🌙 Midnight', 'colors': [const Color(0xFF1A1A2E), const Color(0xFF0F3460)]},
-      {'id': 'ocean', 'label': '🌊 Ocean', 'colors': [const Color(0xFF0D1B2A), const Color(0xFF006D77)]},
-      {'id': 'forest', 'label': '🌿 Forest', 'colors': [const Color(0xFF1A1C16), const Color(0xFF2D6A4F)]},
-      {'id': 'sunset', 'label': '🌅 Sunset', 'colors': [const Color(0xFF2D1B33), const Color(0xFF6B1D3F)]},
+    final themes = <Map<String, dynamic>>[
+      {'id': 'midnight', 'label': '🌙 Midnight', 'colors': <Color>[const Color(0xFF1A1A2E), const Color(0xFF0F3460)]},
+      {'id': 'ocean', 'label': '🌊 Ocean', 'colors': <Color>[const Color(0xFF0D1B2A), const Color(0xFF006D77)]},
+      {'id': 'forest', 'label': '🌿 Forest', 'colors': <Color>[const Color(0xFF1A1C16), const Color(0xFF2D6A4F)]},
+      {'id': 'sunset', 'label': '🌅 Sunset', 'colors': <Color>[const Color(0xFF2D1B33), const Color(0xFF6B1D3F)]},
     ];
     return Wrap(
       spacing: 8,
@@ -329,7 +391,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       children: themes.map((t) {
         final id = t['id'] as String;
         final isSelected = selected == id;
-        final colors = t['colors'] as List<Color>;
+        final colors = (t['colors'] as List).cast<Color>();
         return GestureDetector(
           onTap: () => context.read<SettingsBloc>().add(SettingsBackgroundEvent(id)),
           child: AnimatedContainer(

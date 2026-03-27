@@ -26,16 +26,24 @@ class UserModel {
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
+    bool parseBool(dynamic val, bool fallback) {
+      if (val == null) return fallback;
+      if (val is bool) return val;
+      if (val is int) return val == 1;
+      if (val is String) return val.toLowerCase() == 'true' || val == '1';
+      return fallback;
+    }
+
     return UserModel(
-      id: json['id'] as String,
-      username: json['username'] as String,
+      id: (json['id'] ?? '').toString(),
+      username: (json['username'] ?? 'User').toString(),
       avatarUrl: json['avatar_url'] as String?,
       localAvatar: json['local_avatar'] as String?,
       xp: json['xp'] as int? ?? 0,
-      isOnline: (json['is_online'] as int? ?? 0) == 1,
+      isOnline: parseBool(json['is_online'], false),
       stats: UserStats.fromJson(json['stats'] as Map<String, dynamic>? ?? {}),
-      deviceId: json['device_id'] as String? ?? '',
-      isGhibli: json['is_ghibli'] as bool? ?? false,
+      deviceId: (json['device_id'] ?? '').toString(),
+      isGhibli: parseBool(json['is_ghibli'], false),
       recentGames: (json['recent_games'] as List? ?? [])
           .map((g) => GameRecord.fromJson(g as Map<String, dynamic>))
           .toList(),
@@ -62,6 +70,8 @@ class UserModel {
       'ai_wins': stats.aiWins,
       'multiplayer_games': stats.multiplayerGames,
       'multiplayer_wins': stats.multiplayerWins,
+      'two_player_games': stats.twoPlayerGames,
+      'two_player_wins': stats.twoPlayerWins,
       'tournament_wins': stats.tournamentWins,
     },
     'recent_games': recentGames.map((g) => g.toJson()).toList(),
@@ -79,6 +89,8 @@ class UserStats {
   final int aiWins;
   final int multiplayerGames;
   final int multiplayerWins;
+  final int twoPlayerGames;
+  final int twoPlayerWins;
   final int tournamentWins;
 
   const UserStats({
@@ -92,10 +104,15 @@ class UserStats {
     this.aiWins = 0,
     this.multiplayerGames = 0,
     this.multiplayerWins = 0,
+    this.twoPlayerGames = 0,
+    this.twoPlayerWins = 0,
     this.tournamentWins = 0,
   });
 
   double get winRate => gamesPlayed > 0 ? wins / gamesPlayed * 100 : 0;
+  double get aiWinRate => aiGames > 0 ? aiWins / aiGames * 100 : 0;
+  double get mpWinRate => multiplayerGames > 0 ? multiplayerWins / multiplayerGames * 100 : 0;
+  double get twoPlayerWinRate => twoPlayerGames > 0 ? twoPlayerWins / twoPlayerGames * 100 : 0;
 
   factory UserStats.fromJson(Map<String, dynamic> json) {
     return UserStats(
@@ -109,6 +126,8 @@ class UserStats {
       aiWins: json['ai_wins'] as int? ?? 0,
       multiplayerGames: json['multiplayer_games'] as int? ?? 0,
       multiplayerWins: json['multiplayer_wins'] as int? ?? 0,
+      twoPlayerGames: json['two_player_games'] as int? ?? 0,
+      twoPlayerWins: json['two_player_wins'] as int? ?? 0,
       tournamentWins: json['tournament_wins'] as int? ?? 0,
     );
   }
