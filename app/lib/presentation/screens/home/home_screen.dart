@@ -96,6 +96,17 @@ class _HomeScreenState extends State<HomeScreen> {
                           delay: 160,
                         ),
                         _buildModeCard(
+                          emoji: '🎓',
+                          title: 'Practice Mode',
+                          subtitle: 'AI Coach & Guidance',
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFA29BFE), Color(0xFF6C5CE7)],
+                          ),
+                          shadowColor: const Color(0xFFA29BFE),
+                          onTap: () => context.go('/game/play', extra: const GameConfig(mode: GameMode.practice)),
+                          delay: 180,
+                        ),
+                        _buildModeCard(
                           emoji: '📰',
                           title: 'Chess World',
                           subtitle: 'News, events, and career tips!',

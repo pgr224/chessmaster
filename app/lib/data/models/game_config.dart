@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/puzzle_model.dart';
 
-enum GameMode { tutorial, singlePlayer, twoPlayer, multiplayer, puzzle }
+enum GameMode { tutorial, singlePlayer, twoPlayer, multiplayer, puzzle, practice }
 enum AIDifficulty { basic, intermediate, advanced, impossible }
 
 class GameConfig {

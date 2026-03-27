@@ -117,6 +117,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               if (!state.isGameOver) _buildTurnOverlay(state, minimalMotion),
               if (state.pendingMove != null) _buildConfirmMoveOverlay(state),
               if (_showMoves) _buildMoveHistoryOverlay(state),
+              if (state.coachMessage != null) _buildCoachPopup(state.coachMessage!),
+              if (state.showMiniLesson) _buildMiniLessonOverlay(context, state),
             ],
           ),
         );
@@ -684,11 +686,21 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         spacing: 6,
         children: [
           // Hint button (single player only)
-          if (state.mode == GameMode.singlePlayer)
+          if (state.mode == GameMode.singlePlayer || state.mode == GameMode.practice)
             HintButtonWidget(
               hintsRemaining: state.hintsRemaining,
               onTap: state.hintsRemaining > 0 && state.isPlayerTurn && !state.isGameOver
                   ? () => context.read<GameBloc>().add(GameRequestHintEvent())
+                  : null,
+            ),
+          // Undo
+          if (state.mode == GameMode.practice || state.mode == GameMode.singlePlayer || state.mode == GameMode.multiplayer)
+            _actionBtn(
+              icon: Icons.undo_rounded,
+              label: 'Undo',
+              color: AppTheme.skyBlue,
+              onTap: (state.mode == GameMode.practice || (state.mode == GameMode.singlePlayer && !state.isGameOver) || state.canMpUndo)
+                  ? () => context.read<GameBloc>().add(GameUndoEvent())
                   : null,
             ),
           // Draw offer
@@ -949,6 +961,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         context.read<GameBloc>().add(GameSaveEvent());
         context.go('/home');
       } else if (action == 'quit_no_save') {
+        context.read<GameBloc>().add(GameDiscardEvent());
         context.go('/home');
       }
       return;
@@ -985,11 +998,42 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       if (forfeit == true && context.mounted) {
         context.read<MultiplayerBloc>().add(MpResignEvent());
         context.read<GameBloc>().add(GameResignEvent());
-            }
-  }rdEvent());
+        context.go('/home');
+      }
+      return;
+    }
+    // For puzzle and tutorial modes, simply leave
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.navyCard,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        title: Text('Leave Game? 👋', style: GoogleFonts.fredoka(color: AppTheme.textPrimary)),
+        content: Text(
+          'Your current progress will be lost. Are you sure?',
+          style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 16),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Keep Playing', style: GoogleFonts.fredoka(color: AppTheme.textMuted)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.accentRed,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('Exit!', style: GoogleFonts.fredoka(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && context.mounted) {
+      context.read<GameBloc>().add(GameDiscardEvent());
       context.go('/home');
     }
-  }
   }
 
   Future<void> _showResignDialog(BuildContext context) async {
@@ -1068,6 +1112,93 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     if (confirmed == true && context.mounted) {
       context.read<GameBloc>().add(GameDrawOfferEvent());
     }
+  }
+
+  Widget _buildCoachPopup(String message) {
+    return Positioned(
+      top: 120,
+      left: 20,
+      right: 20,
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          decoration: BoxDecoration(
+            color: AppTheme.navyCard.withValues(alpha: 0.9),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.4)),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4)),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('💡', style: TextStyle(fontSize: 20)),
+              const SizedBox(width: 12),
+              Flexible(
+                child: Text(
+                  message,
+                  style: GoogleFonts.baloo2(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
+        ).animate().slideY(begin: -0.2).fadeIn().shake(duration: 400.ms),
+      ),
+    );
+  }
+
+  Widget _buildMiniLessonOverlay(BuildContext context, GameState state) {
+    return Positioned.fill(
+      child: Stack(
+        children: [
+          Container(color: Colors.black.withValues(alpha: 0.4)),
+          Center(
+            child: Container(
+              width: 300,
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppTheme.navyCard,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.5)),
+                boxShadow: [
+                  BoxShadow(color: Colors.black, blurRadius: 30, offset: const Offset(0, 10)),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                   const Text('🚩', style: TextStyle(fontSize: 48)),
+                   const SizedBox(height: 16),
+                   Text('MINI LESSON', style: GoogleFonts.fredoka(color: AppTheme.goldPrimary, fontSize: 13, fontWeight: FontWeight.w700, letterSpacing: 1.5)),
+                   const SizedBox(height: 8),
+                   Text('That move was a Blunder', style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.w600)),
+                   const SizedBox(height: 12),
+                   Text('You just lost significant material or a tactical advantage. This typically happens when a piece is left hanging or a fork is missed.', 
+                      style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 15), textAlign: TextAlign.center),
+                   const SizedBox(height: 24),
+                   ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.goldPrimary,
+                        foregroundColor: Colors.black,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                      ),
+                      onPressed: () => context.read<GameBloc>().add(GameUndoEvent()),
+                      child: Text('TAKE BACK', style: GoogleFonts.fredoka(fontWeight: FontWeight.w700)),
+                   ),
+                   const SizedBox(height: 8),
+                   TextButton(
+                      onPressed: () => context.read<GameBloc>().emit(state.copyWith(showMiniLesson: false)),
+                      child: Text('CONTINUE ANYWAY', style: GoogleFonts.baloo2(color: AppTheme.textMuted)),
+                   ),
+                ],
+              ),
+            ).animate().scale(begin: const Offset(0.8, 0.8)).fadeIn(),
+          ),
+        ],
+      ),
+    );
   }
 }
 

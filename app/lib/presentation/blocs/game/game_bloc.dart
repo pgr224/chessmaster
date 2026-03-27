@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -11,6 +12,7 @@ import '../../../data/models/game_model.dart';
 import '../../../data/models/game_config.dart';
 import '../../../data/models/tutorial_model.dart';
 import '../../../data/models/puzzle_model.dart';
+import '../../../data/repositories/auth_repository.dart';
 
 // ═══════════════════════════════════════════
 // EVENTS
@@ -135,7 +137,8 @@ class GameState extends Equatable {
   final int missedWins;
   final int bestMoves;
   final int xpGained;
-  final String? analysisMessage;
+  final String? coachMessage;
+  final bool showMiniLesson;
 
   const GameState({
     required this.board,
@@ -184,6 +187,8 @@ class GameState extends Equatable {
     this.bestMoves = 0,
     this.xpGained = 0,
     this.analysisMessage,
+    this.coachMessage,
+    this.showMiniLesson = false,
   });
 
   bool get isGameOver => status == GameStatus.checkmate ||
@@ -250,11 +255,14 @@ class GameState extends Equatable {
     int? bestMoves,
     int? xpGained,
     String? analysisMessage,
+    String? coachMessage,
+    bool? showMiniLesson,
     bool clearSelected = false,
     bool clearHint = false,
     bool clearDrawOffer = false,
     bool clearTutorialMessage = false,
     bool clearPendingMove = false,
+    bool clearCoachMessage = false,
   }) {
     return GameState(
       board: board ?? this.board,
@@ -302,6 +310,8 @@ class GameState extends Equatable {
       bestMoves: bestMoves ?? this.bestMoves,
       xpGained: xpGained ?? this.xpGained,
       analysisMessage: analysisMessage ?? this.analysisMessage,
+      coachMessage: clearCoachMessage ? null : (coachMessage ?? this.coachMessage),
+      showMiniLesson: showMiniLesson ?? this.showMiniLesson,
     );
   }
 
@@ -314,6 +324,7 @@ class GameState extends Equatable {
     lastMoveTimestamp, opponentName,
     confirmMoves, autoQueen, pendingMove,
     accuracy, mistakes, blunders, missedWins, bestMoves, xpGained,
+    coachMessage, showMiniLesson,
   ];
 }
 
@@ -324,13 +335,14 @@ class GameBloc extends Bloc<GameEvent, GameState> {
   late ChessEngine _engine;
   final EngineController _engineController = EngineController();
   final GameRepository _gameRepository;
+  final AuthRepository _authRepository;
   String? _gameId;
   int _aiRequestEpoch = 0;
 
   ChessEngine get engine => _engine;
   EngineController get engineController => _engineController;
 
-  GameBloc(this._gameRepository) : super(GameState(
+  GameBloc(this._gameRepository, this._authRepository) : super(GameState(
     board: List.generate(8, (_) => List.filled(8, null)),
     currentTurn: PieceColor.white,
   )) {
@@ -361,13 +373,27 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     }
   }
 
-  void _onStart(GameStartEvent event, Emitter<GameState> emit) {
+  Future<void> _onStart(GameStartEvent event, Emitter<GameState> emit) async {
     // Invalidate any pending AI response from a previous game lifecycle.
     _aiRequestEpoch++;
     _engine = ChessEngine.fromFEN(event.config.puzzle?.initialFEN ?? event.tutorial?.initialFEN ?? 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
     final config = event.config;
 
-    _engineController.init(config.mode, config.difficulty);
+    AIDifficulty? difficulty = config.difficulty;
+    
+    // Fetch user's persistent difficulty if in Practice Mode
+    if (config.mode == GameMode.practice) {
+      final user = await _authRepository.getCurrentUser();
+      if (user != null) {
+        final d = user.stats.practiceDifficulty;
+        if (d < 1.0) difficulty = AIDifficulty.basic;
+        else if (d < 2.0) difficulty = AIDifficulty.intermediate;
+        else if (d < 3.0) difficulty = AIDifficulty.advanced;
+        else difficulty = AIDifficulty.impossible;
+      }
+    }
+
+    _engineController.init(config.mode, difficulty);
 
     final playerColor = config.playerColor == 'black'
         ? PieceColor.black : PieceColor.white;
@@ -375,9 +401,9 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     final initialState = GameState(
       board: _engine.board,
       currentTurn: _engine.currentTurn,
-      playerColor: (config.mode == GameMode.singlePlayer || config.mode == GameMode.multiplayer) ? playerColor : null,
+      playerColor: (config.mode == GameMode.singlePlayer || config.mode == GameMode.multiplayer || config.mode == GameMode.practice) ? playerColor : null,
       mode: config.mode,
-      aiDifficulty: config.difficulty,
+      aiDifficulty: difficulty,
       boardTheme: config.boardTheme ?? 'classic',
       pieceShape: config.pieceShape ?? 'classic',
       pieceStyle: config.pieceStyle ?? '3d',
@@ -410,8 +436,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     });
  
     // If AI plays first (player chose black)
-    if (config.mode == GameMode.singlePlayer && playerColor == PieceColor.black) {
-      add(GameMakeMoveEvent(Square(0, 0), Square(0, 0)));
+    if ((config.mode == GameMode.singlePlayer || config.mode == GameMode.practice) && playerColor == PieceColor.black) {
+      add(const GameMakeMoveEvent(Square(0, 0), Square(0, 0)));
     }
   }
 
@@ -572,7 +598,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
 
     // --- MOVE ANALYSIS ---
     // Get evaluation BEFORE the move (relative to current player)
-    final topMoves = await AIEngine.getTopMoves(_engine, state.aiDifficulty ?? AIDifficulty.intermediate, count: 1);
+    final difficulty = state.aiDifficulty ?? (state.mode == GameMode.practice ? AIDifficulty.intermediate : AIDifficulty.advanced);
+    final topMoves = await AIEngine.getTopMoves(_engine, difficulty, count: 1);
     final bestScoreBefore = topMoves.isNotEmpty ? topMoves[0].$2 : await AIEngine.evaluatePosition(_engine);
 
     final success = _engine.makeMove(move);
@@ -588,16 +615,34 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     int bestMoves = state.bestMoves;
     int missedWins = state.missedWins;
 
+    String? coachMsg;
+    bool showLesson = false;
+
     if (cpLoss <= 10) {
       bestMoves++;
     } else if (cpLoss > 300) {
       blunders++;
+      if (state.mode == GameMode.practice) {
+        final bestMoveStr = topMoves.isNotEmpty ? topMoves[0].$1.toAlgebraic() : 'another move';
+        coachMsg = 'Blunder! Better was $bestMoveStr 🚩';
+        showLesson = true;
+      }
     } else if (cpLoss > 150) {
       mistakes++;
+      if (state.mode == GameMode.practice) {
+        final bestMoveStr = topMoves.isNotEmpty ? topMoves[0].$1.toAlgebraic() : 'another move';
+        coachMsg = 'Mistake! Better was $bestMoveStr ⚠️';
+      }
+    } else if (cpLoss > 50 && state.mode == GameMode.practice) {
+      final bestMoveStr = topMoves.isNotEmpty ? topMoves[0].$1.toAlgebraic() : 'another move';
+      coachMsg = 'Inaccuracy. Best was $bestMoveStr 💡';
     }
 
     if (bestScoreBefore > 500 && evaluationAfter < 0) {
       missedWins++;
+      if (state.mode == GameMode.practice) {
+        coachMsg = 'You missed a winning advantage! 💎';
+      }
     }
 
     // Accuracy Calculation (simplified: 100 - average centipawn loss / 10)
@@ -626,7 +671,16 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       blunders: blunders,
       bestMoves: bestMoves,
       missedWins: missedWins,
+      coachMessage: coachMsg,
+      showMiniLesson: showLesson,
     ));
+
+    // Wait a bit and clear coach message
+    if (coachMsg != null) {
+      Future.delayed(const Duration(seconds: 4)).then((_) {
+        if (!isClosed) emit(state.copyWith(clearCoachMessage: true, showMiniLesson: false));
+      });
+    }
 
     // Tutorial Progress — show success, then advance to next step
     if (state.mode == GameMode.tutorial && state.tutorial != null) {
@@ -693,7 +747,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
 
     // Trigger AI if needed
     if (!state.isGameOver &&
-        state.mode == GameMode.singlePlayer &&
+        (state.mode == GameMode.singlePlayer || state.mode == GameMode.practice) &&
         _engine.currentTurn != state.playerColor) {
       final aiRequestEpoch = ++_aiRequestEpoch;
       emit(state.copyWith(isAIThinking: true));
@@ -716,6 +770,23 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       if (state.isGameOver) {
         _gameRepository.setLastActiveGameId(null);
 
+        // Scale Practice Difficulty
+        if (state.mode == GameMode.practice) {
+          final user = await _authRepository.getCurrentUser();
+          if (user != null) {
+            double currentD = user.stats.practiceDifficulty;
+            final isWin = (state.result == GameResult.whiteWins && state.playerColor == PieceColor.white) ||
+                         (state.result == GameResult.blackWins && state.playerColor == PieceColor.black);
+            
+            if (isWin) {
+              currentD += 0.5;
+            } else if (state.result != GameResult.draw && state.result != GameResult.ongoing) {
+              currentD = math.max(1.0, currentD - 0.5);
+            }
+            await _authRepository.updatePracticeDifficulty(user.id, currentD);
+          }
+        }
+
         // Calculate XP Rewards
         int xp = 0;
         if (state.accuracy >= 90) {
@@ -725,6 +796,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         } else if (state.accuracy >= 25) {
           xp = 100;
         }
+
+        emit(state.copyWith(xpGained: xp));
 
         // Generate Encouraging Message & Engine Suggestion
         String msg = '';
@@ -795,7 +868,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       return;
     }
     // Undo 2 moves if vs AI (take back player's move + AI's response)
-    final undoCount = state.mode == GameMode.singlePlayer ? 2 : 1;
+    final undoCount = (state.mode == GameMode.singlePlayer || state.mode == GameMode.practice) ? 2 : 1;
     for (int i = 0; i < undoCount; i++) {
       if (_engine.moveHistory.isNotEmpty) _engine.undoMove();
     }

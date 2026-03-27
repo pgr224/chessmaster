@@ -1,0 +1,48 @@
+# AI Engine Enhancements & Post-Game Analysis Plan
+
+This plan details the implementation of a robust, "human-like" AI environment, a comprehensive post-game analysis system, and a deeply integrated **Practice Mode** with a built-in AI Coach.
+
+## Goal Description
+Enhance learning and player retention by replacing static analysis tools with an active "Practice Mode". The game will feature:
+1. **AI Coach Mode**: Live popups giving instantaneous, context-aware feedback (e.g., "Better move was Nf3") and "mini lessons" automatically triggering upon blunders.
+2. **Adaptive Practice Difficulty**: A difficulty value (starting at 1.0) that increments by +0.5 on a win, and -0.5 on a loss, persisting in the database per-user.
+3. **Responsive Environment**: Infinite undo options in Practice Mode and near-instantaneous computer replies using the lightweight Dart Sunfish internal engine (Depth 1/fast eval).
+
+## Proposed Changes
+
+### 1. Data Models and API Integration
+#### [MODIFY] [app/lib/data/models/game_config.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/data/models/game_config.dart)
+- **Add** `practice` to the [GameMode](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/data/models/game_model.dart#1-64) enum.
+
+#### [MODIFY] [app/lib/data/models/user_model.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/data/models/user_model.dart)
+- **Add** `practiceDifficulty` (double, default 1.0) to track user scaling in practice mode. Ensure JSON serialization maps this appropriately.
+
+#### [MODIFY] `app/lib/data/repositories/user_repository.dart`
+- **Add** a method or modify existing stats update logic to save/change `practiceDifficulty`.
+
+### 2. Move Evaluation & AI Coach Core
+#### [MODIFY] [app/lib/domain/engine/ai_engine.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/domain/engine/ai_engine.dart) & [engine_controller.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/domain/engine/engine_controller.dart)
+- **Instant Moves**: If `GameMode.practice`, configure the engine loop to bypass humanization delays and use a very shallow search depth (e.g., 1 or 2) to provide the required "instant" response as per the Sunfish/fast library request.
+- **Coach Advice Generation**: Expose logic to get the engine's "Best Move" in algebraic notation (e.g., "Nf3"). Create generating heuristics for string messages like "Better move was Nf3" or "You missed mate in 2".
+
+#### [MODIFY] [app/lib/presentation/blocs/game/game_bloc.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/presentation/blocs/game/game_bloc.dart)
+- **Uncapped Undo**: Remove any restrictions on [GameUndoEvent](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/presentation/blocs/game/game_bloc.dart#55-56) when `state.mode == GameMode.practice`.
+- **Coach Messages**: When a player makes an inaccuracy, mistake, or blunder, push an `aiCoachMessage` to the state to display.
+- **Adaptive Difficulty Trigger**: Upon game over in practice mode, read the outcome. If won, update repo `practiceDifficulty += 0.5`. If lost, `practiceDifficulty -= 0.5`. Set the AI strength proportional to this double value.
+- **Mini Lesson Trigger**: If `cpLoss` classifies as a Blunder in Practice mode, emit a state flag `showMiniLesson = true` with the context payload.
+
+### 3. Practice UI & Selection Menu
+#### [MODIFY] [app/lib/presentation/screens/home/home_screen.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/presentation/screens/home/home_screen.dart)
+- **Add** a new Mode Card for **Practice Mode** with suitable emoji (🎓 or 🏋️), styling/gradients, and a unique box-shadow matching the vibe of the app.
+
+#### [MODIFY] [app/lib/presentation/screens/game/game_screen.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/presentation/screens/game/game_screen.dart)
+- **Coach Popup Box**: Create a short-lived SnackBar or floating positioned widget that sliding-animates in to say "Better move was Nf3".
+- **Mini Lesson UI**: Build a responsive dialog/overlay `MiniLessonDialog` that halts play briefly to explain a blunder.
+- **Undo Button**: Ensure the undo button remains constantly visible and usable in Practice mode.
+
+## Verification Plan
+### Automated & Manual Verification
+1. Access the "Practice Mode" via the Home Screen card.
+2. Make a blatantly bad move and verify the appearance of the Coach Popup (suggesting the engine's better move) and the Mini-Lesson dialog.
+3. Use the Undo button 3+ times consecutively to verify unlimited functionality.
+4. Intentionally win/lose the game and observe the database persisting the new `practiceDifficulty` variable.

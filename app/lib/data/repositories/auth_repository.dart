@@ -270,6 +270,25 @@ class AuthRepository {
     return updated;
   }
 
+  Future<void> updatePracticeDifficulty(String userId, double difficulty) async {
+    try {
+      await _dio.put(
+        '/api/profile/$userId/difficulty',
+        data: {'practiceDifficulty': difficulty},
+      );
+      
+      final prefs = await SharedPreferences.getInstance();
+      final userData = prefs.getString(_userKey);
+      if (userData != null) {
+        final current = jsonDecode(userData) as Map<String, dynamic>;
+        final stats = current['stats'] as Map<String, dynamic>? ?? {};
+        stats['practice_difficulty'] = difficulty;
+        current['stats'] = stats;
+        await prefs.setString(_userKey, jsonEncode(current));
+      }
+    } catch (_) {}
+  }
+
   UserModel _resolveRegisteredUser({
     required Map<String, dynamic> responseData,
     required String userId,

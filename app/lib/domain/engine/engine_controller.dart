@@ -42,8 +42,8 @@ class EngineController {
       return null;
     }
 
-    // 1. Simulate Human Thinking Delay
-    if (humanized) {
+    // 1. Simulate Human Thinking Delay (only for Single Player/Multiplayer AI, not Practice)
+    if (humanized && _mode != GameMode.practice) {
       final baseDelay = switch (_difficulty) {
         AIDifficulty.basic => 800,
         AIDifficulty.intermediate => 1200,
