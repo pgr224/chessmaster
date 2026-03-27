@@ -985,49 +985,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       if (forfeit == true && context.mounted) {
         context.read<MultiplayerBloc>().add(MpResignEvent());
         context.read<GameBloc>().add(GameResignEvent());
-        context.go('/home');
-      }
-      return;
-    }
-
-  Future<void> _showExitDialog(BuildContext context) async {
-    final result = await showDialog<int>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.navyCard,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-        title: Text('Leave Game? 👋', style: GoogleFonts.fredoka(color: AppTheme.textPrimary)),
-        content: Text(
-          'Do you want to save your progress or discard this game?',
-          style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 16),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, 0),
-            child: Text('Cancel', style: GoogleFonts.fredoka(color: AppTheme.textMuted)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, 2),
-            child: Text('Discard & Quit', style: GoogleFonts.fredoka(color: AppTheme.accentRed)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.accentCyan,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            ),
-            onPressed: () => Navigator.pop(ctx, 1),
-            child: Text('Save & Exit', style: GoogleFonts.fredoka(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
-
-    if (!context.mounted) return;
-    if (result == 1) {
-      context.read<GameBloc>().add(GameSaveEvent());
-      context.go('/home');
-    } else if (result == 2) {
-      context.read<GameBloc>().add(GameDiscardEvent());
+            }
+  }rdEvent());
       context.go('/home');
     }
   }
