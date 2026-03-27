@@ -250,6 +250,8 @@ class AuthRepository {
       data: {
         if (username != null) 'username': username,
         if (avatarPath != null) 'avatarUrl': avatarPath,
+        if (isGhibli != null) 'isGhibli': isGhibli,
+        if (localAvatar != null) 'localAvatar': localAvatar,
       },
     );
     

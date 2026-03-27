@@ -93,19 +93,19 @@ export class Lobby implements DurableObject {
         }
 
         case 'CHALLENGE_ACCEPTED': {
-          const { challengerId } = msg
+          const { challengerId, mode, timeControl } = msg
           const sockets = this.state.getWebSockets()
           const challenger = sockets.find(s => (s.deserializeAttachment() as LobbyPlayer)?.id === challengerId)
           
           if (challenger) {
             const gameId = crypto.randomUUID()
-            const msg = (color: string, oppName: string) => JSON.stringify({
+            const payload = (color: string, oppName: string) => JSON.stringify({
               type: 'MATCH_FOUND',
-              data: { gameId, color, opponentName: oppName }
+              data: { gameId, color, opponentName: oppName, mode, timeControl }
             })
 
-            ws.send(msg('black', (challenger.deserializeAttachment() as LobbyPlayer).name))
-            challenger.send(msg('white', meta.name))
+            ws.send(payload('black', (challenger.deserializeAttachment() as LobbyPlayer).name))
+            challenger.send(payload('white', meta.name))
           }
           break
         }

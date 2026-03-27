@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="256" height="256" viewBox="0 0 45 45" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    
+                <filter id="cyanGlow_neon_white" x="-50%" y="-50%" width="200%" height="200%">
+                    <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
+                    <feMerge>
+                        <feMergeNode in="coloredBlur"/>
+                        <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                </filter>
+            
+  </defs>
+  <path d="M 22 9 C 19.8 9 18 10.8 18 13 C 18 15.2 19.8 17 22 17 C 24.2 17 26 15.2 26 13 C 26 10.8 24.2 9 22 9 z M 22 18 C 18 18 16 22 16 25 C 16 30 20 32 20 32 L 25 32 C 25 32 28 30 28 25 C 28 22 26 18 22 18 z M 9 39 L 36 39 L 36 36 L 9 36 L 9 39 z M 12 36 L 12 32 L 33 32 L 33 36 L 12 36 z" fill="none" stroke="#00ffff" stroke-width="1.5" filter="url(#cyanGlow_neon_white)" />
+</svg>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="256" height="256" viewBox="0 0 45 45" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    
+                <filter id="magentaGlow_neon_black" x="-50%" y="-50%" width="200%" height="200%">
+                    <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
+                    <feMerge>
+                        <feMergeNode in="coloredBlur"/>
+                        <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                </filter>
+            
+  </defs>
+  <path d="M 9 39 L 36 39 L 36 36 L 9 36 L 9 39 z M 12 36 L 12 32 L 33 32 L 33 36 L 12 36 z M 11 32 L 34 32 C 34 32 32 23 23 23 C 14 23 11 32 11 32 z M 22.5 24 L 22.5 14 M 22.5 11 A 3.5 3.5 0 1 1 22.5 4 A 3.5 3.5 0 1 1 22.5 11 z" fill="none" stroke="#ff00ff" stroke-width="1.5" filter="url(#magentaGlow_neon_black)" />
+</svg>

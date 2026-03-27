@@ -59,10 +59,11 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/pieces/classic/
-    - assets/pieces/neo/
-    - assets/pieces/wood/
+    - assets/pieces/modern_flat/
+    - assets/pieces/classic_3d/
+    - assets/pieces/metal/
     - assets/pieces/neon/
+    - assets/pieces/fantasy/
     - assets/sounds/
     - assets/images/
     - assets/animations/

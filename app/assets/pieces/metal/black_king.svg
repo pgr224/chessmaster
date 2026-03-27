@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="256" height="256" viewBox="0 0 45 45" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    
+                <linearGradient id="silver_metal_black" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stop-color="#ffffff"/>
+                    <stop offset="40%" stop-color="#b0b0b0"/>
+                    <stop offset="80%" stop-color="#696969"/>
+                    <stop offset="100%" stop-color="#222222"/>
+                </linearGradient>
+                <filter id="metalShadowBlack_metal_black">
+                    <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000" flood-opacity="0.6"/>
+                </filter>
+            
+  </defs>
+  <path d="M 22.5,11.63 L 22.5,6 L 20,6 L 20,3.5 L 25,3.5 L 25,6 L 22.5,6 L 22.5,11.63 M 20,8 L 25,8 M 22.5,11.63 A 8,8 0 0,0 12,20 L 33,20 A 8,8 0 0,0 22.5,11.63 M 12,20 A 8,8 0 0,0 12,28 M 33,20 A 8,8 0 0,1 33,28 M 12,28 L 33,28 M 12,32 L 33,32 M 11.5,35 L 33.5,35 M 11.5,35 L 11.5,39.5 L 33.5,39.5 L 33.5,35 M 15,32 L 15,35 M 30,32 L 30,35" fill="url(#silver_metal_black)" stroke="#444444" stroke-width="0.5" filter="url(#metalShadowBlack_metal_black)" />
+</svg>

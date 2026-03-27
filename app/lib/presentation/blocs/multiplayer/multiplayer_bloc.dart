@@ -29,7 +29,9 @@ class MpGameFoundEvent extends MultiplayerEvent {
   final String gameId;
   final String color;
   final String opponentName;
-  const MpGameFoundEvent(this.gameId, this.color, this.opponentName);
+  final String? mode;
+  final String? timeControl;
+  const MpGameFoundEvent(this.gameId, this.color, this.opponentName, {this.mode, this.timeControl});
 }
 
 class MpMakeMoveEvent extends MultiplayerEvent {
@@ -92,10 +94,17 @@ class MpDrawDeclineEvent extends MultiplayerEvent {}
 class MpLobbyNoticeEvent extends MultiplayerEvent {
   final String message;
   final String? challengerId;
-  const MpLobbyNoticeEvent(this.message, {this.challengerId});
+  final String? mode;
+  final String? timeControl;
+  const MpLobbyNoticeEvent(this.message, {this.challengerId, this.mode, this.timeControl});
 }
 class MpDisconnectLobbyEvent extends MultiplayerEvent {}
 class MpReconnectEvent extends MultiplayerEvent {}
+
+class MpChangeSelectedTimeEvent extends MultiplayerEvent {
+  final String timeControl;
+  const MpChangeSelectedTimeEvent(this.timeControl);
+}
 
 // STATE
 enum MultiplayerStatus { disconnected, inLobby, matchmaking, inGame, gameOver }
@@ -108,6 +117,8 @@ class MultiplayerState extends Equatable {
   final String? gameId;
   final PieceColor? playerColor;
   final String? opponentName;
+  final String? mode;
+  final String? timeControl;
   final List<ChatMessage> chatMessages;
   final String? lastMoveFrom;
   final String? lastMoveTo;
@@ -116,6 +127,9 @@ class MultiplayerState extends Equatable {
   final String? gameReason;
   final String? lobbyNotice;
   final String? challengerId;
+  final String? challengerMode;
+  final String? challengerTimeControl;
+  final String selectedTimeControl;
   final bool drawOfferPending;
   final String? connectionError;
 
@@ -127,6 +141,8 @@ class MultiplayerState extends Equatable {
     this.gameId,
     this.playerColor,
     this.opponentName,
+    this.mode,
+    this.timeControl,
     this.chatMessages = const [],
     this.lastMoveFrom,
     this.lastMoveTo,
@@ -135,6 +151,9 @@ class MultiplayerState extends Equatable {
     this.gameReason,
     this.lobbyNotice,
     this.challengerId,
+    this.challengerMode,
+    this.challengerTimeControl,
+    this.selectedTimeControl = '10+0',
     this.drawOfferPending = false,
     this.connectionError,
   });
@@ -147,6 +166,8 @@ class MultiplayerState extends Equatable {
     String? gameId,
     PieceColor? playerColor,
     String? opponentName,
+    String? mode,
+    String? timeControl,
     List<ChatMessage>? chatMessages,
     String? lastMoveFrom,
     String? lastMoveTo,
@@ -155,6 +176,9 @@ class MultiplayerState extends Equatable {
     String? gameReason,
     String? lobbyNotice,
     String? challengerId,
+    String? challengerMode,
+    String? challengerTimeControl,
+    String? selectedTimeControl,
     bool? drawOfferPending,
     String? connectionError,
   }) {
@@ -166,6 +190,8 @@ class MultiplayerState extends Equatable {
       gameId: gameId ?? this.gameId,
       playerColor: playerColor ?? this.playerColor,
       opponentName: opponentName ?? this.opponentName,
+      mode: mode ?? this.mode,
+      timeControl: timeControl ?? this.timeControl,
       chatMessages: chatMessages ?? this.chatMessages,
       lastMoveFrom: lastMoveFrom ?? this.lastMoveFrom,
       lastMoveTo: lastMoveTo ?? this.lastMoveTo,
@@ -174,6 +200,9 @@ class MultiplayerState extends Equatable {
       gameReason: gameReason ?? this.gameReason,
       lobbyNotice: (lobbyNotice == null && challengerId == null) ? null : (lobbyNotice ?? this.lobbyNotice),
       challengerId: (lobbyNotice == null && challengerId == null) ? null : (challengerId ?? this.challengerId),
+      challengerMode: challengerMode ?? this.challengerMode,
+      challengerTimeControl: challengerTimeControl ?? this.challengerTimeControl,
+      selectedTimeControl: selectedTimeControl ?? this.selectedTimeControl,
       drawOfferPending: drawOfferPending ?? this.drawOfferPending,
       connectionError: connectionError ?? this.connectionError,
     );
@@ -238,11 +267,25 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
       emit(const MultiplayerState());
     });
     on<MpGameOverEvent>((event, emit) => emit(state.copyWith(status: MultiplayerStatus.gameOver, gameResult: event.result, gameReason: event.reason)));
-    on<MpLobbyNoticeEvent>((event, emit) => emit(state.copyWith(lobbyNotice: event.message, challengerId: event.challengerId)));
+    on<MpLobbyNoticeEvent>((event, emit) => emit(state.copyWith(
+      lobbyNotice: event.message, 
+      challengerId: event.challengerId,
+      challengerMode: event.mode,
+      challengerTimeControl: event.timeControl,
+    )));
     on<MpAcceptChallengeEvent>((event, emit) {
-      _service.acceptChallenge(event.challengerId);
+      if (state.challengerId != null) {
+        _service.acceptChallenge(
+          state.challengerId!, 
+          state.challengerMode ?? 'duel', 
+          state.challengerTimeControl ?? '10+0'
+        );
+      } else {
+        _service.acceptChallenge(event.challengerId, 'duel', '10+0');
+      }
       emit(state.copyWith(lobbyNotice: null, challengerId: null));
     });
+    on<MpChangeSelectedTimeEvent>((event, emit) => emit(state.copyWith(selectedTimeControl: event.timeControl)));
     on<MpClearNoticeEvent>((event, emit) => emit(state.copyWith(lobbyNotice: null, challengerId: null)));
   }
 
@@ -276,12 +319,16 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
           data['gameId']?.toString() ?? '',
           data['color']?.toString() ?? 'white',
           data['opponentName']?.toString() ?? 'Unknown',
+          mode: data['mode']?.toString(),
+          timeControl: data['timeControl']?.toString(),
         ));
       } else if (msg['type'] == 'CHALLENGE_RECEIVED') {
         final d = msg['data'] as Map;
         add(MpLobbyNoticeEvent(
-          '${d['challengerName']?.toString() ?? 'Someone'} invited you to ${d['mode']?.toString() ?? 'a game'} (${d['timeControl']?.toString() ?? '5+3'})!',
+          '${d['challengerName']?.toString() ?? 'Someone'} invited you to ${d['mode']?.toString() ?? 'a game'} (${d['timeControl']?.toString() ?? '5+0'})!',
           challengerId: d['challengerId']?.toString(),
+          mode: d['mode']?.toString(),
+          timeControl: d['timeControl']?.toString(),
         ));
       } else if (msg['type'] == 'CONNECTION_LOST') {
         add(MpLobbyNoticeEvent('Connection lost. Please check your internet.'));
@@ -348,6 +395,8 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
       gameId: event.gameId,
       playerColor: event.color == 'white' ? PieceColor.white : PieceColor.black,
       opponentName: event.opponentName,
+      mode: event.mode,
+      timeControl: event.timeControl,
     ));
   }
 

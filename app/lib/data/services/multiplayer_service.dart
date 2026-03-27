@@ -106,10 +106,12 @@ class MultiplayerService {
   }
 
   /// Accept a direct challenge from another player
-  void acceptChallenge(String challengerId) {
+  void acceptChallenge(String challengerId, String mode, String timeControl) {
     _lobbyChannel?.sink.add(jsonEncode({
       'type': 'CHALLENGE_ACCEPTED',
       'challengerId': challengerId,
+      'mode': mode,
+      'timeControl': timeControl,
     }));
   }
 

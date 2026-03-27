@@ -181,7 +181,15 @@ class MainScaffold extends StatefulWidget {
 }
 
 class _MainScaffoldState extends State<MainScaffold> {
-  int _currentIndex = 0;
+  int get _currentIndex {
+    final String location = GoRouterState.of(context).matchedLocation;
+    if (location.startsWith('/home')) return 0;
+    if (location.startsWith('/learn')) return 1;
+    if (location.startsWith('/leaderboard')) return 2;
+    if (location.startsWith('/profile')) return 3;
+    if (location.startsWith('/settings')) return 4;
+    return 0;
+  }
 
   final List<_NavItem> _navItems = const [
     _NavItem(icon: Icons.home_rounded, label: 'Home', path: '/home'),
@@ -202,7 +210,6 @@ class _MainScaffoldState extends State<MainScaffold> {
         
         // If not at home, go home first
         if (_currentIndex != 0) {
-          setState(() => _currentIndex = 0);
           context.go('/home');
           return;
         }
@@ -267,12 +274,12 @@ class _MainScaffoldState extends State<MainScaffold> {
   Widget _buildNavBar() {
     return Container(
       decoration: const BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [Color(0xFF0F1535), Color(0xFF0A0E27)],
         ),
-        border: const Border(
+        border: Border(
           top: BorderSide(color: Color(0xFF1F2952), width: 1),
         ),
       ),
@@ -281,7 +288,6 @@ class _MainScaffoldState extends State<MainScaffold> {
         elevation: 0,
         selectedIndex: _currentIndex,
         onDestinationSelected: (index) {
-          setState(() => _currentIndex = index);
           context.go(_navItems[index].path);
         },
         indicatorColor: const Color(0xFFD4AF37).withValues(alpha: 0.2),

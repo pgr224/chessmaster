@@ -15,7 +15,7 @@ class LobbyScreen extends StatefulWidget {
 }
 
 class _LobbyScreenState extends State<LobbyScreen> {
-  String _selectedTime = '10+0';
+  // Removed local selectedTime, now managed by MultiplayerBloc
 
   @override
   void initState() {
@@ -198,7 +198,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
           ),
         ).animate().fadeIn().slideY(),
         const SizedBox(height: 16),
-        _buildTimeGrid(constraints.maxWidth).animate().fadeIn(delay: 200.ms).slideY(),
+        _buildTimeGrid(state, constraints.maxWidth).animate().fadeIn(delay: 200.ms).slideY(),
         const SizedBox(height: 18),
         if (!isWide) ...[
           _buildOnlinePlayersButton(state),
@@ -288,7 +288,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
-  Widget _buildTimeGrid(double width) {
+  Widget _buildTimeGrid(MultiplayerState state, double width) {
     final times = [
       {
         'label': 'Bullet',
@@ -349,11 +349,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
       itemCount: times.length,
       itemBuilder: (context, index) {
         final item = times[index];
-        final isSelected = _selectedTime == item['time'];
+        final isSelected = state.selectedTimeControl == item['time'];
         final accentColor = item['color'] as Color;
         
         return GestureDetector(
-          onTap: () => setState(() => _selectedTime = item['time'] as String),
+          onTap: () => context.read<MultiplayerBloc>().add(MpChangeSelectedTimeEvent(item['time'] as String)),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             decoration: BoxDecoration(
@@ -662,7 +662,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           MpSendChallengeEvent(
                             opponent: player,
                             mode: ChallengeMode.duel,
-                            timeControl: _selectedTime,
+                            timeControl: context.read<MultiplayerBloc>().state.selectedTimeControl,
                           ),
                         )
                     : null,
@@ -675,7 +675,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           MpSendChallengeEvent(
                             opponent: player,
                             mode: ChallengeMode.tournament,
-                            timeControl: _selectedTime,
+                            timeControl: context.read<MultiplayerBloc>().state.selectedTimeControl,
                           ),
                         )
                     : null,
