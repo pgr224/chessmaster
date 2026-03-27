@@ -95,6 +95,7 @@ class MpLobbyNoticeEvent extends MultiplayerEvent {
   const MpLobbyNoticeEvent(this.message, {this.challengerId});
 }
 class MpDisconnectLobbyEvent extends MultiplayerEvent {}
+class MpReconnectEvent extends MultiplayerEvent {}
 
 // STATE
 enum MultiplayerStatus { disconnected, inLobby, matchmaking, inGame, gameOver }
@@ -116,6 +117,7 @@ class MultiplayerState extends Equatable {
   final String? lobbyNotice;
   final String? challengerId;
   final bool drawOfferPending;
+  final String? connectionError;
 
   const MultiplayerState({
     this.status = MultiplayerStatus.disconnected,
@@ -134,6 +136,7 @@ class MultiplayerState extends Equatable {
     this.lobbyNotice,
     this.challengerId,
     this.drawOfferPending = false,
+    this.connectionError,
   });
 
   MultiplayerState copyWith({
@@ -153,6 +156,7 @@ class MultiplayerState extends Equatable {
     String? lobbyNotice,
     String? challengerId,
     bool? drawOfferPending,
+    String? connectionError,
   }) {
     return MultiplayerState(
       status: status ?? this.status,
@@ -171,13 +175,14 @@ class MultiplayerState extends Equatable {
       lobbyNotice: (lobbyNotice == null && challengerId == null) ? null : (lobbyNotice ?? this.lobbyNotice),
       challengerId: (lobbyNotice == null && challengerId == null) ? null : (challengerId ?? this.challengerId),
       drawOfferPending: drawOfferPending ?? this.drawOfferPending,
+      connectionError: connectionError ?? this.connectionError,
     );
   }
 
   @override List<Object?> get props => [
     status, onlineCount, searchingCount, availablePlayers.length, gameId, 
     playerColor, opponentName, chatMessages.length, lastMoveFrom, lastMoveTo, 
-    gameResult, lobbyNotice, challengerId, drawOfferPending
+    gameResult, lobbyNotice, challengerId, drawOfferPending, connectionError
   ];
 }
 
@@ -190,6 +195,10 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
 
   MultiplayerBloc(this._service) : super(const MultiplayerState()) {
     on<MpConnectLobbyEvent>(_onConnectLobby);
+    on<MpReconnectEvent>((event, emit) {
+      if (_service.isLobbyConnected) return;
+       // ... existing connect logic
+    });
     on<MpStartMatchmakingEvent>(_onMatchmaking);
     on<MpCancelMatchmakingEvent>(_onCancelMatchmaking);
     on<MpLobbyUpdateEvent>((event, emit) => emit(state.copyWith(
@@ -243,7 +252,6 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
     _lobbySub?.cancel();
     _lobbySub = _service.lobbyUpdates.listen((msg) {
       if (msg['type'] == 'LOBBY_UPDATE') {
-        // Handle optional player list if sent
         final playersRaw = msg['data']['players'] as List?;
         final list = playersRaw
           ?.where((p) => (p as Map)['id'] != _myUserId)
@@ -252,7 +260,7 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
             return OnlineLobbyUser(
               id: player['id']?.toString() ?? '',
               name: player['name']?.toString() ?? 'Unknown',
-              xp: (player['rating'] is int) ? player['rating'] as int : int.tryParse(player['rating']?.toString() ?? '0') ?? 0,
+              xp: (player['rating'] is int) ? player['rating'] as int : int.tryParse(player['rating']?.toString() ?? '0') ?? 1200,
               isAvailable: player['status'] == 'idle',
               flair: player['status'] == 'searching' ? 'Searching...' : (player['status'] == 'idle' ? 'Ready!' : 'Playing'),
             );
@@ -275,9 +283,15 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
           '${d['challengerName']?.toString() ?? 'Someone'} invited you to ${d['mode']?.toString() ?? 'a game'} (${d['timeControl']?.toString() ?? '5+3'})!',
           challengerId: d['challengerId']?.toString(),
         ));
+      } else if (msg['type'] == 'CONNECTION_LOST') {
+        add(MpLobbyNoticeEvent('Connection lost. Please check your internet.'));
       }
+    }, onError: (err) {
+      add(MpLobbyNoticeEvent('Network error: ${err.toString()}'));
+    }, onDone: () {
+      add(MpLobbyNoticeEvent('Disconnected from lobby.'));
     });
-    emit(state.copyWith(status: MultiplayerStatus.inLobby));
+    emit(state.copyWith(status: MultiplayerStatus.inLobby, connectionError: null));
   }
 
   void _onMatchmaking(MpStartMatchmakingEvent event, Emitter<MultiplayerState> emit) {

@@ -25,6 +25,9 @@ class MultiplayerService {
   Stream<Map<String, dynamic>> get lobbyUpdates => _lobbyStream.stream;
   Stream<Map<String, dynamic>> get gameUpdates => _gameStream.stream;
 
+  bool get isLobbyConnected => _lobbyChannel != null;
+  bool get isGameConnected => _gameChannel != null;
+
   static final MultiplayerService _instance = MultiplayerService._internal();
   factory MultiplayerService() => _instance;
   MultiplayerService._internal();
@@ -42,7 +45,14 @@ class MultiplayerService {
     _lobbyChannel!.stream.listen((msg) {
       final data = jsonDecode(msg) as Map<String, dynamic>;
       _lobbyStream.add(data);
-    }, onDone: () => print('Lobby disconnected'));
+    }, onDone: () {
+      _lobbyChannel = null;
+      _lobbyStream.add({'type': 'CONNECTION_LOST'});
+      print('Lobby disconnected');
+    }, onError: (err) {
+      _lobbyChannel = null;
+      _lobbyStream.add({'type': 'CONNECTION_LOST', 'error': err.toString()});
+    });
   }
 
   /// Start matchmaking

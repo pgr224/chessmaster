@@ -49,7 +49,11 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       autoQueen: settings.autoQueen,
     ));
     
-    context.read<GameBloc>().add(GameStartEvent(widget.config, tutorial: widget.tutorial));
+    if (widget.config.activeGameId != null) {
+      context.read<GameBloc>().add(GameResumeEvent(widget.config.activeGameId!));
+    } else {
+      context.read<GameBloc>().add(GameStartEvent(widget.config, tutorial: widget.tutorial));
+    }
   }
 
   /// Handle system back button (Android hardware or gesture back)
@@ -63,6 +67,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
   @override
   void dispose() {
+    context.read<GameBloc>().add(GameExitEvent());
     _confettiController.dispose();
     _checkAnimController.dispose();
     super.dispose();

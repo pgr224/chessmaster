@@ -124,12 +124,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
   Widget _buildConnectionStatus(MultiplayerState state) {
     final isConnected = state.status == MultiplayerStatus.inLobby;
+    final hasError = state.connectionError != null;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
       decoration: BoxDecoration(
-        gradient: AppTheme.cardGradient,
+        gradient: hasError ? AppTheme.errorGradient : AppTheme.cardGradient,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -150,18 +152,30 @@ class _LobbyScreenState extends State<LobbyScreen> {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              isConnected
-                  ? 'Connected to Global Server • ${state.onlineCount} players online'
-                  : 'Connecting to online lobby...',
+              hasError 
+                  ? 'Network Error: ${state.connectionError}'
+                  : isConnected
+                      ? 'Connected to Global Server • ${state.onlineCount} players online'
+                      : 'Connecting to online lobby...',
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: GoogleFonts.baloo2(
-                color: AppTheme.textSecondary,
+                color: hasError ? Colors.white : AppTheme.textSecondary,
                 fontWeight: FontWeight.w700,
                 fontSize: 17,
               ),
             ),
           ),
+          if (hasError)
+             TextButton(
+               onPressed: () {
+                 final auth = context.read<AuthBloc>().state;
+                 if (auth is AuthAuthenticatedState) {
+                   context.read<MultiplayerBloc>().add(MpConnectLobbyEvent(auth.user.id, auth.user.username, rating: auth.user.xp));
+                 }
+               },
+               child: Text('TRY AGAIN', style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold)),
+             ),
         ],
       ),
     );
