@@ -161,6 +161,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   }
 
   Widget _buildMyRankBanner() {
+    final authState = context.read<AuthBloc>().state;
+    final int myXp = authState is AuthAuthenticatedState ? authState.user.xp : 0;
+    
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
@@ -170,15 +173,60 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
         boxShadow: [BoxShadow(color: AppTheme.goldPrimary.withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 4))],
       ),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Icon(Icons.emoji_events_rounded, color: AppTheme.midnight, size: 26),
-          const SizedBox(width: 12),
-          Text('Your Rank: #$_myRank', style: GoogleFonts.fredoka(
-            color: AppTheme.midnight, fontSize: 18, fontWeight: FontWeight.w800,
-          )),
+          Row(
+            children: [
+              const Icon(Icons.emoji_events_rounded, color: AppTheme.midnight, size: 26),
+              const SizedBox(width: 12),
+              Text('Your Rank: #$_myRank', style: GoogleFonts.fredoka(
+                color: AppTheme.midnight, fontSize: 18, fontWeight: FontWeight.w800,
+              )),
+            ],
+          ),
+          if (myXp <= 0) // Only show if user has low/minus XP
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.midnight,
+                foregroundColor: AppTheme.goldPrimary,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () => _requestXP(context),
+              child: const Text('Request XP', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
         ],
       ),
     ).animate().fadeIn().slideY(begin: 0.1);
+  }
+
+  void _requestXP(BuildContext context) async {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.navyCard,
+        title: Text('Request XP', style: GoogleFonts.fredoka(color: AppTheme.goldPrimary)),
+        content: const Text('You are out of XP! Would you like to request 100 XP from the community network?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.goldPrimary),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final authRepo = di.sl<AuthRepository>();
+              final success = await authRepo.requestXP(amount: 100);
+              if (success && mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('XP Request broadcasted! If accepted, you will recive XP.')));
+                // Also trigger a refresh to UI if we gave them "sympathy XP" immediately or wait for network
+              } else if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to broadcast request.')));
+              }
+            },
+            child: const Text('Request 100 XP', style: TextStyle(color: Colors.black)),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildContent() {
@@ -238,98 +286,135 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
             ? '${entry.longestStreak} 🔥'
             : '${entry.xp} XP';
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        gradient: isMe ? LinearGradient(colors: [AppTheme.goldPrimary.withValues(alpha: 0.12), AppTheme.goldPrimary.withValues(alpha: 0.04)]) : AppTheme.cardGradient,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: isMe ? AppTheme.goldPrimary.withValues(alpha: 0.4) : Colors.white.withValues(alpha: 0.05), width: isMe ? 2 : 1),
-      ),
-      child: Row(
-        children: [
-          // Rank badge
-          SizedBox(
-            width: 42,
-            child: entry.rank <= 3
-                ? Text(rankIcon, style: const TextStyle(fontSize: 26), textAlign: TextAlign.center)
-                : Text(rankIcon, style: GoogleFonts.fredoka(color: rankColor, fontSize: 16, fontWeight: FontWeight.w700), textAlign: TextAlign.center),
-          ),
-          const SizedBox(width: 12),
-          // Avatar
-          Stack(
-            children: [
-              CircleAvatar(
-                radius: 22,
-                backgroundColor: AppTheme.goldPrimary.withValues(alpha: 0.12),
-                child: Text(
-                  entry.username.isNotEmpty ? entry.username[0].toUpperCase() : '?',
-                  style: GoogleFonts.fredoka(color: AppTheme.goldPrimary, fontSize: 20, fontWeight: FontWeight.w700),
-                ),
-              ),
-              if (entry.isOnline)
-                Positioned(
-                  bottom: 0, right: 0,
-                  child: Container(
-                    width: 12, height: 12,
-                    decoration: BoxDecoration(
-                      color: AppTheme.accentGreen,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: AppTheme.midnight, width: 2),
-                    ),
+    return GestureDetector(
+      onTap: isMe ? null : () => _showDonationDialog(context, entry),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          gradient: isMe ? LinearGradient(colors: [AppTheme.goldPrimary.withValues(alpha: 0.12), AppTheme.goldPrimary.withValues(alpha: 0.04)]) : AppTheme.cardGradient,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: isMe ? AppTheme.goldPrimary.withValues(alpha: 0.4) : Colors.white.withValues(alpha: 0.05), width: isMe ? 2 : 1),
+        ),
+        child: Row(
+          children: [
+            // Rank badge
+            SizedBox(
+              width: 42,
+              child: entry.rank <= 3
+                  ? Text(rankIcon, style: const TextStyle(fontSize: 26), textAlign: TextAlign.center)
+                  : Text(rankIcon, style: GoogleFonts.fredoka(color: rankColor, fontSize: 16, fontWeight: FontWeight.w700), textAlign: TextAlign.center),
+            ),
+            const SizedBox(width: 12),
+            // Avatar
+            Stack(
+              children: [
+                CircleAvatar(
+                  radius: 22,
+                  backgroundColor: AppTheme.goldPrimary.withValues(alpha: 0.12),
+                  child: Text(
+                    entry.username.isNotEmpty ? entry.username[0].toUpperCase() : '?',
+                    style: GoogleFonts.fredoka(color: AppTheme.goldPrimary, fontSize: 20, fontWeight: FontWeight.w700),
                   ),
                 ),
-            ],
-          ),
-          const SizedBox(width: 14),
-          // Name & stats
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        entry.username,
-                        style: GoogleFonts.fredoka(
-                          color: isMe ? AppTheme.goldPrimary : AppTheme.textPrimary,
-                          fontSize: 16, fontWeight: FontWeight.w700,
-                        ),
-                        overflow: TextOverflow.ellipsis,
+                if (entry.isOnline)
+                  Positioned(
+                    bottom: 0, right: 0,
+                    child: Container(
+                      width: 12, height: 12,
+                      decoration: BoxDecoration(
+                        color: AppTheme.accentGreen,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppTheme.midnight, width: 2),
                       ),
                     ),
-                    if (isMe) ...[
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(color: AppTheme.goldPrimary.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(6)),
-                        child: Text('YOU', style: GoogleFonts.fredoka(color: AppTheme.goldPrimary, fontSize: 10, fontWeight: FontWeight.w800)),
-                      ),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '${entry.gamesPlayed} games · ${entry.winRate.toStringAsFixed(0)}% win',
-                  style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 12),
-                ),
+                  ),
               ],
             ),
-          ),
-          // Primary stat
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: AppTheme.goldPrimary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
+            const SizedBox(width: 14),
+            // Name & stats
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          entry.username,
+                          style: GoogleFonts.fredoka(
+                            color: isMe ? AppTheme.goldPrimary : AppTheme.textPrimary,
+                            fontSize: 16, fontWeight: FontWeight.w700,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (isMe) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(color: AppTheme.goldPrimary.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(6)),
+                          child: Text('YOU', style: GoogleFonts.fredoka(color: AppTheme.goldPrimary, fontSize: 10, fontWeight: FontWeight.w800)),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${entry.gamesPlayed} games · ${entry.winRate.toStringAsFixed(0)}% win',
+                    style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 12),
+                  ),
+                ],
+              ),
             ),
-            child: Text(statValue, style: GoogleFonts.fredoka(
-              color: AppTheme.goldPrimary, fontSize: 14, fontWeight: FontWeight.w700,
-            )),
+            // Primary stat
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppTheme.goldPrimary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(statValue, style: GoogleFonts.fredoka(
+                color: AppTheme.goldPrimary, fontSize: 14, fontWeight: FontWeight.w700,
+              )),
+            ),
+          ],
+        ),
+      ),
+    ).animate().fadeIn(delay: (index * 50).ms).slideX(begin: 0.05);
+  }
+
+  void _showDonationDialog(BuildContext context, _LeaderboardEntry entry) {
+    if (entry.xp >= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${entry.username} is doing fine on XP!')));
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.navyCard,
+        title: Text('Donate XP to ${entry.username}?', style: GoogleFonts.fredoka(color: AppTheme.goldPrimary)),
+        content: Text('They currently have ${entry.xp} XP. Donate 100 XP to help them out?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.goldPrimary),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final authRepo = di.sl<AuthRepository>();
+              final success = await authRepo.donateXP(recipientId: entry.id, amount: 100);
+              if (success && mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Donation successful! 💖')));
+                _fetchLeaderboard(); // Refresh to see updated XP
+              } else if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Donation failed. Not enough XP or server error.')));
+              }
+            },
+            child: const Text('Donate 100 XP', style: TextStyle(color: Colors.black)),
           ),
         ],
       ),
-    ).animate().fadeIn(delay: (index * 50).ms).slideX(begin: 0.05);
+    );
   }
 }

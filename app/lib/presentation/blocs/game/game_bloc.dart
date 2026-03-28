@@ -978,12 +978,16 @@ class GameBloc extends Bloc<GameEvent, GameState> {
               mapUpdates['wins'] = 1;
               if (state.mode == GameMode.singlePlayer) mapUpdates['ai_wins'] = 1;
               if (state.mode == GameMode.multiplayer) mapUpdates['multiplayer_wins'] = 1;
+              if (state.mode == GameMode.tournament) mapUpdates['tournament_wins'] = 1;
               
             } else if (isLoss) {
-              xp -= 20;
+              // Less penalty for tournaments to encourage playing
+              if (state.mode == GameMode.tournament) xp -= 10;
+              else xp -= 20;
+
               mapUpdates['losses'] = 1;
             } else if (isDraw) {
-              xp += 0;
+              xp += 10; // Small reward for holding a draw
               mapUpdates['draws'] = 1;
             }
 

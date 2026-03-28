@@ -343,6 +343,43 @@ class AuthRepository {
     } catch (_) {}
   }
 
+  Future<bool> donateXP({required String recipientId, required int amount}) async {
+    try {
+      final response = await _dio.post(
+        '/api/profile/xp/transfer',
+        data: {'recipientId': recipientId, 'amount': amount},
+      );
+
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        // Update local XP
+        final prefs = await SharedPreferences.getInstance();
+        final userData = prefs.getString(_userKey);
+        if (userData != null) {
+          final current = jsonDecode(userData) as Map<String, dynamic>;
+          current['xp'] = (current['xp'] as int? ?? 0) - amount;
+          await prefs.setString(_userKey, jsonEncode(current));
+        }
+        return true;
+      }
+    } catch (e) {
+      print('Failed to donate XP: $e');
+    }
+    return false;
+  }
+
+  Future<bool> requestXP({required int amount}) async {
+    try {
+      final response = await _dio.post(
+        '/api/profile/xp/request',
+        data: {'amount': amount},
+      );
+      return response.statusCode == 200 && response.data['success'] == true;
+    } catch (e) {
+      print('Failed to request XP: $e');
+    }
+    return false;
+  }
+
   UserModel _resolveRegisteredUser({
     required Map<String, dynamic> responseData,
     required String userId,
