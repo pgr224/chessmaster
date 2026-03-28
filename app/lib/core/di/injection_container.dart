@@ -72,7 +72,11 @@ Future<void> init() async {
 
   // ── BLoCs ──
   sl.registerLazySingleton<AuthBloc>(() => AuthBloc(sl<AuthRepository>()));
-  sl.registerFactory<GameBloc>(() => GameBloc(sl<GameRepository>(), sl<AuthRepository>()));
+  sl.registerFactory<GameBloc>(() => GameBloc(
+    sl<GameRepository>(), 
+    sl<AuthRepository>(),
+    sl<PuzzleRepository>(),
+  ));
   sl.registerLazySingleton<MultiplayerBloc>(() => MultiplayerBloc(sl<MultiplayerService>()));
   sl.registerLazySingleton<ThemeBloc>(() => ThemeBloc());
   sl.registerLazySingleton<SettingsBloc>(() => SettingsBloc());

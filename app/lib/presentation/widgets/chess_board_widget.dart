@@ -27,6 +27,7 @@ class ChessBoardWidget extends StatefulWidget {
   final Function(Square)? onSquareTap;
   final bool isInteractive;
   final PieceColor currentTurn;
+  final Move? lastCorrectMove;
 
   const ChessBoardWidget({
     super.key,
@@ -49,6 +50,7 @@ class ChessBoardWidget extends StatefulWidget {
     this.onSquareTap,
     this.isInteractive = true,
     this.currentTurn = PieceColor.white,
+    this.lastCorrectMove,
   });
 
   @override
@@ -146,6 +148,11 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
         ...widget.legalMoves.map((m) => _legalMoveIndicator(m, sqSize)),
         // Check highlight
         if (widget.status == GameStatus.check) _buildCheckHighlight(sqSize),
+        // Correct Move Glow
+        if (widget.lastCorrectMove != null) ...[
+          _glowHighlight(widget.lastCorrectMove!.from, sqSize),
+          _glowHighlight(widget.lastCorrectMove!.to, sqSize),
+        ],
       ],
     );
   }
@@ -158,6 +165,28 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
       width: sqSize,
       height: sqSize,
       child: ColoredBox(color: color),
+    );
+  }
+
+  Widget _glowHighlight(Square sq, double sqSize) {
+    final (x, y) = _squareToPixel(sq, sqSize);
+    return Positioned(
+      left: x,
+      top: y,
+      width: sqSize,
+      height: sqSize,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.green.withValues(alpha: 0.3),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.greenAccent.withValues(alpha: 0.5),
+              blurRadius: 15,
+              spreadRadius: 2,
+            ),
+          ],
+        ),
+      ).animate().fadeIn(duration: 300.ms).then().fadeOut(delay: 600.ms),
     );
   }
 

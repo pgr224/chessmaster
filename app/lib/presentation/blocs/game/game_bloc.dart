@@ -85,6 +85,8 @@ class GameConfirmMoveEvent extends GameEvent {}
 
 class GameDrawReceiveEvent extends GameEvent { final String? fromId; const GameDrawReceiveEvent(this.fromId); }
 class GameDismissMiniLessonEvent extends GameEvent { const GameDismissMiniLessonEvent(); }
+class GamePuzzleRushTickEvent extends GameEvent { const GamePuzzleRushTickEvent(); }
+class GameExplainPuzzleMoveEvent extends GameEvent { const GameExplainPuzzleMoveEvent(); }
 
 // ═══════════════════════════════════════════
 // STATE
@@ -142,6 +144,16 @@ class GameState extends Equatable {
   final String? analysisMessage;
   final bool showMiniLesson;
 
+  // Puzzle Overhaul
+  final int puzzleStreak;
+  final int puzzleRushStrikes;
+  final int puzzleRushTime; // seconds
+  final bool isPuzzleRush;
+  final Move? lastCorrectPuzzleMove;
+  final bool showPuzzleCelebration;
+  final String? puzzleExplanation;
+  final int totalPuzzleXP;
+
   const GameState({
     required this.board,
     required this.currentTurn,
@@ -191,6 +203,14 @@ class GameState extends Equatable {
     this.analysisMessage,
     this.coachMessage,
     this.showMiniLesson = false,
+    this.puzzleStreak = 0,
+    this.puzzleRushStrikes = 0,
+    this.puzzleRushTime = 180, // 3 minutes
+    this.isPuzzleRush = false,
+    this.lastCorrectPuzzleMove,
+    this.showPuzzleCelebration = false,
+    this.puzzleExplanation,
+    this.totalPuzzleXP = 0,
   });
 
   bool get isGameOver => status == GameStatus.checkmate ||
@@ -260,6 +280,14 @@ class GameState extends Equatable {
     String? analysisMessage,
     String? coachMessage,
     bool? showMiniLesson,
+    int? puzzleStreak,
+    int? puzzleRushStrikes,
+    int? puzzleRushTime,
+    bool? isPuzzleRush,
+    Move? lastCorrectPuzzleMove,
+    bool? showPuzzleCelebration,
+    String? puzzleExplanation,
+    int? totalPuzzleXP,
     bool clearSelected = false,
     bool clearHint = false,
     bool clearDrawOffer = false,
@@ -315,6 +343,14 @@ class GameState extends Equatable {
       analysisMessage: analysisMessage ?? this.analysisMessage,
       coachMessage: clearCoachMessage ? null : (coachMessage ?? this.coachMessage),
       showMiniLesson: showMiniLesson ?? this.showMiniLesson,
+      puzzleStreak: puzzleStreak ?? this.puzzleStreak,
+      puzzleRushStrikes: puzzleRushStrikes ?? this.puzzleRushStrikes,
+      puzzleRushTime: puzzleRushTime ?? this.puzzleRushTime,
+      isPuzzleRush: isPuzzleRush ?? this.isPuzzleRush,
+      lastCorrectPuzzleMove: lastCorrectPuzzleMove ?? this.lastCorrectPuzzleMove,
+      showPuzzleCelebration: showPuzzleCelebration ?? this.showPuzzleCelebration,
+      puzzleExplanation: puzzleExplanation ?? this.puzzleExplanation,
+      totalPuzzleXP: totalPuzzleXP ?? this.totalPuzzleXP,
     );
   }
 
@@ -328,6 +364,8 @@ class GameState extends Equatable {
     confirmMoves, autoQueen, pendingMove,
     accuracy, mistakes, blunders, missedWins, bestMoves, xpGained,
     coachMessage, showMiniLesson, analysisMessage,
+    puzzleStreak, puzzleRushStrikes, puzzleRushTime, isPuzzleRush, 
+    lastCorrectPuzzleMove, showPuzzleCelebration, puzzleExplanation, totalPuzzleXP
   ];
 }
 
@@ -339,13 +377,15 @@ class GameBloc extends Bloc<GameEvent, GameState> {
   final EngineController _engineController = EngineController();
   final GameRepository _gameRepository;
   final AuthRepository _authRepository;
+  final PuzzleRepository _puzzleRepository;
   String? _gameId;
   int _aiRequestEpoch = 0;
+  Timer? _rushTimer;
 
   ChessEngine get engine => _engine;
   EngineController get engineController => _engineController;
 
-  GameBloc(this._gameRepository, this._authRepository) : super(GameState(
+  GameBloc(this._gameRepository, this._authRepository, this._puzzleRepository) : super(GameState(
     board: List.generate(8, (_) => List.filled(8, null)),
     currentTurn: PieceColor.white,
   )) {
@@ -367,6 +407,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     on<GameUpdateSettingsEvent>((e, emit) => emit(state.copyWith(confirmMoves: e.confirmMoves, autoQueen: e.autoQueen)));
     on<GameSetOpponentNameEvent>((event, emit) => emit(state.copyWith(opponentName: event.name)));
     on<GameDiscardEvent>(_onDiscard);
+    on<GamePuzzleRushTickEvent>(_onPuzzleRushTick);
+    on<GameExplainPuzzleMoveEvent>(_onExplainPuzzleMove);
   }
 
   Future<void> _onDiscard(GameDiscardEvent event, Emitter<GameState> emit) async {
@@ -442,9 +484,12 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     _gameId = id;
     _gameRepository.setLastActiveGameId(id);
  
-    // If AI plays first (player chose black)
-    if ((config.mode == GameMode.singlePlayer || config.mode == GameMode.practice) && playerColor == PieceColor.black) {
-      add(const GameMakeMoveEvent(Square(0, 0), Square(0, 0)));
+    if (config.mode == GameMode.puzzle && config.isPuzzleRush) {
+      _rushTimer?.cancel();
+      _rushTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+        add(const GamePuzzleRushTickEvent());
+      });
+      emit(state.copyWith(isPuzzleRush: true, puzzleRushTime: 180, puzzleRushStrikes: 0));
     }
   }
 
@@ -459,6 +504,11 @@ class GameBloc extends Bloc<GameEvent, GameState> {
 
     final mode = GameMode.values.firstWhere((m) => m.name == game.mode, orElse: () => GameMode.singlePlayer);
     
+    // Puzzle Rush check on resume
+    if (mode == GameMode.puzzle) {
+        // Usually we don't resume puzzle rush, but if we do, timer should restart
+    }
+
     _engineController.init(mode, AIDifficulty.intermediate);
 
     final playerColorStr = (game.whiteUserId == 'me') ? PieceColor.white : PieceColor.black;
@@ -480,7 +530,41 @@ class GameBloc extends Bloc<GameEvent, GameState> {
   }
 
   void _onExit(GameExitEvent event, Emitter<GameState> emit) {
+    _rushTimer?.cancel();
     _gameRepository.setLastActiveGameId(null);
+  }
+
+  void _onPuzzleRushTick(GamePuzzleRushTickEvent event, Emitter<GameState> emit) {
+    if (state.puzzleRushTime <= 0 || state.puzzleRushStrikes >= 3 || state.isGameOver) {
+      _rushTimer?.cancel();
+      return;
+    }
+    final newTime = state.puzzleRushTime - 1;
+    if (newTime <= 0) {
+      _rushTimer?.cancel();
+      emit(state.copyWith(puzzleRushTime: 0, status: GameStatus.draw, result: GameResult.ongoing));
+    } else {
+      emit(state.copyWith(puzzleRushTime: newTime));
+    }
+  }
+
+  Future<void> _onExplainPuzzleMove(GameExplainPuzzleMoveEvent event, Emitter<GameState> emit) async {
+    if (state.puzzle == null) return;
+    emit(state.copyWith(puzzleExplanation: 'Analyzing position...'));
+    
+    final currentFen = _engine.toFEN();
+    // Use engine to evaluate and find why this move is good
+    final eval = await AIEngine.evaluatePosition(_engine);
+    
+    // Simplified child-friendly explanation logic
+    String explanation = "This move helps you control the center and prepares a strong attack! 🧠";
+    if (eval > 300) {
+      explanation = "Great move! This wins material and puts your opponent in big trouble! 🚀";
+    } else if (state.status == GameStatus.check) {
+      explanation = "Correct! This move puts the King in danger! ⚔️";
+    }
+    
+    emit(state.copyWith(puzzleExplanation: explanation));
   }
 
   void _onSelectPiece(GameSelectPieceEvent event, Emitter<GameState> emit) {
@@ -591,15 +675,41 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       }
     }
 
-    // Puzzle check — wrong moves show error but keep the challenge text
+    // Puzzle check
     if (state.mode == GameMode.puzzle && state.puzzle != null) {
       final currentMove = state.puzzle!.moves[state.puzzleStep];
-      if (move.toAlgebraic() != currentMove.move) {
+      if (move.toAlgebraic() != currentMove.uciMove && move.toAlgebraic() != currentMove.move) {
+        // WRONG MOVE
+        Vibration.vibrate(duration: 400);
+        int newStrikes = state.puzzleRushStrikes;
+        if (state.isPuzzleRush) {
+          newStrikes++;
+          if (newStrikes >= 3) {
+            _rushTimer?.cancel();
+            emit(state.copyWith(
+              puzzleRushStrikes: newStrikes,
+              status: GameStatus.draw,
+              tutorialMessage: '❌ 3 Strikes! Puzzle Rush Over.',
+            ));
+            return;
+          }
+        }
+
         emit(state.copyWith(
-          tutorialMessage: '❌ Not the right move. Think again!\n\n${currentMove.dialog}',
+          puzzleRushStrikes: newStrikes,
+          puzzleStreak: 0, // Reset streak on wrong move
+          tutorialMessage: '❌ Not the right move. Think again!',
           clearSelected: true,
         ));
         return;
+      } else {
+        // CORRECT MOVE
+        emit(state.copyWith(
+          lastCorrectPuzzleMove: move,
+          puzzleStreak: state.puzzleStreak + 1,
+          totalPuzzleXP: state.totalPuzzleXP + 50,
+        ));
+        // We'll show celebration in UI based on lastCorrectPuzzleMove
       }
     }
 
@@ -742,14 +852,39 @@ class GameBloc extends Bloc<GameEvent, GameState> {
 
     // Puzzle Progress
     if (state.mode == GameMode.puzzle && state.puzzle != null) {
-      final currentMove = state.puzzle!.moves[state.puzzleStep];
       final isLastMove = state.puzzleStep == state.puzzle!.moves.length - 1;
 
       if (isLastMove) {
         emit(state.copyWith(
-          tutorialMessage: currentMove.successDialog,
-          status: GameStatus.checkmate, // Mark as win
+          showPuzzleCelebration: true,
+          status: GameStatus.checkmate, 
+          tutorialMessage: '🌟 Amazing! Puzzle Solved!',
+          totalPuzzleXP: state.totalPuzzleXP + 100, // Completion bonus
         ));
+
+        // SYNC XP TO SERVER
+        final user = await _authRepository.getCurrentUser();
+        if (user != null) {
+          await _authRepository.updateXPProgress(
+            userId: user.id,
+            xpDelta: 100,
+            statUpdates: {'puzzles_solved': 1},
+          );
+        }
+
+        // In Puzzle Rush, automatically go to the next puzzle
+        if (state.isPuzzleRush) {
+          await Future.delayed(const Duration(milliseconds: 1500));
+          if (isClosed || state.puzzleRushTime <= 0 || !state.isPuzzleRush) return;
+          
+          final nextPuzzle = await _puzzleRepository.getRandomPuzzle(); 
+          add(GameStartEvent(GameConfig(
+            mode: GameMode.puzzle,
+            playerColor: 'white', // Lichess puzzles typically White to move from FEN
+            puzzle: nextPuzzle,
+            isPuzzleRush: true, // Keep the rush going
+          )));
+        }
       } else {
         final nextIdx = state.puzzleStep + 1;
         emit(state.copyWith(

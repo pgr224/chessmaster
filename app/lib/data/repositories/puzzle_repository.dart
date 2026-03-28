@@ -1,35 +1,91 @@
+import 'package:dio/dio.dart';
 import '../models/puzzle_model.dart';
 
 class PuzzleRepository {
+  final Dio _dio = Dio();
+
   Future<Puzzle> getDailyPuzzle() async {
-    // In a real app, this would fetch from an API
-    // For now, return a unique and challenging hard-coded puzzle
+    try {
+      final response = await _dio.get('https://lichess.org/api/puzzle/daily');
+      if (response.statusCode == 200) {
+        return _mapLichessPuzzle(response.data);
+      }
+    } catch (e) {
+      print('[PuzzleRepository] Failed to fetch daily puzzle: $e');
+    }
+    return _getFallbackPuzzle();
+  }
+
+  Future<Puzzle> getRandomPuzzle() async {
+    // Lichess doesn't have a simple "random" endpoint without auth, 
+    // but we can fetch the daily one or use a pool of IDs. 
+    // For now, we'll try to fetch the daily one as a baseline.
+    return getDailyPuzzle();
+  }
+
+  Puzzle _mapLichessPuzzle(Map<String, dynamic> data) {
+    final p = data['puzzle'];
+    final game = data['game'];
+    final moves = p['moves'] as List;
+    
+    // Lichess gives a list of UCI moves.
+    // The first move is usually the opponent's move that triggers the puzzle.
+    final List<PuzzleMove> puzzleMoves = [];
+    for (int i = 0; i < moves.length; i++) {
+        puzzleMoves.add(PuzzleMove(
+          move: _uciToSimpleSan(moves[i]), // Placeholder for SAN conversion
+          uciMove: moves[i],
+          hint: 'Look for a strong tactical response!',
+          dialog: 'Can you find the best move?',
+          successDialog: i == moves.length - 1 ? 'Fantastic! You solved it!' : 'Great move! Keep going.',
+        ));
+    }
+
+    return Puzzle(
+      id: p['id'],
+      title: 'Lichess Daily Puzzle',
+      description: 'Find the winning sequence for ${game['players'][0]['color'] == 'white' ? 'Black' : 'White'}!',
+      initialFEN: p['fen'],
+      moves: puzzleMoves,
+      reward: '100 XP',
+      rating: p['rating'],
+      themes: List<String>.from(p['themes'] ?? []),
+      gameId: game['id'],
+    );
+  }
+
+  String _uciToSimpleSan(String uci) {
+    // Basic conversion logic if needed, or just return UCI for simplicity
+    return uci;
+  }
+
+  Puzzle _getFallbackPuzzle() {
     return const Puzzle(
-      id: 'daily_2026_03_26',
+      id: 'fallback_1',
       title: '👑 The Royal Trap',
-      description: 'White to move and deliver a beautiful smothered mate in 3 moves!',
+      description: 'White to move and deliver a beautiful smothered mate!',
       initialFEN: 'r1b2r1k/1p1n1Npp/p7/3Q4/8/8/PP3PPP/R4RK1 w - - 0 1',
       moves: [
         PuzzleMove(
-          move: 'f7h6',
-          hint: 'The knight is already checking the king, but we need to force it into a worse position.',
-          dialog: 'The king is trapped in the corner! Can you find the way to squeeze him?',
-          successDialog: 'Double check! The king is forced back to h8.',
+          move: 'f7h6', uciMove: 'f7h6',
+          hint: 'Force the king into a worse position.',
+          dialog: 'The king is trapped!',
+          successDialog: 'Double check! King to h8.',
         ),
         PuzzleMove(
-          move: 'd5g8',
-          hint: 'Sometimes you have to give up the most powerful piece to win the game.',
-          dialog: 'A heart-stopping queen sacrifice! This forces the rook to take.',
-          successDialog: 'Brilliant! The king is now completely surrounded by his own pieces.',
+          move: 'd5g8', uciMove: 'd5g8',
+          hint: 'Sometimes you have to sacrifice the queen.',
+          dialog: 'Force the rook to take.',
+          successDialog: 'Brilliant! The king is surrounded.',
         ),
         PuzzleMove(
-          move: 'h6f7',
-          hint: 'The knight jumps in for the kill.',
-          dialog: 'One final leap for the knight...',
-          successDialog: 'SMOTHERED MATE! The king was suffocated by his own loyal defenders.',
+          move: 'h6f7', uciMove: 'h6f7',
+          hint: 'Knight jumps in for the kill.',
+          dialog: 'Smothered mate!',
+          successDialog: 'Victory!',
         ),
       ],
-      reward: '500 XP & Legendary Tactician Badge 🏅',
+      reward: '500 XP',
     );
   }
 }

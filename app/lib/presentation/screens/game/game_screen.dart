@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'package:audioplayers/audioplayers.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -38,6 +39,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   final TextEditingController _chatController = TextEditingController();
   final FocusNode _chatFocus = FocusNode();
   bool _showChat = false;
+  final AudioPlayer _audioPlayer = AudioPlayer();
 
   @override
   void initState() {
@@ -75,6 +77,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     _checkAnimController.dispose();
     _chatController.dispose();
     _chatFocus.dispose();
+    _audioPlayer.dispose();
     super.dispose();
   }
 
@@ -90,10 +93,27 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                     state.playerColor == PieceColor.white) ||
                 (state.result == GameResult.blackWins &&
                     state.playerColor == PieceColor.black);
-            if (isWin) _confettiController.play();
+            if (isWin) {
+              _confettiController.play();
+              _audioPlayer.play(AssetSource('sounds/win.wav'));
+            }
+          }
+          if (state.showPuzzleCelebration) {
+            _confettiController.play();
+            _audioPlayer.play(AssetSource('sounds/win.wav'));
           }
           if (state.status == GameStatus.check) {
             _checkAnimController.forward(from: 0);
+          }
+
+          // Move Sound
+          if (state.moveHistory.isNotEmpty) {
+            _audioPlayer.play(AssetSource('sounds/move.wav'));
+          }
+
+          // Warning Sound for wrong puzzle moves
+          if (state.tutorialMessage?.startsWith('❌') ?? false) {
+             _audioPlayer.play(AssetSource('sounds/warning.wav'));
           }
         },
       builder: (context, state) {
@@ -122,9 +142,11 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               if (!state.isGameOver) _buildTurnOverlay(state, minimalMotion),
               if (state.pendingMove != null) _buildConfirmMoveOverlay(state),
               if (_showMoves) _buildMoveHistoryOverlay(state),
+              if (state.isPuzzleRush) _buildPuzzleRushOverlay(state),
               if (state.coachMessage != null) _buildCoachPopup(state.coachMessage!),
               if (state.showMiniLesson) _buildMiniLessonOverlay(context, state),
               if (state.mode == GameMode.multiplayer) _buildFloatingChat(context),
+              if (state.puzzleExplanation != null) _buildPuzzleExplanation(state),
             ],
           ),
         );
@@ -481,6 +503,13 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             icon: Icons.history_rounded,
             onTap: () => setState(() => _showMoves = true),
           ),
+          if (state.mode == GameMode.puzzle) ...[
+            const SizedBox(width: 8),
+            _glassButton(
+              icon: Icons.psychology_rounded,
+              onTap: () => context.read<GameBloc>().add(const GameExplainPuzzleMoveEvent()),
+            ),
+          ],
         ],
       ),
     );
@@ -688,6 +717,105 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     ).animate().slideY(begin: 0.1, duration: 200.ms).fadeIn();
   }
 
+  Widget _buildPuzzleRushOverlay(GameState state) {
+    return Positioned(
+      top: 140, left: 16, right: 16,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Strikes
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.black38,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white12),
+            ),
+            child: Row(
+              children: List.generate(3, (i) {
+                final isStrike = i < state.puzzleRushStrikes;
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                  child: Icon(
+                    isStrike ? Icons.close_rounded : Icons.check_circle_outline_rounded,
+                    color: isStrike ? AppTheme.accentRed : Colors.white24,
+                    size: 20,
+                  ),
+                );
+              }),
+            ),
+          ),
+          // Timer
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppTheme.navyCard,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppTheme.accentCyan.withValues(alpha: 0.5)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.timer_outlined, color: AppTheme.accentCyan, size: 18),
+                const SizedBox(width: 6),
+                Text(
+                  '${(state.puzzleRushTime ~/ 60)}:${(state.puzzleRushTime % 60).toString().padLeft(2, '0')}',
+                  style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.w700),
+                ),
+              ],
+            ),
+          ),
+          // XP
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppTheme.goldPrimary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.3)),
+            ),
+            child: Text(
+                '${state.totalPuzzleXP} XP',
+                style: GoogleFonts.fredoka(color: AppTheme.goldPrimary, fontWeight: FontWeight.w700),
+              ),
+          ),
+        ],
+      ),
+    ).animate().fadeIn().slideY(begin: -0.2);
+  }
+
+  Widget _buildPuzzleExplanation(GameState state) {
+    return Positioned(
+      top: 200, left: 32, right: 32,
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppTheme.navyCard.withValues(alpha: 0.95),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppTheme.skyBlue.withValues(alpha: 0.5)),
+            boxShadow: [BoxShadow(color: Colors.black45, blurRadius: 20)],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.psychology_rounded, color: AppTheme.skyBlue),
+                  const SizedBox(width: 10),
+                  Text('BRAIN EXPLAINS', style: GoogleFonts.fredoka(color: AppTheme.skyBlue, fontWeight: FontWeight.bold)),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Text(
+                state.puzzleExplanation ?? '',
+                style: GoogleFonts.baloo2(color: Colors.white, fontSize: 15),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ).animate().fadeIn().scale();
+  }
+
   Widget _buildWideLayout(BuildContext context, GameState state, BoxConstraints constraints) {
     const sideWidth = 330.0;
     final maxBoard = math.min(constraints.maxHeight - 32, constraints.maxWidth - sideWidth - 56);
@@ -777,6 +905,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                 context.read<GameBloc>().add(GameSelectPieceEvent(sq));
               },
         isInteractive: !state.isAIThinking && state.isPlayerTurn,
+        lastCorrectMove: state.lastCorrectPuzzleMove,
       ),
     );
   }
