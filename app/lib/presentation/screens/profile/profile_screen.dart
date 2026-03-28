@@ -25,7 +25,7 @@ class ProfileScreen extends StatelessWidget {
       backgroundColor: AppTheme.midnight,
       body: BlocBuilder<AuthBloc, AuthState>(
         builder: (context, state) {
-          if (state is AuthLoadingState) {
+          if (state is AuthLoadingState || state is AuthInitialState) {
             return const Center(
               child: CircularProgressIndicator(color: AppTheme.goldPrimary),
             );
@@ -461,9 +461,144 @@ class _ProfileContent extends StatelessWidget {
 
   // Define static method for modal if needed elsewhere (kept from original)
   static void showEditProfileModal(BuildContext context, UserModel user) {
-     // Implementation of modal (same as original or slimmed down for app vibe)
-     // For now, I'll refer back to the original's static method logic
-     // but will wrap it in the new theme.
+    final nameController = TextEditingController(text: user.username);
+    String? localAvatarPreview = user.localAvatar;
+    bool isCartoon = user.isGhibli;
+    bool checkingName = false;
+    bool? nameAvailable;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (builderContext, setLocalState) {
+          return Container(
+            padding: EdgeInsets.fromLTRB(28, 28, 28, MediaQuery.of(builderContext).viewInsets.bottom + 40),
+            decoration: const BoxDecoration(
+              gradient: AppTheme.backgroundGradient,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+              boxShadow: [BoxShadow(color: Colors.black54, blurRadius: 40)],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
+                const SizedBox(height: 24),
+                Text('👤 IDENTITY STUDIO', style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 24, fontWeight: FontWeight.w700, letterSpacing: 1.5)),
+                const SizedBox(height: 32),
+                
+                GestureDetector(
+                  onTap: () async {
+                    final picker = ImagePicker();
+                    final XFile? image = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+                    if (image == null) return;
+                    
+                    final croppedFile = await ImageCropper().cropImage(
+                      sourcePath: image.path,
+                      aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
+                      compressFormat: ImageCompressFormat.jpg,
+                      uiSettings: [
+                        AndroidUiSettings(toolbarTitle: 'Crop Avatar', toolbarColor: AppTheme.midnight, toolbarWidgetColor: Colors.white, lockAspectRatio: true),
+                        IOSUiSettings(title: 'Crop Avatar', aspectRatioLockEnabled: true),
+                      ],
+                    );
+
+                    if (croppedFile != null) {
+                      final bytes = await croppedFile.readAsBytes();
+                      setLocalState(() => localAvatarPreview = base64Encode(bytes));
+                    }
+                  },
+                  child: Stack(
+                    alignment: Alignment.bottomRight,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(shape: BoxShape.circle, gradient: AppTheme.rainbowGradient),
+                        child: _UserAvatar(user: user.copyWith(localAvatar: localAvatarPreview), size: 100),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: const BoxDecoration(color: AppTheme.goldPrimary, shape: BoxShape.circle),
+                        child: const Icon(Icons.camera_alt_rounded, size: 20, color: Colors.black),
+                      ),
+                    ],
+                  ),
+                ),
+                
+                const SizedBox(height: 32),
+                TextField(
+                  controller: nameController,
+                  style: GoogleFonts.fredoka(color: AppTheme.textPrimary),
+                  onChanged: (val) async {
+                    if (val == user.username) {
+                      setLocalState(() => nameAvailable = null);
+                      return;
+                    }
+                    setLocalState(() => checkingName = true);
+                    final available = await context.read<AuthRepository>().checkUsername(val);
+                    setLocalState(() {
+                      checkingName = false;
+                      nameAvailable = available;
+                    });
+                  },
+                  decoration: InputDecoration(
+                    labelText: 'PLAYER NAME',
+                    labelStyle: GoogleFonts.fredoka(color: AppTheme.textSecondary, letterSpacing: 1),
+                    prefixIcon: const Icon(Icons.stars_rounded, color: AppTheme.goldPrimary),
+                    suffixIcon: checkingName 
+                        ? const Padding(padding: EdgeInsets.all(12), child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.goldPrimary)))
+                        : (nameAvailable == null ? null : (nameAvailable! ? const Icon(Icons.check_circle, color: Colors.green) : const Icon(Icons.error, color: Colors.red))),
+                    filled: true,
+                    fillColor: Colors.white.withValues(alpha: 0.03),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
+                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: AppTheme.goldPrimary, width: 1.5)),
+                  ),
+                ),
+                
+                const SizedBox(height: 32),
+                Row(
+                  children: [
+                    const Text('🎨', style: TextStyle(fontSize: 20)),
+                    const SizedBox(width: 12),
+                    Expanded(child: Text('Ghibli Art Style', style: GoogleFonts.baloo2(color: AppTheme.textPrimary, fontWeight: FontWeight.w600))),
+                    Switch.adaptive(
+                      value: isCartoon,
+                      activeColor: AppTheme.goldPrimary,
+                      onChanged: (v) => setLocalState(() => isCartoon = v),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 40),
+                SizedBox(
+                  width: double.infinity,
+                  height: 60,
+                  child: ElevatedButton(
+                    onPressed: (nameAvailable == false || checkingName) ? null : () {
+                      context.read<AuthBloc>().add(AuthUpdateProfileEvent(
+                        username: nameController.text,
+                        localAvatar: localAvatarPreview,
+                        isGhibli: isCartoon,
+                      ));
+                      Navigator.pop(ctx);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.goldPrimary,
+                      foregroundColor: Colors.black,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      elevation: 8,
+                      shadowColor: AppTheme.goldPrimary.withValues(alpha: 0.4),
+                    ),
+                    child: Text('APPLY CHANGES', style: GoogleFonts.fredoka(fontSize: 18, fontWeight: FontWeight.w700, letterSpacing: 1.2)),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
   }
 }
 

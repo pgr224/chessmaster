@@ -177,23 +177,26 @@ class _HomeScreenState extends State<HomeScreen> {
           // Avatar — big and colorful
           GestureDetector(
             onTap: () => context.push('/profile'),
-            child: Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: AppTheme.rainbowGradient,
-                boxShadow: [
-                  BoxShadow(
-                    color: AppTheme.goldPrimary.withValues(alpha: 0.4),
-                    blurRadius: 16,
-                    spreadRadius: 2,
-                  ),
-                ],
+            child: Hero(
+              tag: 'user-avatar',
+              child: Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: AppTheme.rainbowGradient,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.goldPrimary.withValues(alpha: 0.4),
+                      blurRadius: 16,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: user?.avatarUrl != null
+                    ? ClipOval(child: Image.network(user!.avatarUrl!, fit: BoxFit.cover))
+                    : const Icon(Icons.person_rounded, color: AppTheme.midnight, size: 32),
               ),
-              child: user?.avatarUrl != null
-                  ? ClipOval(child: Image.network(user!.avatarUrl!, fit: BoxFit.cover))
-                  : const Icon(Icons.person_rounded, color: AppTheme.midnight, size: 32),
             ),
           ).animate().scale(duration: 500.ms, curve: Curves.elasticOut),
         ],
