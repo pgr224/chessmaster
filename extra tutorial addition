@@ -1,0 +1,50 @@
+# Tutorial Content Population — Implementation Plan
+
+Populate all placeholder tutorials with expert chess content and interactive board-play instructions, one lesson at a time.
+
+## Proposed Changes
+
+### Tutorial Lessons Data
+
+#### [MODIFY] [tutorial_model.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/data/models/tutorial_model.dart)
+
+Add **8 new [TutorialLesson](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/data/models/tutorial_model.dart#3-21) entries** to the existing `tutorialLessons` list, each with:
+- Accurate FEN starting position
+- 2-4 interactive [TutorialStep](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/data/models/tutorial_model.dart#22-40)s with `expectedMove` in UCI format
+- Child-friendly instructional text, hints, and success messages
+- Final `isCompletion` step summarizing key takeaways
+
+| ID | Title | Topic | Moves |
+|---|---|---|---|
+| `opening_italian` | Italian Game | 1.e4 e5 2.Nf3 Nc6 3.Bc4 | 3 moves |
+| `opening_ruylopez` | Ruy López | 1.e4 e5 2.Nf3 Nc6 3.Bb5 | 3 moves |
+| `strategy_pawns` | Pawn Structure | IQP + passed pawn play | 3 moves |
+| `endgame_lucena` | Lucena Position | Rook bridge building | 2 moves |
+| `endgame_philidor` | Philidor Defense | 6th rank rook defense | 2 moves |
+| `endgame_opposition` | King Opposition | K+P vs K opposition | 2 moves |
+| `analysis_opera` | The Opera Game | Morphy's 1858 brilliancy | 3 moves |
+| `practice_full` | Graduation Puzzle | Mixed tactics | 2 moves |
+
+---
+
+### Week Screen Wiring
+
+#### [MODIFY] [week_screen.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/presentation/screens/learn/week_screen.dart)
+
+Update `tutorialId` for weeks currently set to `null`:
+
+| Week | Current | New `tutorialId` |
+|------|---------|-------------------|
+| 6 | `null` | `'opening_italian'` |
+| 7 | `null` | `'strategy_pawns'` |
+| 8 | `null` | `'endgame_lucena'` |
+| 9 | `null` | `'endgame_opposition'` |
+| 11 | `null` | `'analysis_opera'` |
+| 12 | `null` | `'practice_full'` |
+
+## Verification Plan
+
+### Automated Tests
+- `flutter analyze` — 0 new errors
+- `flutter test` — all pass
+- Internal FEN validation: each FEN must be a legal chess position

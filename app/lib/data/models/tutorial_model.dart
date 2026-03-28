@@ -404,4 +404,222 @@ final List<TutorialLesson> tutorialLessons = [
       ),
     ],
   ),
+
+  // ═══════════════════════════════════════════
+  // WEEK 6: Italian Game
+  // ═══════════════════════════════════════════
+  TutorialLesson(
+    id: 'opening_italian',
+    title: '🌿 The Italian Game',
+    description: 'Learn the principles of the Italian Game, a classic and solid opening.',
+    initialFEN: 'r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3',
+    steps: [
+      TutorialStep(
+        text: 'The Italian Game begins after 1.e4 e5 2.Nf3. Black has just replied 2...Nc6 to defend the pawn.\n\n👉 Now, develop your light-squared bishop to its most active square: c4.',
+        expectedMove: 'f1c4',
+        hintText: 'Tap your bishop on f1, then move it to c4.',
+        successMessage: '✨ Excellent! 3.Bc4 controls the center and aims directly at f7, Black\'s weakest point in the opening.',
+      ),
+      TutorialStep(
+        text: 'Black responds with 3...Bc5 (The Giuoco Piano). Now, prepare to build a strong pawn center and open a path for your queen.\n\n👉 Play the solid move c2-c3.',
+        expectedMove: 'c2c3',
+        hintText: 'Move your pawn from c2 to c3.',
+        successMessage: '🎯 Spot on! 4.c3 prepares to challenge the center with d2-d4 on the next move. This is the main idea of the Giuoco Piano.',
+      ),
+      TutorialStep(
+        text: 'Lesson complete! Italian Game principles:\n• Develop pieces rapidly towards the center\n• Bc4 targets the weak f7 pawn\n• Prepare a strong pawn center with c3 and d4\n• Castle early to secure the king\n\n🎓 A timeless opening for all levels!',
+        isCompletion: true,
+      ),
+    ],
+  ),
+
+  // ═══════════════════════════════════════════
+  // WEEK 6 (Bonus): Ruy López
+  // ═══════════════════════════════════════════
+  TutorialLesson(
+    id: 'opening_ruylopez',
+    title: '⚔️ The Ruy López',
+    description: 'Master the Spanish Opening, a favorite of World Champions.',
+    initialFEN: 'r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3',
+    steps: [
+      TutorialStep(
+        text: 'After 1.e4 e5 2.Nf3 Nc6, instead of Bc4, White can play the even more ambitious Ruy López (Spanish Game).\n\n👉 Develop your bishop to b5 to attack the knight defending the e5 pawn.',
+        expectedMove: 'f1b5',
+        hintText: 'Tap your bishop on f1, and move it to b5.',
+        successMessage: '🔥 Great! 3.Bb5 puts immediate pressure on the c6 knight. If White removes the defender, the e5 pawn becomes a target.',
+      ),
+      TutorialStep(
+        text: 'Black plays 3...a6 (The Morphy Defense), "putting the question" to your bishop.\n\n👉 Retreat the bishop safely to a4 to maintain the pin/pressure.',
+        expectedMove: 'b5a4',
+        hintText: 'Move the bishop from b5 to a4.',
+        successMessage: '🎯 Good choice! 4.Ba4 maintains the tension. The bishop remains active on the long diagonal pointing towards the kingside.',
+      ),
+      TutorialStep(
+        text: 'Now secure your king immediately.\n\n👉 Castle kingside: Move king from e1 to g1.',
+        expectedMove: 'e1g1',
+        hintText: 'Tap your king on e1, then tap g1.',
+        successMessage: '🏰 Perfect! Castling early is a key principle. Your king is safe, and your rook is now connected and ready for action.',
+      ),
+      TutorialStep(
+        text: 'Lesson complete! Ruy López principles:\n• Bb5 creates long-term strategic pressure on Black\'s center\n• Maintain tension — don\'t exchange too early\n• Castle quickly to keep the king safe\n• The Ruy López has been played by every World Champion in history!\n\n🎓 You are walking in the footsteps of legends!',
+        isCompletion: true,
+      ),
+    ],
+  ),
+
+  // ═══════════════════════════════════════════
+  // WEEK 7: Pawn Structure
+  // ═══════════════════════════════════════════
+  TutorialLesson(
+    id: 'strategy_pawns',
+    title: '🧱 Pawn Structure Basics',
+    description: 'Understand how pawn structure dictates the flow of the game.',
+    initialFEN: 'r1bqk2r/pp2bppp/2n1pn2/3p4/2PP4/2N2N2/PP2BPPP/R1BQ1RK1 w kq - 0 1',
+    steps: [
+      TutorialStep(
+        text: 'Pawn structure forms the "skeleton" of a chess position.\nHere, White has an opportunity to create an "Isolated Queen\'s Pawn" (IQP) for Black, which can be both a strength and a weakness.\n\n👉 Capture the pawn on d5 with your c4 pawn.',
+        expectedMove: 'c4d5',
+        hintText: 'Move the pawn on c4 to capture on d5.',
+        successMessage: '💡 Nice! After Black recaptures, Black will have an isolated d5 pawn. It controls center squares but requires pieces to defend it.',
+      ),
+      TutorialStep(
+        text: 'Lesson complete! Pawn structure lessons:\n• Isolated Pawns must be blockaded, preferably by knights\n• Pawn breaks change the structure and open lines\n• Passed pawns must be pushed!\n\n🎓 Strategy flows from the pawns.',
+        isCompletion: true,
+      ),
+    ],
+  ),
+
+  // ═══════════════════════════════════════════
+  // WEEK 8: Lucena Position
+  // ═══════════════════════════════════════════
+  TutorialLesson(
+    id: 'endgame_lucena',
+    title: '🌉 The Lucena Position',
+    description: 'Master the "bridge building" technique to win key rook endgames.',
+    initialFEN: '1K1k4/1P6/8/8/8/8/r7/2R5 w - - 0 1',
+    steps: [
+      TutorialStep(
+        text: 'The Lucena Position is the most important winning method in Rook endgames. Your king is stuck in front of your passed pawn (b7). You need to get him out, but Black\'s rook will check him.\n\nThe solution is "Building a Bridge." First, force the enemy king further away.\n\n👉 Check the Black king: Move your rook to c8.',
+        expectedMove: 'c1c8',
+        hintText: 'Move the rook from c1 to c8, giving check.',
+        successMessage: '🛡️ Check! The Black king must move away (e.g., to d7). Now you have space to execute the plan.',
+      ),
+      TutorialStep(
+        text: 'Now for the magic move! You must prepare a shield for your king so he can step out without being endlessly checked.\n\n👉 Move your rook to c4 (the 4th rank).',
+        expectedMove: 'c8c4',
+        hintText: 'Move your rook from c8 to c4.',
+        successMessage: '🌉 Brilliant! Rc4 prepares the "bridge." Now when your King comes out to a7, and Black checks you on a2, you can walk down to b5 and block the check with Rb4, guaranteeing promotion!',
+      ),
+      TutorialStep(
+        text: 'Lesson complete! The Lucena method:\n• Force the enemy king one file further away\n• Bring your rook to the 4th rank\n• Walk the king out and use the rook as a shield\n\n🎓 You now know how to win countless drawn-looking endgames!',
+        isCompletion: true,
+      ),
+    ],
+  ),
+
+  // ═══════════════════════════════════════════
+  // WEEK 8 (Bonus): Philidor Defense
+  // ═══════════════════════════════════════════
+  TutorialLesson(
+    id: 'endgame_philidor',
+    title: '🛡️ Philidor Defense',
+    description: 'Learn the essential drawing technique for Rook + Pawn endgames.',
+    initialFEN: '4k3/8/8/4K3/4P3/r7/8/8 b - - 0 1',
+    steps: [
+      TutorialStep(
+        text: 'The Philidor position is THE must-know drawing method when you are down a pawn in a Rook endgame.\n\nWhite wants to bring their King to the 6th rank (e6). You must prevent this!\n\n👉 Move your rook up to the 6th rank.',
+        expectedMove: 'a3a6',
+        hintText: 'Move your rook to a6 to guard the 6th rank.',
+        successMessage: '🚧 The Wall! Your rook on the 6th rank prevents the White king from advancing. White has no choice but to push the pawn to e5.',
+      ),
+      TutorialStep(
+        text: 'Imagine White just pushed the pawn to e5 (P-e5). White\'s King no longer has a shelter on the 6th rank because the pawn is blocking it.\n\n👉 Drop your rook all the way to the 1st rank to start a barrage of checks from behind!',
+        expectedMove: 'a6a1',
+        hintText: 'Move your rook to a1.',
+        successMessage: '🌪️ Perfect! With the rook on the 1st rank, you can check the White king endlessly from behind. Since the pawn is on e5, the White king has nowhere to hide, and the game is a draw!',
+      ),
+      TutorialStep(
+        text: 'Lesson complete! The Philidor method:\n• Keep your rook on the 6th rank to block the enemy king\n• Wait for the opponent to push their pawn to the 6th rank\n• Drop your rook back and check endlessly from behind\n\n🎓 A fundamental endgame rescue!',
+        isCompletion: true,
+      ),
+    ],
+  ),
+
+  // ═══════════════════════════════════════════
+  // WEEK 9: King Opposition
+  // ═══════════════════════════════════════════
+  TutorialLesson(
+    id: 'endgame_opposition',
+    title: '👑 King + Pawn: Opposition',
+    description: 'Learn the most critical endgame concept: the opposition.',
+    initialFEN: '8/8/8/4k3/8/4K3/4P3/8 w - - 0 1',
+    steps: [
+      TutorialStep(
+        text: 'In King + Pawn endgames, the OPPOSITION is king vs king. Two kings "facing" each other with one square between them — the side NOT to move "has the opposition" and controls the key squares.\n\nYou need to advance your pawn while keeping flexibility.\n\n👉 Push your pawn from e2 to e3 (NOT e4 — that loses the opposition!).',
+        expectedMove: 'e2e3',
+        hintText: 'Push e2 to e3. Going e4 would let Black take opposition and draw.',
+        successMessage: '🧠 Correct! e3 (not e4!) is the key move. If you played e4, Black plays ...Ke6 and takes direct opposition, drawing the game. With e3, you maintain flexibility.',
+      ),
+      TutorialStep(
+        text: 'Black must respond. After any Black king move, you will advance your king to take the opposition.\n\n👉 Now advance your king: Move Ke3 to e4.',
+        expectedMove: 'e3e4',
+        hintText: 'Move your king from e3 to e4.',
+        successMessage: '🎯 Now YOU have the opposition! Black\'s king is pushed back. You will advance to the key squares (d6, e6, f6) and escort your pawn to promotion.',
+      ),
+      TutorialStep(
+        text: 'Lesson complete! Opposition rules:\n• Kings directly facing = whoever\'s turn it is does NOT have opposition\n• The side WITH opposition can force the other king back\n• In K+P vs K: push the KING first, then the pawn\n• This concept decides 90% of king & pawn endings\n\n🎓 Master endgames, master chess!',
+        isCompletion: true,
+      ),
+    ],
+  ),
+
+  // ═══════════════════════════════════════════
+  // WEEK 11: The Opera Game
+  // ═══════════════════════════════════════════
+  TutorialLesson(
+    id: 'analysis_opera',
+    title: '🎭 Morphy\'s Opera Game',
+    description: 'Finish the most famous chess game of all time from 1858.',
+    initialFEN: '1n2kb1r/p4ppp/4q3/4p1B1/4P3/1Q6/PPP2PPP/2KR4 w k - 0 1',
+    steps: [
+      TutorialStep(
+        text: 'Paul Morphy is playing White. Black\'s king is stuck in the center. All of White\'s pieces are developed and attacking perfectly.\n\nMorphy finds a spectacular queen sacrifice to force checkmate.\n\n👉 Sacrifice the queen to draw the knight away from defending d8: Move your Queen to b8.',
+        expectedMove: 'b3b8',
+        hintText: 'Move the queen to b8, capturing the invisible knight and checking the king.',
+        successMessage: '💥 Qb8+!! The legendary sacrifice. Black is forced to capture with the knight (Nxb8).',
+      ),
+      TutorialStep(
+        text: 'With the d8 square no longer defended by the knight, Morphy\'s rook and bishop team up for a beautiful geometric mate.\n\n👉 Deliver checkmate with the rook.',
+        expectedMove: 'd1d8',
+        hintText: 'Move your rook from d1 to d8.',
+        successMessage: '🎉 CHECKMATE! The rook delivers mate, supported by the bishop on g5. This is the immortal "Opera Game" finish.',
+      ),
+      TutorialStep(
+        text: 'Lesson complete! Morphy\'s Opera Game teaches:\n• Rapid development is key\n• Do not waste time making multiple pawn moves\n• Keep your king safe, and punish opponents who leave their king in the center\n\n🎓 A masterpiece of attacking chess!',
+        isCompletion: true,
+      ),
+    ],
+  ),
+
+  // ═══════════════════════════════════════════
+  // WEEK 12: Graduation Puzzle
+  // ═══════════════════════════════════════════
+  TutorialLesson(
+    id: 'practice_full',
+    title: '🎓 Graduation: Smothered Mate',
+    description: 'Spot a beautiful tactical pattern to secure your victory.',
+    initialFEN: 'r1b1k2r/ppppqppp/2n5/4n3/2P5/2N5/PP1NPPPP/R2QKB1R b KQkq - 0 1',
+    steps: [
+      TutorialStep(
+        text: 'You have reached the final puzzle! White has neglected their development and left their King vulnerable.\n\nEven though the White King is surrounded by his own pieces, you have a knight move that ends the game immediately.\n\n👉 Deliver checkmate with your knight on e5.',
+        expectedMove: 'e5d3',
+        hintText: 'Move your e5 knight to d3.',
+        successMessage: '🔥 BREATHTAKING! Nd3 is Checkmate! This is called a "Smothered Mate" because the king is completely boxed in by his own pieces.',
+      ),
+      TutorialStep(
+        text: 'Lesson complete! You have completed the 12-week curriculum!\n• Now you understand piece values, openings, tactics, and endgames\n• Continue practicing puzzles every day\n• Play full games and use the post-game analysis to review\n\n🎓 Congratulations, Chess Master!',
+        isCompletion: true,
+      ),
+    ],
+  ),
 ];

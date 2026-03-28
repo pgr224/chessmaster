@@ -186,7 +186,7 @@ final List<WeekDetail> weekDetails = [
       _FenPosition('r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3', 'Italian Game'),
       _FenPosition('r1bqkbnr/pppp1ppp/2n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3', 'Ruy López'),
     ],
-    tutorialId: null,
+    tutorialId: 'opening_italian',
     resources: [
       _ExtLink('Lichess Opening Explorer', 'https://lichess.org/opening'),
       _ExtLink('Chess.com Opening Guide', 'https://www.chess.com/openings'),
@@ -210,7 +210,7 @@ final List<WeekDetail> weekDetails = [
       _FenPosition('8/pp3ppp/3p4/8/3P4/8/PP3PPP/8 w - - 0 1', 'Isolated d-pawn'),
       _FenPosition('8/pp3ppp/8/3P4/8/8/PP3PPP/8 w - - 0 1', 'Passed d-pawn'),
     ],
-    tutorialId: null,
+    tutorialId: 'strategy_pawns',
     resources: [
       _ExtLink('Pawn Structure 101', 'https://www.chess.com/article/view/pawn-structure-101'),
       _ExtLink('My System — Nimzowitsch', 'https://www.amazon.com/My-System-Aron-Nimzowitsch/dp/1857442490'),
@@ -234,7 +234,7 @@ final List<WeekDetail> weekDetails = [
       _FenPosition('1K1k4/1P6/8/8/8/8/r7/2R5 w - - 0 1', 'Lucena position'),
       _FenPosition('8/4k3/R7/4P3/8/8/8/3rK3 w - - 0 1', 'Philidor defense'),
     ],
-    tutorialId: null,
+    tutorialId: 'endgame_lucena',
     resources: [
       _ExtLink('Lichess Endgame Practice', 'https://lichess.org/practice'),
       _ExtLink('Silman\'s Endgame Course', 'https://www.amazon.com/Silmans-Complete-Endgame-Course-Beginner/dp/1890085103'),
@@ -258,7 +258,7 @@ final List<WeekDetail> weekDetails = [
       _FenPosition('8/8/4k3/8/4P3/4K3/8/8 w - - 0 1', 'Direct opposition'),
       _FenPosition('8/8/8/8/k7/8/1P6/1K6 w - - 0 1', 'Key squares for b-pawn'),
     ],
-    tutorialId: null,
+    tutorialId: 'endgame_opposition',
     resources: [
       _ExtLink('Lichess K+P Endgames', 'https://lichess.org/practice/pawn-endgames/the-opposition/bwoBhlP5/7Lnx9Xbm'),
       _ExtLink('100 Endgames You Must Know', 'https://www.newinchess.com'),
@@ -304,7 +304,7 @@ final List<WeekDetail> weekDetails = [
     keyPositions: [
       _FenPosition('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', 'Start of every masterpiece'),
     ],
-    tutorialId: null,
+    tutorialId: 'analysis_opera',
     resources: [
       _ExtLink('Morphy Opera Game', 'https://www.chess.com/article/view/paul-morphys-opera-game'),
       _ExtLink('Evergreen & Immortal Games', 'https://lichess.org/study/great-games'),
@@ -327,7 +327,7 @@ final List<WeekDetail> weekDetails = [
     keyPositions: [
       _FenPosition('rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1', 'Your journey begins with 1.e4'),
     ],
-    tutorialId: null,
+    tutorialId: 'practice_full',
     resources: [
       _ExtLink('Play on Lichess', 'https://lichess.org'),
       _ExtLink('Play on Chess.com', 'https://www.chess.com/play'),
