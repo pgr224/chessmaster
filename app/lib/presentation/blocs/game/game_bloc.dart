@@ -787,17 +787,61 @@ class GameBloc extends Bloc<GameEvent, GameState> {
           }
         }
 
-        // Calculate XP Rewards
+        // Calculate XP Rewards & Update Stats
         int xp = 0;
-        if (state.accuracy >= 90) {
-          xp = 1000;
-        } else if (state.accuracy >= 50) {
-          xp = 500;
-        } else if (state.accuracy >= 25) {
-          xp = 100;
-        }
+        final mapUpdates = <String, dynamic>{
+          'games_played': 1,
+        };
 
-        emit(state.copyWith(xpGained: xp));
+        if (state.mode != GameMode.practice) {
+          final user = await _authRepository.getCurrentUser();
+          if (user != null) {
+            final isWin = (state.result == GameResult.whiteWins && state.playerColor == PieceColor.white) ||
+                         (state.result == GameResult.blackWins && state.playerColor == PieceColor.black);
+            final isLoss = (state.result == GameResult.blackWins && state.playerColor == PieceColor.white) ||
+                          (state.result == GameResult.whiteWins && state.playerColor == PieceColor.black);
+            final isDraw = state.result == GameResult.draw;
+
+            if (isWin) {
+              xp += 100; // Base win XP
+              
+              // Bonus for every 10th win
+              if ((user.stats.wins + 1) % 10 == 0) {
+                xp += 100;
+              }
+
+              // Checkmate in 5 moves (10 half-moves)
+              if (state.status == GameStatus.checkmate && state.moveHistory.length <= 10) {
+                xp += 500;
+              }
+
+              // Win without losing piece
+              final myCaptured = state.playerColor == PieceColor.black ? state.capturedBlack : state.capturedWhite;
+              if (myCaptured.isEmpty) {
+                xp += 10000;
+              }
+              
+              mapUpdates['wins'] = 1;
+              if (state.mode == GameMode.singlePlayer) mapUpdates['ai_wins'] = 1;
+              if (state.mode == GameMode.multiplayer) mapUpdates['multiplayer_wins'] = 1;
+              
+            } else if (isLoss) {
+              xp -= 20;
+              mapUpdates['losses'] = 1;
+            } else if (isDraw) {
+              xp += 0;
+              mapUpdates['draws'] = 1;
+            }
+
+            // Sync with Repo
+            await _authRepository.updateXPProgress(
+              userId: user.id,
+              xpDelta: xp + state.xpGained, // include hint penalties already in state
+              statUpdates: mapUpdates,
+              isOnlineMatch: state.mode == GameMode.multiplayer,
+            );
+          }
+        }
 
         // Generate Encouraging Message & Engine Suggestion
         String msg = '';
@@ -812,9 +856,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
           msg = '💎 Good effort! Keep practicing to master the patterns.';
         }
 
-        // Update with rewards
         emit(state.copyWith(
-          xpGained: xp,
+          xpGained: xp + state.xpGained, // Show total gained in this game
           analysisMessage: msg,
         ));
 
@@ -826,6 +869,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
           status: state.status.name,
           result: state.result.name,
           moveCount: state.moveHistory.length,
+          playerColor: state.playerColor == PieceColor.black ? 'black' : 'white',
           updatedAt: DateTime.now(),
         );
         _gameRepository.completeGame(game);
@@ -961,6 +1005,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       emit(state.copyWith(
         hintMove: hintMove,
         hintsUsed: state.hintsUsed + 1,
+        xpGained: state.xpGained - 10,
       ));
     }
   }

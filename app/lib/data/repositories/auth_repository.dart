@@ -270,6 +270,46 @@ class AuthRepository {
     return updated;
   }
 
+  Future<void> updateXPProgress({
+    required String userId,
+    required int xpDelta,
+    required Map<String, dynamic> statUpdates,
+    bool isOnlineMatch = false,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final userData = prefs.getString(_userKey);
+    if (userData == null) return;
+
+    try {
+      final current = jsonDecode(userData) as Map<String, dynamic>;
+      final currentStats = current['stats'] as Map<String, dynamic>? ?? {};
+      
+      // Update local data first (for instant feedback/offline play)
+      current['xp'] = (current['xp'] as int? ?? 0) + xpDelta;
+      statUpdates.forEach((key, value) {
+        if (value is int) {
+          currentStats[key] = (currentStats[key] as int? ?? 0) + value;
+        } else {
+          currentStats[key] = value;
+        }
+      });
+      current['stats'] = currentStats;
+      await prefs.setString(_userKey, jsonEncode(current));
+
+      // Push to server
+      await _dio.post(
+        '/api/profile/$userId/xp',
+        data: {
+          'xpDelta': xpDelta,
+          'stats': statUpdates,
+          'isOnlineMatch': isOnlineMatch,
+        },
+      );
+    } catch (_) {
+      // Silent fail for network, data is already saved locally in prefs
+    }
+  }
+
   Future<void> updatePracticeDifficulty(String userId, double difficulty) async {
     try {
       await _dio.put(
