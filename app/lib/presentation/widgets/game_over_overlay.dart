@@ -84,7 +84,7 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
       children: [
         // Semi-transparent background so the board is visible behind
         Container(
-          color: Colors.black.withOpacity(0.55),
+          color: Colors.black.withValues(alpha: 0.55),
         ),
         // Result panel at the bottom, not covering the entire board
         Positioned(
@@ -96,9 +96,9 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
             decoration: BoxDecoration(
               gradient: AppTheme.cardGradient,
               borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: statusColor.withOpacity(0.6), width: 3),
+              border: Border.all(color: statusColor.withValues(alpha: 0.6), width: 3),
               boxShadow: [
-                BoxShadow(color: statusColor.withOpacity(0.3), blurRadius: 40, spreadRadius: 4),
+                BoxShadow(color: statusColor.withValues(alpha: 0.3), blurRadius: 40, spreadRadius: 4),
               ],
             ),
             child: Column(
@@ -111,7 +111,7 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: statusColor.withOpacity(0.15),
+                        color: statusColor.withValues(alpha: 0.15),
                         shape: BoxShape.circle,
                       ),
                       child: Text(
@@ -150,9 +150,9 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: AppTheme.surface.withOpacity(0.3),
+                    color: AppTheme.surface.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppTheme.skyBlue.withOpacity(0.1)),
+                    border: Border.all(color: AppTheme.skyBlue.withValues(alpha: 0.1)),
                   ),
                   child: Column(
                     children: [
@@ -189,9 +189,9 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                     margin: const EdgeInsets.only(bottom: 16),
                     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(colors: [AppTheme.goldPrimary.withOpacity(0.3), AppTheme.goldPrimary.withOpacity(0.1)]),
+                      gradient: LinearGradient(colors: [AppTheme.goldPrimary.withValues(alpha: 0.3), AppTheme.goldPrimary.withValues(alpha: 0.1)]),
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppTheme.goldPrimary.withOpacity(0.4)),
+                      border: Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.4)),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -213,7 +213,7 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                       child: OutlinedButton(
                         style: OutlinedButton.styleFrom(
                           foregroundColor: AppTheme.textPrimary,
-                          side: BorderSide(color: AppTheme.textMuted.withOpacity(0.3), width: 2),
+                          side: BorderSide(color: AppTheme.textMuted.withValues(alpha: 0.3), width: 2),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                           padding: const EdgeInsets.symmetric(vertical: 14),
                         ),

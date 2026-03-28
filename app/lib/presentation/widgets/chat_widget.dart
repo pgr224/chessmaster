@@ -43,10 +43,10 @@ class _ChatWidgetState extends State<ChatWidget> {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppTheme.midnight.withOpacity(0.95),
+        color: AppTheme.midnight.withValues(alpha: 0.95),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 20),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 20),
         ],
       ),
       child: Column(
@@ -98,12 +98,12 @@ class _ChatWidgetState extends State<ChatWidget> {
           margin: const EdgeInsets.symmetric(vertical: 4),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
-            color: msg.isMe ? AppTheme.goldPrimary.withOpacity(0.15) : AppTheme.surface,
+            color: msg.isMe ? AppTheme.goldPrimary.withValues(alpha: 0.15) : AppTheme.surface,
             borderRadius: BorderRadius.circular(16).copyWith(
               bottomRight: msg.isMe ? const Radius.circular(0) : null,
               bottomLeft: msg.isMe ? null : const Radius.circular(0),
             ),
-            border: Border.all(color: msg.isMe ? AppTheme.goldPrimary.withOpacity(0.3) : Colors.white10),
+            border: Border.all(color: msg.isMe ? AppTheme.goldPrimary.withValues(alpha: 0.3) : Colors.white10),
           ),
           child: Column(
             crossAxisAlignment: msg.isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
@@ -141,10 +141,10 @@ class _ChatWidgetState extends State<ChatWidget> {
               style: const TextStyle(color: AppTheme.textPrimary),
               decoration: InputDecoration(
                 hintText: 'Type a message...',
-                hintStyle: TextStyle(color: AppTheme.textMuted.withOpacity(0.5)),
+                hintStyle: TextStyle(color: AppTheme.textMuted.withValues(alpha: 0.5)),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(25), borderSide: BorderSide.none),
                 filled: true,
-                fillColor: AppTheme.midnight.withOpacity(0.5),
+                fillColor: AppTheme.midnight.withValues(alpha: 0.5),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               ),
               onSubmitted: (_) => _send(),

@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -455,13 +455,13 @@ class _ProfileContent extends StatelessWidget {
   }
 
   void _showEditProfile(BuildContext context) {
-    // Re-use existing static method from the original logic for compatibility
-    ProfileScreen.showEditProfileModal(context, user);
+    showEditProfileModal(context, user);
   }
+}
 
-  // Define static method for modal if needed elsewhere (kept from original)
-  static void showEditProfileModal(BuildContext context, UserModel user) {
-    final nameController = TextEditingController(text: user.username);
+// Global helper for profile editing
+void showEditProfileModal(BuildContext context, UserModel user) {
+  final nameController = TextEditingController(text: user.username);
     String? localAvatarPreview = user.localAvatar;
     bool isCartoon = user.isGhibli;
     bool checkingName = false;
@@ -564,7 +564,7 @@ class _ProfileContent extends StatelessWidget {
                     Expanded(child: Text('Ghibli Art Style', style: GoogleFonts.baloo2(color: AppTheme.textPrimary, fontWeight: FontWeight.w600))),
                     Switch.adaptive(
                       value: isCartoon,
-                      activeColor: AppTheme.goldPrimary,
+                      activeThumbColor: AppTheme.goldPrimary,
                       onChanged: (v) => setLocalState(() => isCartoon = v),
                     ),
                   ],

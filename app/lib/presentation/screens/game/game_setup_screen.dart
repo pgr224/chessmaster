@@ -413,7 +413,7 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
         color: AppTheme.textMuted, fontSize: 14,
       )),
       value: _hintsEnabled,
-      activeColor: AppTheme.goldPrimary,
+      activeThumbColor: AppTheme.goldPrimary,
       contentPadding: EdgeInsets.zero,
       onChanged: (v) => setState(() => _hintsEnabled = v),
     );

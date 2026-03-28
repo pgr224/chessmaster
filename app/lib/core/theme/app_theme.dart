@@ -112,23 +112,23 @@ class AppTheme {
   // SHADOWS
   // ═══════════════════════════════════════════
   static List<BoxShadow> goldShadow = [
-    BoxShadow(color: goldPrimary.withOpacity(0.4), blurRadius: 24, spreadRadius: 4),
+    BoxShadow(color: goldPrimary.withValues(alpha: 0.4), blurRadius: 24, spreadRadius: 4),
   ];
 
   static List<BoxShadow> cyanShadow = [
-    BoxShadow(color: accentCyan.withOpacity(0.3), blurRadius: 20, spreadRadius: 2),
+    BoxShadow(color: accentCyan.withValues(alpha: 0.3), blurRadius: 20, spreadRadius: 2),
   ];
 
   static List<BoxShadow> cardShadow = [
     BoxShadow(
-      color: Colors.black.withOpacity(0.3),
+      color: Colors.black.withValues(alpha: 0.3),
       blurRadius: 16,
       offset: const Offset(0, 8),
     ),
   ];
 
   static List<BoxShadow> pinkShadow = [
-    BoxShadow(color: accentPurple.withOpacity(0.3), blurRadius: 20, spreadRadius: 2),
+    BoxShadow(color: accentPurple.withValues(alpha: 0.3), blurRadius: 20, spreadRadius: 2),
   ];
 
   // ═══════════════════════════════════════════
@@ -214,7 +214,7 @@ class AppTheme {
       cardTheme: CardThemeData(
         color: navyCard,
         elevation: 8,
-        shadowColor: Colors.black.withOpacity(0.4),
+        shadowColor: Colors.black.withValues(alpha: 0.4),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -222,7 +222,7 @@ class AppTheme {
           backgroundColor: goldPrimary,
           foregroundColor: midnight,
           elevation: 8,
-          shadowColor: goldPrimary.withOpacity(0.4),
+          shadowColor: goldPrimary.withValues(alpha: 0.4),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 18),
           textStyle: GoogleFonts.fredoka(fontSize: 18, fontWeight: FontWeight.w700, letterSpacing: 0.5),
@@ -276,7 +276,7 @@ class AppTheme {
       ),
       chipTheme: ChipThemeData(
         backgroundColor: surface,
-        selectedColor: goldPrimary.withOpacity(0.2),
+        selectedColor: goldPrimary.withValues(alpha: 0.2),
         labelStyle: GoogleFonts.fredoka(fontSize: 14, color: textPrimary),
         side: const BorderSide(color: Color(0xFF2D3A6A)),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

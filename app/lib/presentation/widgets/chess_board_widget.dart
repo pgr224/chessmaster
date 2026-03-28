@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../domain/engine/chess_engine.dart';
@@ -73,7 +73,7 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.5),
+                    color: Colors.black.withValues(alpha: 0.5),
                     blurRadius: 24,
                     offset: const Offset(0, 12),
                   ),
@@ -137,11 +137,11 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
         // Hint highlight
         if (widget.hintMove != null) ...[
           _highlight(widget.hintMove!.from, sqSize, AppTheme.hintSq),
-          _highlight(widget.hintMove!.to, sqSize, AppTheme.hintSq.withOpacity(0.9)),
+          _highlight(widget.hintMove!.to, sqSize, AppTheme.hintSq.withValues(alpha: 0.9)),
         ],
         // Selected piece
         if (widget.selectedSquare != null)
-          _highlight(widget.selectedSquare!, sqSize, AppTheme.selectedSq.withOpacity(0.7)),
+          _highlight(widget.selectedSquare!, sqSize, AppTheme.selectedSq.withValues(alpha: 0.7)),
         // Legal moves
         ...widget.legalMoves.map((m) => _legalMoveIndicator(m, sqSize)),
         // Check highlight
@@ -286,7 +286,7 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
 
   Widget _buildCoordinates(double sqSize) {
     final themeData = AppTheme.boardThemes[widget.boardTheme] ?? AppTheme.boardThemes['classic']!;
-    final notationColor = themeData.notation.withOpacity(0.8);
+    final notationColor = themeData.notation.withValues(alpha: 0.8);
     
     return Stack(
       children: [
@@ -330,7 +330,7 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
 
   Widget _buildSquareLabels(double sqSize) {
     final themeData = AppTheme.boardThemes[widget.boardTheme] ?? AppTheme.boardThemes['classic']!;
-    final notationColor = themeData.notation.withOpacity(0.35); // Subtle
+    final notationColor = themeData.notation.withValues(alpha: 0.35); // Subtle
 
     return Positioned.fill(
       child: Stack(
@@ -553,7 +553,7 @@ class _ChessPiecePainter extends CustomPainter {
       case 'neon':
         // Inner glow
         final glowPaint = Paint()
-          ..color = color.withOpacity(0.5)
+          ..color = color.withValues(alpha: 0.5)
           ..maskFilter = MaskFilter.blur(BlurStyle.normal, size.width * 0.1);
         canvas.drawPath(path, glowPaint);
         
@@ -564,7 +564,7 @@ class _ChessPiecePainter extends CustomPainter {
         canvas.drawPath(path, strokePaint);
         
         // Base thin bright center
-        paint.color = Colors.white.withOpacity(0.8);
+        paint.color = Colors.white.withValues(alpha: 0.8);
         canvas.drawPath(path, paint);
         break;
 
@@ -583,18 +583,18 @@ class _ChessPiecePainter extends CustomPainter {
         final highlightPath = Path();
         final rect = path.getBounds();
         highlightPath.addOval(Rect.fromLTWH(rect.left + rect.width*0.2, rect.top + rect.height*0.1, rect.width*0.3, rect.height*0.2));
-        canvas.drawPath(highlightPath, Paint()..color = Colors.white.withOpacity(0.3)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5));
+        canvas.drawPath(highlightPath, Paint()..color = Colors.white.withValues(alpha: 0.3)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5));
         break;
 
       case 'glass':
-        paint.color = color.withOpacity(0.3);
+        paint.color = color.withValues(alpha: 0.3);
         canvas.drawPath(path, paint);
         
-        strokePaint.color = Colors.white.withOpacity(0.5);
+        strokePaint.color = Colors.white.withValues(alpha: 0.5);
         canvas.drawPath(path, strokePaint);
         
         // Refraction highlights
-        final highlightPaint = Paint()..color = Colors.white.withOpacity(0.4);
+        final highlightPaint = Paint()..color = Colors.white.withValues(alpha: 0.4);
         canvas.drawCircle(Offset(size.width * 0.4, size.height * 0.35), size.width * 0.1, highlightPaint);
         break;
 
@@ -630,7 +630,7 @@ class _ChessPiecePainter extends CustomPainter {
       default:
         // Default shaded look
         final gradient = RadialGradient(
-          colors: [color.withOpacity(0.8), color],
+          colors: [color.withValues(alpha: 0.8), color],
           center: const Alignment(-0.3, -0.3),
         );
         paint.shader = gradient.createShader(Offset.zero & size);

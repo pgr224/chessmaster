@@ -6,7 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/router/app_router.dart';
-import '../../../data/models/game_config.dart';
+
 import '../../../data/models/tutorial_model.dart';
 
 // ─── Week Data ────────────────────────────────────────────────────────────────

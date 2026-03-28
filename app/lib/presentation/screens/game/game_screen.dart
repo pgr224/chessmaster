@@ -290,11 +290,11 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         constraints: const BoxConstraints(maxHeight: 220),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: AppTheme.navyCard.withOpacity(0.97),
+            color: AppTheme.navyCard.withValues(alpha: 0.97),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: isCompleted
-                  ? AppTheme.accentCyan.withOpacity(0.7)
+                  ? AppTheme.accentCyan.withValues(alpha: 0.7)
                   : AppTheme.goldPrimary.withValues(alpha: 0.5),
               width: 2,
             ),

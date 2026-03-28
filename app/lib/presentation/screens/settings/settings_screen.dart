@@ -66,7 +66,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             subtitle: 'Username, avatar, and account info',
                             onTap: () {
                               if (user != null) {
-                                ProfileScreen.showEditProfileModal(context, user);
+                                showEditProfileModal(context, user);
                               }
                             },
                           ),
@@ -394,7 +394,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       value: value,
       onChanged: onChanged,
       contentPadding: EdgeInsets.zero,
-      activeColor: AppTheme.goldPrimary,
+      activeThumbColor: AppTheme.goldPrimary,
       title: Text(
         title,
         style: GoogleFonts.fredoka(

@@ -3,7 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/router/app_router.dart';
-import '../../blocs/auth/auth_bloc.dart';
+
 import '../../blocs/game/game_bloc.dart';
 import '../../blocs/multiplayer/multiplayer_bloc.dart';
 import '../../blocs/theme/theme_bloc.dart';
