@@ -306,6 +306,7 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
     GameMode.twoPlayer    => '2 Player',
     GameMode.tutorial     => 'Tutorial',
     GameMode.puzzle       => 'Puzzle',
+    GameMode.practice     => 'Practice',
     null                  => 'Game',
   };
 

@@ -914,6 +914,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     GameMode.twoPlayer    => '👥 2 PLAYER',
     GameMode.multiplayer  => '🌍 ONLINE',
     GameMode.puzzle       => '🧩 DAILY PUZZLE',
+    GameMode.practice     => '🎯 PRACTICE',
   };
 
   Future<void> _showExitDialog(BuildContext context) async {
@@ -1189,7 +1190,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                    ),
                    const SizedBox(height: 8),
                    TextButton(
-                      onPressed: () => context.read<GameBloc>().emit(state.copyWith(showMiniLesson: false)),
+                      onPressed: () => context.read<GameBloc>().add(const GameDismissMiniLessonEvent()),
                       child: Text('CONTINUE ANYWAY', style: GoogleFonts.baloo2(color: AppTheme.textMuted)),
                    ),
                 ],

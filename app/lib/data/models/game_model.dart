@@ -11,6 +11,7 @@ class GameModel {
   final String? whiteUsername;
   final String? blackUsername;
   final int moveCount;
+  final String? playerColor;
   final DateTime updatedAt;
 
   const GameModel({
@@ -26,6 +27,7 @@ class GameModel {
     this.whiteUsername,
     this.blackUsername,
     required this.moveCount,
+    this.playerColor,
     required this.updatedAt,
   });
 
@@ -42,6 +44,7 @@ class GameModel {
     whiteUsername: json['white_username'] as String?,
     blackUsername: json['black_username'] as String?,
     moveCount: json['move_count'] as int? ?? 0,
+    playerColor: json['player_color'] as String?,
     updatedAt: DateTime.tryParse((json['completed_at'] ?? json['updated_at']) as String? ?? '') ?? DateTime.now(),
   );
 
@@ -58,6 +61,7 @@ class GameModel {
     'white_username': whiteUsername,
     'black_username': blackUsername,
     'move_count': moveCount,
+    'player_color': playerColor,
     'updated_at': updatedAt.toIso8601String(),
   };
 }

@@ -77,6 +77,32 @@ class UserModel {
     },
     'recent_games': recentGames.map((g) => g.toJson()).toList(),
   };
+
+  UserModel copyWith({
+    String? id,
+    String? username,
+    String? avatarUrl,
+    String? localAvatar,
+    int? xp,
+    bool? isOnline,
+    UserStats? stats,
+    String? deviceId,
+    List<GameRecord>? recentGames,
+    bool? isGhibli,
+  }) {
+    return UserModel(
+      id: id ?? this.id,
+      username: username ?? this.username,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
+      localAvatar: localAvatar ?? this.localAvatar,
+      xp: xp ?? this.xp,
+      isOnline: isOnline ?? this.isOnline,
+      stats: stats ?? this.stats,
+      deviceId: deviceId ?? this.deviceId,
+      recentGames: recentGames ?? this.recentGames,
+      isGhibli: isGhibli ?? this.isGhibli,
+    );
+  }
 }
 
 class UserStats {

@@ -37,6 +37,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final id = await _gameRepository.getLastActiveGameId();
     if (mounted) setState(() => _lastActiveGameId = id);
   }
+  @override
   Widget build(BuildContext context) {
     final bgTheme = context.watch<SettingsBloc>().state.backgroundTheme;
     return BlocBuilder<AuthBloc, AuthState>(

@@ -84,6 +84,7 @@ class GameUpdateSettingsEvent extends GameEvent {
 class GameConfirmMoveEvent extends GameEvent {}
 
 class GameDrawReceiveEvent extends GameEvent { final String? fromId; const GameDrawReceiveEvent(this.fromId); }
+class GameDismissMiniLessonEvent extends GameEvent { const GameDismissMiniLessonEvent(); }
 
 // ═══════════════════════════════════════════
 // STATE
@@ -138,6 +139,7 @@ class GameState extends Equatable {
   final int bestMoves;
   final int xpGained;
   final String? coachMessage;
+  final String? analysisMessage;
   final bool showMiniLesson;
 
   const GameState({
@@ -324,7 +326,7 @@ class GameState extends Equatable {
     lastMoveTimestamp, opponentName,
     confirmMoves, autoQueen, pendingMove,
     accuracy, mistakes, blunders, missedWins, bestMoves, xpGained,
-    coachMessage, showMiniLesson,
+    coachMessage, showMiniLesson, analysisMessage,
   ];
 }
 
@@ -358,6 +360,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     on<GameDrawDeclineEvent>(_onDrawDecline);
     on<GameSaveEvent>(_onSave);
     on<GameRequestHintEvent>(_onRequestHint);
+    on<GameDismissMiniLessonEvent>(_onDismissMiniLesson);
     on<GamePromotionRequiredEvent>(_onPromotionRequired);
     on<GameConfirmMoveEvent>(_onConfirmMove);
     on<GameUpdateSettingsEvent>((e, emit) => emit(state.copyWith(confirmMoves: e.confirmMoves, autoQueen: e.autoQueen)));
@@ -1008,6 +1011,10 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         xpGained: state.xpGained - 10,
       ));
     }
+  }
+
+  void _onDismissMiniLesson(GameDismissMiniLessonEvent event, Emitter<GameState> emit) {
+    emit(state.copyWith(showMiniLesson: false));
   }
 
   @override
