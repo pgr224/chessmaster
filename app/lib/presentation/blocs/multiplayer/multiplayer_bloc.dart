@@ -98,8 +98,15 @@ class MpLobbyNoticeEvent extends MultiplayerEvent {
   final String? timeControl;
   const MpLobbyNoticeEvent(this.message, {this.challengerId, this.mode, this.timeControl});
 }
+class MpUndoEvent extends MultiplayerEvent {}
+class MpOpponentUndoEvent extends MultiplayerEvent {}
 class MpDisconnectLobbyEvent extends MultiplayerEvent {}
 class MpReconnectEvent extends MultiplayerEvent {}
+
+class MpSaveRequestEvent extends MultiplayerEvent {}
+class MpSaveAcceptEvent extends MultiplayerEvent {}
+class MpSaveDeclineEvent extends MultiplayerEvent {}
+class MpGameSavedEvent extends MultiplayerEvent {}
 
 class MpChangeSelectedTimeEvent extends MultiplayerEvent {
   final String timeControl;
@@ -131,7 +138,9 @@ class MultiplayerState extends Equatable {
   final String? challengerTimeControl;
   final String selectedTimeControl;
   final bool drawOfferPending;
+  final bool saveOfferPending;
   final String? connectionError;
+  final int opponentUndoCount;
 
   const MultiplayerState({
     this.status = MultiplayerStatus.disconnected,
@@ -155,7 +164,9 @@ class MultiplayerState extends Equatable {
     this.challengerTimeControl,
     this.selectedTimeControl = '10+0',
     this.drawOfferPending = false,
+    this.saveOfferPending = false,
     this.connectionError,
+    this.opponentUndoCount = 0,
   });
 
   MultiplayerState copyWith({
@@ -180,7 +191,9 @@ class MultiplayerState extends Equatable {
     String? challengerTimeControl,
     String? selectedTimeControl,
     bool? drawOfferPending,
+    bool? saveOfferPending,
     String? connectionError,
+    int? opponentUndoCount,
   }) {
     return MultiplayerState(
       status: status ?? this.status,
@@ -204,14 +217,17 @@ class MultiplayerState extends Equatable {
       challengerTimeControl: challengerTimeControl ?? this.challengerTimeControl,
       selectedTimeControl: selectedTimeControl ?? this.selectedTimeControl,
       drawOfferPending: drawOfferPending ?? this.drawOfferPending,
+      saveOfferPending: saveOfferPending ?? this.saveOfferPending,
       connectionError: connectionError ?? this.connectionError,
+      opponentUndoCount: opponentUndoCount ?? this.opponentUndoCount,
     );
   }
 
   @override List<Object?> get props => [
     status, onlineCount, searchingCount, availablePlayers.length, gameId, 
     playerColor, opponentName, chatMessages.length, lastMoveFrom, lastMoveTo, 
-    gameResult, lobbyNotice, challengerId, drawOfferPending, connectionError
+    gameResult, lobbyNotice, challengerId, drawOfferPending, saveOfferPending,
+    connectionError, opponentUndoCount
   ];
 }
 
@@ -238,24 +254,26 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
     on<MpGameFoundEvent>(_onGameFound);
     on<MpMakeMoveEvent>(_onMakeMove);
     on<MpOpponentMoveEvent>(_onOpponentMove);
+    on<MpUndoEvent>((event, emit) => _service.sendUndo());
+    on<MpOpponentUndoEvent>((event, emit) => emit(state.copyWith(
+      opponentUndoCount: state.opponentUndoCount + 1,
+    )));
     on<MpSendChatEvent>(_onSendChat);
     on<MpChatReceivedEvent>(_onChatReceived);
     on<MpResignEvent>((event, emit) => _service.resign());
-    on<MpDrawOfferEvent>((event, emit) {
-      _service.sendDrawOffer();
-      emit(state.copyWith(lobbyNotice: 'Draw offer sent...'));
-    });
-    on<MpDrawReceivedEvent>((event, emit) {
-      emit(state.copyWith(drawOfferPending: true, lobbyNotice: 'Opponent offers a draw!'));
-    });
-    on<MpDrawAcceptEvent>((event, emit) {
-      _service.sendDrawAccept();
-      emit(state.copyWith(drawOfferPending: false));
-    });
-    on<MpDrawDeclineEvent>((event, emit) {
-      _service.sendDrawDecline();
-      emit(state.copyWith(drawOfferPending: false, lobbyNotice: 'Draw declined'));
-    });
+    on<MpDrawOfferEvent>((event, emit) => _service.sendDrawOffer());
+    on<MpDrawAcceptEvent>((event, emit) => _service.sendDrawAccept());
+    on<MpDrawDeclineEvent>((event, emit) => _service.sendDrawDecline());
+    
+    // Save & Quit
+    on<MpSaveRequestEvent>((event, emit) => _service.sendSaveRequest());
+    on<MpSaveAcceptEvent>((event, emit) => _service.sendSaveAccept());
+    on<MpSaveDeclineEvent>((event, emit) => _service.sendSaveDecline());
+    on<MpGameSavedEvent>((event, emit) => emit(state.copyWith(
+      status: MultiplayerStatus.gameOver,
+      gameReason: 'manual_save'
+    )));
+
     on<MpSendChallengeEvent>((event, emit) {
       _service.sendChallenge(event.opponent.id, event.mode.name, event.timeControl);
       emit(state.copyWith(lobbyNotice: 'Challenge sent to ${event.opponent.name}!'));
@@ -358,7 +376,11 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
       final msgType = msg['type']?.toString();
       switch (msgType) {
         case 'MOVE_UPDATE':
-          add(MpOpponentMoveEvent(msg['data'] as Map<String, dynamic>? ?? {}));
+          if (msg['data']['undo'] == true) {
+            add(MpOpponentUndoEvent());
+          } else {
+            add(MpOpponentMoveEvent(msg['data'] as Map<String, dynamic>? ?? {}));
+          }
           break;
         case 'CHAT':
           final chatData = msg['data'] as Map?;
@@ -386,7 +408,16 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
           add(MpGameOverEvent('draw', 'agreement'));
           break;
         case 'DRAW_DECLINE':
-          add(MpClearNoticeEvent());
+          emit(state.copyWith(drawOfferPending: false));
+          break;
+        case 'SAVE_REQUEST':
+          emit(state.copyWith(saveOfferPending: true));
+          break;
+        case 'SAVE_DECLINE':
+          emit(state.copyWith(saveOfferPending: false));
+          break;
+        case 'GAME_SAVED':
+          add(MpGameSavedEvent());
           break;
       }
     });
@@ -422,7 +453,16 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
 
   void _onChatReceived(MpChatReceivedEvent event, Emitter<MultiplayerState> emit) {
     final history = List<ChatMessage>.from(state.chatMessages);
-    history.add(event.message);
+    // On the backend, data includes userId
+    // Ensure we tag correctly for the UI
+    final msg = ChatMessage(
+      userId: event.message.userId,
+      username: event.message.username,
+      message: event.message.message,
+      timestamp: event.message.timestamp,
+      isMe: event.message.userId == _myUserId,
+    );
+    history.add(msg);
     emit(state.copyWith(chatMessages: history));
   }
 

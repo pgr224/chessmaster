@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../domain/engine/chess_engine.dart';
@@ -438,6 +438,10 @@ class _PieceWidget extends StatelessWidget {
     if (style == 'letters') return _buildLetterPiece(isWhite, baseColor);
     if (style == '8-bit') return _build8BitPiece(isWhite, baseColor);
 
+    if (shape == 'iconic' || shape == 'artwork') {
+      return _buildSvgPiece(isWhite);
+    }
+
     return _ObjectPiece(
       piece: piece,
       shape: shape,
@@ -458,6 +462,21 @@ class _PieceWidget extends StatelessWidget {
           color: color,
         ),
       ),
+    );
+  }
+
+  Widget _buildSvgPiece(bool isWhite) {
+    final colorStr = isWhite ? 'white' : 'black';
+    final typeStr = piece.type.name;
+    final path = 'assets/pieces/$shape/${colorStr}_$typeStr.svg';
+    
+    return SvgPicture.asset(
+      path,
+      width: size,
+      height: size,
+      // Some SVG pieces might need color override if the user chose custom colors
+      // but usually these sets have their own fixed colors. 
+      // I'll keep them as they are for "artwork" and "iconic".
     );
   }
 

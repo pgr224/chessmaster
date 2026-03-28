@@ -206,7 +206,8 @@ class GameState extends Equatable {
     if (mode != GameMode.multiplayer) return false;
     if (mpUndosUsed >= 2) return false;
     if (lastMoveTimestamp == null) return false;
-    if (!isPlayerTurn) return false; // can't undo on opponent's turn after they moved
+    // You can only undo if you were the last one to move (meaning it's now the opponent's turn)
+    if (isPlayerTurn) return false;
     final elapsed = DateTime.now().difference(lastMoveTimestamp!);
     return elapsed.inSeconds < 5;
   }
@@ -414,7 +415,11 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       blackPieceColor: config.blackPieceColor ?? Colors.black,
       currentFEN: _engine.toFEN(),
       tutorial: event.tutorial,
-      tutorialMessage: config.puzzle?.moves.first.dialog ?? event.tutorial?.steps.first.text,
+      tutorialMessage: (config.puzzle?.moves.isNotEmpty ?? false) 
+          ? config.puzzle!.moves.first.dialog 
+          : (event.tutorial?.steps.isNotEmpty ?? false) 
+              ? event.tutorial!.steps.first.text 
+              : null,
       puzzle: config.puzzle,
     );
     emit(initialState);
@@ -433,10 +438,9 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       moveCount: 0,
       updatedAt: DateTime.now(),
     );
-    _gameRepository.saveGame(firstGame).then((id) {
-      _gameId = id;
-      _gameRepository.setLastActiveGameId(id);
-    });
+    final id = await _gameRepository.saveGame(firstGame);
+    _gameId = id;
+    _gameRepository.setLastActiveGameId(id);
  
     // If AI plays first (player chose black)
     if ((config.mode == GameMode.singlePlayer || config.mode == GameMode.practice) && playerColor == PieceColor.black) {
@@ -462,7 +466,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     emit(GameState(
       board: _engine.board,
       currentTurn: _engine.currentTurn,
-      playerColor: (mode == GameMode.singlePlayer || mode == GameMode.multiplayer) ? playerColorStr : null,
+      playerColor: (mode == GameMode.singlePlayer || mode == GameMode.multiplayer || mode == GameMode.practice) ? playerColorStr : null,
       mode: mode,
       moveHistory: _engine.moveHistory,
       currentFEN: game.fen,
@@ -599,62 +603,12 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       }
     }
 
-    // --- MOVE ANALYSIS ---
-    // Get evaluation BEFORE the move (relative to current player)
-    final difficulty = state.aiDifficulty ?? (state.mode == GameMode.practice ? AIDifficulty.intermediate : AIDifficulty.advanced);
-    final topMoves = await AIEngine.getTopMoves(_engine, difficulty, count: 1);
-    final bestScoreBefore = topMoves.isNotEmpty ? topMoves[0].$2 : await AIEngine.evaluatePosition(_engine);
-
     final success = _engine.makeMove(move);
     if (!success && !(event.from == event.to)) return; // Invalid move
 
-    // Get evaluation AFTER the move (now from opponent's perspective, so negate)
-    final evaluationAfter = -(await AIEngine.evaluatePosition(_engine));
-    final cpLoss = bestScoreBefore - evaluationAfter;
-
-    // Categorize
-    int mistakes = state.mistakes;
-    int blunders = state.blunders;
-    int bestMoves = state.bestMoves;
-    int missedWins = state.missedWins;
-
-    String? coachMsg;
-    bool showLesson = false;
-
-    if (cpLoss <= 10) {
-      bestMoves++;
-    } else if (cpLoss > 300) {
-      blunders++;
-      if (state.mode == GameMode.practice) {
-        final bestMoveStr = topMoves.isNotEmpty ? topMoves[0].$1.toAlgebraic() : 'another move';
-        coachMsg = 'Blunder! Better was $bestMoveStr 🚩';
-        showLesson = true;
-      }
-    } else if (cpLoss > 150) {
-      mistakes++;
-      if (state.mode == GameMode.practice) {
-        final bestMoveStr = topMoves.isNotEmpty ? topMoves[0].$1.toAlgebraic() : 'another move';
-        coachMsg = 'Mistake! Better was $bestMoveStr ⚠️';
-      }
-    } else if (cpLoss > 50 && state.mode == GameMode.practice) {
-      final bestMoveStr = topMoves.isNotEmpty ? topMoves[0].$1.toAlgebraic() : 'another move';
-      coachMsg = 'Inaccuracy. Best was $bestMoveStr 💡';
-    }
-
-    if (bestScoreBefore > 500 && evaluationAfter < 0) {
-      missedWins++;
-      if (state.mode == GameMode.practice) {
-        coachMsg = 'You missed a winning advantage! 💎';
-      }
-    }
-
-    // Accuracy Calculation (simplified: 100 - average centipawn loss / 10)
-    final moveCount = state.moveHistory.length + 1;
-    final double accuracy = math.max(0.0, 100.0 - (cpLoss / 10.0));
-    final double cumulativeAccuracy = (state.accuracy * (moveCount - 1) + accuracy) / moveCount;
-
     final captured = _collectCaptured();
 
+    // 1. IMPROVEMENT: Emit board state immediately so move is responsive
     emit(state.copyWith(
       board: _engine.board,
       currentTurn: _engine.currentTurn,
@@ -669,21 +623,83 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       clearHint: true,
       showPromotionDialog: false,
       lastMoveTimestamp: DateTime.now(),
-      accuracy: cumulativeAccuracy,
-      mistakes: mistakes,
-      blunders: blunders,
-      bestMoves: bestMoves,
-      missedWins: missedWins,
-      coachMessage: coachMsg,
-      showMiniLesson: showLesson,
+      pendingMove: null, // Clear any pending move UI
     ));
 
-    // Wait a bit and clear coach message
-    if (coachMsg != null) {
-      Future.delayed(const Duration(seconds: 4)).then((_) {
-        if (!isClosed) emit(state.copyWith(clearCoachMessage: true, showMiniLesson: false));
-      });
+    // 2. ANALYZE PLAYER MOVE IN BACKGROUND (only for modes that provide coaching)
+    // We don't block the UI for this anymore!
+    bool shouldAnalyze = state.mode == GameMode.practice || state.mode == GameMode.singlePlayer;
+    if (!shouldAnalyze) {
+      _triggerAIIfNeeded(emit);
+      return;
     }
+
+    // --- MOVE ANALYSIS ---
+    // Note: Since we already moved, we need to pass a snapshot of the engine in previous state
+    // for correct evaluation. Or we can use the move info to calculate the loss.
+    // For simplicity and to fix the 'lag', we do it in a non-blocking sequence.
+    int mistakes = state.mistakes;
+    int blunders = state.blunders;
+    int bestMoves = state.bestMoves;
+    int missedWins = state.missedWins;
+    String? coachMsg;
+    bool showLesson = false;
+    double accuracy = state.accuracy;
+
+    try {
+      final difficulty = state.aiDifficulty ?? AIDifficulty.intermediate;
+      
+      // Calculate loss: We use a snapshot of engine or the current engine (after move)
+      // but correctly relative to previous turn.
+      final evaluationAfter = -(await AIEngine.evaluatePosition(_engine)).toDouble();
+      
+      // Rough estimation of mistake (since we didn't calculate bestScoreBefore to avoid blocking)
+      // In a "Real" engine we compare your move score to the actual best move's score.
+      // For instant response, we'll perform this after the move but still async.
+      final topMoves = await AIEngine.getTopMoves(ChessEngine.fromFEN(state.currentFEN), difficulty, count: 1);
+      final bestScoreBefore = topMoves.isNotEmpty ? topMoves[0].$2.toDouble() : evaluationAfter;
+      
+      final cpLoss = bestScoreBefore - evaluationAfter;
+
+      if (cpLoss <= 25) {
+        bestMoves++;
+      } else if (cpLoss > 350) {
+        blunders++;
+        if (state.mode == GameMode.practice) {
+          final bestMoveStr = topMoves.isNotEmpty ? topMoves[0].$1.toAlgebraic() : 'another move';
+          coachMsg = 'Blunder! Better was $bestMoveStr 🚩';
+          showLesson = true;
+        }
+      } else if (cpLoss > 180) {
+        mistakes++;
+        if (state.mode == GameMode.practice) {
+          final bestMoveStr = topMoves.isNotEmpty ? topMoves[0].$1.toAlgebraic() : 'another move';
+          coachMsg = 'Mistake! Better was $bestMoveStr ⚠️';
+        }
+      }
+
+      final moveCountTotal = state.moveHistory.length + 1;
+      final double moveAccuracy = (100.0 - (cpLoss / 10.0)).clamp(0.0, 100.0);
+      accuracy = (state.accuracy * (moveCountTotal - 1) + moveAccuracy) / moveCountTotal;
+    } catch (e) {
+      print('[Analysis Error] $e');
+    }
+
+    // Update with analysis results
+    if (coachMsg != null || mistakes != state.mistakes || blunders != state.blunders) {
+      emit(state.copyWith(
+        accuracy: accuracy,
+        mistakes: mistakes,
+        blunders: blunders,
+        bestMoves: bestMoves,
+        missedWins: missedWins,
+        coachMessage: coachMsg,
+        showMiniLesson: showLesson,
+      ));
+    }
+
+    // Note: We avoid Future.delayed here as it can cause late emits after bloc closure.
+    // UI should handle the ephemeral display of coach messages.
 
     // Tutorial Progress — show success, then advance to next step
     if (state.mode == GameMode.tutorial && state.tutorial != null) {
@@ -865,7 +881,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         ));
 
         final game = GameModel(
-          id: _gameId!,
+          id: _gameId ?? '',
           fen: state.currentFEN,
           pgn: _engine.toPGN(),
           mode: state.mode.name,
@@ -890,14 +906,18 @@ class GameBloc extends Bloc<GameEvent, GameState> {
   }
 
   void _onUndo(GameUndoEvent event, Emitter<GameState> emit) {
-    // Multiplayer undo logic: 2 tries within 5s window
     if (state.mode == GameMode.multiplayer) {
-      if (state.mpUndosUsed >= 2) return; // exhausted
+      if (state.mpUndosUsed >= 2) return;
       if (state.lastMoveTimestamp == null) return;
-      if (!state.isPlayerTurn) return; // can't undo after opponent moved
+      
+      // In multiplayer, the move turned the board to the OPPONENT. 
+      // We can only undo if it's currently NOT our turn (meaning we just moved).
+      if (state.isPlayerTurn) return; 
+
       final elapsed = DateTime.now().difference(state.lastMoveTimestamp!);
-      if (elapsed.inSeconds >= 5) return; // too late
+      if (elapsed.inSeconds >= 5) return;
       if (_engine.moveHistory.isEmpty) return;
+
       _engine.undoMove();
       final captured = _collectCaptured();
       emit(state.copyWith(

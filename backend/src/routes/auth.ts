@@ -10,7 +10,7 @@ const auth = new Hono<{ Bindings: Env }>()
 // SCHEMAS
 // ────────────────────────────────────────
 const RegisterSchema = z.object({
-  username: z.string().min(2).max(30).regex(/^[a-zA-Z0-9_]+$/),
+  username: z.string().min(3).max(30).regex(/^[a-zA-Z0-9_]+$/),
   deviceId: z.string().min(8).max(256),   // device fingerprint
   deviceModel: z.string().optional(),
   avatarUrl: z.string().url().optional(),

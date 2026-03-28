@@ -30,6 +30,14 @@ export class Lobby implements DurableObject {
       status: 'idle'
     }
 
+    // Close any existing sessions for this user to prevent duplicates
+    const existingSockets = this.state.getWebSockets()
+    for (const ws of existingSockets) {
+      if ((ws.deserializeAttachment() as LobbyPlayer)?.id === userId) {
+        ws.close(1001, 'Newer session started')
+      }
+    }
+
     // Accept and tag with metadata
     this.state.acceptWebSocket(server, [userId])
     
@@ -164,9 +172,11 @@ export class Lobby implements DurableObject {
     const sockets = this.state.getWebSockets()
     const allPlayers: LobbyPlayer[] = []
     
+    const seen = new Set<string>()
     for (const ws of sockets) {
       const meta = ws.deserializeAttachment() as LobbyPlayer
-      if (meta) {
+      if (meta && !seen.has(meta.id)) {
+        seen.add(meta.id)
         allPlayers.push(meta)
       }
     }

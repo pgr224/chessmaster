@@ -23,7 +23,8 @@ class GameRoomScreen extends StatelessWidget {
       listenWhen: (prev, current) => 
           prev.status != current.status ||
           prev.gameReason != current.gameReason ||
-          prev.drawOfferPending != current.drawOfferPending,
+          prev.drawOfferPending != current.drawOfferPending ||
+          prev.saveOfferPending != current.saveOfferPending,
       listener: (context, mpState) {
         if (mpState.gameReason == 'disconnect_timeout') {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -41,6 +42,10 @@ class GameRoomScreen extends StatelessWidget {
         // Show draw offer dialog when received
         if (mpState.drawOfferPending) {
           _showDrawOfferDialog(context);
+        }
+        // Show save offer dialog when received
+        if (mpState.saveOfferPending) {
+          _showSaveRequestDialog(context);
         }
       },
       builder: (context, mpState) {
@@ -85,6 +90,22 @@ class GameRoomScreen extends StatelessWidget {
                     MpMakeMoveEvent(lastMove.from.toString(), lastMove.to.toString(), promotion: lastMove.promotion?.name)
                   );
                 }
+              },
+            ),
+            // Sync Multiplayer -> Game (Opponent UNDO)
+            BlocListener<MultiplayerBloc, MultiplayerState>(
+              listenWhen: (prev, current) => current.opponentUndoCount > prev.opponentUndoCount,
+              listener: (context, state) {
+                context.read<GameBloc>().add(GameUndoEvent());
+              },
+            ),
+            // Sync Game -> Multiplayer (Player UNDO)
+            BlocListener<GameBloc, GameState>(
+              listenWhen: (prev, current) => 
+                prev.moveHistory.length > current.moveHistory.length &&
+                current.mode == GameMode.multiplayer,
+              listener: (context, state) {
+                context.read<MultiplayerBloc>().add(MpUndoEvent());
               },
             ),
             // Set opponent name in game state
@@ -159,6 +180,42 @@ class GameRoomScreen extends StatelessWidget {
               context.read<GameBloc>().add(GameDrawAcceptEvent());
             },
             child: Text('Accept Draw', style: GoogleFonts.fredoka(color: AppTheme.midnight)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSaveRequestDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.navyCard,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Text('💾 Save & Quit?', style: GoogleFonts.fredoka(color: AppTheme.accentCyan)),
+        content: Text(
+          'Your opponent wants to save the game progress and quit. If you accept, both players can resume this later.',
+          style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 16),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              context.read<MultiplayerBloc>().add(MpSaveDeclineEvent());
+            },
+            child: Text('Continue', style: GoogleFonts.fredoka(color: AppTheme.textMuted)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.accentCyan,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              context.read<MultiplayerBloc>().add(MpSaveAcceptEvent());
+            },
+            child: Text('Accept & Save', style: GoogleFonts.fredoka(color: AppTheme.midnight)),
           ),
         ],
       ),

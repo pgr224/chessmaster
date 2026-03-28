@@ -1,0 +1,65 @@
+# 🧩 Puzzle Overhaul & Engagement Implementation Plan
+
+This plan details the technical steps to transform the puzzle experience into a robust, addictive, and child-friendly learning environment with real-world data and rich UI feedback.
+
+## User Review Required
+> [!IMPORTANT]
+> - **Lichess API Dependency**: The app will now require an internet connection for the latest daily puzzles (with local fallback).
+> - **Vibration Permission**: On Android/iOS, the app will request vibration permissions for the "Wrong Move" feedback.
+
+## Proposed Changes
+
+### 1. Data Layer & Service Refactor
+#### [MODIFY] [puzzle_model.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/data/models/puzzle_model.dart)
+- Update [Puzzle](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/data/models/puzzle_model.dart#3-23) to include `rating`, `themes`, and `initialMove` (Lichess often starts a puzzle after an opponent move).
+- Ensure [PuzzleMove](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/data/models/puzzle_model.dart#24-40) supports UCI format directly for easier engine matching.
+
+#### [MODIFY] [puzzle_repository.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/data/repositories/puzzle_repository.dart)
+- Implement [getDailyPuzzle()](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/data/repositories/puzzle_repository.dart#4-35) using `Dio` to fetch from `https://lichess.org/api/puzzle/daily`.
+- Implement `getRandomPuzzle()` for **Puzzle Rush** and **Streak** modes.
+- Add a local JSON fallback to ensure puzzles work offline.
+
+---
+
+### 2. Game Logic & Engagement (BLoC)
+#### [MODIFY] [game_bloc.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/presentation/blocs/game/game_bloc.dart)
+- **Puzzle Rush Mode**:
+    - Add `rushTimer`, `rushStrikes` (max 3), and `rushScore` to [GameState](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/presentation/blocs/game/game_bloc.dart#92-333).
+    - Handle ticking timer and game-over conditions when strikes reach 3 or time hits zero.
+- **Puzzle Streak**:
+    - Track `streakCount` and `solveTime`.
+    - Calculate XP: `baseXP (100) + speedBonus + difficultyMultiplier`.
+- **AI Explanation**:
+    - Add a `getPuzzleExplanation()` method that uses Stockfish/Sunfish to evaluate the position before and after the correct move to describe the tactical benefit (e.g., "This move forks the king and queen!").
+
+---
+
+### 3. UI/UX "Juiciness" & Feedback
+#### [MODIFY] [game_screen.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/presentation/screens/game/game_screen.dart)
+- **Visual Feedback**:
+    - **Highlight Correct Move**: Draw a subtle green glow/overlay on the target square.
+    - **Glow Effect**: Use `flutter_animate` to make the piece "pulse" when correctly placed.
+    - **Fireworks**: Trigger a `ConfettiController` with a fireworks-style burst on puzzle completion.
+- **Haptic & Sound**:
+    - **Vibration**: Trigger `Vibration.vibrate()` on incorrect moves.
+    - **Sounds**: Integrate `audioplayers` to play Chess.com style sounds (move, capture, correct, wrong).
+- **Communication**:
+    - **Child-Friendly Messages**: Map tactical terms to simpler language (e.g., "Double Attack" → "Super Sneaky Double Move!").
+
+---
+
+### 4. Aggregation
+- Link `totalPuzzleXp` to the user's global profile XP.
+- Persist `maxPuzzlesSolvedInDay` in [UserModel](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/data/models/user_model.dart#3-107).
+
+## Verification Plan
+
+### Automated Tests
+- `flutter test` for [PuzzleRepository](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/data/repositories/puzzle_repository.dart#3-36) mapping logic.
+- Mock Lichess API responses to verify fallback behavior.
+
+### Manual Verification
+- **Puzzle Rush**: Verify timer countdown and strike accumulation.
+- **Vibration**: Test on physical device (Android/iOS) to ensure haptics trigger on error.
+- **Fireworks**: Finish a puzzle and confirm visual celebration.
+- **AI Advisor**: Request an explanation and verify it accurately describes the win (e.g., "Wins a Knight").

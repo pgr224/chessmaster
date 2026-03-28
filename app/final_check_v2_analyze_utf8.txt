@@ -1,0 +1,66 @@
+﻿Resolving dependencies...
+Downloading packages...
+  _fe_analyzer_shared 93.0.0 (98.0.0 available)
+  analyzer 10.0.1 (12.0.0 available)
+  dart_style 3.1.7 (3.1.8 available)
+  meta 1.17.0 (1.18.2 available)
+  test 1.30.0 (1.31.0 available)
+  test_api 0.7.10 (0.7.11 available)
+  test_core 0.6.16 (0.6.17 available)
+  vector_math 2.2.0 (2.3.0 available)
+  win32 5.15.0 (6.0.0 available)
+  win32_registry 2.1.0 (3.0.2 available)
+Got dependencies!
+10 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+Analyzing app...                                                
+
+   info - Invalid use of a private type in a public API - lib\core\theme\app_theme.dart:35:22 - library_private_types_in_public_api
+   info - The constant name 'FIND_MATCH' isn't a lowerCamelCase identifier - lib\data\services\multiplayer_service.dart:8:3 - constant_identifier_names
+   info - The constant name 'CANCEL_FIND_MATCH' isn't a lowerCamelCase identifier - lib\data\services\multiplayer_service.dart:8:15 - constant_identifier_names
+   info - The constant name 'MOVE' isn't a lowerCamelCase identifier - lib\data\services\multiplayer_service.dart:8:34 - constant_identifier_names
+   info - The constant name 'CHAT' isn't a lowerCamelCase identifier - lib\data\services\multiplayer_service.dart:8:40 - constant_identifier_names
+   info - The constant name 'RESIGN' isn't a lowerCamelCase identifier - lib\data\services\multiplayer_service.dart:8:46 - constant_identifier_names
+   info - The constant name 'LOBBY_UPDATE' isn't a lowerCamelCase identifier - lib\data\services\multiplayer_service.dart:10:3 - constant_identifier_names
+   info - The constant name 'MATCH_FOUND' isn't a lowerCamelCase identifier - lib\data\services\multiplayer_service.dart:10:17 - constant_identifier_names
+   info - The constant name 'MOVE_UPDATE' isn't a lowerCamelCase identifier - lib\data\services\multiplayer_service.dart:10:30 - constant_identifier_names
+   info - The constant name 'CHAT_UPDATE' isn't a lowerCamelCase identifier - lib\data\services\multiplayer_service.dart:10:43 - constant_identifier_names
+   info - The constant name 'ROOM_STATE' isn't a lowerCamelCase identifier - lib\data\services\multiplayer_service.dart:10:56 - constant_identifier_names
+   info - The constant name 'PLAYER_DISCONNECTED' isn't a lowerCamelCase identifier - lib\data\services\multiplayer_service.dart:11:3 - constant_identifier_names
+   info - The constant name 'GAME_OVER' isn't a lowerCamelCase identifier - lib\data\services\multiplayer_service.dart:11:24 - constant_identifier_names
+   info - The constant name 'ERROR' isn't a lowerCamelCase identifier - lib\data\services\multiplayer_service.dart:11:35 - constant_identifier_names
+warning - The value of the field '_rating' isn't used - lib\data\services\multiplayer_service.dart:23:7 - unused_field
+   info - Don't invoke 'print' in production code - lib\data\services\multiplayer_service.dart:51:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\data\services\multiplayer_service.dart:78:22 - avoid_print
+   info - Dangling library doc comment - lib\domain\engine\chess_engine.dart:1:1 - dangling_library_doc_comments
+   info - The private field _moveHistory could be 'final' - lib\domain\engine\chess_engine.dart:154:14 - prefer_final_fields
+   info - The private field _positionHistory could be 'final' - lib\domain\engine\chess_engine.dart:155:16 - prefer_final_fields
+warning - The declaration '_resetCastlingRights' isn't referenced - lib\domain\engine\chess_engine.dart:527:8 - unused_element
+warning - The declaration '_findKing' isn't referenced - lib\domain\engine\chess_engine.dart:703:10 - unused_element
+   info - Dangling library doc comment - lib\domain\engine\engine_controller.dart:1:1 - dangling_library_doc_comments
+warning - The value of the field '_rng' isn't used - lib\domain\engine\engine_controller.dart:24:28 - unused_field
+   info - Dangling library doc comment - lib\domain\engine\js_engine_bridge.dart:1:1 - dangling_library_doc_comments
+   info - Don't invoke 'print' in production code - lib\domain\engine\js_engine_bridge.dart:35:5 - avoid_print
+   info - Don't invoke 'print' in production code - lib\domain\engine\js_engine_bridge.dart:50:5 - avoid_print
+   info - Dangling library doc comment - lib\domain\engine\native_engine_bridge.dart:1:1 - dangling_library_doc_comments
+warning - The value of the field '_engine' isn't used - lib\domain\engine\native_engine_bridge.dart:11:16 - unused_field
+   info - Dangling library doc comment - lib\domain\engine\native_engine_bridge_stub.dart:1:1 - dangling_library_doc_comments
+   info - Statements in an if should be enclosed in a block - lib\presentation\blocs\game\game_bloc.dart:392:22 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\presentation\blocs\game\game_bloc.dart:393:27 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\presentation\blocs\game\game_bloc.dart:394:27 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\presentation\blocs\game\game_bloc.dart:395:14 - curly_braces_in_flow_control_structures
+   info - Unnecessary 'this.' qualifier - lib\presentation\blocs\game\game_bloc.dart:763:12 - unnecessary_this
+   info - Unnecessary 'this.' qualifier - lib\presentation\blocs\game\game_bloc.dart:765:31 - unnecessary_this
+warning - The value of the field '_timeControl' isn't used - lib\presentation\screens\game\game_setup_screen.dart:25:8 - unused_field
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\presentation\screens\game\game_setup_screen.dart:324:40 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\presentation\screens\game\game_setup_screen.dart:324:58 - deprecated_member_use
+warning - The declaration '_MiniKingPainter' isn't referenced - lib\presentation\screens\game\game_setup_screen.dart:456:7 - unused_element
+   info - Invalid use of a private type in a public API - lib\presentation\screens\learn\week_screen.dart:22:14 - library_private_types_in_public_api
+   info - Invalid use of a private type in a public API - lib\presentation\screens\learn\week_screen.dart:24:14 - library_private_types_in_public_api
+warning - The value of the field '_hasRetriedSuggestedUsername' isn't used - lib\presentation\screens\onboarding\onboarding_screen.dart:27:8 - unused_field
+   info - Unnecessary use of 'toList' in a spread - lib\presentation\screens\profile\profile_screen.dart:405:66 - unnecessary_to_list_in_spreads
+   info - 'translate' is deprecated and shouldn't be used. Use translateByVector3, translateByVector4, or translateByDouble instead - lib\presentation\widgets\chess_board_widget.dart:557:9 - deprecated_member_use
+   info - 'scale' is deprecated and shouldn't be used. Use scaleByVector3, scaleByVector4, or scaleByDouble instead - lib\presentation\widgets\chess_board_widget.dart:558:9 - deprecated_member_use
+warning - The declaration '_infoChip' isn't referenced - lib\presentation\widgets\game_over_overlay.dart:292:10 - unused_element
+warning - The declaration '_modeLabel' isn't referenced - lib\presentation\widgets\game_over_overlay.dart:303:10 - unused_element
+

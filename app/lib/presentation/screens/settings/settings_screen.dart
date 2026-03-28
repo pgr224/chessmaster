@@ -265,6 +265,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       {'id': 'neo', 'name': 'Neo'},
       {'id': 'wood', 'name': 'Wood'},
       {'id': 'fantasy', 'name': 'Fantasy'},
+      {'id': 'iconic', 'name': 'Iconic SVG'},
+      {'id': 'artwork', 'name': 'Artwork SVG'},
     ];
     return Wrap(
       spacing: 8, runSpacing: 8,

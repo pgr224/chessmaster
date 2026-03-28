@@ -64,6 +64,8 @@ flutter:
     - assets/pieces/metal/
     - assets/pieces/neon/
     - assets/pieces/fantasy/
+    - assets/pieces/iconic/
+    - assets/pieces/artwork/
     - assets/sounds/
     - assets/images/
     - assets/animations/

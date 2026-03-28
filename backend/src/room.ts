@@ -117,8 +117,34 @@ export class GameRoom {
         break
 
       case 'UNDO':
-        // Notify opponent about undo; validation handled client-side
-        this.broadcast({ type: 'UNDO', data: { userId } }, userId)
+        // Perform undo on internal state to keep sync
+        const newFen = this.validator.undo()
+        this.broadcast({ 
+          type: 'MOVE_UPDATE', 
+          data: { 
+            fen: newFen, 
+            turn: newFen.split(' ')[1] === 'w' ? 'white' : 'black',
+            undo: true,
+            userId,
+            move: null 
+          }
+        })
+        break
+
+      case 'SAVE_REQUEST':
+        // Forward save request to opponent
+        this.broadcast({ type: 'SAVE_REQUEST', data: { from: userId } }, userId)
+        break
+
+      case 'SAVE_ACCEPT':
+        // Both agreed, save state as 'active' (paused) and finish session
+        this.status = 'finished'
+        await this.syncPausedGame()
+        this.broadcast({ type: 'GAME_SAVED', data: { reason: 'manual_save' } })
+        break
+
+      case 'SAVE_DECLINE':
+        this.broadcast({ type: 'SAVE_DECLINE', data: {} }, userId)
         break
     }
   }
@@ -209,6 +235,32 @@ export class GameRoom {
       `).bind(outcome, outcome, new Date().toISOString(), userId).run()
     } catch (e) {
       console.error('[GameRoom] Stats update failed:', e)
+    }
+  }
+  private async syncPausedGame() {
+    if (!this.env.DB) return
+    try {
+      let whiteUserId: string | null = null
+      let blackUserId: string | null = null
+      for (const [id, p] of this.players.entries()) {
+        if (p.color === 'white') whiteUserId = id
+        if (p.color === 'black') blackUserId = id
+      }
+
+      await this.env.DB.prepare(`
+        INSERT INTO games (id, white_user_id, black_user_id, mode, status, result, pgn, final_fen, move_count, created_at, updated_at)
+        VALUES (?, ?, ?, 'multiplayer', 'active', 'ongoing', ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET 
+          status = 'active', result = 'ongoing', pgn = excluded.pgn, 
+          final_fen = excluded.final_fen, move_count = excluded.move_count,
+          updated_at = excluded.updated_at
+      `).bind(
+        this.gameId, whiteUserId, blackUserId,
+        this.validator.getPgn(), this.validator.getFen(), this.validator.getMoveCount(),
+        new Date().toISOString(), new Date().toISOString()
+      ).run()
+    } catch (e) {
+      console.error('[GameRoom] syncPausedGame failed:', e)
     }
   }
 }

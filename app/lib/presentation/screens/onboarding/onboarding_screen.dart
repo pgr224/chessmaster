@@ -17,7 +17,7 @@ class OnboardingScreen extends StatefulWidget {
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
-  static final RegExp _usernamePattern = RegExp(r'^[a-zA-Z0-9_]{2,30}$');
+  static final RegExp _usernamePattern = RegExp(r'^[a-zA-Z0-9_]{3,30}$');
   final _pageController = PageController();
   final _usernameController = TextEditingController();
   final Random _random = Random();
@@ -325,7 +325,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Use 2-30 characters: letters, numbers, or underscore 😊',
+            'Use 3-30 characters: letters, numbers, or underscore 😊',
             style: GoogleFonts.baloo2(),
           ),
         ),

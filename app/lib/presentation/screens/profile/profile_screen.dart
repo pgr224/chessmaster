@@ -402,7 +402,7 @@ class _ProfileContent extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 16),
               child: Text('Recent Battles', style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.w700)),
             ),
-            ...games.take(5).map((game) => _buildGameTile(game)).toList(),
+            ...games.take(5).map((game) => _buildGameTile(game)),
           ],
         ),
       ),
@@ -598,8 +598,7 @@ void showEditProfileModal(BuildContext context, UserModel user) {
           );
         },
       ),
-    );
-  }
+  );
 }
 
 class _UserAvatar extends StatelessWidget {

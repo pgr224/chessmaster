@@ -12,7 +12,7 @@ game.use('*', authMiddleware)
 // ────────────────────────────────────────
 const CreateGameSchema = z.object({
   gameId: z.string().optional(),
-  mode: z.enum(['singlePlayer', 'twoPlayer', 'multiplayer', 'tournament']),
+  mode: z.enum(['singlePlayer', 'twoPlayer', 'multiplayer', 'tournament', 'tutorial', 'puzzle', 'practice']),
   opponentId: z.string().optional(),
   timeControl: z.string().default('10+0'),
   color: z.enum(['white', 'black', 'random']).default('random'),

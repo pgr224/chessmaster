@@ -67,9 +67,10 @@ class AuthRepository {
     if (token == null || userData == null) return null;
     
     try {
-      final json = jsonDecode(userData) as Map<String, dynamic>;
-      return UserModel.fromJson(json);
-    } catch (_) {
+      final Map<String, dynamic> data = jsonDecode(userData);
+      return UserModel.fromJson(data);
+    } catch (e) {
+      print('User session decode error: $e');
       return null;
     }
   }
@@ -79,7 +80,17 @@ class AuthRepository {
     final response = await _dio.post(
       '/api/auth/login',
       data: {'deviceId': deviceId},
+      options: Options(validateStatus: (status) => status == 200 || status == 404),
     );
+
+    if (response.statusCode == 404) {
+      // Not a real error, just means user needs to register
+      throw DioException(
+        requestOptions: response.requestOptions,
+        response: response,
+        type: DioExceptionType.badResponse,
+      );
+    }
 
     final rawToken = (response.data['token'] ?? response.data['accessToken']) as String;
     final token = _normalizeToken(rawToken);
@@ -281,7 +292,10 @@ class AuthRepository {
     if (userData == null) return;
 
     try {
-      final current = jsonDecode(userData) as Map<String, dynamic>;
+      final dynamic decoded = jsonDecode(userData);
+      if (decoded is! Map<String, dynamic>) return;
+      
+      final current = decoded;
       final currentStats = current['stats'] as Map<String, dynamic>? ?? {};
       
       // Update local data first (for instant feedback/offline play)

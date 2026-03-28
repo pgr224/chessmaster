@@ -7,6 +7,9 @@ class Puzzle extends Equatable {
   final String initialFEN;
   final List<PuzzleMove> moves;
   final String reward;
+  final int? rating;
+  final List<String>? themes;
+  final String? gameId;
 
   const Puzzle({
     required this.id,
@@ -15,25 +18,30 @@ class Puzzle extends Equatable {
     required this.initialFEN,
     required this.moves,
     required this.reward,
+    this.rating,
+    this.themes,
+    this.gameId,
   });
 
   @override
-  List<Object?> get props => [id, title, description, initialFEN, moves, reward];
+  List<Object?> get props => [id, title, description, initialFEN, moves, reward, rating, themes, gameId];
 }
 
 class PuzzleMove extends Equatable {
-  final String move; // SAN or UCI, typically UCI here for simplicity e2e4
+  final String move; // typically SAN (e.g. Nf3)
+  final String uciMove; // typically UCI (e.g. g1f3)
   final String hint;
   final String dialog;
   final String successDialog;
 
   const PuzzleMove({
     required this.move,
+    required this.uciMove,
     required this.hint,
     required this.dialog,
     required this.successDialog,
   });
 
   @override
-  List<Object?> get props => [move, hint, dialog, successDialog];
+  List<Object?> get props => [move, uciMove, hint, dialog, successDialog];
 }

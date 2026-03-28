@@ -68,16 +68,31 @@ class GameRepository {
   Future<List<GameModel>> getSavedGames() async {
     final box = await Hive.openBox<String>(_boxName);
     return box.values
-        .map((json) => GameModel.fromJson(jsonDecode(json) as Map<String, dynamic>))
+        .where((val) => val != null && val.isNotEmpty)
+        .map((jsonStr) {
+          try {
+            final Map<String, dynamic> data = jsonDecode(jsonStr);
+            return GameModel.fromJson(data);
+          } catch (e) {
+            print('Error decoding saved game: $e');
+            return null;
+          }
+        })
+        .whereType<GameModel>()
         .toList()
       ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
   }
 
   Future<GameModel?> getSavedGame(String id) async {
     final box = await Hive.openBox<String>(_boxName);
-    final json = box.get(id);
-    if (json == null) return null;
-    return GameModel.fromJson(jsonDecode(json) as Map<String, dynamic>);
+    final jsonStr = box.get(id);
+    if (jsonStr == null || jsonStr.isEmpty) return null;
+    try {
+      return GameModel.fromJson(jsonDecode(jsonStr));
+    } catch (e) {
+      print('Error decoding specific game $id: $e');
+      return null;
+    }
   }
 
   Future<void> deleteGame(String id) async {
@@ -104,12 +119,15 @@ class GameRepository {
   Future<List<GameModel>> getRecentGames(String userId, {int limit = 10}) async {
     try {
       final res = await _dio.get('/api/game/user/$userId', queryParameters: {'limit': limit});
+      if (res.data is! Map<String, dynamic>) return const [];
+
       final rows = (res.data['games'] as List?) ?? const [];
       return rows
           .whereType<Map<String, dynamic>>()
           .map(GameModel.fromJson)
           .toList(growable: false);
-    } catch (_) {
+    } catch (e) {
+      print('Recent games fetch error: $e');
       return const [];
     }
   }

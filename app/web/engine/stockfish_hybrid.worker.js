@@ -23,6 +23,9 @@ async function loadStockfish() {
   if (stockfishEngine) return;
 
   try {
+    // Tell Emscripten where the main script is so pthreads can load sub-workers correctly
+    self.mainScriptUrlOrBlob = 'stockfish.wasm.js';
+
     // Load the local stockfish.wasm.js (which in turn fetches stockfish.wasm)
     importScripts('stockfish.wasm.js');
 

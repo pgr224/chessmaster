@@ -56,4 +56,8 @@ export class ChessValidator {
   public getMoveCount(): number {
     return this.game.moveNumber();
   }
+  public undo(): string {
+    this.game.undo();
+    return this.game.fen();
+  }
 }

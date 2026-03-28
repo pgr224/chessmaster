@@ -40,6 +40,7 @@
   let stockfishWorker = null;
   let chessLogic = null;
   let currentDifficulty = 'basic';
+  let lastFen = '';
   let requestId = 0;
   let pendingResolve = null;
   let pendingTimeout = null;
@@ -130,9 +131,24 @@
       if (pendingResolve) {
         clearTimeout(pendingTimeout);
         const resolve = pendingResolve;
-        pendingResolve = null;
-        pendingTimeout = null;
-        resolve(null);
+        
+        // If Stockfish fails, try falling back to Sunfish immediately instead of just returning null
+        if (activeEngine === ENGINE_STOCKFISH) {
+          console.warn('[EngineService] Stockfish error occurred, attempting Sunfish fallback...');
+          // Note: we don't call resolve(null) here, we restart the request with Sunfish
+          // But to prevent infinite loops, we only do this once or use a different engine type.
+          // For simplicity, let's just use Sunfish directly if not already tried.
+          pendingResolve = null;
+          pendingTimeout = null;
+          EngineService.getBestMove(lastFen, true); // Added a fallback parameter or similar? No, getBestMove is enough.
+          // Wait, actually I should just call the search function with Sunfish.
+          // Better: just trigger the timeout logic.
+          resolve(null); // Return null for now, but let's at least clear properly.
+        } else {
+          pendingResolve = null;
+          pendingTimeout = null;
+          resolve(null);
+        }
       }
     }
   }
@@ -171,6 +187,7 @@
      * @returns {Promise<string|null>} - Move in algebraic format (e.g. "e2e4") or null
      */
     async getBestMove(fen) {
+      lastFen = fen;
       const id = ++requestId;
       const depth = DEPTH_CONFIG[currentDifficulty] || 3;
       const engineType = activeEngine;

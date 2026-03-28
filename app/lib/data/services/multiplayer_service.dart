@@ -140,6 +140,21 @@ class MultiplayerService {
     _gameChannel?.sink.add(jsonEncode({'type': 'UNDO'}));
   }
 
+  /// Request to save and quit game
+  void sendSaveRequest() {
+    _gameChannel?.sink.add(jsonEncode({'type': 'SAVE_REQUEST'}));
+  }
+
+  /// Accept save request
+  void sendSaveAccept() {
+    _gameChannel?.sink.add(jsonEncode({'type': 'SAVE_ACCEPT'}));
+  }
+
+  /// Decline save request
+  void sendSaveDecline() {
+    _gameChannel?.sink.add(jsonEncode({'type': 'SAVE_DECLINE'}));
+  }
+
   void dispose() {
     _lobbyChannel?.sink.close();
     _gameChannel?.sink.close();

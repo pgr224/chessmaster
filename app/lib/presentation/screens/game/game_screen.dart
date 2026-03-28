@@ -35,6 +35,9 @@ class GameScreen extends StatefulWidget {
 class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   late ConfettiController _confettiController;
   late AnimationController _checkAnimController;
+  final TextEditingController _chatController = TextEditingController();
+  final FocusNode _chatFocus = FocusNode();
+  bool _showChat = false;
 
   @override
   void initState() {
@@ -70,6 +73,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     context.read<GameBloc>().add(GameExitEvent());
     _confettiController.dispose();
     _checkAnimController.dispose();
+    _chatController.dispose();
+    _chatFocus.dispose();
     super.dispose();
   }
 
@@ -119,6 +124,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               if (_showMoves) _buildMoveHistoryOverlay(state),
               if (state.coachMessage != null) _buildCoachPopup(state.coachMessage!),
               if (state.showMiniLesson) _buildMiniLessonOverlay(context, state),
+              if (state.mode == GameMode.multiplayer) _buildFloatingChat(context),
             ],
           ),
         );
@@ -576,6 +582,112 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     );
   }
 
+  Widget _buildFloatingChat(BuildContext context) {
+    return BlocBuilder<MultiplayerBloc, MultiplayerState>(
+      builder: (context, mpState) {
+        final messages = mpState.chatMessages.where((msg) {
+          // Keep messages sent within the last 2 minutes
+          final age = DateTime.now().difference(msg.timestamp);
+          return age.inSeconds < 120;
+        }).toList();
+
+        return Positioned(
+          left: 16, bottom: 200,
+          right: 80,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Messages area
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 250),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: messages.length,
+                  itemBuilder: (context, index) {
+                    final msg = messages[index];
+                    return _chatBubble(msg.message, msg.isMe)
+                        .animate()
+                        .fadeIn(duration: 400.ms)
+                        .slideY(begin: 0.2, end: 0, duration: 400.ms)
+                        .fadeOut(delay: 118.seconds, duration: 2.seconds); // Fade out after 2 minutes
+                  },
+                ),
+              ),
+              const SizedBox(height: 8),
+              if (_showChat)
+                _buildChatInput(context)
+              else
+                _glassAction(
+                  icon: Icons.chat_bubble_outline_rounded,
+                  size: 40,
+                  onTap: () => setState(() => _showChat = true),
+                ).animate().fadeIn(),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _chatBubble(String text, bool isMe) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: (isMe ? AppTheme.goldPrimary : Colors.white).withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: (isMe ? AppTheme.goldPrimary : Colors.white).withValues(alpha: 0.1)),
+        ),
+        child: Text(
+          text,
+          style: GoogleFonts.baloo2(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChatInput(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppTheme.navyCard.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppTheme.skyBlue.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _chatController,
+              focusNode: _chatFocus,
+              autofocus: true,
+              style: GoogleFonts.baloo2(color: Colors.white, fontSize: 14),
+              decoration: const InputDecoration(
+                hintText: 'Press enter to send...',
+                hintStyle: TextStyle(color: Colors.white38, fontSize: 13),
+                border: InputBorder.none,
+              ),
+              onSubmitted: (val) {
+                if (val.trim().isNotEmpty) {
+                  context.read<MultiplayerBloc>().add(MpSendChatEvent(val.trim()));
+                  _chatController.clear();
+                  setState(() => _showChat = false);
+                }
+              },
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close_rounded, color: AppTheme.textMuted, size: 20),
+            onPressed: () => setState(() => _showChat = false),
+          ),
+        ],
+      ),
+    ).animate().slideY(begin: 0.1, duration: 200.ms).fadeIn();
+  }
+
   Widget _buildWideLayout(BuildContext context, GameState state, BoxConstraints constraints) {
     const sideWidth = 330.0;
     final maxBoard = math.min(constraints.maxHeight - 32, constraints.maxWidth - sideWidth - 56);
@@ -720,20 +832,23 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           ),
           // Resign
           _actionBtn(
-            icon: Icons.flag_rounded,
-            label: 'Resign',
-            color: AppTheme.accentRed,
-            onTap: !state.isGameOver
-                ? () => _resign(context, settings.confirmResign)
-                : null,
+            icon: Icons.flag_rounded, label: 'Resign', color: AppTheme.accentRed,
+            onTap: !state.isGameOver ? () => _resign(context, settings.confirmResign) : null,
           ),
-          // Save
-          _actionBtn(
-            icon: Icons.save_rounded,
-            label: 'Save',
-            color: AppTheme.accentCyan,
-            onTap: () => context.read<GameBloc>().add(GameSaveEvent()),
-          ),
+          // Save & Quit Request (Online only)
+          if (state.mode == GameMode.multiplayer)
+            _actionBtn(
+              icon: Icons.save_rounded, label: 'Save Game', color: AppTheme.accentCyan,
+              onTap: !state.isGameOver
+                  ? () => context.read<MultiplayerBloc>().add(MpSaveRequestEvent())
+                  : null,
+            ),
+          // Save (Local only)
+          if (state.mode != GameMode.multiplayer && state.mode != GameMode.tutorial)
+            _actionBtn(
+              icon: Icons.save_rounded, label: 'Save', color: AppTheme.accentCyan,
+              onTap: () => context.read<GameBloc>().add(GameSaveEvent()),
+            ),
           // Share
           _actionBtn(
             icon: Icons.share_rounded,

@@ -36,10 +36,10 @@ app.use('*', cors({
   origin: (origin) => {
     if (!origin) return null;
     if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) return origin;
-    if (origin.startsWith('https://chessmaster-app.pages.dev') || origin === 'https://chessmaster-app.pages.dev') return origin;
+    if (origin.endsWith('.chessmaster-app.pages.dev') || origin === 'https://chessmaster-app.pages.dev') return origin;
     return 'https://chessmaster-app.pages.dev';
   },
-  allowHeaders: ['Content-Type', 'Authorization', 'X-Device-ID', 'Accept'],
+  allowHeaders: ['Content-Type', 'Authorization', 'X-Device-ID', 'Accept', 'X-Access-Token'],
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   credentials: true,
 }))
