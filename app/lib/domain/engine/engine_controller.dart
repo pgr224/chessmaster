@@ -5,6 +5,7 @@
 ///   - MOBILE: delegates to Dart AIEngine on isolates
 ///
 /// Provides a single async API for GameBloc regardless of platform.
+library;
 
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart' show kIsWeb;

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/puzzle_model.dart';
 
-enum GameMode { tutorial, singlePlayer, twoPlayer, multiplayer, puzzle, practice }
+enum GameMode { tutorial, singlePlayer, twoPlayer, multiplayer, tournament, puzzle, practice }
 enum AIDifficulty { basic, intermediate, advanced, impossible }
 
 class GameConfig {
@@ -18,6 +18,7 @@ class GameConfig {
   final bool hintsEnabled;
   final int? timeControl;
   final String? activeGameId;
+  final bool isPuzzleRush;
 
   const GameConfig({
     required this.mode,
@@ -32,5 +33,6 @@ class GameConfig {
     this.hintsEnabled = false,
     this.timeControl,
     this.activeGameId,
+    this.isPuzzleRush = false,
   });
 }

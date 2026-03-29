@@ -1,5 +1,6 @@
 /// Chess Engine — Full FIDE-compliant implementation
 /// Handles: legal moves, check/checkmate/stalemate, castling, en passant, pawn promotion
+library;
 
 enum PieceType { pawn, rook, knight, bishop, queen, king }
 enum PieceColor { white, black }
@@ -151,8 +152,8 @@ class ChessEngine {
   Square? _enPassantTarget;
   int _halfMoveClock = 0;
   int _fullMoveNumber = 1;
-  List<Move> _moveHistory = [];
-  List<String> _positionHistory = [];
+  final List<Move> _moveHistory = [];
+  final List<String> _positionHistory = [];
   GameStatus _status = GameStatus.active;
   GameResult _result = GameResult.ongoing;
   DrawReason? _drawReason;

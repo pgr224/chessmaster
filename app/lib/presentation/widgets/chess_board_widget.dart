@@ -581,10 +581,14 @@ class _ChessPiecePainter extends CustomPainter {
     // 1. Get Path based on Shape
     final path = _PiecePathProvider.getPath(type, shape);
     
-    // Scale and center the path
+    // Scale and center the path with legacy matrix ops (ignoring deprecation for 2D safety)
     final matrix = Matrix4.identity()
+      // ignore: deprecated_member_use
       ..translate(center.dx, center.dy)
+      // ignore: deprecated_member_use
       ..scale(scale);
+
+
     final finalPath = path.transform(matrix.storage);
 
     // 2. Apply Style logic

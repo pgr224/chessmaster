@@ -1,6 +1,7 @@
 /// Native Engine Bridge — Mobile-only fallback
 /// On mobile platforms (Android/iOS), uses the existing Dart AI engine
 /// running on isolates. No JS interop needed.
+library;
 
 import 'chess_engine.dart';
 import 'ai_engine.dart';

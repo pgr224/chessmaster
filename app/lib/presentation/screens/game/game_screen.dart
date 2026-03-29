@@ -1159,7 +1159,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     GameMode.multiplayer  => '🌍 ONLINE',
     GameMode.puzzle       => '🧩 DAILY PUZZLE',
     GameMode.practice     => '🎯 PRACTICE',
+    GameMode.tournament   => '🏆 TOURNAMENT',
   };
+
 
   Future<void> _showExitDialog(BuildContext context) async {
     final gameState = context.read<GameBloc>().state;
@@ -1204,10 +1206,12 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
       if (action == 'save_quit') {
         context.read<GameBloc>().add(GameSaveEvent());
-        context.go('/home');
+        await Future.delayed(const Duration(milliseconds: 200));
+        if (context.mounted) context.go('/home');
       } else if (action == 'quit_no_save') {
         context.read<GameBloc>().add(GameDiscardEvent());
-        context.go('/home');
+        await Future.delayed(const Duration(milliseconds: 200));
+        if (context.mounted) context.go('/home');
       }
       return;
     }
@@ -1243,7 +1247,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       if (forfeit == true && context.mounted) {
         context.read<MultiplayerBloc>().add(MpResignEvent());
         context.read<GameBloc>().add(GameResignEvent());
-        context.go('/home');
+        await Future.delayed(const Duration(milliseconds: 200));
+        if (context.mounted) context.go('/home');
       }
       return;
     }
@@ -1277,7 +1282,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
     if (confirmed == true && context.mounted) {
       context.read<GameBloc>().add(GameDiscardEvent());
-      context.go('/home');
+      await Future.delayed(const Duration(milliseconds: 200));
+      if (context.mounted) context.go('/home');
     }
   }
 

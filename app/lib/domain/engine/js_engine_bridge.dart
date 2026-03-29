@@ -1,6 +1,7 @@
 /// JS Engine Bridge — Web-only interop with window.ChessEngineService
 /// This file uses dart:js_interop to call the JavaScript engine service
 /// that runs Sunfish/Stockfish/ChessLogic in Web Workers.
+library;
 
 import 'dart:js_interop';
 import 'dart:js_interop_unsafe';

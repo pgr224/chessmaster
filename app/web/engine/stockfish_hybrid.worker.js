@@ -85,9 +85,9 @@ function handleUCIOutput(line) {
 
     // If there's a queued search, execute it now
     if (pendingSearch) {
-      const { fen, depth } = pendingSearch;
+      const { fen, depth, timeoutMs } = pendingSearch;
       pendingSearch = null;
-      executeSearch(fen, depth);
+      executeSearch(fen, depth, timeoutMs);
     }
   }
 
@@ -99,10 +99,14 @@ function handleUCIOutput(line) {
   }
 }
 
-function executeSearch(fen, depth) {
+function executeSearch(fen, depth, timeoutMs) {
   isSearching = true;
   sendUCI(`position fen ${fen}`);
-  sendUCI(`go depth ${depth}`);
+  if (timeoutMs) {
+    sendUCI(`go depth ${depth} movetime ${timeoutMs}`);
+  } else {
+    sendUCI(`go depth ${depth}`);
+  }
 }
 
 // ════════════════════════════════════════
@@ -117,7 +121,7 @@ self.addEventListener('message', async (e) => {
       break;
 
     case 'search': {
-      const { fen, depth = 12 } = msg;
+      const { fen, depth = 12, timeoutMs = 14000 } = msg;
 
       if (!stockfishEngine) {
         await loadStockfish();
@@ -129,10 +133,10 @@ self.addEventListener('message', async (e) => {
       }
 
       if (isReady) {
-        executeSearch(fen, depth);
+        executeSearch(fen, depth, timeoutMs);
       } else {
         // Queue until engine is ready
-        pendingSearch = { fen, depth };
+        pendingSearch = { fen, depth, timeoutMs };
         sendUCI('isready');
       }
       break;

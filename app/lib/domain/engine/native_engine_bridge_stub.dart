@@ -1,5 +1,6 @@
 /// Native Engine Bridge Stub — Used on web platform (no-ops)
 /// This file is loaded via conditional import when dart:io is NOT available.
+library;
 
 void jsEngineInit(String mode, String difficulty) {}
 Future<String?> jsEngineGetBestMove(String fen) async => null;

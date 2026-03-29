@@ -13,6 +13,8 @@ import '../../../data/models/game_config.dart';
 import '../../../data/models/tutorial_model.dart';
 import '../../../data/models/puzzle_model.dart';
 import '../../../data/repositories/auth_repository.dart';
+import '../../../data/repositories/puzzle_repository.dart';
+
 
 // ═══════════════════════════════════════════
 // EVENTS
@@ -432,8 +434,9 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       final user = await _authRepository.getCurrentUser();
       if (user != null) {
         final d = user.stats.practiceDifficulty;
-        if (d < 1.0) difficulty = AIDifficulty.basic;
-        else if (d < 2.0) difficulty = AIDifficulty.intermediate;
+        if (d < 1.0) {
+          difficulty = AIDifficulty.basic;
+        } else if (d < 2.0) difficulty = AIDifficulty.intermediate;
         else if (d < 3.0) difficulty = AIDifficulty.advanced;
         else difficulty = AIDifficulty.impossible;
       }
@@ -739,12 +742,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     // 2. ANALYZE PLAYER MOVE IN BACKGROUND (only for modes that provide coaching)
     // We don't block the UI for this anymore!
     bool shouldAnalyze = state.mode == GameMode.practice || state.mode == GameMode.singlePlayer;
-    if (!shouldAnalyze) {
-      _triggerAIIfNeeded(emit);
-      return;
-    }
-
-    // --- MOVE ANALYSIS ---
+    if (shouldAnalyze) {
+      // --- MOVE ANALYSIS ---
     // Note: Since we already moved, we need to pass a snapshot of the engine in previous state
     // for correct evaluation. Or we can use the move info to calculate the loss.
     // For simplicity and to fix the 'lag', we do it in a non-blocking sequence.
@@ -807,6 +806,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         showMiniLesson: showLesson,
       ));
     }
+    } // End of shouldAnalyze block
 
     // Note: We avoid Future.delayed here as it can cause late emits after bloc closure.
     // UI should handle the ephemeral display of coach messages.
@@ -911,9 +911,9 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       final moveStr = await _engineController.getBestMove(_engine.toFEN(), engine: _engine);
       
       if (isClosed || aiRequestEpoch != _aiRequestEpoch) return;
-      emit(this.state.copyWith(isAIThinking: false));
+      emit(state.copyWith(isAIThinking: false));
 
-      if (moveStr != null && !this.state.isGameOver && _engine.status == GameStatus.active) {
+      if (moveStr != null && !state.isGameOver && _engine.status == GameStatus.active) {
         final aiMove = Move.fromAlgebraic(moveStr);
         add(GameMakeMoveEvent(aiMove.from, aiMove.to, promotion: aiMove.promotion));
       }
@@ -982,8 +982,11 @@ class GameBloc extends Bloc<GameEvent, GameState> {
               
             } else if (isLoss) {
               // Less penalty for tournaments to encourage playing
-              if (state.mode == GameMode.tournament) xp -= 10;
-              else xp -= 20;
+              if (state.mode == GameMode.tournament) {
+                xp -= 10;
+              } else {
+                xp -= 20;
+              }
 
               mapUpdates['losses'] = 1;
             } else if (isDraw) {

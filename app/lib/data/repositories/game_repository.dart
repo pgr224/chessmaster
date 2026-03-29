@@ -68,7 +68,7 @@ class GameRepository {
   Future<List<GameModel>> getSavedGames() async {
     final box = await Hive.openBox<String>(_boxName);
     return box.values
-        .where((val) => val != null && val.isNotEmpty)
+        .where((val) => val.isNotEmpty)
         .map((jsonStr) {
           try {
             final Map<String, dynamic> data = jsonDecode(jsonStr);

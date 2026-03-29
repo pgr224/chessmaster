@@ -289,28 +289,8 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
     );
   }
 
-  Widget _infoChip(IconData icon, String label) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, color: AppTheme.textMuted, size: 16),
-        const SizedBox(width: 4),
-        Text(label, style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 12, fontWeight: FontWeight.w600)),
-      ],
-    );
-  }
-
-  String _modeLabel() => switch (widget.gameMode) {
-    GameMode.singlePlayer => 'Solo',
-    GameMode.multiplayer  => 'Online',
-    GameMode.twoPlayer    => '2 Player',
-    GameMode.tutorial     => 'Tutorial',
-    GameMode.puzzle       => 'Puzzle',
-    GameMode.practice     => 'Practice',
-    null                  => 'Game',
-  };
-
   String _resultText() {
+
     if (widget.result == GameResult.draw) {
       return switch (widget.drawReason) {
         DrawReason.stalemate        => 'Stalemate — no legal moves left! 😅',

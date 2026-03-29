@@ -6,6 +6,8 @@ import 'package:dio/dio.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/di/injection_container.dart' as di;
 import '../../blocs/auth/auth_bloc.dart';
+import '../../../data/repositories/auth_repository.dart';
+
 
 class _LeaderboardEntry {
   final String id;
@@ -215,12 +217,13 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
               Navigator.pop(ctx);
               final authRepo = di.sl<AuthRepository>();
               final success = await authRepo.requestXP(amount: 100);
-              if (success && mounted) {
+              if (!context.mounted) return;
+              if (success) {
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('XP Request broadcasted! If accepted, you will recive XP.')));
-                // Also trigger a refresh to UI if we gave them "sympathy XP" immediately or wait for network
-              } else if (mounted) {
+              } else {
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to broadcast request.')));
               }
+
             },
             child: const Text('Request 100 XP', style: TextStyle(color: Colors.black)),
           ),
@@ -404,12 +407,14 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
               Navigator.pop(ctx);
               final authRepo = di.sl<AuthRepository>();
               final success = await authRepo.donateXP(recipientId: entry.id, amount: 100);
-              if (success && mounted) {
+              if (!context.mounted) return;
+              if (success) {
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Donation successful! 💖')));
                 _fetchLeaderboard(); // Refresh to see updated XP
-              } else if (mounted) {
+              } else {
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Donation failed. Not enough XP or server error.')));
               }
+
             },
             child: const Text('Donate 100 XP', style: TextStyle(color: Colors.black)),
           ),

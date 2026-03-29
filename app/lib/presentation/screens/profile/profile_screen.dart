@@ -532,15 +532,20 @@ void showEditProfileModal(BuildContext context, UserModel user) {
                   style: GoogleFonts.fredoka(color: AppTheme.textPrimary),
                   onChanged: (val) async {
                     if (val == user.username) {
-                      setLocalState(() => nameAvailable = null);
+                      setLocalState(() {
+                        checkingName = false;
+                        nameAvailable = null;
+                      });
                       return;
                     }
                     setLocalState(() => checkingName = true);
                     final available = await context.read<AuthRepository>().checkUsername(val);
-                    setLocalState(() {
-                      checkingName = false;
-                      nameAvailable = available;
-                    });
+                    if (nameController.text == val) {
+                      setLocalState(() {
+                        checkingName = false;
+                        nameAvailable = available;
+                      });
+                    }
                   },
                   decoration: InputDecoration(
                     labelText: 'PLAYER NAME',
