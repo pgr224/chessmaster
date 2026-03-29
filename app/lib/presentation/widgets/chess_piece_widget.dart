@@ -176,10 +176,9 @@ class ChessPiecePainter extends CustomPainter {
     // 1. Get Path based on Shape
     final path = PiecePathProvider.getPath(type, shape);
     
-    // Scale and center the path
     final matrix = Matrix4.identity()
       ..translate(center.dx, center.dy, 0.0)
-      ..scale(scale, scale, 1.0);
+      ..scaleByDouble(scale);
 
     final finalPath = path.transform(matrix.storage);
 

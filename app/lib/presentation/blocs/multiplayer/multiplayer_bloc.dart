@@ -261,8 +261,10 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
     on<MpConnectLobbyEvent>(_onConnectLobby);
     on<MpReconnectEvent>((event, emit) {
       if (_service.isLobbyConnected) return;
-       // ... existing connect logic
+      // Reconnect will be triggered by MpConnectLobbyEvent from the UI
+      emit(state.copyWith(connectionError: 'Reconnecting...'));
     });
+    on<MpDrawReceivedEvent>((event, emit) => emit(state.copyWith(drawOfferPending: true)));
     on<MpStartMatchmakingEvent>(_onMatchmaking);
     on<MpCancelMatchmakingEvent>(_onCancelMatchmaking);
     on<MpLobbyUpdateEvent>((event, emit) => emit(state.copyWith(
@@ -360,7 +362,7 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
     });
     on<MpChangeSelectedTimeEvent>((event, emit) => emit(state.copyWith(selectedTimeControl: event.timeControl)));
     on<MpClearNoticeEvent>((event, emit) => emit(state.copyWith(lobbyNotice: null, challengerId: null)));
-    on<MpTimerSyncEvent>((event, emit) => emit(state.copyWith(whiteTime: event.whiteTime, blackTime: event.blackTime)));
+    // MpTimerSyncEvent already registered above at line ~287
   }
 
   Future<void> _onConnectLobby(MpConnectLobbyEvent event, Emitter<MultiplayerState> emit) async {

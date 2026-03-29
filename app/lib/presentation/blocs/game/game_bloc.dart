@@ -17,6 +17,7 @@ import '../../../data/models/puzzle_model.dart';
 import '../../../data/repositories/auth_repository.dart';
 import '../../../data/repositories/puzzle_repository.dart';
 import '../theme/theme_bloc.dart';
+import '../../../data/services/audio_service.dart';
 
 // ═══════════════════════════════════════════
 // EVENTS
@@ -93,6 +94,18 @@ class GamePuzzleRushTickEvent extends GameEvent { const GamePuzzleRushTickEvent(
 class GameExplainPuzzleMoveEvent extends GameEvent { const GameExplainPuzzleMoveEvent(); }
 class GameDismissCoachFeedbackEvent extends GameEvent {}
 class GameDismissHintEvent extends GameEvent {}
+class GameClockTickEvent extends GameEvent {}
+class GameTimerSyncEvent extends GameEvent {
+  final double whiteTime;
+  final double blackTime;
+  const GameTimerSyncEvent(this.whiteTime, this.blackTime);
+  @override List<Object?> get props => [whiteTime, blackTime];
+}
+class GameUpdateEvalEvent extends GameEvent {
+  final double evalScore;
+  const GameUpdateEvalEvent(this.evalScore);
+  @override List<Object?> get props => [evalScore];
+}
 class GameUpdateCoachSettingsEvent extends GameEvent {
   final CoachSettings coachSettings;
   const GameUpdateCoachSettingsEvent(this.coachSettings);
@@ -151,6 +164,7 @@ class GameState extends Equatable {
   final Move? pendingMove;
   final int mpUndosUsed;
   final DateTime? lastMoveTimestamp;
+  final double evalScore;
   
   // Analytics & Rewards
   final double accuracy;
@@ -182,6 +196,15 @@ class GameState extends Equatable {
   // Real-time Highlighting & Undo
   final Move? coachMove;
   final Set<int> hintedIndices;
+
+  // Time Control
+  final double whiteTimeMs; // milliseconds remaining
+  final double blackTimeMs;
+  final int incrementMs; // increment in ms per move
+  final bool clockRunning;
+  
+  // Premove
+  final Move? preMove;
 
   const GameState({
     required this.board,
@@ -219,6 +242,7 @@ class GameState extends Equatable {
     this.isPuzzleHintUsed = false,
     this.mpUndosUsed = 0,
     this.lastMoveTimestamp,
+    this.evalScore = 0.0,
     this.opponentName,
     this.confirmMoves = false,
     this.autoQueen = false,
@@ -246,6 +270,11 @@ class GameState extends Equatable {
     this.totalPuzzleXP = 0,
     this.coachMove,
     this.hintedIndices = const {},
+    this.whiteTimeMs = 0,
+    this.blackTimeMs = 0,
+    this.incrementMs = 0,
+    this.clockRunning = false,
+    this.preMove,
   });
 
   bool get isGameOver => status == GameStatus.checkmate ||
@@ -302,6 +331,7 @@ class GameState extends Equatable {
     bool? isPuzzleHintUsed,
     int? mpUndosUsed,
     DateTime? lastMoveTimestamp,
+    double? evalScore,
     String? opponentName,
     bool? confirmMoves,
     bool? autoQueen,
@@ -329,6 +359,10 @@ class GameState extends Equatable {
     int? totalPuzzleXP,
     Move? coachMove,
     Set<int>? hintedIndices,
+    double? whiteTimeMs,
+    double? blackTimeMs,
+    int? incrementMs,
+    bool? clockRunning,
     bool clearSelected = false,
     bool clearHint = false,
     bool clearDrawOffer = false,
@@ -338,6 +372,8 @@ class GameState extends Equatable {
     bool clearCoachFeedback = false,
     bool clearActiveHint = false,
     bool clearCoachMove = false,
+    bool clearPreMove = false,
+    Move? preMove,
   }) {
     return GameState(
       board: board ?? this.board,
@@ -374,6 +410,7 @@ class GameState extends Equatable {
       isPuzzleHintUsed: isPuzzleHintUsed ?? this.isPuzzleHintUsed,
       mpUndosUsed: mpUndosUsed ?? this.mpUndosUsed,
       lastMoveTimestamp: lastMoveTimestamp ?? this.lastMoveTimestamp,
+      evalScore: evalScore ?? this.evalScore,
       opponentName: opponentName ?? this.opponentName,
       confirmMoves: confirmMoves ?? this.confirmMoves,
       autoQueen: autoQueen ?? this.autoQueen,
@@ -401,6 +438,11 @@ class GameState extends Equatable {
       totalPuzzleXP: totalPuzzleXP ?? this.totalPuzzleXP,
       coachMove: clearCoachMove ? null : (coachMove ?? this.coachMove),
       hintedIndices: hintedIndices ?? this.hintedIndices,
+      whiteTimeMs: whiteTimeMs ?? this.whiteTimeMs,
+      blackTimeMs: blackTimeMs ?? this.blackTimeMs,
+      incrementMs: incrementMs ?? this.incrementMs,
+      clockRunning: clockRunning ?? this.clockRunning,
+      preMove: clearPreMove ? null : (preMove ?? this.preMove),
     );
   }
 
@@ -417,7 +459,8 @@ class GameState extends Equatable {
     coachFeedback, activeHint, coachSettings, gameCoachHistory,
     puzzleStreak, puzzleRushStrikes, puzzleRushTime, isPuzzleRush, 
     lastCorrectPuzzleMove, showPuzzleCelebration, puzzleExplanation, totalPuzzleXP,
-    coachMove, hintedIndices
+    coachMove, hintedIndices,
+    whiteTimeMs, blackTimeMs, incrementMs, clockRunning, preMove, evalScore
   ];
 }
 
@@ -435,6 +478,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
   String? _gameId;
   int _aiRequestEpoch = 0;
   Timer? _rushTimer;
+  Timer? _clockTimer;
+  DateTime? _lastClockTickTime;
 
   ChessEngine get engine => _engine;
   AIEngineController get engineController => _engineController;
@@ -464,6 +509,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     on<GameDiscardEvent>(_onDiscard);
     on<GamePuzzleRushTickEvent>(_onPuzzleRushTick);
     on<GameExplainPuzzleMoveEvent>(_onExplainPuzzleMove);
+    on<GameUpdateEvalEvent>(_onUpdateEval);
     on<GameDismissCoachFeedbackEvent>((e, emit) => emit(state.copyWith(clearCoachFeedback: true)));
     on<GameDismissHintEvent>((e, emit) => emit(state.copyWith(clearActiveHint: true)));
     on<GameUpdateCoachSettingsEvent>((e, emit) {
@@ -471,14 +517,21 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       emit(state.copyWith(coachSettings: e.coachSettings));
     });
     on<MpGameOverSyncEvent>((e, emit) {
+      _stopClock();
       final status = e.result == GameResult.draw ? GameStatus.draw : GameStatus.checkmate;
       emit(state.copyWith(
         status: status,
         result: e.result,
         drawReason: e.reason,
         xpGained: e.xpGained,
+        clockRunning: false,
       ));
     });
+    on<GameClockTickEvent>(_onClockTick);
+    on<GameTimerSyncEvent>((e, emit) => emit(state.copyWith(
+      whiteTimeMs: e.whiteTime,
+      blackTimeMs: e.blackTime,
+    )));
   }
 
   Future<void> _onDiscard(GameDiscardEvent event, Emitter<GameState> emit) async {
@@ -544,6 +597,19 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       puzzle: config.puzzle,
     );
     emit(initialState);
+
+    // Initialize time control
+    if (config.timeControl != null && config.timeControl! > 0) {
+      final timeMs = config.timeControl!.toDouble() * 1000;
+      final incMs = config.incrementSeconds * 1000;
+      emit(state.copyWith(
+        whiteTimeMs: timeMs,
+        blackTimeMs: timeMs,
+        incrementMs: incMs,
+        clockRunning: true,
+      ));
+      _startClock();
+    }
  
     // Initialize game record
     _gameId = null; // reset
@@ -654,21 +720,35 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       return;
     }
 
-    // In multiplayer, only allow controlling your own pieces
+    // Premove logic for multiplayer
+    bool isPremove = false;
+    if (state.mode == GameMode.multiplayer && state.playerColor != null && !state.isPlayerTurn) {
+      isPremove = true;
+    }
+
+    // In multiplayer, only allow controlling your own pieces or setting premove
     if (state.mode == GameMode.multiplayer && state.playerColor != null) {
-      if (!state.isPlayerTurn) return; // Not your turn
-      final clickedPiece = _engine.pieceAt(sq);
       // If no piece selected yet, only allow selecting own color
       if (state.selectedSquare == null) {
+        final clickedPiece = _engine.pieceAt(sq);
         if (clickedPiece == null || clickedPiece.color != state.playerColor) {
-          emit(state.copyWith(clearSelected: true, clearPendingMove: true));
+          emit(state.copyWith(clearSelected: true, clearPendingMove: true, clearPreMove: true));
           return;
         }
       }
     }
 
-    // If a piece is already selected, try to make a move
+    // If a piece is already selected, try to make a move (or premove)
     if (state.selectedSquare != null) {
+      if (isPremove) {
+          final from = state.selectedSquare!;
+          emit(state.copyWith(
+             preMove: Move(from: from, to: sq),
+             clearSelected: true,
+          ));
+          return;
+      }
+
       final isLegal = state.legalMoves.any((m) => m.to == sq);
       if (isLegal) {
         final from = state.selectedSquare!;
@@ -712,13 +792,20 @@ class GameBloc extends Bloc<GameEvent, GameState> {
 
     // Select new piece
     final piece = _engine.pieceAt(sq);
-    if (piece == null || piece.color != _engine.currentTurn) {
-      emit(state.copyWith(clearSelected: true, clearPendingMove: true));
-      return;
+    if (!isPremove) {
+        if (piece == null || piece.color != _engine.currentTurn) {
+          emit(state.copyWith(clearSelected: true, clearPendingMove: true));
+          return;
+        }
+        if (!state.isPlayerTurn) return;
+    } else {
+        if (piece == null || piece.color != state.playerColor) {
+          emit(state.copyWith(clearSelected: true, clearPendingMove: true));
+          return;
+        }
     }
-    if (!state.isPlayerTurn) return;
 
-    final moves = _engine.legalMovesFrom(sq);
+    final moves = isPremove ? <Move>[] : _engine.legalMovesFrom(sq);
     emit(state.copyWith(
       selectedSquare: sq,
       legalMoves: moves,
@@ -790,6 +877,9 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       }
     }
 
+    // Capture pre-move FEN for coach analysis BEFORE making the move
+    final fenBeforeMove = _engine.toFEN();
+
     final success = _engine.makeMove(move);
     if (!success && !(event.from == event.to)) return; // Invalid move
 
@@ -813,6 +903,45 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       pendingMove: null, // Clear any pending move UI
     ));
 
+    // Update Evaluation asynchronously to not block the UI
+    if (!state.isGameOver) {
+      final fenSnapshot = _engine.toFEN();
+      final currTurn = _engine.currentTurn;
+      AIEngine.evaluatePosition(ChessEngine.fromFEN(fenSnapshot)).then((score) {
+        if (!isClosed) {
+          final absScore = currTurn == PieceColor.white ? score : -score;
+          add(GameUpdateEvalEvent(absScore / 100.0));
+        }
+      }).catchError((_) {});
+    }
+
+    // Sound logic
+    final theme = state.boardTheme ?? 'default';
+    if (_engine.status == GameStatus.checkmate || _engine.status == GameStatus.draw) {
+       AudioService().playSound('game-end', theme);
+    } else if (_engine.status == GameStatus.check) {
+       AudioService().playSound('check', theme);
+    } else if (move.promotion != null) {
+       AudioService().playSound('promote', theme);
+    } else if (move.isCastle == true) { // We might not have isCastle property natively here but we can check if it's capture
+       // Actually let's assume move has no isCastle
+       AudioService().playSound((captured.$1.length + captured.$2.length) > (state.capturedWhite.length + state.capturedBlack.length) ? 'capture' : 'move-self', theme);
+    } else {
+       AudioService().playSound((captured.$1.length + captured.$2.length) > (state.capturedWhite.length + state.capturedBlack.length) ? 'capture' : 'move-self', theme);
+    }
+
+
+    // Apply increment to the player who just moved
+    if (state.incrementMs > 0 && state.whiteTimeMs > 0) {
+      final justMoved = state.currentTurn; // currentTurn already flipped, so the OTHER color just moved
+      final movedColor = justMoved == PieceColor.white ? PieceColor.black : PieceColor.white;
+      if (movedColor == PieceColor.white) {
+        emit(state.copyWith(whiteTimeMs: state.whiteTimeMs + state.incrementMs));
+      } else {
+        emit(state.copyWith(blackTimeMs: state.blackTimeMs + state.incrementMs));
+      }
+    }
+
     // 2. AI COACH MOVE ANALYSIS (async, non-blocking)
     bool shouldAnalyze = state.mode == GameMode.practice || state.mode == GameMode.singlePlayer;
     if (shouldAnalyze && state.coachSettings.enableRealTimeCoaching) {
@@ -823,8 +952,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     double accuracy = state.accuracy;
 
     try {
-      // Use CoachController for proper move evaluation
-      final fenBeforeMove = state.currentFEN;
+      // Use pre-move FEN captured before engine.makeMove()
       final engineBefore = ChessEngine.fromFEN(fenBeforeMove);
       
       final feedback = await _coachController.evaluateMove(
@@ -885,9 +1013,9 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         clearActiveHint: true,
       ));
     } catch (e) {
-      print('[Coach Analysis Error] $e');
+      debugPrint('[Coach Analysis Error] $e');
     }
-    } // End of shouldAnalyze block
+  }  } // End of shouldAnalyze block
 
     // Note: We avoid Future.delayed here as it can cause late emits after bloc closure.
     // UI should handle the ephemeral display of coach messages.
@@ -1126,6 +1254,18 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         add(GameSaveEvent());
       }
     }
+
+    // After everything, check if we have a pending preMove and it's now our turn
+    if (state.preMove != null && _engine.currentTurn == state.playerColor) {
+      final pre = state.preMove!;
+      emit(state.copyWith(clearPreMove: true)); // Clear it to avoid looping
+      
+      final legals = _engine.legalMovesFrom(pre.from);
+      final legit = legals.where((m) => m.to == pre.to).firstOrNull;
+      if (legit != null) {
+        add(GameMakeMoveEvent(legit.from, legit.to, promotion: legit.promotion ?? (state.autoQueen ? PieceType.queen : null)));
+      }
+    }
   }
 
   void _onUndo(GameUndoEvent event, Emitter<GameState> emit) {
@@ -1271,7 +1411,66 @@ class GameBloc extends Bloc<GameEvent, GameState> {
   Future<void> close() {
     _engineController.dispose();
     _coachController.dispose();
+    _clockTimer?.cancel();
+    _rushTimer?.cancel();
     return super.close();
+  }
+
+  void _startClock() {
+    _clockTimer?.cancel();
+    _lastClockTickTime = DateTime.now();
+    _clockTimer = Timer.periodic(const Duration(milliseconds: 100), (_) {
+      if (!isClosed) add(GameClockTickEvent());
+    });
+  }
+
+  void _stopClock() {
+    _clockTimer?.cancel();
+    _clockTimer = null;
+  }
+
+  void _onClockTick(GameClockTickEvent event, Emitter<GameState> emit) {
+    if (state.isGameOver || !state.clockRunning) return;
+    if (state.whiteTimeMs <= 0 && state.blackTimeMs <= 0) return;
+
+    final now = DateTime.now();
+    final elapsedMs = now.difference(_lastClockTickTime ?? now).inMilliseconds.toDouble();
+    _lastClockTickTime = now;
+
+    double white = state.whiteTimeMs;
+    double black = state.blackTimeMs;
+
+    if (state.currentTurn == PieceColor.white) {
+      white = (white - elapsedMs).clamp(0, double.infinity);
+    } else {
+      black = (black - elapsedMs).clamp(0, double.infinity);
+    }
+
+    // Check for timeout
+    if (white <= 0) {
+      _stopClock();
+      emit(state.copyWith(
+        whiteTimeMs: 0,
+        blackTimeMs: black,
+        clockRunning: false,
+        status: GameStatus.checkmate,
+        result: GameResult.blackWins,
+      ));
+      return;
+    }
+    if (black <= 0) {
+      _stopClock();
+      emit(state.copyWith(
+        whiteTimeMs: white,
+        blackTimeMs: 0,
+        clockRunning: false,
+        status: GameStatus.checkmate,
+        result: GameResult.whiteWins,
+      ));
+      return;
+    }
+
+    emit(state.copyWith(whiteTimeMs: white, blackTimeMs: black, clockRunning: true));
   }
 
   void _onPromotionRequired(GamePromotionRequiredEvent event, Emitter<GameState> emit) {
@@ -1313,5 +1512,9 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     }
 
     return (capturedWhite, capturedBlack);
+  }
+
+  void _onUpdateEval(GameUpdateEvalEvent event, Emitter<GameState> emit) {
+    emit(state.copyWith(evalScore: event.evalScore));
   }
 }

@@ -13,6 +13,7 @@ class ChessBoardWidget extends StatefulWidget {
   final List<Move> legalMoves;
   final Move? lastMove;
   final Move? hintMove;
+  final Move? preMove;
   final GameStatus status;
   final bool isFlipped;
   final String boardTheme;
@@ -36,6 +37,7 @@ class ChessBoardWidget extends StatefulWidget {
     this.legalMoves = const [],
     this.lastMove,
     this.hintMove,
+    this.preMove,
     this.status = GameStatus.active,
     this.isFlipped = false,
     this.boardTheme = 'classic',
@@ -151,6 +153,11 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
         if (widget.lastCorrectMove != null) ...[
           _glowHighlight(widget.lastCorrectMove!.from, sqSize),
           _glowHighlight(widget.lastCorrectMove!.to, sqSize),
+        ],
+        // Pre Move Glow
+        if (widget.preMove != null) ...[
+          _highlight(widget.preMove!.from, sqSize, Colors.redAccent.withValues(alpha: 0.6)),
+          _highlight(widget.preMove!.to, sqSize, Colors.redAccent.withValues(alpha: 0.6)),
         ],
       ],
     );

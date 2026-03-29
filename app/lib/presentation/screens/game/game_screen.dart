@@ -26,6 +26,7 @@ import '../../widgets/hint_button_widget.dart';
 import '../../widgets/coach_overlay_widget.dart';
 import '../../widgets/timer_widget.dart';
 import '../../widgets/game_rules_dialog.dart';
+import '../../widgets/eval_bar_widget.dart';
 import '../../../data/models/coach_model.dart';
 import '../../widgets/thinking_overlay.dart';
 
@@ -996,31 +997,50 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     }
 
     return ConstrainedBox(
-      constraints: BoxConstraints.tightFor(width: dimension, height: dimension),
-      child: ChessBoardWidget(
-        board: state.board,
-        perspective: perspective,
-        selectedSquare: state.selectedSquare,
-        legalMoves: settings.showLegalMoves ? state.legalMoves : const [],
-        lastMove: state.moveHistory.isNotEmpty ? state.moveHistory.last : null,
-        hintMove: state.hintMove,
-        status: state.status,
-        boardTheme: state.boardTheme ?? 'classic',
-        pieceShape: state.pieceShape,
-        pieceStyle: state.pieceStyle,
-        moveAnimationSpeed: settings.moveAnimationSpeed,
-        showCoordinates: settings.showCoordinates,
-        showSquareLabels: settings.showSquareLabels,
-        whitePieceColor: state.whitePieceColor,
-        blackPieceColor: state.blackPieceColor,
-        currentTurn: state.currentTurn,
-        onSquareTap: state.isGameOver
-            ? null
-            : (sq) {
-                context.read<GameBloc>().add(GameSelectPieceEvent(sq));
-              },
-        isInteractive: !state.isAIThinking && state.isPlayerTurn,
-        lastCorrectMove: state.coachMove,
+      constraints: BoxConstraints.tightFor(width: dimension + 30, height: dimension),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          if (state.coachSettings.showEvalBar && state.mode != GameMode.puzzle) ...[
+            EvalBarWidget(
+              evalScore: state.evalScore,
+              perspective: perspective,
+              height: dimension,
+              isGameOver: state.isGameOver,
+              result: state.result,
+            ),
+            const SizedBox(width: 8),
+          ],
+          SizedBox(
+            width: dimension, height: dimension,
+            child: ChessBoardWidget(
+              board: state.board,
+              perspective: perspective,
+              selectedSquare: state.selectedSquare,
+              legalMoves: settings.showLegalMoves ? state.legalMoves : const [],
+              lastMove: state.moveHistory.isNotEmpty ? state.moveHistory.last : null,
+              hintMove: state.hintMove,
+              status: state.status,
+              boardTheme: state.boardTheme ?? 'classic',
+              pieceShape: state.pieceShape,
+              pieceStyle: state.pieceStyle,
+              moveAnimationSpeed: settings.moveAnimationSpeed,
+              showCoordinates: settings.showCoordinates,
+              showSquareLabels: settings.showSquareLabels,
+              whitePieceColor: state.whitePieceColor,
+              blackPieceColor: state.blackPieceColor,
+              currentTurn: state.currentTurn,
+              onSquareTap: state.isGameOver
+                  ? null
+                  : (sq) {
+                      context.read<GameBloc>().add(GameSelectPieceEvent(sq));
+                    },
+              isInteractive: !state.isAIThinking,
+              lastCorrectMove: state.coachMove,
+              preMove: state.preMove,
+            ),
+          ),
+        ],
       ),
     );
   }

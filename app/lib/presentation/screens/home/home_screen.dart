@@ -57,6 +57,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 slivers: [
                   SliverToBoxAdapter(child: _buildHeader(user)),
                   SliverToBoxAdapter(child: _buildQuickStats(user)),
+                  if (user != null && user.xp < 0) SliverToBoxAdapter(child: _buildLowXPWarning(user)),
                   if (_lastActiveGameId != null) SliverToBoxAdapter(child: _buildResumeCard()),
                   SliverToBoxAdapter(child: _buildSectionTitle('🎮 Game Modes')),
                   SliverPadding(
@@ -231,6 +232,48 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.1);
+  }
+
+  Widget _buildLowXPWarning(UserModel user) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.accentRed.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.accentRed.withValues(alpha: 0.5)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.warning_amber_rounded, color: AppTheme.accentRed, size: 36),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Negative XP Warning',
+                  style: GoogleFonts.fredoka(
+                    color: AppTheme.accentRed,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Your XP is critically low. Play Online Multiplayer mode and kindly request XP donations from other players to recover!',
+                  style: GoogleFonts.baloo2(
+                    color: AppTheme.textPrimary.withValues(alpha: 0.9),
+                    fontSize: 14,
+                    height: 1.2,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ).animate().fadeIn().slideY(begin: 0.1);
   }
 
   Widget _statItem(String value, String label, Color? color) {

@@ -55,12 +55,24 @@ class GameRoomScreen extends StatelessWidget {
         }
 
         final themeState = context.read<ThemeBloc>().state;
+        
+        // Parse time control from multiplayer (e.g. "10+5" -> 600s base, 5s increment)
+        int? tcSeconds;
+        int incSeconds = 0;
+        if (mpState.timeControl != null && mpState.timeControl!.isNotEmpty) {
+          final parsed = GameConfig.parseTimeControl(mpState.timeControl!);
+          tcSeconds = parsed.$1;
+          incSeconds = parsed.$2;
+        }
+
         final config = GameConfig(
           mode: GameMode.multiplayer,
           playerColor: mpState.playerColor?.name ?? 'white',
           boardTheme: themeState.boardTheme,
           pieceShape: themeState.pieceShape,
           pieceStyle: themeState.pieceStyle,
+          timeControl: tcSeconds,
+          incrementSeconds: incSeconds,
         );
 
         return MultiBlocListener(

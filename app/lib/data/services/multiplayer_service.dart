@@ -2,50 +2,80 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-
-import 'package:flutter/foundation.dart'; // Add for debugPrint
+import 'package:flutter/foundation.dart';
 
 class MultiplayerService {
   WebSocketChannel? _lobbyChannel;
   WebSocketChannel? _gameChannel;
   
-  final _lobbyStream = StreamController<Map<String, dynamic>>.broadcast();
-  final _gameStream = StreamController<Map<String, dynamic>>.broadcast();
+  StreamController<Map<String, dynamic>>? _lobbyStreamCtrl;
+  StreamController<Map<String, dynamic>>? _gameStreamCtrl;
 
   String? _userId;
   String? _username;
   int _rating = 1200;
 
-  Stream<Map<String, dynamic>> get lobbyUpdates => _lobbyStream.stream;
-  Stream<Map<String, dynamic>> get gameUpdates => _gameStream.stream;
+  // Lazy stream getters — re-create if closed
+  Stream<Map<String, dynamic>> get lobbyUpdates {
+    _lobbyStreamCtrl ??= StreamController<Map<String, dynamic>>.broadcast();
+    return _lobbyStreamCtrl!.stream;
+  }
+
+  Stream<Map<String, dynamic>> get gameUpdates {
+    _gameStreamCtrl ??= StreamController<Map<String, dynamic>>.broadcast();
+    return _gameStreamCtrl!.stream;
+  }
 
   bool get isLobbyConnected => _lobbyChannel != null;
   bool get isGameConnected => _gameChannel != null;
 
+  String? get userId => _userId;
+  String? get username => _username;
+  int get rating => _rating;
+
   static final MultiplayerService _instance = MultiplayerService._internal();
   factory MultiplayerService() => _instance;
   MultiplayerService._internal();
+
+  void _ensureStreams() {
+    if (_lobbyStreamCtrl == null || _lobbyStreamCtrl!.isClosed) {
+      _lobbyStreamCtrl = StreamController<Map<String, dynamic>>.broadcast();
+    }
+    if (_gameStreamCtrl == null || _gameStreamCtrl!.isClosed) {
+      _gameStreamCtrl = StreamController<Map<String, dynamic>>.broadcast();
+    }
+  }
 
   /// Connect to the global lobby
   Future<void> connectLobby(String userId, String username, {int rating = 1200}) async {
     _userId = userId;
     _username = username;
     _rating = rating;
+    _ensureStreams();
 
     final baseUrl = dotenv.env['WS_URL'] ?? 'wss://chess-master-api.pp942920.workers.dev';
     final url = '$baseUrl/multiplayer/lobby?userId=$userId&username=$username&rating=$rating';
     
+    // Close existing lobby connection gracefully
+    try { await _lobbyChannel?.sink.close(); } catch (_) {}
+    
     _lobbyChannel = WebSocketChannel.connect(Uri.parse(url));
     _lobbyChannel!.stream.listen((msg) {
       final data = jsonDecode(msg) as Map<String, dynamic>;
-      _lobbyStream.add(data);
+      if (!(_lobbyStreamCtrl?.isClosed ?? true)) {
+        _lobbyStreamCtrl!.add(data);
+      }
     }, onDone: () {
       _lobbyChannel = null;
-      _lobbyStream.add({'type': 'CONNECTION_LOST'});
+      if (!(_lobbyStreamCtrl?.isClosed ?? true)) {
+        _lobbyStreamCtrl!.add({'type': 'CONNECTION_LOST'});
+      }
       debugPrint('Lobby disconnected');
     }, onError: (err) {
       _lobbyChannel = null;
-      _lobbyStream.add({'type': 'CONNECTION_LOST', 'error': err.toString()});
+      if (!(_lobbyStreamCtrl?.isClosed ?? true)) {
+        _lobbyStreamCtrl!.add({'type': 'CONNECTION_LOST', 'error': err.toString()});
+      }
     });
   }
 
@@ -64,12 +94,22 @@ class MultiplayerService {
     final baseUrl = dotenv.env['WS_URL'] ?? 'wss://chess-master-api.pp942920.workers.dev';
     final url = '$baseUrl/multiplayer/game/$gameId?userId=$_userId&username=$_username&color=$color&gameId=$gameId';
     
-    await _gameChannel?.sink.close();
+    try { await _gameChannel?.sink.close(); } catch (_) {}
+    _ensureStreams();
+    
     _gameChannel = WebSocketChannel.connect(Uri.parse(url));
     _gameChannel!.stream.listen((msg) {
       final data = jsonDecode(msg) as Map<String, dynamic>;
-      _gameStream.add(data);
-    }, onDone: () => debugPrint('Game session ended'));
+      if (!(_gameStreamCtrl?.isClosed ?? true)) {
+        _gameStreamCtrl!.add(data);
+      }
+    }, onDone: () {
+      _gameChannel = null;
+      debugPrint('Game session ended');
+    }, onError: (err) {
+      _gameChannel = null;
+      debugPrint('Game connection error: $err');
+    });
   }
 
   /// Send move in game
@@ -149,10 +189,38 @@ class MultiplayerService {
     _gameChannel?.sink.add(jsonEncode({'type': 'SAVE_DECLINE'}));
   }
 
+  /// Send rematch request
+  void sendRematchRequest() {
+    _gameChannel?.sink.add(jsonEncode({'type': 'REMATCH_REQUEST'}));
+  }
+
+  /// Accept rematch
+  void sendRematchAccept() {
+    _gameChannel?.sink.add(jsonEncode({'type': 'REMATCH_ACCEPT'}));
+  }
+
+  /// Disconnect lobby only — keeps streams alive for reconnection
+  void disconnectLobby() {
+    try { _lobbyChannel?.sink.close(); } catch (_) {}
+    _lobbyChannel = null;
+  }
+
+  /// Disconnect game only
+  void disconnectGame() {
+    try { _gameChannel?.sink.close(); } catch (_) {}
+    _gameChannel = null;
+  }
+
+  /// Full dispose — closes everything, streams can be re-created on next connect
   void dispose() {
-    _lobbyChannel?.sink.close();
-    _gameChannel?.sink.close();
-    _lobbyStream.close();
-    _gameStream.close();
+    try { _lobbyChannel?.sink.close(); } catch (_) {}
+    try { _gameChannel?.sink.close(); } catch (_) {}
+    _lobbyChannel = null;
+    _gameChannel = null;
+    // Close stream controllers — they'll be lazily re-created
+    _lobbyStreamCtrl?.close();
+    _gameStreamCtrl?.close();
+    _lobbyStreamCtrl = null;
+    _gameStreamCtrl = null;
   }
 }
