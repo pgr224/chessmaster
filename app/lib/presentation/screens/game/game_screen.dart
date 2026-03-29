@@ -88,6 +88,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       onPopInvokedWithResult: (didPop, result) => _onPopInvoked(didPop),
       child: BlocConsumer<GameBloc, GameState>(
         listener: (context, state) {
+          final settings = context.read<SettingsBloc>().state;
+          
           if (state.isGameOver) {
             final isWin = (state.result == GameResult.whiteWins &&
                     state.playerColor == PieceColor.white) ||
@@ -95,12 +97,16 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                     state.playerColor == PieceColor.black);
             if (isWin) {
               _confettiController.play();
-              _audioPlayer.play(AssetSource('sounds/win.wav'));
+              if (settings.soundEnabled) {
+                _audioPlayer.play(AssetSource('sounds/win.wav'));
+              }
             }
           }
           if (state.showPuzzleCelebration) {
             _confettiController.play();
-            _audioPlayer.play(AssetSource('sounds/win.wav'));
+            if (settings.soundEnabled) {
+              _audioPlayer.play(AssetSource('sounds/win.wav'));
+            }
           }
           if (state.status == GameStatus.check) {
             _checkAnimController.forward(from: 0);
@@ -108,12 +114,16 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
           // Move Sound
           if (state.moveHistory.isNotEmpty) {
-            _audioPlayer.play(AssetSource('sounds/move.wav'));
+            if (settings.soundEnabled) {
+              _audioPlayer.play(AssetSource('sounds/move.wav'));
+            }
           }
 
           // Warning Sound for wrong puzzle moves
           if (state.tutorialMessage?.startsWith('❌') ?? false) {
-             _audioPlayer.play(AssetSource('sounds/warning.wav'));
+             if (settings.soundEnabled) {
+               _audioPlayer.play(AssetSource('sounds/warning.wav'));
+             }
           }
         },
       builder: (context, state) {
@@ -436,8 +446,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildBackground() {
+    final bgTheme = context.watch<SettingsBloc>().state.backgroundTheme;
     return Container(
-      decoration: const BoxDecoration(gradient: AppTheme.backgroundGradient),
+      decoration: BoxDecoration(gradient: AppTheme.getBackground(bgTheme)),
     );
   }
 

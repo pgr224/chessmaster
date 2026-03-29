@@ -267,27 +267,166 @@ class _SettingsScreenState extends State<SettingsScreen> {
       {'id': 'fantasy', 'name': 'Fantasy'},
       {'id': 'iconic', 'name': 'Iconic SVG'},
       {'id': 'artwork', 'name': 'Artwork SVG'},
+      {'id': 'shuffled', 'name': '🔀 SHUFFLE'},
     ];
-    return Wrap(
-      spacing: 8, runSpacing: 8,
-      children: shapes.map((s) {
-        final id = s['id']!;
-        final selected = _pieceShape == id;
-        return ChoiceChip(
-          selected: selected,
-          onSelected: (_) {
-            setState(() => _pieceShape = id);
-            context.read<ThemeBloc>().add(ThemeChangeEvent(
-              boardTheme: _boardTheme, 
-              pieceShape: _pieceShape, 
-              pieceStyle: _pieceStyle
-            ));
-          },
-          label: Text(s['name']!, style: GoogleFonts.fredoka(fontSize: 12)),
-          labelStyle: TextStyle(color: selected ? AppTheme.midnight : AppTheme.textPrimary),
-          selectedColor: AppTheme.goldPrimary,
-        );
-      }).toList(),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: 8, runSpacing: 8,
+          children: shapes.map((s) {
+            final id = s['id']!;
+            final selected = _pieceShape == id;
+            return ChoiceChip(
+              selected: selected,
+              onSelected: (_) {
+                setState(() => _pieceShape = id);
+                context.read<ThemeBloc>().add(ThemeChangeEvent(
+                  boardTheme: _boardTheme, 
+                  pieceShape: _pieceShape, 
+                  pieceStyle: _pieceStyle
+                ));
+              },
+              label: Text(s['name']!, style: GoogleFonts.fredoka(fontSize: 12)),
+              labelStyle: TextStyle(
+                color: selected ? AppTheme.midnight : AppTheme.textPrimary,
+                fontWeight: id == 'shuffled' ? FontWeight.w800 : FontWeight.w500,
+              ),
+              selectedColor: id == 'shuffled' ? AppTheme.accentCyan : AppTheme.goldPrimary,
+            );
+          }).toList(),
+        ),
+        const SizedBox(height: 12),
+        _glassButton(
+          icon: Icons.grid_view_rounded,
+          label: 'Browse 49+ PyChess Shapes',
+          onTap: () => _showPychessSelector(context),
+        ),
+      ],
+    );
+  }
+
+  Widget _glassButton({required IconData icon, required String label, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: AppTheme.skyBlue, size: 20),
+            const SizedBox(width: 10),
+            Text(label, style: GoogleFonts.fredoka(color: AppTheme.skyBlue, fontSize: 13, fontWeight: FontWeight.w600)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showPychessSelector(BuildContext context) {
+    final List<String> pychessShapes = [
+      'alfonso', 'alila', 'alpha', 'atopdown', 'california', 'cardinal', 'cburnett',
+      'celtic', 'chess7', 'chessicons', 'chessmonk', 'chessnut', 'companion',
+      'dubrovny', 'eyes', 'fantasy', 'fantasy_alt', 'freak', 'freestaunton',
+      'fresca', 'gioco', 'governor', 'horsey', 'icpieces', 'kilfiger', 'kosal',
+      'leipzig', 'letter', 'libra', 'maestro', 'magnetic', 'makruk', 'maya',
+      'merida', 'merida_new', 'metaltops', 'pirat', 'pirouetti', 'pixel', 'prmi',
+      'regular', 'reillycraig', 'riohacha', 'shapes', 'sittuyin', 'skulls',
+      'spatial', 'staunty', 'tatiana'
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.75,
+        decoration: BoxDecoration(
+          color: AppTheme.midnight,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+          border: Border.all(color: AppTheme.skyBlue.withValues(alpha: 0.2)),
+        ),
+        child: Column(
+          children: [
+            const SizedBox(height: 12),
+            Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Row(
+                children: [
+                  Text('PyChess Shapes', style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 22, fontWeight: FontWeight.w700)),
+                  const Spacer(),
+                  _glassAction(icon: Icons.close_rounded, size: 32, onTap: () => Navigator.pop(context)),
+                ],
+              ),
+            ),
+            Expanded(
+              child: GridView.builder(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3, crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: 0.9,
+                ),
+                itemCount: pychessShapes.length,
+                itemBuilder: (context, index) {
+                  final s = pychessShapes[index];
+                  final isSelected = _pieceShape == s;
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() => _pieceShape = s);
+                      context.read<ThemeBloc>().add(ThemeChangeEvent(
+                        boardTheme: _boardTheme, 
+                        pieceShape: _pieceShape, 
+                        pieceStyle: _pieceStyle
+                      ));
+                      Navigator.pop(context);
+                    },
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: isSelected ? AppTheme.goldPrimary.withValues(alpha: 0.1) : AppTheme.surface.withValues(alpha: 0.4),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: isSelected ? AppTheme.goldPrimary : Colors.white12, width: 2),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _pychessPreview(s),
+                          const SizedBox(height: 8),
+                          Text(s.capitalize(), style: GoogleFonts.fredoka(color: isSelected ? AppTheme.goldPrimary : AppTheme.textSecondary, fontSize: 10, fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _pychessPreview(String shape) {
+    return Image.asset(
+      'assets/pieces/pychess/$shape/wn.svg', // Preview using White Knight
+      width: 40, height: 40,
+      errorBuilder: (context, error, stackTrace) => const Icon(Icons.help_outline_rounded, color: Colors.white24),
+    );
+  }
+
+  Widget _glassAction({required IconData icon, required double size, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.1), shape: BoxShape.circle),
+        child: Icon(icon, color: AppTheme.textPrimary, size: size - 12),
+      ),
     );
   }
 

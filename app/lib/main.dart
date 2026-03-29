@@ -55,15 +55,19 @@ class ChessApp extends StatelessWidget {
         BlocProvider<ThemeBloc>(create: (_) => di.sl<ThemeBloc>()..add(ThemeLoadEvent())),
         BlocProvider<SettingsBloc>(create: (_) => di.sl<SettingsBloc>()..add(SettingsLoadEvent())),
       ],
-      child: BlocBuilder<ThemeBloc, ThemeState>(
-        builder: (context, themeState) {
-          return MaterialApp.router(
-            title: 'Chess Master',
-            debugShowCheckedModeBanner: false,
-            theme: AppTheme.darkTheme,
-            darkTheme: AppTheme.darkTheme,
-            themeMode: ThemeMode.dark,
-            routerConfig: AppRouter.router,
+      child: BlocBuilder<SettingsBloc, SettingsState>(
+        builder: (context, settingsState) {
+          return BlocBuilder<ThemeBloc, ThemeState>(
+            builder: (context, themeState) {
+              return MaterialApp.router(
+                title: 'Chess Master',
+                debugShowCheckedModeBanner: false,
+                theme: AppTheme.darkTheme,
+                darkTheme: AppTheme.darkTheme,
+                themeMode: ThemeMode.dark,
+                routerConfig: AppRouter.router,
+              );
+            },
           );
         },
       ),

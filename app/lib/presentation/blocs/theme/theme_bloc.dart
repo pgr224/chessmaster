@@ -11,13 +11,10 @@ class ThemeChangeEvent extends ThemeEvent {
   final String boardTheme;
   final String pieceShape;
   final String pieceStyle;
-  const ThemeChangeEvent({
-    required this.boardTheme,
-    required this.pieceShape,
-    required this.pieceStyle,
-  });
   @override List<Object?> get props => [boardTheme, pieceShape, pieceStyle];
 }
+
+class ThemeShuffleEvent extends ThemeEvent {}
 
 class ThemeState extends Equatable {
   final String boardTheme;
@@ -41,6 +38,27 @@ class ThemeBloc extends Bloc<ThemeEvent, ThemeState> {
   ThemeBloc() : super(const ThemeState()) {
     on<ThemeLoadEvent>(_onLoad);
     on<ThemeChangeEvent>(_onChange);
+    on<ThemeShuffleEvent>(_onShuffle);
+  }
+
+  static const List<String> _pychessShapes = [
+    'alfonso', 'alila', 'alpha', 'atopdown', 'california', 'cardinal', 'cburnett',
+    'celtic', 'chess7', 'chessicons', 'chessmonk', 'chessnut', 'companion',
+    'dubrovny', 'eyes', 'fantasy', 'fantasy_alt', 'freak', 'freestaunton',
+    'fresca', 'gioco', 'governor', 'horsey', 'icpieces', 'kilfiger', 'kosal',
+    'leipzig', 'letter', 'libra', 'maestro', 'magnetic', 'makruk', 'maya',
+    'merida', 'merida_new', 'metaltops', 'pirat', 'pirouetti', 'pixel', 'prmi',
+    'regular', 'reillycraig', 'riohacha', 'shapes', 'sittuyin', 'skulls',
+    'spatial', 'staunty', 'tatiana'
+  ];
+
+  void _onShuffle(ThemeShuffleEvent event, Emitter<ThemeState> emit) async {
+    final prefs = await SharedPreferences.getInstance();
+    final isShuffled = (prefs.getString('piece_shape') ?? 'classic') == 'shuffled';
+    if (isShuffled) {
+      final randomShape = _pychessShapes[DateTime.now().millisecondsSinceEpoch % _pychessShapes.length];
+      emit(state.copyWith(pieceShape: randomShape));
+    }
   }
 
   Future<void> _onLoad(ThemeLoadEvent event, Emitter<ThemeState> emit) async {

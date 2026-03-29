@@ -467,7 +467,12 @@ class _PieceWidget extends StatelessWidget {
     if (style == 'letters') return _buildLetterPiece(isWhite, baseColor);
     if (style == '8-bit') return _build8BitPiece(isWhite, baseColor);
 
-    if (shape == 'iconic' || shape == 'artwork') {
+    // Support Pychess SVGs
+    final isVectorShape = shape == 'iconic' || 
+                         shape == 'artwork' || 
+                         _isPyChessShape(shape);
+
+    if (isVectorShape) {
       return _buildSvgPiece(isWhite);
     }
 
@@ -495,18 +500,34 @@ class _PieceWidget extends StatelessWidget {
   }
 
   Widget _buildSvgPiece(bool isWhite) {
-    final colorStr = isWhite ? 'white' : 'black';
-    final typeStr = piece.type.name;
-    final path = 'assets/pieces/$shape/${colorStr}_$typeStr.svg';
+    String path;
+    if (shape == 'iconic' || shape == 'artwork') {
+      final colorStr = isWhite ? 'white' : 'black';
+      final typeStr = piece.type.name;
+      path = 'assets/pieces/$shape/${colorStr}_$typeStr.svg';
+    } else {
+      // Pychess logic
+      final colorStr = isWhite ? 'w' : 'b';
+      final typeStr = _getPychessTypeChar(piece.type);
+      path = 'assets/pieces/pychess/$shape/$colorStr$typeStr.svg';
+    }
     
     return SvgPicture.asset(
       path,
       width: size,
       height: size,
-      // Some SVG pieces might need color override if the user chose custom colors
-      // but usually these sets have their own fixed colors. 
-      // I'll keep them as they are for "artwork" and "iconic".
     );
+  }
+
+  String _getPychessTypeChar(PieceType type) {
+    switch (type) {
+      case PieceType.pawn: return 'p';
+      case PieceType.knight: return 'n';
+      case PieceType.bishop: return 'b';
+      case PieceType.rook: return 'r';
+      case PieceType.queen: return 'q';
+      case PieceType.king: return 'k';
+    }
   }
 
   Widget _build8BitPiece(bool isWhite, Color color) {
@@ -836,8 +857,20 @@ class _PiecePathProvider {
         break;
       default: return _getClassicPath(type);
     }
-    return p;
   }
+
+  static final Set<String> _pychessShapes = {
+    'alfonso', 'alila', 'alpha', 'atopdown', 'california', 'cardinal', 'cburnett',
+    'celtic', 'chess7', 'chessicons', 'chessmonk', 'chessnut', 'companion',
+    'dubrovny', 'eyes', 'fantasy', 'fantasy_alt', 'freak', 'freestaunton',
+    'fresca', 'gioco', 'governor', 'horsey', 'icpieces', 'kilfiger', 'kosal',
+    'leipzig', 'letter', 'libra', 'maestro', 'magnetic', 'makruk', 'maya',
+    'merida', 'merida_new', 'metaltops', 'pirat', 'pirouetti', 'pixel', 'prmi',
+    'regular', 'reillycraig', 'riohacha', 'shapes', 'sittuyin', 'skulls',
+    'spatial', 'staunty', 'tatiana'
+  };
+
+  static bool _isPyChessShape(String s) => _pychessShapes.contains(s);
 }
 
 

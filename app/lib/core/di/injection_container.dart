@@ -76,6 +76,7 @@ Future<void> init() async {
     sl<GameRepository>(), 
     sl<AuthRepository>(),
     sl<PuzzleRepository>(),
+    sl<ThemeBloc>(),
   ));
   sl.registerLazySingleton<MultiplayerBloc>(() => MultiplayerBloc(sl<MultiplayerService>()));
   sl.registerLazySingleton<ThemeBloc>(() => ThemeBloc());

@@ -380,6 +380,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
   final GameRepository _gameRepository;
   final AuthRepository _authRepository;
   final PuzzleRepository _puzzleRepository;
+  final ThemeBloc _themeBloc;
   String? _gameId;
   int _aiRequestEpoch = 0;
   Timer? _rushTimer;
@@ -387,7 +388,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
   ChessEngine get engine => _engine;
   EngineController get engineController => _engineController;
 
-  GameBloc(this._gameRepository, this._authRepository, this._puzzleRepository) : super(GameState(
+  GameBloc(this._gameRepository, this._authRepository, this._puzzleRepository, this._themeBloc) : super(GameState(
     board: List.generate(8, (_) => List.filled(8, null)),
     currentTurn: PieceColor.white,
   )) {
@@ -424,6 +425,10 @@ class GameBloc extends Bloc<GameEvent, GameState> {
   Future<void> _onStart(GameStartEvent event, Emitter<GameState> emit) async {
     // Invalidate any pending AI response from a previous game lifecycle.
     _aiRequestEpoch++;
+
+    // Trigger shuffle if the user has chosen it
+    _themeBloc.add(ThemeShuffleEvent());
+
     _engine = ChessEngine.fromFEN(event.config.puzzle?.initialFEN ?? event.tutorial?.initialFEN ?? 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
     final config = event.config;
 

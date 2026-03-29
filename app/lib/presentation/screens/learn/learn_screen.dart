@@ -195,7 +195,7 @@ class LearnScreen extends StatelessWidget {
                 )),
                 const Spacer(),
                 ElevatedButton(
-                  onPressed: () => context.push('/article/sicilian'),
+                  onPressed: () => context.push('/learn/article/sicilian'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.midnight,
                     foregroundColor: Colors.white,
@@ -227,7 +227,7 @@ class LearnScreen extends StatelessWidget {
 
   Widget _buildCategoryCard(BuildContext context, _Category cat) {
     return GestureDetector(
-      onTap: () => context.push('/article/${cat.articleId}'),
+      onTap: () => context.push('/learn/article/${cat.articleId}'),
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
         padding: const EdgeInsets.all(20),
