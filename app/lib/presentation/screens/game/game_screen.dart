@@ -27,6 +27,7 @@ import '../../widgets/coach_overlay_widget.dart';
 import '../../widgets/timer_widget.dart';
 import '../../widgets/game_rules_dialog.dart';
 import '../../../data/models/coach_model.dart';
+import '../../widgets/thinking_overlay.dart';
 
 class GameScreen extends StatefulWidget {
   final GameConfig config;
@@ -222,6 +223,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               // Only show floating chat on mobile/compact, wide layout has sidebar chat
               if (state.mode == GameMode.multiplayer && constraints.maxWidth < 1080) _buildFloatingChat(context),
               if (state.puzzleExplanation != null) _buildPuzzleExplanation(state),
+              if (state.isAIThinking) Center(child: const ThinkingOverlayWidget().animate().fadeIn().scale()),
             ],
           );
         },

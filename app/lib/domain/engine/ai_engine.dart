@@ -56,7 +56,7 @@ class AIEngine {
 
       for (final move in moves) {
         isolatedEngine.applyMoveInternal(move);
-        final score = -_search(isolatedEngine, config.depth, -999999, 999999).score;
+        final score = -_search(isolatedEngine, config.depth, -999999, 999999, DateTime.now(), const Duration(seconds: 10)).score;
         isolatedEngine.undoMove();
         scored.add((move.toAlgebraic(), score));
       }
@@ -108,7 +108,7 @@ class AIEngine {
       final elapsed = DateTime.now().difference(startTime);
       if (elapsed > timeout && currentDepth > 1) break;
 
-      final result = _search(engine, currentDepth, -999999, 999999);
+      final result = _search(engine, currentDepth, -999999, 999999, startTime, timeout);
       if (result.move != null) bestMove = result.move;
       
       currentDepth++;
@@ -117,8 +117,8 @@ class AIEngine {
     return bestMove ?? engine.allLegalMoves().firstOrNull;
   }
 
-  static _SearchResult _search(ChessEngine engine, int depth, int alpha, int beta) {
-    if (depth == 0) return _SearchResult(score: _quiescence(engine, alpha, beta));
+  static _SearchResult _search(ChessEngine engine, int depth, int alpha, int beta, DateTime startTime, Duration timeout) {
+    if (depth == 0) return _SearchResult(score: _quiescence(engine, alpha, beta, startTime, timeout));
 
     final fen = engine.toFEN();
     if (_tt.containsKey(fen)) {
@@ -142,8 +142,13 @@ class AIEngine {
     int bestScore = -999999;
 
     for (final move in moves) {
+      // Check for timeout deep in the tree every few nodes
+      if (depth > 2 && DateTime.now().difference(startTime).inMilliseconds > timeout.inMilliseconds) {
+        break; 
+      }
+
       engine.applyMoveInternal(move);
-      final score = -_search(engine, depth - 1, -beta, -alpha).score;
+      final score = -_search(engine, depth - 1, -beta, -alpha, startTime, timeout).score;
       engine.undoMove();
 
       if (score > bestScore) {
@@ -158,15 +163,16 @@ class AIEngine {
     return _SearchResult(score: bestScore, move: bestMove);
   }
 
-  static int _quiescence(ChessEngine engine, int alpha, int beta) {
+  static int _quiescence(ChessEngine engine, int alpha, int beta, DateTime startTime, Duration timeout) {
     int standPat = _evaluate(engine);
     if (standPat >= beta) return beta;
     if (alpha < standPat) alpha = standPat;
 
     final moves = engine.allLegalMoves().where((m) => m.capturedPiece != null).toList();
     for (final move in moves) {
+      if (DateTime.now().difference(startTime).inMilliseconds > timeout.inMilliseconds) break;
       engine.applyMoveInternal(move);
-      final score = -_quiescence(engine, -beta, -alpha);
+      final score = -_quiescence(engine, -beta, -alpha, startTime, timeout);
       engine.undoMove();
 
       if (score >= beta) return beta;

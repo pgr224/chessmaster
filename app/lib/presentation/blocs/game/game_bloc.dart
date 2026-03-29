@@ -426,7 +426,7 @@ class GameState extends Equatable {
 // ═══════════════════════════════════════════
 class GameBloc extends Bloc<GameEvent, GameState> {
   late ChessEngine _engine;
-  final EngineController _engineController = EngineController();
+  final AIEngineController _engineController = AIEngineController();
   final CoachController _coachController = CoachController();
   final GameRepository _gameRepository;
   final AuthRepository _authRepository;
@@ -437,7 +437,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
   Timer? _rushTimer;
 
   ChessEngine get engine => _engine;
-  EngineController get engineController => _engineController;
+  AIEngineController get engineController => _engineController;
   CoachController get coachController => _coachController;
 
   GameBloc(this._gameRepository, this._authRepository, this._puzzleRepository, this._themeBloc) : super(GameState(
@@ -989,7 +989,10 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       await Future.delayed(const Duration(milliseconds: 400));
 
       // Use the hybrid EngineController instead of AIDirectly
-      final moveStr = await _engineController.getBestMove(_engine.toFEN(), engine: _engine);
+      final moveStr = await _engineController.getBestMove(
+        fen: _engine.toFEN(),
+        difficulty: state.aiDifficulty ?? AIDifficulty.intermediate,
+      );
       
       if (isClosed || aiRequestEpoch != _aiRequestEpoch) return;
       emit(state.copyWith(isAIThinking: false));
