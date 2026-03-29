@@ -23,6 +23,7 @@ import '../../widgets/promotion_dialog.dart';
 import '../../widgets/game_over_overlay.dart';
 import '../../widgets/player_info_widget.dart';
 import '../../widgets/hint_button_widget.dart';
+import '../../widgets/coach_overlay_widget.dart';
 
 class GameScreen extends StatefulWidget {
   final GameConfig config;
@@ -153,8 +154,23 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               if (state.pendingMove != null) _buildConfirmMoveOverlay(state),
               if (_showMoves) _buildMoveHistoryOverlay(state),
               if (state.isPuzzleRush) _buildPuzzleRushOverlay(state),
-              if (state.coachMessage != null) _buildCoachPopup(state.coachMessage!),
-              if (state.showMiniLesson) _buildMiniLessonOverlay(context, state),
+              // AI Coach Overlays
+              if (state.coachFeedback != null && !state.isGameOver)
+                CoachOverlayWidget(
+                  feedback: state.coachFeedback,
+                  personality: state.coachSettings.personality,
+                  onDismiss: () => context.read<GameBloc>().add(GameDismissCoachFeedbackEvent()),
+                  onUndo: () {
+                    context.read<GameBloc>().add(GameDismissCoachFeedbackEvent());
+                    context.read<GameBloc>().add(GameUndoEvent());
+                  },
+                ),
+              if (state.activeHint != null && !state.isGameOver)
+                HintOverlayWidget(
+                  hint: state.activeHint!,
+                  onDismiss: () => context.read<GameBloc>().add(GameDismissHintEvent()),
+                ),
+              if (state.showMiniLesson && state.coachFeedback == null) _buildMiniLessonOverlay(context, state),
               if (state.mode == GameMode.multiplayer) _buildFloatingChat(context),
               if (state.puzzleExplanation != null) _buildPuzzleExplanation(state),
             ],
@@ -916,13 +932,16 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                 context.read<GameBloc>().add(GameSelectPieceEvent(sq));
               },
         isInteractive: !state.isAIThinking && state.isPlayerTurn,
-        lastCorrectMove: state.lastCorrectPuzzleMove,
+        lastCorrectMove: state.coachMove,
       ),
     );
   }
 
   Widget _buildActionBar(BuildContext context, GameState state) {
     final settings = context.watch<SettingsBloc>().state;
+    final isPracticeOrSingle = state.mode == GameMode.singlePlayer || state.mode == GameMode.practice;
+    final isMultiplayer = state.mode == GameMode.multiplayer;
+    
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
       decoration: BoxDecoration(
@@ -937,69 +956,66 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         runSpacing: 8,
         spacing: 6,
         children: [
-          // Hint button (single player only)
-          if (state.mode == GameMode.singlePlayer || state.mode == GameMode.practice)
+          // Hint button (single player & practice)
+          if (isPracticeOrSingle)
             HintButtonWidget(
               hintsRemaining: state.hintsRemaining,
               onTap: state.hintsRemaining > 0 && state.isPlayerTurn && !state.isGameOver
                   ? () => context.read<GameBloc>().add(GameRequestHintEvent())
                   : null,
             ),
-          // Undo
-          if (state.mode == GameMode.practice || state.mode == GameMode.singlePlayer || state.mode == GameMode.multiplayer)
+          // Undo — always available for practice & single, conditional for multiplayer
+          if (isPracticeOrSingle || isMultiplayer)
             _actionBtn(
               icon: Icons.undo_rounded,
               label: 'Undo',
               color: AppTheme.skyBlue,
-              onTap: (state.mode == GameMode.practice || (state.mode == GameMode.singlePlayer && !state.isGameOver) || state.canMpUndo)
+              onTap: (isPracticeOrSingle && state.moveHistory.isNotEmpty && !state.isGameOver) || state.canMpUndo
                   ? () => context.read<GameBloc>().add(GameUndoEvent())
                   : null,
             ),
-          // Draw offer
-          _actionBtn(
-            icon: Icons.handshake_rounded,
-            label: 'Draw',
-            color: AppTheme.skyBlue,
-            onTap: !state.isGameOver
-                ? () {
-                    if (state.mode == GameMode.multiplayer) {
-                      context.read<MultiplayerBloc>().add(MpDrawOfferEvent());
-                    } else {
-                      _offerDraw(context, settings.confirmDrawOffer);
-                    }
-                  }
-                : null,
-          ),
           // Resign
           _actionBtn(
             icon: Icons.flag_rounded, label: 'Resign', color: AppTheme.accentRed,
             onTap: !state.isGameOver ? () => _resign(context, settings.confirmResign) : null,
           ),
-          // Save & Quit Request (Online only)
-          if (state.mode == GameMode.multiplayer)
+          // Hint — only for practice/single (cost XP)
+          if (isPracticeOrSingle)
+            _actionBtn(
+              icon: Icons.lightbulb_rounded,
+              label: 'Hint',
+              color: AppTheme.goldPrimary,
+              onTap: !state.isGameOver && state.isPlayerTurn && !state.isAIThinking
+                  ? () => _requestHint(context, state)
+                  : null,
+            ),
+          
+          // Coach Settings
+          if (isPracticeOrSingle)
+            _actionBtn(
+              icon: Icons.face_rounded,
+              label: 'Coach',
+              color: AppTheme.accentPurple,
+              onTap: () => _showCoachSettings(context, state),
+            ),
+          // Draw offer — multiplayer only
+          if (isMultiplayer)
+            _actionBtn(
+              icon: Icons.handshake_rounded,
+              label: 'Draw',
+              color: AppTheme.skyBlue,
+              onTap: !state.isGameOver
+                  ? () => context.read<MultiplayerBloc>().add(MpDrawOfferEvent())
+                  : null,
+            ),
+          // Save (multiplayer)
+          if (isMultiplayer)
             _actionBtn(
               icon: Icons.save_rounded, label: 'Save Game', color: AppTheme.accentCyan,
               onTap: !state.isGameOver
                   ? () => context.read<MultiplayerBloc>().add(MpSaveRequestEvent())
                   : null,
             ),
-          // Save (Local only)
-          if (state.mode != GameMode.multiplayer && state.mode != GameMode.tutorial)
-            _actionBtn(
-              icon: Icons.save_rounded, label: 'Save', color: AppTheme.accentCyan,
-              onTap: () => context.read<GameBloc>().add(GameSaveEvent()),
-            ),
-          // Share
-          _actionBtn(
-            icon: Icons.share_rounded,
-            label: 'Share',
-            color: AppTheme.goldPrimary,
-            onTap: () => _sharePgn(
-              context.read<GameBloc>().engine.toPGN(),
-              'Check out my chess game!',
-              'Chess Master Game',
-            ),
-          ),
         ],
       ),
     );
@@ -1030,6 +1046,133 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               color: onTap != null ? (color ?? AppTheme.textSecondary) : AppTheme.textMuted,
               fontSize: 12, fontWeight: FontWeight.w600,
             )),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showCoachSettings(BuildContext context, GameState state) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          gradient: AppTheme.cardGradient,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+          border: Border.all(color: AppTheme.accentPurple.withValues(alpha: 0.3), width: 2),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.accentPurple.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.face_rounded, color: AppTheme.accentPurple, size: 28),
+                ),
+                const SizedBox(width: 16),
+                Text(
+                  'AI Coach Settings',
+                  style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 24, fontWeight: FontWeight.bold),
+                ),
+                const Spacer(),
+                IconButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  icon: const Icon(Icons.close_rounded, color: AppTheme.textMuted),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            
+            // Toggle Coaching
+            SwitchListTile(
+              title: Text('Real-time Feedback', style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 18)),
+              subtitle: Text('Get help and lessons while playing', style: GoogleFonts.baloo2(color: AppTheme.textSecondary)),
+              value: state.coachSettings.enabled,
+              activeColor: AppTheme.accentPurple,
+              onChanged: (val) {
+                context.read<GameBloc>().add(GameUpdateCoachSettingsEvent(
+                  state.coachSettings.copyWith(enabled: val),
+                ));
+              },
+            ),
+            
+            const Divider(color: Colors.white12, height: 32),
+            
+            // Personality Selector
+            Text('Coach Personality', style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 18)),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: CoachPersonality.values.map((p) {
+                final isSelected = state.coachSettings.personality == p;
+                return GestureDetector(
+                  onTap: () {
+                    context.read<GameBloc>().add(GameUpdateCoachSettingsEvent(
+                      state.coachSettings.copyWith(personality: p),
+                    ));
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isSelected ? AppTheme.accentPurple : AppTheme.surface.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isSelected ? AppTheme.accentPurple : AppTheme.textMuted.withValues(alpha: 0.2),
+                      ),
+                    ),
+                    child: Text(
+                      p.name[0].toUpperCase() + p.name.substring(1),
+                      style: GoogleFonts.fredoka(
+                        color: isSelected ? AppTheme.midnight : AppTheme.textPrimary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            
+            const SizedBox(height: 24),
+            
+            // Level Selector
+            Text('Coaching Level', style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 18)),
+            const SizedBox(height: 12),
+            Container(
+              decoration: BoxDecoration(
+                color: AppTheme.surface.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Slider(
+                value: CoachingLevel.values.indexOf(state.coachSettings.level).toDouble(),
+                min: 0,
+                max: (CoachingLevel.values.length - 1).toDouble(),
+                divisions: CoachingLevel.values.length - 1,
+                activeColor: AppTheme.accentPurple,
+                onChanged: (val) {
+                  context.read<GameBloc>().add(GameUpdateCoachSettingsEvent(
+                    state.coachSettings.copyWith(level: CoachingLevel.values[val.toInt()]),
+                  ));
+                },
+              ),
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: CoachingLevel.values.map((l) => Text(
+                l.name.toUpperCase(),
+                style: GoogleFonts.jura(color: AppTheme.textMuted, fontSize: 10, fontWeight: FontWeight.bold),
+              )).toList(),
+            ),
+            
+            const SizedBox(height: 32),
           ],
         ),
       ),
@@ -1338,77 +1481,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     context.read<GameBloc>().add(GameResignEvent());
   }
 
-  Future<void> _offerDraw(BuildContext context, bool requireConfirm) async {
-    if (!requireConfirm) {
-      context.read<GameBloc>().add(GameDrawOfferEvent());
-      return;
-    }
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.navyCard,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: Text('Offer Draw?', style: GoogleFonts.fredoka(color: AppTheme.skyBlue)),
-        content: Text(
-          'Send a draw offer to your opponent now?',
-          style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 15),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Cancel', style: GoogleFonts.fredoka(color: AppTheme.textMuted)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.skyBlue,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text('Offer', style: GoogleFonts.fredoka(color: AppTheme.midnight)),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true && context.mounted) {
-      context.read<GameBloc>().add(GameDrawOfferEvent());
-    }
-  }
-
-  Widget _buildCoachPopup(String message) {
-    return Positioned(
-      top: 120,
-      left: 20,
-      right: 20,
-      child: Center(
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          decoration: BoxDecoration(
-            color: AppTheme.navyCard.withValues(alpha: 0.9),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.4)),
-            boxShadow: [
-              BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4)),
-            ],
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('💡', style: TextStyle(fontSize: 20)),
-              const SizedBox(width: 12),
-              Flexible(
-                child: Text(
-                  message,
-                  style: GoogleFonts.baloo2(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600),
-                ),
-              ),
-            ],
-          ),
-        ).animate().slideY(begin: -0.2).fadeIn().shake(duration: 400.ms),
-      ),
-    );
-  }
 
   Widget _buildMiniLessonOverlay(BuildContext context, GameState state) {
     return Positioned.fill(

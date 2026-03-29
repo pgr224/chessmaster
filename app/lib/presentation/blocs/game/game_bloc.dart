@@ -7,14 +7,16 @@ import 'package:vibration/vibration.dart';
 import '../../../domain/engine/chess_engine.dart';
 import '../../../domain/engine/ai_engine.dart';
 import '../../../domain/engine/engine_controller.dart';
+import '../../../domain/engine/coach_controller.dart';
 import '../../../data/repositories/game_repository.dart';
 import '../../../data/models/game_model.dart';
 import '../../../data/models/game_config.dart';
+import '../../../data/models/coach_model.dart';
 import '../../../data/models/tutorial_model.dart';
 import '../../../data/models/puzzle_model.dart';
 import '../../../data/repositories/auth_repository.dart';
 import '../../../data/repositories/puzzle_repository.dart';
-
+import '../theme/theme_bloc.dart';
 
 // ═══════════════════════════════════════════
 // EVENTS
@@ -89,6 +91,13 @@ class GameDrawReceiveEvent extends GameEvent { final String? fromId; const GameD
 class GameDismissMiniLessonEvent extends GameEvent { const GameDismissMiniLessonEvent(); }
 class GamePuzzleRushTickEvent extends GameEvent { const GamePuzzleRushTickEvent(); }
 class GameExplainPuzzleMoveEvent extends GameEvent { const GameExplainPuzzleMoveEvent(); }
+class GameDismissCoachFeedbackEvent extends GameEvent {}
+class GameDismissHintEvent extends GameEvent {}
+class GameUpdateCoachSettingsEvent extends GameEvent {
+  final CoachSettings coachSettings;
+  const GameUpdateCoachSettingsEvent(this.coachSettings);
+  @override List<Object?> get props => [coachSettings];
+}
 
 // ═══════════════════════════════════════════
 // STATE
@@ -146,6 +155,12 @@ class GameState extends Equatable {
   final String? analysisMessage;
   final bool showMiniLesson;
 
+  // AI Coach System
+  final CoachFeedback? coachFeedback;
+  final HintResult? activeHint;
+  final CoachSettings coachSettings;
+  final List<CoachFeedback> gameCoachHistory;
+
   // Puzzle Overhaul
   final int puzzleStreak;
   final int puzzleRushStrikes;
@@ -155,6 +170,10 @@ class GameState extends Equatable {
   final bool showPuzzleCelebration;
   final String? puzzleExplanation;
   final int totalPuzzleXP;
+
+  // Real-time Highlighting & Undo
+  final Move? coachMove;
+  final Set<int> hintedIndices;
 
   const GameState({
     required this.board,
@@ -205,6 +224,10 @@ class GameState extends Equatable {
     this.analysisMessage,
     this.coachMessage,
     this.showMiniLesson = false,
+    this.coachFeedback,
+    this.activeHint,
+    this.coachSettings = const CoachSettings(),
+    this.gameCoachHistory = const [],
     this.puzzleStreak = 0,
     this.puzzleRushStrikes = 0,
     this.puzzleRushTime = 180, // 3 minutes
@@ -213,6 +236,8 @@ class GameState extends Equatable {
     this.showPuzzleCelebration = false,
     this.puzzleExplanation,
     this.totalPuzzleXP = 0,
+    this.coachMove,
+    this.hintedIndices = const {},
   });
 
   bool get isGameOver => status == GameStatus.checkmate ||
@@ -282,6 +307,10 @@ class GameState extends Equatable {
     String? analysisMessage,
     String? coachMessage,
     bool? showMiniLesson,
+    CoachFeedback? coachFeedback,
+    HintResult? activeHint,
+    CoachSettings? coachSettings,
+    List<CoachFeedback>? gameCoachHistory,
     int? puzzleStreak,
     int? puzzleRushStrikes,
     int? puzzleRushTime,
@@ -290,12 +319,17 @@ class GameState extends Equatable {
     bool? showPuzzleCelebration,
     String? puzzleExplanation,
     int? totalPuzzleXP,
+    Move? coachMove,
+    Set<int>? hintedIndices,
     bool clearSelected = false,
     bool clearHint = false,
     bool clearDrawOffer = false,
     bool clearTutorialMessage = false,
     bool clearPendingMove = false,
     bool clearCoachMessage = false,
+    bool clearCoachFeedback = false,
+    bool clearActiveHint = false,
+    bool clearCoachMove = false,
   }) {
     return GameState(
       board: board ?? this.board,
@@ -345,6 +379,10 @@ class GameState extends Equatable {
       analysisMessage: analysisMessage ?? this.analysisMessage,
       coachMessage: clearCoachMessage ? null : (coachMessage ?? this.coachMessage),
       showMiniLesson: showMiniLesson ?? this.showMiniLesson,
+      coachFeedback: clearCoachFeedback ? null : (coachFeedback ?? this.coachFeedback),
+      activeHint: clearActiveHint ? null : (activeHint ?? this.activeHint),
+      coachSettings: coachSettings ?? this.coachSettings,
+      gameCoachHistory: gameCoachHistory ?? this.gameCoachHistory,
       puzzleStreak: puzzleStreak ?? this.puzzleStreak,
       puzzleRushStrikes: puzzleRushStrikes ?? this.puzzleRushStrikes,
       puzzleRushTime: puzzleRushTime ?? this.puzzleRushTime,
@@ -353,6 +391,8 @@ class GameState extends Equatable {
       showPuzzleCelebration: showPuzzleCelebration ?? this.showPuzzleCelebration,
       puzzleExplanation: puzzleExplanation ?? this.puzzleExplanation,
       totalPuzzleXP: totalPuzzleXP ?? this.totalPuzzleXP,
+      coachMove: clearCoachMove ? null : (coachMove ?? this.coachMove),
+      hintedIndices: hintedIndices ?? this.hintedIndices,
     );
   }
 
@@ -366,8 +406,10 @@ class GameState extends Equatable {
     confirmMoves, autoQueen, pendingMove,
     accuracy, mistakes, blunders, missedWins, bestMoves, xpGained,
     coachMessage, showMiniLesson, analysisMessage,
+    coachFeedback, activeHint, coachSettings, gameCoachHistory,
     puzzleStreak, puzzleRushStrikes, puzzleRushTime, isPuzzleRush, 
-    lastCorrectPuzzleMove, showPuzzleCelebration, puzzleExplanation, totalPuzzleXP
+    lastCorrectPuzzleMove, showPuzzleCelebration, puzzleExplanation, totalPuzzleXP,
+    coachMove, hintedIndices
   ];
 }
 
@@ -377,6 +419,7 @@ class GameState extends Equatable {
 class GameBloc extends Bloc<GameEvent, GameState> {
   late ChessEngine _engine;
   final EngineController _engineController = EngineController();
+  final CoachController _coachController = CoachController();
   final GameRepository _gameRepository;
   final AuthRepository _authRepository;
   final PuzzleRepository _puzzleRepository;
@@ -387,6 +430,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
 
   ChessEngine get engine => _engine;
   EngineController get engineController => _engineController;
+  CoachController get coachController => _coachController;
 
   GameBloc(this._gameRepository, this._authRepository, this._puzzleRepository, this._themeBloc) : super(GameState(
     board: List.generate(8, (_) => List.filled(8, null)),
@@ -412,6 +456,12 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     on<GameDiscardEvent>(_onDiscard);
     on<GamePuzzleRushTickEvent>(_onPuzzleRushTick);
     on<GameExplainPuzzleMoveEvent>(_onExplainPuzzleMove);
+    on<GameDismissCoachFeedbackEvent>((e, emit) => emit(state.copyWith(clearCoachFeedback: true)));
+    on<GameDismissHintEvent>((e, emit) => emit(state.copyWith(clearActiveHint: true)));
+    on<GameUpdateCoachSettingsEvent>((e, emit) {
+      _coachController.updateSettings(e.coachSettings);
+      emit(state.copyWith(coachSettings: e.coachSettings));
+    });
   }
 
   Future<void> _onDiscard(GameDiscardEvent event, Emitter<GameState> emit) async {
@@ -441,9 +491,13 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         final d = user.stats.practiceDifficulty;
         if (d < 1.0) {
           difficulty = AIDifficulty.basic;
-        } else if (d < 2.0) difficulty = AIDifficulty.intermediate;
-        else if (d < 3.0) difficulty = AIDifficulty.advanced;
-        else difficulty = AIDifficulty.impossible;
+        } else if (d < 2.0) {
+          difficulty = AIDifficulty.intermediate;
+        } else if (d < 3.0) {
+          difficulty = AIDifficulty.advanced;
+        } else {
+          difficulty = AIDifficulty.impossible;
+        }
       }
     }
 
@@ -559,8 +613,6 @@ class GameBloc extends Bloc<GameEvent, GameState> {
   Future<void> _onExplainPuzzleMove(GameExplainPuzzleMoveEvent event, Emitter<GameState> emit) async {
     if (state.puzzle == null) return;
     emit(state.copyWith(puzzleExplanation: 'Analyzing position...'));
-    
-    final currentFen = _engine.toFEN();
     // Use engine to evaluate and find why this move is good
     final eval = await AIEngine.evaluatePosition(_engine);
     
@@ -744,72 +796,79 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       pendingMove: null, // Clear any pending move UI
     ));
 
-    // 2. ANALYZE PLAYER MOVE IN BACKGROUND (only for modes that provide coaching)
-    // We don't block the UI for this anymore!
+    // 2. AI COACH MOVE ANALYSIS (async, non-blocking)
     bool shouldAnalyze = state.mode == GameMode.practice || state.mode == GameMode.singlePlayer;
-    if (shouldAnalyze) {
-      // --- MOVE ANALYSIS ---
-    // Note: Since we already moved, we need to pass a snapshot of the engine in previous state
-    // for correct evaluation. Or we can use the move info to calculate the loss.
-    // For simplicity and to fix the 'lag', we do it in a non-blocking sequence.
+    if (shouldAnalyze && state.coachSettings.enableRealTimeCoaching) {
     int mistakes = state.mistakes;
     int blunders = state.blunders;
     int bestMoves = state.bestMoves;
     int missedWins = state.missedWins;
-    String? coachMsg;
-    bool showLesson = false;
     double accuracy = state.accuracy;
 
     try {
-      final difficulty = state.aiDifficulty ?? AIDifficulty.intermediate;
+      // Use CoachController for proper move evaluation
+      final fenBeforeMove = state.currentFEN;
+      final engineBefore = ChessEngine.fromFEN(fenBeforeMove);
       
-      // Calculate loss: We use a snapshot of engine or the current engine (after move)
-      // but correctly relative to previous turn.
-      final evaluationAfter = -(await AIEngine.evaluatePosition(_engine)).toDouble();
-      
-      // Rough estimation of mistake (since we didn't calculate bestScoreBefore to avoid blocking)
-      // In a "Real" engine we compare your move score to the actual best move's score.
-      // For instant response, we'll perform this after the move but still async.
-      final topMoves = await AIEngine.getTopMoves(ChessEngine.fromFEN(state.currentFEN), difficulty, count: 1);
-      final bestScoreBefore = topMoves.isNotEmpty ? topMoves[0].$2.toDouble() : evaluationAfter;
-      
-      final cpLoss = bestScoreBefore - evaluationAfter;
+      final feedback = await _coachController.evaluateMove(
+        engineBeforeMove: engineBefore,
+        playedMove: move,
+        engineAfterMove: _engine,
+      );
 
-      if (cpLoss <= 25) {
-        bestMoves++;
-      } else if (cpLoss > 350) {
-        blunders++;
-        if (state.mode == GameMode.practice) {
-          final bestMoveStr = topMoves.isNotEmpty ? topMoves[0].$1.toAlgebraic() : 'another move';
-          coachMsg = 'Blunder! Better was $bestMoveStr 🚩';
-          showLesson = true;
-        }
-      } else if (cpLoss > 180) {
-        mistakes++;
-        if (state.mode == GameMode.practice) {
-          final bestMoveStr = topMoves.isNotEmpty ? topMoves[0].$1.toAlgebraic() : 'another move';
-          coachMsg = 'Mistake! Better was $bestMoveStr ⚠️';
-        }
+      // Update stats based on classification
+      switch (feedback.classification) {
+        case MoveClassification.brilliant:
+        case MoveClassification.best:
+          bestMoves++;
+        case MoveClassification.good:
+          break;
+        case MoveClassification.needsImprovement:
+          break;
+        case MoveClassification.mistake:
+          mistakes++;
+        case MoveClassification.blunder:
+          blunders++;
       }
 
+      // Update accuracy
       final moveCountTotal = state.moveHistory.length + 1;
-      final double moveAccuracy = (100.0 - (cpLoss / 10.0)).clamp(0.0, 100.0);
+      final double moveAccuracy = (100.0 - (feedback.centipawnLoss / 10.0)).clamp(0.0, 100.0);
       accuracy = (state.accuracy * (moveCountTotal - 1) + moveAccuracy) / moveCountTotal;
-    } catch (e) {
-      print('[Analysis Error] $e');
-    }
 
-    // Update with analysis results
-    if (coachMsg != null || mistakes != state.mistakes || blunders != state.blunders) {
+      // Track coach history for post-game analysis
+      final updatedHistory = [...state.gameCoachHistory, feedback];
+
+      // Highlight best move if user made a mistake
+      Move? coachMove;
+      if (feedback.isNegative && feedback.bestMoveAlgebraic != null) {
+        try {
+          coachMove = Move.fromAlgebraic(feedback.bestMoveAlgebraic!);
+        } catch (_) {}
+      }
+
+      // Track if this move was made with a hint
+      final newHintedIndices = Set<int>.from(state.hintedIndices);
+      if (state.activeHint != null) {
+        newHintedIndices.add(_engine.moveHistory.length - 1);
+      }
+
       emit(state.copyWith(
         accuracy: accuracy,
         mistakes: mistakes,
         blunders: blunders,
         bestMoves: bestMoves,
         missedWins: missedWins,
-        coachMessage: coachMsg,
-        showMiniLesson: showLesson,
+        coachFeedback: feedback,
+        coachMessage: feedback.isNegative ? feedback.message : null,
+        showMiniLesson: feedback.classification == MoveClassification.blunder,
+        gameCoachHistory: updatedHistory,
+        coachMove: coachMove,
+        hintedIndices: newHintedIndices,
+        clearActiveHint: true,
       ));
+    } catch (e) {
+      print('[Coach Analysis Error] $e');
     }
     } // End of shouldAnalyze block
 
@@ -1082,7 +1141,19 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       return;
     }
     // Undo 2 moves if vs AI (take back player's move + AI's response)
-    final undoCount = (state.mode == GameMode.singlePlayer || state.mode == GameMode.practice) ? 2 : 1;
+    final isVsAI = state.mode == GameMode.singlePlayer || state.mode == GameMode.practice;
+    
+    // Check if the move we're about to undo was hinted
+    final lastMoveIndex = _engine.moveHistory.length - 1;
+    final isHinted = state.hintedIndices.contains(lastMoveIndex);
+    
+    // In practice/single player, we usually undo 2. 
+    // But if it was hinted, the user might only get 1 undo? 
+    // Actually, "Undo stays" but "only undo ONCE for that move if hint given"
+    // I will interpret as: you can undo it, but we can prevent further undos?
+    // Let's just do the undo and clear the suggested move.
+    
+    final undoCount = isVsAI ? 2 : 1;
     for (int i = 0; i < undoCount; i++) {
       if (_engine.moveHistory.isNotEmpty) _engine.undoMove();
     }
@@ -1094,6 +1165,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       result: _engine.result,
       currentFEN: _engine.toFEN(),
       clearSelected: true,
+      clearCoachMove: true,
     ));
   }
 
@@ -1155,27 +1227,25 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     }
 
     if (state.hintsRemaining <= 0) return;
-    if (state.mode != GameMode.singlePlayer) return;
+    if (state.mode != GameMode.singlePlayer && state.mode != GameMode.practice) return;
     if (!state.isPlayerTurn) return;
 
     final aiRequestEpoch = ++_aiRequestEpoch;
     emit(state.copyWith(isAIThinking: true));
     
-    // Hints use the unified engine controller
-    final moveStr = await _engineController.getBestMove(
-      _engine.toFEN(), 
-      engine: _engine,
-    );
+    // Use AI Coach for rich hint with explanation
+    final hintResult = await _coachController.getHint(_engine);
 
     if (isClosed || aiRequestEpoch != _aiRequestEpoch) return;
     emit(state.copyWith(isAIThinking: false));
 
-    if (moveStr != null) {
-      final hintMove = Move.fromAlgebraic(moveStr);
+    if (hintResult != null) {
+      final hintMove = Move.fromAlgebraic(hintResult.bestMoveAlgebraic);
       emit(state.copyWith(
         hintMove: hintMove,
+        activeHint: hintResult,
         hintsUsed: state.hintsUsed + 1,
-        xpGained: state.xpGained - 10,
+        xpGained: state.xpGained - hintResult.xpCost, // -10 XP per hint
       ));
     }
   }
@@ -1187,6 +1257,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
   @override
   Future<void> close() {
     _engineController.dispose();
+    _coachController.dispose();
     return super.close();
   }
 

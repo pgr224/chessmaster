@@ -470,7 +470,7 @@ class _PieceWidget extends StatelessWidget {
     // Support Pychess SVGs
     final isVectorShape = shape == 'iconic' || 
                          shape == 'artwork' || 
-                         _isPyChessShape(shape);
+                         _PiecePathProvider._isPyChessShape(shape);
 
     if (isVectorShape) {
       return _buildSvgPiece(isWhite);
@@ -857,6 +857,7 @@ class _PiecePathProvider {
         break;
       default: return _getClassicPath(type);
     }
+    return p;
   }
 
   static final Set<String> _pychessShapes = {

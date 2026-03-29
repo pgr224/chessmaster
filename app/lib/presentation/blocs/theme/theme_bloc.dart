@@ -11,6 +11,11 @@ class ThemeChangeEvent extends ThemeEvent {
   final String boardTheme;
   final String pieceShape;
   final String pieceStyle;
+  const ThemeChangeEvent({
+    required this.boardTheme,
+    required this.pieceShape,
+    required this.pieceStyle,
+  });
   @override List<Object?> get props => [boardTheme, pieceShape, pieceStyle];
 }
 

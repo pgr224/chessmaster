@@ -397,7 +397,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         children: [
                           _pychessPreview(s),
                           const SizedBox(height: 8),
-                          Text(s.capitalize(), style: GoogleFonts.fredoka(color: isSelected ? AppTheme.goldPrimary : AppTheme.textSecondary, fontSize: 10, fontWeight: FontWeight.w600)),
+                          Text(_cap(s), style: GoogleFonts.fredoka(color: isSelected ? AppTheme.goldPrimary : AppTheme.textSecondary, fontSize: 10, fontWeight: FontWeight.w600)),
                         ],
                       ),
                     ),
