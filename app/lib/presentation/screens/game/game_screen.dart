@@ -24,6 +24,8 @@ import '../../widgets/game_over_overlay.dart';
 import '../../widgets/player_info_widget.dart';
 import '../../widgets/hint_button_widget.dart';
 import '../../widgets/coach_overlay_widget.dart';
+import '../../widgets/timer_widget.dart';
+import '../../widgets/game_rules_dialog.dart';
 
 class GameScreen extends StatefulWidget {
   final GameConfig config;
@@ -126,6 +128,46 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                _audioPlayer.play(AssetSource('sounds/warning.wav'));
              }
           }
+          
+          // Show Rules Dialog on start of Multiplayer
+          if (state.mode == GameMode.multiplayer && state.moveHistory.isEmpty && !state.isGameOver && !_didShowRules) {
+             final mpState = context.read<MultiplayerBloc>().state;
+             if (mpState.status == MultiplayerStatus.inGame) {
+                _didShowRules = true;
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  showDialog(
+                    context: context,
+                    builder: (ctx) => GameRulesDialog(
+                      timeControl: mpState.timeControl ?? '30+0',
+                      mode: 'Multiplayer',
+                    ),
+                  );
+                });
+             }
+          }
+          
+          if (state.mode != GameMode.multiplayer) {
+            _didShowRules = false; // Reset for next game
+          }
+
+          // Handle Multiplayer Game Over
+          if (state.mode == GameMode.multiplayer) {
+            final mpState = context.read<MultiplayerBloc>().state;
+            if (mpState.status == MultiplayerStatus.gameOver && !state.isGameOver) {
+               // Map mpResult to GameResult
+               GameResult res = GameResult.ongoing;
+               if (mpState.gameResult == 'white') res = GameResult.whiteWins;
+               else if (mpState.gameResult == 'black') res = GameResult.blackWins;
+               else if (mpState.gameResult == 'draw') res = GameResult.draw;
+
+               DrawReason? reason;
+               if (mpState.gameReason == 'stalemate') reason = DrawReason.stalemate;
+               else if (mpState.gameReason == 'agreement') reason = DrawReason.agreement;
+               else if (mpState.gameReason == 'insufficient_material') reason = DrawReason.insufficientMaterial;
+
+               context.read<GameBloc>().add(MpGameOverSyncEvent(res, reason, mpState.xpGained));
+            }
+          }
         },
       builder: (context, state) {
         final minimalMotion = context.select<SettingsBloc, bool>(
@@ -133,24 +175,21 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         );
         return Scaffold(
           backgroundColor: AppTheme.midnight,
-          body: Stack(
-            children: [
-              _buildBackground(),
-              SafeArea(
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final isWide = constraints.maxWidth >= 1080;
-                    return isWide
-                        ? _buildWideLayout(context, state, constraints)
-                        : _buildCompactLayout(context, state, constraints);
-                  },
-                ),
-              ),
+          body: LayoutBuilder(
+            builder: (context, constraints) {
+              return Stack(
+                children: [
+                  _buildBackground(),
+                  SafeArea(
+                    child: constraints.maxWidth >= 1080
+                      ? _buildWideLayout(context, state, constraints)
+                      : _buildCompactLayout(context, state, constraints),
+                  ),
               if (state.showPromotionDialog) _buildPromotionOverlay(context, state),
               if (state.isGameOver) _buildGameOverOverlay(context, state),
               _buildConfetti(),
-              if (state.status == GameStatus.check) _buildCheckAlert(state, minimalMotion),
-              if (!state.isGameOver) _buildTurnOverlay(state, minimalMotion),
+              if (state.status == GameStatus.check) IgnorePointer(child: _buildCheckAlert(state, minimalMotion)),
+              if (!state.isGameOver) IgnorePointer(child: _buildTurnOverlay(state, minimalMotion)),
               if (state.pendingMove != null) _buildConfirmMoveOverlay(state),
               if (_showMoves) _buildMoveHistoryOverlay(state),
               if (state.isPuzzleRush) _buildPuzzleRushOverlay(state),
@@ -171,15 +210,17 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   onDismiss: () => context.read<GameBloc>().add(GameDismissHintEvent()),
                 ),
               if (state.showMiniLesson && state.coachFeedback == null) _buildMiniLessonOverlay(context, state),
-              if (state.mode == GameMode.multiplayer) _buildFloatingChat(context),
+              // Only show floating chat on mobile/compact, wide layout has sidebar chat
+              if (state.mode == GameMode.multiplayer && constraints.maxWidth < 1080) _buildFloatingChat(context),
               if (state.puzzleExplanation != null) _buildPuzzleExplanation(state),
             ],
-          ),
-        );
-      },
-    ),
+          );
+        },
+      ),
     );
-  }
+  },
+);
+}
 
   Widget _buildMoveHistoryOverlay(GameState state) {
     return Positioned.fill(
@@ -243,8 +284,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     final textColor = isMyTurn ? AppTheme.midnight : Colors.white;
 
     final overlay = Positioned(
-      bottom: isMyTurn ? 120 : null,
-      top: isMyTurn ? null : 75,
+      bottom: isMyTurn ? 140 : null,
+      top: isMyTurn ? null : 85,
       left: 0, right: 0,
       child: Center(
         child: Container(
@@ -561,32 +602,61 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildOpponentInfo(GameState state) {
+    final mpState = context.read<MultiplayerBloc>().state;
     final opponentLabel = state.mode == GameMode.singlePlayer
         ? '🤖 Chess Robot (${state.aiDifficulty?.name.capitalize() ?? ""})'
         : state.mode == GameMode.multiplayer && state.opponentName != null
             ? '🌍 ${state.opponentName}'
             : '👤 Opponent';
+    
+    final isOpponentTurn = state.currentTurn != state.playerColor;
+    final opponentTime = state.playerColor == PieceColor.white ? mpState.blackTime : mpState.whiteTime;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: PlayerInfoWidget(
-        name: opponentLabel,
-        isActive: state.currentTurn != state.playerColor,
-        isAI: state.mode == GameMode.singlePlayer,
-        isThinking: state.isAIThinking,
-        color: PieceColor.black,
+      child: Row(
+        children: [
+          Expanded(
+            child: PlayerInfoWidget(
+              name: opponentLabel,
+              isActive: isOpponentTurn,
+              isAI: state.mode == GameMode.singlePlayer,
+              isThinking: state.isAIThinking,
+              color: state.playerColor == PieceColor.white ? PieceColor.black : PieceColor.white,
+            ),
+          ),
+          if (state.mode == GameMode.multiplayer) ...[
+            const SizedBox(width: 8),
+            TimerWidget(timeInSeconds: opponentTime, isActive: isOpponentTurn, label: 'Opponent'),
+          ]
+        ],
       ),
     );
   }
 
   Widget _buildPlayerInfo(GameState state) {
+    final mpState = context.read<MultiplayerBloc>().state;
+    final isPlayerTurn = state.currentTurn == state.playerColor;
+    final playerTime = state.playerColor == PieceColor.white ? mpState.whiteTime : mpState.blackTime;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: PlayerInfoWidget(
-        name: '👑 You',
-        isActive: state.currentTurn == state.playerColor,
-        isAI: false,
-        isThinking: false,
-        color: state.playerColor ?? PieceColor.white,
+      child: Row(
+        children: [
+          Expanded(
+            child: PlayerInfoWidget(
+              name: '👑 You',
+              isActive: isPlayerTurn,
+              isAI: false,
+              isThinking: false,
+              color: state.playerColor ?? PieceColor.white,
+            ),
+          ),
+          if (state.mode == GameMode.multiplayer) ...[
+            const SizedBox(width: 8),
+            TimerWidget(timeInSeconds: playerTime, isActive: isPlayerTurn, label: 'You'),
+          ]
+        ],
       ),
     );
   }
@@ -599,6 +669,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   }
 
   bool _showMoves = false;
+  bool _didShowRules = false;
 
   Widget _buildCompactLayout(BuildContext context, GameState state, BoxConstraints constraints) {
     return Column(
@@ -648,36 +719,37 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         }).toList();
 
         return Positioned(
-          left: 16, bottom: 200,
+          left: 16, bottom: 220,
           right: 80,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Messages area
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 250),
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: messages.length,
-                  itemBuilder: (context, index) {
-                    final msg = messages[index];
-                    return _chatBubble(msg.message, msg.isMe)
-                        .animate()
-                        .fadeIn(duration: 400.ms)
-                        .slideY(begin: 0.2, end: 0, duration: 400.ms)
-                        .fadeOut(delay: 118.seconds, duration: 2.seconds); // Fade out after 2 minutes
-                  },
+              // Messages area — IgnorePointer allows tapping board through recent bubbles
+              IgnorePointer(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 180),
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: messages.length,
+                    itemBuilder: (context, index) {
+                      final msg = messages[index];
+                      return _chatBubble(msg.message, msg.isMe)
+                          .animate()
+                          .fadeIn(duration: 400.ms)
+                          .slideY(begin: 0.2, end: 0, duration: 400.ms)
+                          .fadeOut(delay: 6.seconds, duration: 1.seconds); // Fade out quickly to keep board clean
+                    },
+                  ),
                 ),
               ),
               const SizedBox(height: 8),
               if (_showChat)
                 _buildChatInput(context)
               else
-                _glassAction(
+                _glassButton(
                   icon: Icons.chat_bubble_outline_rounded,
-                  size: 40,
                   onTap: () => setState(() => _showChat = true),
                 ).animate().fadeIn(),
             ],
@@ -885,6 +957,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   _buildPlayerInfo(state),
                   const SizedBox(height: 12),
                   _buildActionBar(context, state),
+                  if (state.mode == GameMode.multiplayer) ...[
+                    const SizedBox(height: 20),
+                    _buildSidebarChat(context),
+                  ],
                 ],
               ),
             ),
@@ -978,6 +1054,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           _actionBtn(
             icon: Icons.flag_rounded, label: 'Resign', color: AppTheme.accentRed,
             onTap: !state.isGameOver ? () => _resign(context, settings.confirmResign) : null,
+            width: isMultiplayer ? 70 : 80,
           ),
           // Hint — only for practice/single (cost XP)
           if (isPracticeOrSingle)
@@ -1007,6 +1084,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               onTap: !state.isGameOver
                   ? () => context.read<MultiplayerBloc>().add(MpDrawOfferEvent())
                   : null,
+              width: 70,
             ),
           // Save (multiplayer)
           if (isMultiplayer)
@@ -1015,6 +1093,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               onTap: !state.isGameOver
                   ? () => context.read<MultiplayerBloc>().add(MpSaveRequestEvent())
                   : null,
+              width: 70,
             ),
         ],
       ),
@@ -1026,13 +1105,14 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     required String label,
     Color? color,
     VoidCallback? onTap,
+    double? width,
   }) {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: 200.ms,
-        width: 88,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+        width: width ?? 78,
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
         decoration: BoxDecoration(
           color: onTap != null ? (color ?? AppTheme.textSecondary).withValues(alpha: 0.1) : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
@@ -1040,15 +1120,72 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: onTap != null ? (color ?? AppTheme.textSecondary) : AppTheme.textMuted, size: 26),
+            Icon(icon, color: onTap != null ? (color ?? AppTheme.textSecondary) : AppTheme.textMuted, size: 22),
             const SizedBox(height: 4),
             Text(label, style: GoogleFonts.fredoka(
               color: onTap != null ? (color ?? AppTheme.textSecondary) : AppTheme.textMuted,
-              fontSize: 12, fontWeight: FontWeight.w600,
-            )),
+              fontSize: 10, fontWeight: FontWeight.w600,
+            ), textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildSidebarChat(BuildContext context) {
+    return BlocBuilder<MultiplayerBloc, MultiplayerState>(
+      builder: (context, mpState) {
+        return Container(
+          height: 300,
+          decoration: BoxDecoration(
+            color: AppTheme.navyCard.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppTheme.skyBlue.withValues(alpha: 0.2)),
+          ),
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    const Icon(Icons.chat_bubble_rounded, color: AppTheme.skyBlue, size: 18),
+                    const SizedBox(width: 8),
+                    Text('GAME CHAT', style: GoogleFonts.fredoka(color: AppTheme.skyBlue, fontWeight: FontWeight.bold, fontSize: 13)),
+                  ],
+                ),
+              ),
+              const Divider(color: Colors.white10, height: 1),
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(12),
+                  itemCount: mpState.chatMessages.length,
+                  itemBuilder: (context, index) {
+                    final msg = mpState.chatMessages[index];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: RichText(
+                        text: TextSpan(
+                          children: [
+                            TextSpan(
+                              text: msg.isMe ? 'You: ' : '${msg.username}: ',
+                              style: GoogleFonts.baloo2(color: AppTheme.goldPrimary, fontWeight: FontWeight.bold, fontSize: 13),
+                            ),
+                            TextSpan(
+                              text: msg.message,
+                              style: GoogleFonts.baloo2(color: Colors.white, fontSize: 13),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              _buildChatInput(context),
+            ],
+          ),
+        );
+      },
     );
   }
 

@@ -8,6 +8,14 @@ export class GameRoom {
   private status: 'active' | 'finished' = 'active'
   private env: any
 
+  // Timer fields
+  private whiteTime: number = 1800
+  private blackTime: number = 1800
+  private baseTime: number = 1800
+  private increment: number = 0
+  private lastMoveTimestamp: number = 0
+  private timerInterval: any = null
+
   constructor(state: DurableObjectState, env: any) {
     this.state = state
     this.env = env
@@ -22,6 +30,10 @@ export class GameRoom {
     const name = url.searchParams.get('username') ?? 'Player'
     const color = url.searchParams.get('color') as 'white' | 'black' ?? 'white'
     this.gameId = url.searchParams.get('gameId')
+
+    // Parse time control: e.g. "blitz_3_2" or "3+2" or "30+0"
+    const tcStr = url.searchParams.get('timeControl') ?? '30+0'
+    this.parseTimeControl(tcStr)
 
     const player = { socket: server, name, color, disconnected: false }
     this.players.set(userId, player)
@@ -43,14 +55,116 @@ export class GameRoom {
       data: {
         fen: this.validator.getFen(),
         turn: this.validator.getFen().split(' ')[1] === 'w' ? 'white' : 'black',
-        status: this.status
+        status: this.status,
+        whiteTime: this.whiteTime,
+        blackTime: this.blackTime,
+        increment: this.increment
       }
     }))
+
+    // Start game if 2 players are present
+    if (this.players.size === 2 && !this.timerInterval) {
+      this.lastMoveTimestamp = Date.now()
+      this.startSyncTimer()
+    }
 
     return new Response(null, {
       status: 101,
       webSocket: client,
     })
+  }
+
+  private parseTimeControl(tcStr: string) {
+    try {
+      // Formats: "10+5", "blitz_3_2", etc.
+      let base = 30, inc = 0
+      if (tcStr.includes('+')) {
+        const parts = tcStr.split('+')
+        base = parseInt(parts[0])
+        inc = parseInt(parts[1])
+      } else if (tcStr.includes('_')) {
+        const parts = tcStr.split('_')
+        base = parseInt(parts[parts.length - 2])
+        inc = parseInt(parts[parts.length - 1])
+      } else {
+        base = parseInt(tcStr)
+      }
+      this.baseTime = base * 60
+      this.whiteTime = this.baseTime
+      this.blackTime = this.baseTime
+      this.increment = inc
+    } catch (e) {
+      this.whiteTime = 1800
+      this.blackTime = 1800
+      this.increment = 0
+    }
+  }
+
+  private startSyncTimer() {
+    this.timerInterval = setInterval(() => {
+      if (this.status === 'finished') {
+        clearInterval(this.timerInterval)
+        return
+      }
+
+      this.updateClocks()
+      this.broadcast({
+        type: 'TIMER_SYNC',
+        data: {
+          whiteTime: Math.max(0, this.whiteTime),
+          blackTime: Math.max(0, this.blackTime),
+          turn: this.validator.getFen().split(' ')[1] === 'w' ? 'white' : 'black'
+        }
+      })
+
+      // Check for timeout
+      if (this.whiteTime <= 0 || this.blackTime <= 0) {
+        this.handleTimeout()
+      }
+    }, 1000)
+  }
+
+  private updateClocks() {
+    if (this.status !== 'active' || this.players.size < 2) return
+    const now = Date.now()
+    const elapsed = (now - this.lastMoveTimestamp) / 1000
+    const turn = this.validator.getFen().split(' ')[1] === 'w' ? 'white' : 'black'
+
+    if (turn === 'white') {
+      this.whiteTime -= elapsed
+    } else {
+      this.blackTime -= elapsed
+    }
+    this.lastMoveTimestamp = now
+  }
+
+  private async handleTimeout() {
+    if (this.status !== 'active') return
+    this.status = 'finished'
+    clearInterval(this.timerInterval)
+
+    const turn = this.validator.getFen().split(' ')[1] === 'w' ? 'white' : 'black'
+    const timedOutColor = turn === 'white' ? 'white' : 'black'
+    const opponentColor = turn === 'white' ? 'black' : 'white'
+
+    // Insufficient material check
+    let result: string
+    if (this.validator.isInsufficientMaterial()) {
+      result = 'draw'
+    } else {
+      result = opponentColor
+    }
+
+    this.broadcast({
+      type: 'GAME_OVER',
+      data: {
+        result,
+        reason: 'timeout',
+        winner: result === 'draw' ? null : result
+      }
+    })
+
+    await this.saveGameToDB(result)
   }
 
   private async handleMessage(userId: string, msg: any) {
@@ -60,6 +174,17 @@ export class GameRoom {
       case 'MOVE':
         const moveRes = this.validator.validateMove(msg.move as Move)
         if (moveRes.valid) {
+          // Final clock update for this turn
+          this.updateClocks()
+          
+          // Apply increment (Fischer)
+          const turnBeforeMove = moveRes.fen.split(' ')[1] === 'b' ? 'white' : 'black'
+          if (turnBeforeMove === 'white') {
+            this.whiteTime += this.increment
+          } else {
+            this.blackTime += this.increment
+          }
+
           this.broadcast({
             type: 'MOVE_UPDATE',
             data: {
@@ -67,12 +192,15 @@ export class GameRoom {
               fen: moveRes.fen,
               turn: moveRes.fen.split(' ')[1] === 'w' ? 'white' : 'black',
               gameOver: moveRes.gameOver,
-              result: moveRes.result
+              result: moveRes.result,
+              whiteTime: Math.max(0, this.whiteTime),
+              blackTime: Math.max(0, this.blackTime)
             }
           })
 
           if (moveRes.gameOver) {
             this.status = 'finished'
+            clearInterval(this.timerInterval)
             await this.saveGameToDB(moveRes.result)
           }
         } else {

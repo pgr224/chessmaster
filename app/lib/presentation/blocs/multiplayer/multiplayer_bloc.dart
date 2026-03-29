@@ -140,6 +140,9 @@ class MultiplayerState extends Equatable {
   final bool drawOfferPending;
   final bool saveOfferPending;
   final String? connectionError;
+  final double whiteTime;
+  final double blackTime;
+  final int xpGained;
   final int opponentUndoCount;
 
   const MultiplayerState({
@@ -162,12 +165,16 @@ class MultiplayerState extends Equatable {
     this.challengerId,
     this.challengerMode,
     this.challengerTimeControl,
-    this.selectedTimeControl = '10+0',
+    this.selectedTimeControl = '30+0',
     this.drawOfferPending = false,
     this.saveOfferPending = false,
     this.connectionError,
+    this.whiteTime = 0,
+    this.blackTime = 0,
+    this.xpGained = 0,
     this.opponentUndoCount = 0,
   });
+
 
   MultiplayerState copyWith({
     MultiplayerStatus? status,
@@ -193,6 +200,9 @@ class MultiplayerState extends Equatable {
     bool? drawOfferPending,
     bool? saveOfferPending,
     String? connectionError,
+    double? whiteTime,
+    double? blackTime,
+    int? xpGained,
     int? opponentUndoCount,
   }) {
     return MultiplayerState(
@@ -219,6 +229,9 @@ class MultiplayerState extends Equatable {
       drawOfferPending: drawOfferPending ?? this.drawOfferPending,
       saveOfferPending: saveOfferPending ?? this.saveOfferPending,
       connectionError: connectionError ?? this.connectionError,
+      whiteTime: whiteTime ?? this.whiteTime,
+      blackTime: blackTime ?? this.blackTime,
+      xpGained: xpGained ?? this.xpGained,
       opponentUndoCount: opponentUndoCount ?? this.opponentUndoCount,
     );
   }
@@ -227,8 +240,14 @@ class MultiplayerState extends Equatable {
     status, onlineCount, searchingCount, availablePlayers.length, gameId, 
     playerColor, opponentName, chatMessages.length, lastMoveFrom, lastMoveTo, 
     gameResult, lobbyNotice, challengerId, drawOfferPending, saveOfferPending,
-    connectionError, opponentUndoCount
+    connectionError, whiteTime, blackTime, xpGained, opponentUndoCount
   ];
+}
+
+class MpTimerSyncEvent extends MultiplayerEvent {
+  final double whiteTime;
+  final double blackTime;
+  const MpTimerSyncEvent(this.whiteTime, this.blackTime);
 }
 
 // BLOC
@@ -265,6 +284,11 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
     on<MpDrawAcceptEvent>((event, emit) => _service.sendDrawAccept());
     on<MpDrawDeclineEvent>((event, emit) => _service.sendDrawDecline());
     
+    on<MpTimerSyncEvent>((event, emit) => emit(state.copyWith(
+      whiteTime: event.whiteTime,
+      blackTime: event.blackTime
+    )));
+    
     // Save & Quit
     on<MpSaveRequestEvent>((event, emit) => _service.sendSaveRequest());
     on<MpSaveAcceptEvent>((event, emit) => _service.sendSaveAccept());
@@ -284,7 +308,31 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
       _service.dispose();
       emit(const MultiplayerState());
     });
-    on<MpGameOverEvent>((event, emit) => emit(state.copyWith(status: MultiplayerStatus.gameOver, gameResult: event.result, gameReason: event.reason)));
+    on<MpGameOverEvent>((event, emit) {
+      int xp = 0;
+      final isWin = (event.result == 'white' && state.playerColor == PieceColor.white) ||
+                    (event.result == 'black' && state.playerColor == PieceColor.black);
+      final isLoss = (event.result == 'white' && state.playerColor == PieceColor.black) ||
+                     (event.result == 'black' && state.playerColor == PieceColor.white);
+
+      if (isWin) {
+        if (event.reason == 'checkmate') xp = 100;
+        else if (event.reason == 'timeout') xp = 50;
+        else xp = 30; // default win
+      } else if (isLoss) {
+        if (event.reason == 'resign') xp = -50;
+        else xp = -20;
+      } else {
+        xp = 0; // draw
+      }
+
+      emit(state.copyWith(
+        status: MultiplayerStatus.gameOver, 
+        gameResult: event.result, 
+        gameReason: event.reason,
+        xpGained: xp,
+      ));
+    });
     on<MpLobbyNoticeEvent>((event, emit) => emit(state.copyWith(
       lobbyNotice: event.message, 
       challengerId: event.challengerId,
@@ -305,6 +353,7 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
     });
     on<MpChangeSelectedTimeEvent>((event, emit) => emit(state.copyWith(selectedTimeControl: event.timeControl)));
     on<MpClearNoticeEvent>((event, emit) => emit(state.copyWith(lobbyNotice: null, challengerId: null)));
+    on<MpTimerSyncEvent>((event, emit) => emit(state.copyWith(whiteTime: event.whiteTime, blackTime: event.blackTime)));
   }
 
   Future<void> _onConnectLobby(MpConnectLobbyEvent event, Emitter<MultiplayerState> emit) async {
@@ -380,7 +429,20 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
             add(MpOpponentUndoEvent());
           } else {
             add(MpOpponentMoveEvent(msg['data'] as Map<String, dynamic>? ?? {}));
+            // Update timers immediately from move update to prevent visual skip
+            if (msg['data']['whiteTime'] != null) {
+              add(MpTimerSyncEvent(
+                (msg['data']['whiteTime'] as num).toDouble(),
+                (msg['data']['blackTime'] as num).toDouble(),
+              ));
+            }
           }
+          break;
+        case 'TIMER_SYNC':
+          add(MpTimerSyncEvent(
+            (msg['data']['whiteTime'] as num).toDouble(),
+            (msg['data']['blackTime'] as num).toDouble(),
+          ));
           break;
         case 'CHAT':
           final chatData = msg['data'] as Map?;
@@ -418,6 +480,13 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
           break;
         case 'GAME_SAVED':
           add(MpGameSavedEvent());
+          break;
+        case 'TIMER_SYNC':
+          final timerData = msg['data'] as Map;
+          add(MpTimerSyncEvent(
+            (timerData['whiteTime'] as num?)?.toDouble() ?? 0,
+            (timerData['blackTime'] as num?)?.toDouble() ?? 0,
+          ));
           break;
       }
     });

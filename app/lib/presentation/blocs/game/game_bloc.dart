@@ -99,6 +99,14 @@ class GameUpdateCoachSettingsEvent extends GameEvent {
   @override List<Object?> get props => [coachSettings];
 }
 
+class MpGameOverSyncEvent extends GameEvent {
+  final GameResult result;
+  final DrawReason? reason;
+  final int xpGained;
+  const MpGameOverSyncEvent(this.result, this.reason, this.xpGained);
+  @override List<Object?> get props => [result, reason, xpGained];
+}
+
 // ═══════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════
@@ -461,6 +469,15 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     on<GameUpdateCoachSettingsEvent>((e, emit) {
       _coachController.updateSettings(e.coachSettings);
       emit(state.copyWith(coachSettings: e.coachSettings));
+    });
+    on<MpGameOverSyncEvent>((e, emit) {
+      final status = e.result == GameResult.draw ? GameStatus.draw : GameStatus.checkmate;
+      emit(state.copyWith(
+        status: status,
+        result: e.result,
+        drawReason: e.reason,
+        xpGained: e.xpGained,
+      ));
     });
   }
 

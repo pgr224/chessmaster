@@ -56,6 +56,20 @@ export class ChessValidator {
   public getMoveCount(): number {
     return this.game.moveNumber();
   }
+
+  public isInsufficientMaterial(): boolean {
+    return this.game.isInsufficientMaterial();
+  }
+
+  public getStatus(): { turn: 'w' | 'b'; gameOver: boolean; draw: boolean; checkmate: boolean } {
+    return {
+      turn: this.game.turn(),
+      gameOver: this.game.isGameOver(),
+      draw: this.game.isDraw(),
+      checkmate: this.game.isCheckmate()
+    };
+  }
+
   public undo(): string {
     this.game.undo();
     return this.game.fen();

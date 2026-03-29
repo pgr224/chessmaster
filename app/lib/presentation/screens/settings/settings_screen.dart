@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../blocs/settings/settings_bloc.dart';
@@ -370,7 +371,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: GridView.builder(
                 padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3, crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: 0.9,
+                  crossAxisCount: 2, crossAxisSpacing: 16, mainAxisSpacing: 16, childAspectRatio: 1.1,
                 ),
                 itemCount: pychessShapes.length,
                 itemBuilder: (context, index) {
@@ -412,10 +413,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _pychessPreview(String shape) {
-    return Image.asset(
-      'assets/pieces/pychess/$shape/wn.svg', // Preview using White Knight
-      width: 40, height: 40,
-      errorBuilder: (context, error, stackTrace) => const Icon(Icons.help_outline_rounded, color: Colors.white24),
+    return Container(
+      padding: const EdgeInsets.all(8),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _svgIcon(shape, 'wk', 40),
+              const SizedBox(width: 8),
+              _svgIcon(shape, 'wb', 40),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _svgIcon(shape, 'wn', 40),
+              const SizedBox(width: 8),
+              _svgIcon(shape, 'wr', 40),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _svgIcon(String shape, String piece, double size) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: SvgPicture.asset(
+        'assets/pieces/pychess/$shape/$piece.svg',
+        width: size * 0.8, height: size * 0.8,
+        errorBuilder: (context, error, stackTrace) => Icon(Icons.help_outline_rounded, color: Colors.white24, size: size * 0.6),
+      ),
     );
   }
 
