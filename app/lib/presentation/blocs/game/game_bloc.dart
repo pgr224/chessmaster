@@ -989,10 +989,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       await Future.delayed(const Duration(milliseconds: 400));
 
       // Use the hybrid EngineController instead of AIDirectly
-      final moveStr = await _engineController.getBestMove(
-        fen: _engine.toFEN(),
-        difficulty: state.aiDifficulty ?? AIDifficulty.intermediate,
-      );
+      final moveStr = await _engineController.getBestMove(_engine.toFEN());
       
       if (isClosed || aiRequestEpoch != _aiRequestEpoch) return;
       emit(state.copyWith(isAIThinking: false));

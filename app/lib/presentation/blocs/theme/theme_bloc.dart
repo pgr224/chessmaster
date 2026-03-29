@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../widgets/chess_piece_widget.dart';
 
 abstract class ThemeEvent extends Equatable {
   const ThemeEvent();
@@ -46,22 +47,13 @@ class ThemeBloc extends Bloc<ThemeEvent, ThemeState> {
     on<ThemeShuffleEvent>(_onShuffle);
   }
 
-  static const List<String> _pychessShapes = [
-    'alfonso', 'alila', 'alpha', 'atopdown', 'california', 'cardinal', 'cburnett',
-    'celtic', 'chess7', 'chessicons', 'chessmonk', 'chessnut', 'companion',
-    'dubrovny', 'eyes', 'fantasy', 'fantasy_alt', 'freak', 'freestaunton',
-    'fresca', 'gioco', 'governor', 'horsey', 'icpieces', 'kilfiger', 'kosal',
-    'leipzig', 'letter', 'libra', 'maestro', 'magnetic', 'makruk', 'maya',
-    'merida', 'merida_new', 'metaltops', 'pirat', 'pirouetti', 'pixel', 'prmi',
-    'regular', 'reillycraig', 'riohacha', 'shapes', 'sittuyin', 'skulls',
-    'spatial', 'staunty', 'tatiana'
-  ];
+  static List<String> get pychessShapes => PiecePathProvider.pychessShapes;
 
   void _onShuffle(ThemeShuffleEvent event, Emitter<ThemeState> emit) async {
     final prefs = await SharedPreferences.getInstance();
     final isShuffled = (prefs.getString('piece_shape') ?? 'classic') == 'shuffled';
     if (isShuffled) {
-      final randomShape = _pychessShapes[DateTime.now().millisecondsSinceEpoch % _pychessShapes.length];
+      final randomShape = pychessShapes[DateTime.now().millisecondsSinceEpoch % pychessShapes.length];
       emit(state.copyWith(pieceShape: randomShape));
     }
   }

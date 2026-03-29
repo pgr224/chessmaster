@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../blocs/settings/settings_bloc.dart';
 import '../../blocs/theme/theme_bloc.dart';
 import '../../blocs/auth/auth_bloc.dart';
 import '../profile/profile_screen.dart';
+import '../../../domain/engine/chess_engine.dart';
+import '../../widgets/chess_piece_widget.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -280,6 +281,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             final selected = _pieceShape == id;
             return ChoiceChip(
               selected: selected,
+              avatar: _getPieceAvatar(id),
               onSelected: (_) {
                 setState(() => _pieceShape = id);
                 context.read<ThemeBloc>().add(ThemeChangeEvent(
@@ -297,6 +299,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             );
           }).toList(),
         ),
+        const SizedBox(height: 16),
+        _buildCurrentThemeKeyPiecesPreview(),
         const SizedBox(height: 12),
         _glassButton(
           icon: Icons.grid_view_rounded,
@@ -304,6 +308,64 @@ class _SettingsScreenState extends State<SettingsScreen> {
           onTap: () => _showPychessSelector(context),
         ),
       ],
+    );
+  }
+
+  Widget _buildCurrentThemeKeyPiecesPreview() {
+    if (_pieceShape == 'shuffled') {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppTheme.surface.withValues(alpha: 0.3),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppTheme.accentCyan.withValues(alpha: 0.3)),
+        ),
+        child: Column(
+          children: [
+            const Icon(Icons.shuffle_rounded, color: AppTheme.accentCyan, size: 32),
+            const SizedBox(height: 8),
+            Text('SHUFFLE MODE', style: GoogleFonts.fredoka(color: AppTheme.accentCyan, fontSize: 14, fontWeight: FontWeight.bold)),
+            Text('A new random theme every game!', style: GoogleFonts.fredoka(color: AppTheme.textSecondary, fontSize: 10)),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.surface.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Live Preview: ${_cap(_pieceShape)}', style: GoogleFonts.fredoka(color: AppTheme.textSecondary, fontSize: 12, fontWeight: FontWeight.w600)),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(color: AppTheme.goldPrimary.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(8)),
+                child: Text(_pieceStyle.toUpperCase(), style: GoogleFonts.fredoka(color: AppTheme.goldPrimary, fontSize: 10, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _piecePreview(_pieceShape, PieceType.king, 48),
+              _piecePreview(_pieceShape, PieceType.queen, 48),
+              _piecePreview(_pieceShape, PieceType.knight, 48),
+              _piecePreview(_pieceShape, PieceType.rook, 48),
+              _piecePreview(_pieceShape, PieceType.pawn, 48),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -331,16 +393,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _showPychessSelector(BuildContext context) {
-    final List<String> pychessShapes = [
-      'alfonso', 'alila', 'alpha', 'atopdown', 'california', 'cardinal', 'cburnett',
-      'celtic', 'chess7', 'chessicons', 'chessmonk', 'chessnut', 'companion',
-      'dubrovny', 'eyes', 'fantasy', 'fantasy_alt', 'freak', 'freestaunton',
-      'fresca', 'gioco', 'governor', 'horsey', 'icpieces', 'kilfiger', 'kosal',
-      'leipzig', 'letter', 'libra', 'maestro', 'magnetic', 'makruk', 'maya',
-      'merida', 'merida_new', 'metaltops', 'pirat', 'pirouetti', 'pixel', 'prmi',
-      'regular', 'reillycraig', 'riohacha', 'shapes', 'sittuyin', 'skulls',
-      'spatial', 'staunty', 'tatiana'
-    ];
+    final List<String> pychessShapes = PiecePathProvider.pychessShapes;
 
     showModalBottomSheet(
       context: context,
@@ -414,33 +467,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _pychessPreview(String shape) {
     return Container(
-      padding: const EdgeInsets.all(8),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _svgIcon(shape, 'wk', 40),
-              const SizedBox(width: 8),
-              _svgIcon(shape, 'wb', 40),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _svgIcon(shape, 'wn', 40),
-              const SizedBox(width: 8),
-              _svgIcon(shape, 'wr', 40),
-            ],
-          ),
+          _piecePreview(shape, PieceType.king, 38),
+          _piecePreview(shape, PieceType.knight, 38),
+          _piecePreview(shape, PieceType.pawn, 38),
         ],
       ),
     );
   }
 
-  Widget _svgIcon(String shape, String piece, double size) {
+  Widget _piecePreview(String shape, PieceType type, double size) {
     return Container(
       width: size,
       height: size,
@@ -448,13 +487,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
         color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: SvgPicture.asset(
-        'assets/pieces/pychess/$shape/$piece.svg',
-        width: size * 0.8, height: size * 0.8,
-        errorBuilder: (context, error, stackTrace) => Icon(Icons.help_outline_rounded, color: Colors.white24, size: size * 0.6),
+      child: ChessPieceWidget(
+        piece: ChessPiece(type: type, color: PieceColor.white),
+        shape: shape,
+        style: _pieceStyle,
+        size: size * 0.8,
       ),
     );
   }
+
+  Widget _getPieceAvatar(String id) {
+    if (id == 'shuffled') return Icon(Icons.shuffle, size: 16, color: _pieceShape == 'shuffled' ? AppTheme.midnight : Colors.white);
+    
+    // Use Knight as the most distinctive piece for the avatar
+    return Padding(
+      padding: const EdgeInsets.all(2.0),
+      child: ChessPieceWidget(
+        piece: ChessPiece(type: PieceType.knight, color: PieceColor.white),
+        shape: id,
+        style: _pieceStyle,
+        size: 18,
+      ),
+    );
+  }
+
 
   Widget _glassAction({required IconData icon, required double size, required VoidCallback onTap}) {
     return GestureDetector(
