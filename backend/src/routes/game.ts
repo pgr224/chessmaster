@@ -37,27 +37,35 @@ game.post('/create', async (c) => {
 
   const userId = user.sub || user.id || null
   if (!userId) return c.json({ error: 'User ID missing from token' }, 401)
+  
   const resolvedColor = color === 'random' ? (Math.random() > 0.5 ? 'white' : 'black') : color
-  if (mode === 'singlePlayer' || mode === 'twoPlayer') {
-    whiteId = resolvedColor === 'white' ? userId : (opponentId ?? null)
-    blackId = resolvedColor === 'black' ? userId : (opponentId ?? null)
+  
+  if (resolvedColor === 'white') {
+    whiteId = userId;
+    blackId = opponentId ?? null;
   } else {
-    whiteId = resolvedColor === 'white' ? userId : (opponentId ?? null)
-    blackId = resolvedColor === 'black' ? userId : (opponentId ?? null)
+    whiteId = opponentId ?? null;
+    blackId = userId;
   }
 
+  // Guard against missing modes or fallback to singlePlayer for custom modes if necessary
+  const validModes = ['singlePlayer', 'twoPlayer', 'multiplayer', 'tournament', 'tutorial', 'puzzle', 'practice'];
+  const dbMode = validModes.includes(mode) ? mode : 'singlePlayer';
+
   try {
-    await c.env.DB.prepare(`
-      INSERT INTO games (id, white_user_id, black_user_id, mode, status, time_control,
+    const res = await c.env.DB.prepare(`
+      INSERT OR IGNORE INTO games (id, white_user_id, black_user_id, mode, status, time_control,
                          ai_difficulty, tournament_id, initial_fen, created_at, updated_at)
       VALUES (?, ?, ?, ?, 'active', ?, ?, ?, ?, ?, ?)
     `).bind(
-      gameId, whiteId, blackId, mode, timeControl,
+      gameId, whiteId, blackId, dbMode, timeControl ?? null,
       aiDifficulty ?? null, tournamentId ?? null,
       initialFen ?? 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
       now, now
     ).run()
 
+    // If it was ignored (already exists), we don't return 500, we just proceed.
+    // If there was a real failure (not a duplicate), the exception will be caught below.
     return c.json({ gameId, whiteId, blackId, color: resolvedColor }, 201)
   } catch (err: any) {
     console.error('Game creation error:', err)

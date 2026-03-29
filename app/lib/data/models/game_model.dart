@@ -31,22 +31,40 @@ class GameModel {
     required this.updatedAt,
   });
 
-  factory GameModel.fromJson(Map<String, dynamic> json) => GameModel(
-    id: json['id'] as String? ?? '',
-    fen: json['final_fen'] as String? ?? json['fen'] as String? ?? '',
-    pgn: json['pgn'] as String?,
-    mode: json['mode'] as String? ?? 'singlePlayer',
-    status: json['status'] as String? ?? 'active',
-    result: json['result'] as String? ?? 'ongoing',
-    termination: json['termination'] as String?,
-    whiteUserId: json['white_user_id'] as String?,
-    blackUserId: json['black_user_id'] as String?,
-    whiteUsername: json['white_username'] as String?,
-    blackUsername: json['black_username'] as String?,
-    moveCount: json['move_count'] as int? ?? 0,
-    playerColor: json['player_color'] as String?,
-    updatedAt: DateTime.tryParse((json['completed_at'] ?? json['updated_at']) as String? ?? '') ?? DateTime.now(),
-  );
+  factory GameModel.fromJson(Map<String, dynamic> json) {
+    // Robust int parsing
+    int parseCount(dynamic value) {
+      if (value is int) return value;
+      if (value is String) return int.tryParse(value) ?? 0;
+      if (value is double) return value.toInt();
+      return 0;
+    }
+
+    // Robust date parsing
+    DateTime parseDate(dynamic value) {
+      if (value == null) return DateTime.now();
+      if (value is String) return DateTime.tryParse(value) ?? DateTime.now();
+      if (value is int) return DateTime.fromMillisecondsSinceEpoch(value);
+      return DateTime.now();
+    }
+
+    return GameModel(
+      id: (json['id'] ?? json['game_id'] ?? '').toString(),
+      fen: (json['final_fen'] ?? json['fen'] ?? json['initial_fen'] ?? '').toString(),
+      pgn: json['pgn']?.toString(),
+      mode: (json['mode'] ?? 'singlePlayer').toString(),
+      status: (json['status'] ?? 'active').toString(),
+      result: (json['result'] ?? 'ongoing').toString(),
+      termination: json['termination']?.toString(),
+      whiteUserId: json['white_user_id']?.toString(),
+      blackUserId: json['black_user_id']?.toString(),
+      whiteUsername: json['white_username']?.toString(),
+      blackUsername: json['black_username']?.toString(),
+      moveCount: parseCount(json['move_count']),
+      playerColor: json['player_color']?.toString(),
+      updatedAt: parseDate(json['completed_at'] ?? json['updated_at']),
+    );
+  }
 
   Map<String, dynamic> toJson() => {
     'id': id,

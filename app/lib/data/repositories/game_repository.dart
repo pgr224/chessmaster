@@ -6,14 +6,32 @@ import '../models/game_model.dart';
 
 class GameRepository {
   final Dio _dio;
-  static const _boxName = 'saved_games';
+  static const _boxName = 'saved_games_v3';
+  static Box? _box;
 
   GameRepository(this._dio);
 
+  /// Opens the Hive box, clearing it if format is incompatible
+  Future<Box> _getBox() async {
+    if (_box != null && _box!.isOpen) return _box!;
+
+    try {
+      _box = await Hive.openBox(_boxName);
+    } catch (e) {
+      print('[GameRepository] Box interaction error, recovering: $e');
+      try {
+        await Hive.deleteBoxFromDisk(_boxName);
+      } catch (_) {}
+      _box = await Hive.openBox(_boxName);
+    }
+    return _box!;
+  }
+
   /// Save game locally and sync to server if online
   Future<String> saveGame(GameModel game) async {
-    final box = await Hive.openBox<String>(_boxName);
+    final box = await _getBox();
     final id = game.id.isEmpty ? const Uuid().v4() : game.id;
+    
     final updatedGame = GameModel(
       id: id,
       fen: game.fen,
@@ -29,27 +47,38 @@ class GameRepository {
       moveCount: game.moveCount,
       updatedAt: DateTime.now(),
     );
+
+    // Write to Hive first
     await box.put(id, jsonEncode(updatedGame.toJson()));
 
-    // Try server sync
+    // Try server sync asynchronously
+    _syncGameCreate(id, updatedGame);
+
+    return id;
+  }
+
+  Future<void> _syncGameCreate(String id, GameModel game) async {
     try {
       await _dio.post('/api/game/create', data: {
         'gameId': id,
         'mode': game.mode,
         'initialFen': game.fen,
       });
-    } catch (_) {}
-
-    return id;
+    } catch (e) {
+      print('[GameRepository] Server sync failed (create): $e');
+    }
   }
 
   /// Sync game completion with the server
   Future<void> completeGame(GameModel game) async {
-    // 1. Update local DB
-    final box = await Hive.openBox<String>(_boxName);
+    final box = await _getBox();
     await box.put(game.id, jsonEncode(game.toJson()));
 
-    // 2. Push to server
+    // 2. Push to server asynchronously
+    _syncGameComplete(game);
+  }
+
+  Future<void> _syncGameComplete(GameModel game) async {
     try {
       final res = game.result.toLowerCase();
       String winner = 'draw';
@@ -62,12 +91,15 @@ class GameRepository {
         'termination': game.status,
         'pgn': game.pgn,
       });
-    } catch (_) {}
+    } catch (e) {
+      print('[GameRepository] Server sync failed (complete): $e');
+    }
   }
 
   Future<List<GameModel>> getSavedGames() async {
-    final box = await Hive.openBox<String>(_boxName);
+    final box = await _getBox();
     return box.values
+        .map((val) => val?.toString() ?? '')
         .where((val) => val.isNotEmpty)
         .map((jsonStr) {
           try {
@@ -84,9 +116,11 @@ class GameRepository {
   }
 
   Future<GameModel?> getSavedGame(String id) async {
-    final box = await Hive.openBox<String>(_boxName);
-    final jsonStr = box.get(id);
-    if (jsonStr == null || jsonStr.isEmpty) return null;
+    final box = await _getBox();
+    final val = box.get(id);
+    if (val == null) return null;
+    final jsonStr = val.toString();
+    if (jsonStr.isEmpty) return null;
     try {
       return GameModel.fromJson(jsonDecode(jsonStr));
     } catch (e) {
@@ -96,14 +130,14 @@ class GameRepository {
   }
 
   Future<void> deleteGame(String id) async {
-    final box = await Hive.openBox<String>(_boxName);
+    final box = await _getBox();
     await box.delete(id);
   }
 
   static const _lastActiveKey = 'last_active_game_id';
 
   Future<void> setLastActiveGameId(String? id) async {
-    final box = await Hive.openBox<String>(_boxName);
+    final box = await _getBox();
     if (id == null) {
       await box.delete(_lastActiveKey);
     } else {
@@ -112,8 +146,8 @@ class GameRepository {
   }
 
   Future<String?> getLastActiveGameId() async {
-    final box = await Hive.openBox<String>(_boxName);
-    return box.get(_lastActiveKey);
+    final box = await _getBox();
+    return box.get(_lastActiveKey)?.toString();
   }
 
   Future<List<GameModel>> getRecentGames(String userId, {int limit = 10}) async {

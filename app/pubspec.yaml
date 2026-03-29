@@ -121,3 +121,7 @@ flutter:
     - assets/themes/
     - assets/tutorials/
     - .env
+  fonts:
+    - family: Merida
+      fonts:
+        - asset: assets/chess_merida.ttf

@@ -1015,7 +1015,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     } catch (e) {
       debugPrint('[Coach Analysis Error] $e');
     }
-  }  } // End of shouldAnalyze block
+  }
 
     // Note: We avoid Future.delayed here as it can cause late emits after bloc closure.
     // UI should handle the ephemeral display of coach messages.
