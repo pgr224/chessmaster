@@ -3,13 +3,7 @@ import 'dart:convert';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-enum WsMessageType {
-  // Outgoing
-  FIND_MATCH, CANCEL_FIND_MATCH, MOVE, CHAT, RESIGN,
-  // Incoming
-  LOBBY_UPDATE, MATCH_FOUND, MOVE_UPDATE, CHAT_UPDATE, ROOM_STATE,
-  PLAYER_DISCONNECTED, GAME_OVER, ERROR
-}
+import 'package:flutter/foundation.dart'; // Add for debugPrint
 
 class MultiplayerService {
   WebSocketChannel? _lobbyChannel;
@@ -48,7 +42,7 @@ class MultiplayerService {
     }, onDone: () {
       _lobbyChannel = null;
       _lobbyStream.add({'type': 'CONNECTION_LOST'});
-      print('Lobby disconnected');
+      debugPrint('Lobby disconnected');
     }, onError: (err) {
       _lobbyChannel = null;
       _lobbyStream.add({'type': 'CONNECTION_LOST', 'error': err.toString()});
@@ -75,7 +69,7 @@ class MultiplayerService {
     _gameChannel!.stream.listen((msg) {
       final data = jsonDecode(msg) as Map<String, dynamic>;
       _gameStream.add(data);
-    }, onDone: () => print('Game session ended'));
+    }, onDone: () => debugPrint('Game session ended'));
   }
 
   /// Send move in game

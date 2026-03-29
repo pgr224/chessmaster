@@ -38,8 +38,11 @@ class _TimerWidgetState extends State<TimerWidget> {
     _currentTime = widget.timeInSeconds;
     
     if (widget.isActive != oldWidget.isActive) {
-      if (widget.isActive) _startLocalCountdown();
-      else _stopLocalCountdown();
+      if (widget.isActive) {
+        _startLocalCountdown();
+      } else {
+        _stopLocalCountdown();
+      }
     }
   }
 
@@ -72,7 +75,7 @@ class _TimerWidgetState extends State<TimerWidget> {
     final int ms = ((seconds % 1) * 10).floor();
     
     if (seconds < 10) {
-      return '${secs.toString()}.${ms}';
+      return '$secs.$ms';
     }
     return '${mins.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
   }

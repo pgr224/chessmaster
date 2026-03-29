@@ -316,12 +316,19 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
                      (event.result == 'black' && state.playerColor == PieceColor.white);
 
       if (isWin) {
-        if (event.reason == 'checkmate') xp = 100;
-        else if (event.reason == 'timeout') xp = 50;
-        else xp = 30; // default win
+        if (event.reason == 'checkmate') {
+          xp = 100;
+        } else if (event.reason == 'timeout') {
+          xp = 50;
+        } else {
+          xp = 30; // default win
+        }
       } else if (isLoss) {
-        if (event.reason == 'resign') xp = -50;
-        else xp = -20;
+        if (event.reason == 'resign') {
+          xp = -50;
+        } else {
+          xp = -20;
+        }
       } else {
         xp = 0; // draw
       }
@@ -480,13 +487,6 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
           break;
         case 'GAME_SAVED':
           add(MpGameSavedEvent());
-          break;
-        case 'TIMER_SYNC':
-          final timerData = msg['data'] as Map;
-          add(MpTimerSyncEvent(
-            (timerData['whiteTime'] as num?)?.toDouble() ?? 0,
-            (timerData['blackTime'] as num?)?.toDouble() ?? 0,
-          ));
           break;
       }
     });

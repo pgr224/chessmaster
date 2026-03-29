@@ -321,7 +321,7 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
                 spacing: 10,
                 runSpacing: 10,
                 children: swatches.map((c) {
-                  final isSelected = c.value == selected.value;
+                  final isSelected = c == selected;
                   return GestureDetector(
                     onTap: () => setLocalState(() => selected = c),
                     child: Container(

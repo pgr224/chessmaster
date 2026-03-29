@@ -26,6 +26,7 @@ import '../../widgets/hint_button_widget.dart';
 import '../../widgets/coach_overlay_widget.dart';
 import '../../widgets/timer_widget.dart';
 import '../../widgets/game_rules_dialog.dart';
+import '../../../data/models/coach_model.dart';
 
 class GameScreen extends StatefulWidget {
   final GameConfig config;
@@ -156,14 +157,22 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             if (mpState.status == MultiplayerStatus.gameOver && !state.isGameOver) {
                // Map mpResult to GameResult
                GameResult res = GameResult.ongoing;
-               if (mpState.gameResult == 'white') res = GameResult.whiteWins;
-               else if (mpState.gameResult == 'black') res = GameResult.blackWins;
-               else if (mpState.gameResult == 'draw') res = GameResult.draw;
-
-               DrawReason? reason;
-               if (mpState.gameReason == 'stalemate') reason = DrawReason.stalemate;
-               else if (mpState.gameReason == 'agreement') reason = DrawReason.agreement;
-               else if (mpState.gameReason == 'insufficient_material') reason = DrawReason.insufficientMaterial;
+               if (mpState.gameResult == 'white') {
+                 res = GameResult.whiteWins;
+               } else if (mpState.gameResult == 'black') {
+                 res = GameResult.blackWins;
+               } else if (mpState.gameResult == 'draw') {
+                 res = GameResult.draw;
+               }
+ 
+                DrawReason? reason;
+                if (mpState.gameReason == 'stalemate') {
+                  reason = DrawReason.stalemate;
+                } else if (mpState.gameReason == 'agreement') {
+                  reason = DrawReason.agreement;
+                } else if (mpState.gameReason == 'insufficient_material') {
+                  reason = DrawReason.insufficientMaterial;
+                }
 
                context.read<GameBloc>().add(MpGameOverSyncEvent(res, reason, mpState.xpGained));
             }
@@ -219,6 +228,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       ),
     );
   },
+),
 );
 }
 
@@ -1063,7 +1073,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               label: 'Hint',
               color: AppTheme.goldPrimary,
               onTap: !state.isGameOver && state.isPlayerTurn && !state.isAIThinking
-                  ? () => _requestHint(context, state)
+                  ? () => context.read<GameBloc>().add(GameRequestHintEvent())
                   : null,
             ),
           
@@ -1232,11 +1242,11 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             SwitchListTile(
               title: Text('Real-time Feedback', style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 18)),
               subtitle: Text('Get help and lessons while playing', style: GoogleFonts.baloo2(color: AppTheme.textSecondary)),
-              value: state.coachSettings.enabled,
-              activeColor: AppTheme.accentPurple,
+              value: state.coachSettings.enableRealTimeCoaching,
+              activeThumbColor: AppTheme.accentPurple,
               onChanged: (val) {
                 context.read<GameBloc>().add(GameUpdateCoachSettingsEvent(
-                  state.coachSettings.copyWith(enabled: val),
+                  state.coachSettings.copyWith(enableRealTimeCoaching: val),
                 ));
               },
             ),

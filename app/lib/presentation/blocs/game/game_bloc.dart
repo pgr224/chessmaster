@@ -1160,10 +1160,6 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     // Undo 2 moves if vs AI (take back player's move + AI's response)
     final isVsAI = state.mode == GameMode.singlePlayer || state.mode == GameMode.practice;
     
-    // Check if the move we're about to undo was hinted
-    final lastMoveIndex = _engine.moveHistory.length - 1;
-    final isHinted = state.hintedIndices.contains(lastMoveIndex);
-    
     // In practice/single player, we usually undo 2. 
     // But if it was hinted, the user might only get 1 undo? 
     // Actually, "Undo stays" but "only undo ONCE for that move if hint given"
