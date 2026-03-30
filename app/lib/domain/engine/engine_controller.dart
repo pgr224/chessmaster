@@ -10,12 +10,13 @@ import 'ai_engine.dart';
 import '../../data/models/game_config.dart';
 
 // Conditional import: web gets the real JS bridge, mobile gets the real native bridge
-import 'native_engine_bridge.dart'
+import 'native_engine_bridge_stub.dart'
+    if (dart.library.io) 'native_engine_bridge.dart'
     if (dart.library.js_interop) 'js_engine_bridge.dart' as js_bridge;
 
 import 'personality_engine.dart';
 import 'move_selector.dart';
-import 'native_stockfish.dart'; // For MoveCandidate
+import 'candidate_model.dart';
 
 class AIEngineController {
   GameMode _mode = GameMode.singlePlayer;
@@ -30,9 +31,9 @@ class AIEngineController {
   static const Map<AIDifficulty, int> _maxTimeMs = {
     AIDifficulty.basic: 2250,
     AIDifficulty.intermediate: 4000,
-    AIDifficulty.advanced: 7250,
-    AIDifficulty.impossible: 17000,
-    AIDifficulty.aiMode: 25000, // Leela can use a bit more time if needed
+    AIDifficulty.advanced: 5000,
+    AIDifficulty.impossible: 5000, // Reduced from 17000 to keep it engaging
+    AIDifficulty.aiMode: 7000,     // Reduced from 25000
   };
 
   static const int _fallbackBufferMs = 2000;
@@ -108,7 +109,15 @@ class AIEngineController {
       String? bestFound;
 
       if (!kIsWeb) {
-        candidates = await js_bridge.jsEngineGetTopMoves(fen, 15, 3, movetime: 1000);
+        int dynamicMoveTime = 1000;
+        if (engine != null) {
+          final complexity = engine.legalMoves.length;
+          final cap = _maxTimeMs[_difficulty] ?? 5000;
+          dynamicMoveTime = (1000 + (complexity * 80)).clamp(1000, cap);
+        }
+        
+        final rawCandidates = await js_bridge.jsEngineGetTopMoves(fen, 15, 3, movetime: dynamicMoveTime);
+        candidates = List<MoveCandidate>.from(rawCandidates);
         if (candidates.isNotEmpty) {
           bestFound = candidates.first.uci;
         }
@@ -187,6 +196,12 @@ class AIEngineController {
     });
 
     return moves.first.toAlgebraic();
+  }
+
+  /// Background analysis of user move (AI Mode)
+  Future<Map<String, dynamic>?> analyzeMoveBackground(String fen, {int nodes = 1000}) async {
+    if (!_initialized) return null;
+    return js_bridge.jsEngineGetBestMove(fen);
   }
 
   /// Stop current engine calculation

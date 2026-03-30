@@ -20,9 +20,7 @@ import '../../../data/repositories/auth_repository.dart';
 import '../../../data/repositories/puzzle_repository.dart';
 import '../theme/theme_bloc.dart';
 import '../../../domain/engine/personality_engine.dart';
-import '../../../domain/engine/native_leela.dart';
-import '../../../domain/engine/move_selector.dart';
-import '../../../domain/engine/native_stockfish.dart';
+import '../../../domain/engine/candidate_model.dart';
 
 // ═══════════════════════════════════════════
 // EVENTS
@@ -495,6 +493,7 @@ class GameState extends Equatable {
   @override
   List<Object?> get props => [
     status, result, isAIThinking, hintMove, hintsUsed, currentFEN,
+    selectedSquare, legalMoves, currentTurn, moveHistory,
     showPromotionDialog, tutorial, tutorialStep, tutorialMessage, 
     pieceShape, pieceStyle,
     lastMoveTimestamp, opponentName,
@@ -1413,8 +1412,10 @@ class GameBloc extends Bloc<GameEvent, GameState> {
        final fenBefore = fenBeforeMove; // Captured at start of _onMakeMove
        final lastMove = move.toAlgebraic();
        
-       // Asynchronous analysis using Leela
-       NativeLeela().getBestMove(fenBefore, 100).then((best) {
+       // Asynchronous analysis using the unified bridge (via controller)
+       _engineController.analyzeMoveBackground(fenBefore, nodes: 1000).then((res) {
+          if (res == null) return;
+          final best = res['move'] as String?;
           if (best == null) return;
           
           // Heuristic: if user played a quick tactical blow (capture/check), shift to Defensive

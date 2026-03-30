@@ -1,15 +1,6 @@
 import 'dart:async';
 import 'package:stockfish/stockfish.dart';
-
-class MoveCandidate {
-  final String uci;
-  final int score; // Centipawns
-
-  MoveCandidate({required this.uci, required this.score});
-
-  @override
-  String toString() => 'MoveCandidate($uci, cp: $score)';
-}
+import 'candidate_model.dart';
 
 class NativeStockfish {
   static final NativeStockfish _instance = NativeStockfish._internal();

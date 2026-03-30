@@ -1,5 +1,5 @@
 import 'dart:math' as math;
-import 'native_stockfish.dart'; // For MoveCandidate
+import 'candidate_model.dart';
 import 'personality_engine.dart';
 
 class MoveSelector {

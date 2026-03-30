@@ -1,6 +1,6 @@
 import 'dart:js_interop';
 import 'dart:js_interop_unsafe';
-import 'native_stockfish.dart'; // For MoveCandidate
+import 'candidate_model.dart';
 
 @JS('ChessEngineService')
 extension type _JSEngineService._(JSObject _) {
@@ -16,7 +16,7 @@ extension type _JSEngineService._(JSObject _) {
 /// Get the ChessEngineService from window
 _JSEngineService? _getService() {
   try {
-    final svc = globalContext['ChessEngineService'];
+    final svc = (globalContext['ChessEngineService'] as JSObject?);
     if (svc == null || svc.isUndefinedOrNull) return null;
     return svc as _JSEngineService;
   } catch (_) {
@@ -69,6 +69,9 @@ Future<Map<String, dynamic>?> jsEngineGetBestMove(String fen) async {
   } catch (e) {
     print('[JSBridge] getBestMove error: $e');
   }
+  return null;
+}
+
 /// Get top candidate moves from JS
 Future<List<MoveCandidate>> jsEngineGetTopMoves(String fen, int depth, int count, {int? movetime}) async {
   final res = await jsEngineGetBestMove(fen);
@@ -90,7 +93,7 @@ List<String> jsEngineGetLegalMoves(String fen, String square) {
   final svc = _getService();
   if (svc == null) return [];
   final result = svc.getLegalMoves(fen.toJS, square.toJS);
-  return result.toDart.map((e) => e.toDart).toList();
+  return result.toDart.map((e) => (e as JSString).toDart).toList();
 }
 
 /// Get the currently active engine name
@@ -104,5 +107,4 @@ String jsEngineGetActiveEngine() {
 void jsEngineDispose() {
   final svc = _getService();
   svc?.dispose();
-}
 }

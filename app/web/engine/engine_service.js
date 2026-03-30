@@ -30,12 +30,13 @@
   };
 
   // Timeout budget per difficulty (ms)
+  // Dynamically capped to ensure players don't wait too long
   const TIMEOUT_CONFIG = {
     basic: 2250,
     intermediate: 4000,
-    advanced: 7250,
-    impossible: 17000,
-    aiMode: 25000,
+    advanced: 5000,
+    impossible: 5000, // Capped to 5s to keep gameplay engaging
+    aiMode: 7000,     // Capped to 7s
   };
 
   const FALLBACK_BUFFER_MS = 2000;
