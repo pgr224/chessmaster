@@ -79,6 +79,8 @@ profileRoutes.post('/:id/xp', async (c) => {
           tournament_wins = tournament_wins + ?,
           total_moves = total_moves + ?,
           hints_used = hints_used + ?,
+          puzzles_solved = puzzles_solved + ?,
+          puzzle_rating = CASE WHEN ? > 0 THEN ? ELSE puzzle_rating END,
           updated_at = datetime('now')
         WHERE user_id = ?
       `).bind(
@@ -89,6 +91,9 @@ profileRoutes.post('/:id/xp', async (c) => {
         stats.tournament_wins || 0,
         stats.total_moves || 0,
         stats.hints_used || 0,
+        stats.puzzles_solved || 0,
+        stats.puzzle_rating || 0,
+        stats.puzzle_rating || 0,
         userId
       )
     ]

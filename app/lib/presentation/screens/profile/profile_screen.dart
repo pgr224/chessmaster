@@ -356,9 +356,10 @@ class _ProfileContent extends StatelessWidget {
               _ruleItem('🤝 Draw', '+0 XP', AppTheme.textMuted),
               _ruleItem('💀 Defeat', '-20 XP', AppTheme.accentRed),
               _ruleItem('💡 Hint Usage', '-10 XP', AppTheme.accentRed),
+              _ruleItem('🧩 Solving Puzzle', '+50 XP', AppTheme.accentCyan),
               const Padding(
                 padding: EdgeInsets.only(top: 16),
-                child: Text('Note: Practice mode affects difficulty but awards 0 XP. Online matches influence your global leaderboard standing.', 
+                child: Text('Note: Practice mode awards 0 XP. Puzzles award +50 XP and adjust your adaptive puzzle rating. Online matches influence your global leaderboard standing.', 
                   style: TextStyle(color: AppTheme.textMuted, fontSize: 12, fontStyle: FontStyle.italic)),
               ),
             ],

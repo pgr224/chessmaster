@@ -1088,6 +1088,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     final settings = context.watch<SettingsBloc>().state;
     final isPracticeOrSingle = state.mode == GameMode.singlePlayer || state.mode == GameMode.practice;
     final isMultiplayer = state.mode == GameMode.multiplayer;
+    final isPuzzle = state.mode == GameMode.puzzle;
     
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
@@ -1103,15 +1104,43 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         runSpacing: 8,
         spacing: 6,
         children: [
-          // Hint button (single player & practice)
-          if (isPracticeOrSingle)
-            HintButtonWidget(
-              hintsRemaining: state.hintsRemaining,
-              onTap: state.hintsRemaining > 0 && state.isPlayerTurn && !state.isGameOver
+          // Puzzle specific buttons
+          if (isPuzzle && !state.isGameOver)
+            _actionBtn(
+              icon: Icons.flag_rounded,
+              label: 'Give Up',
+              color: AppTheme.accentRed,
+              onTap: () => context.read<GameBloc>().add(const GamePuzzleGiveUpEvent()),
+              width: 78,
+            ),
+          if (isPuzzle && state.isGameOver)
+            _actionBtn(
+              icon: Icons.skip_next_rounded,
+              label: 'Next Puzzle',
+              color: AppTheme.accentCyan,
+              onTap: () => context.read<GameBloc>().add(const GamePuzzleNextEvent()),
+              width: 90,
+            ),
+          
+          // Hint button (single player, practice, or puzzle)
+          if (isPracticeOrSingle || isPuzzle)
+            _actionBtn(
+              icon: Icons.lightbulb_rounded,
+              label: isPuzzle ? 'Hint (10XP)' : 'Hint',
+              color: AppTheme.goldPrimary,
+              onTap: !state.isGameOver && state.isPlayerTurn && !state.isAIThinking
                   ? () => context.read<GameBloc>().add(GameRequestHintEvent())
                   : null,
             ),
-          // Undo — always available for practice & single, conditional for multiplayer
+          
+          if (isPuzzle)
+            _actionBtn(
+              icon: Icons.psychology_rounded,
+              label: 'Explain',
+              color: AppTheme.skyBlue,
+              onTap: () => context.read<GameBloc>().add(const GameExplainPuzzleMoveEvent()),
+            ),
+          // Undo — available for practice, single, and multiplayer
           if (isPracticeOrSingle || isMultiplayer)
             _actionBtn(
               icon: Icons.undo_rounded,
@@ -1121,21 +1150,12 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   ? () => context.read<GameBloc>().add(GameUndoEvent())
                   : null,
             ),
-          // Resign
-          _actionBtn(
-            icon: Icons.flag_rounded, label: 'Resign', color: AppTheme.accentRed,
-            onTap: !state.isGameOver ? () => _resign(context, settings.confirmResign) : null,
-            width: isMultiplayer ? 70 : 80,
-          ),
-          // Hint — only for practice/single (cost XP)
-          if (isPracticeOrSingle)
+          // Resign (not for puzzles)
+          if (!isPuzzle)
             _actionBtn(
-              icon: Icons.lightbulb_rounded,
-              label: 'Hint',
-              color: AppTheme.goldPrimary,
-              onTap: !state.isGameOver && state.isPlayerTurn && !state.isAIThinking
-                  ? () => context.read<GameBloc>().add(GameRequestHintEvent())
-                  : null,
+              icon: Icons.flag_rounded, label: 'Resign', color: AppTheme.accentRed,
+              onTap: !state.isGameOver ? () => _resign(context, settings.confirmResign) : null,
+              width: isMultiplayer ? 70 : 80,
             ),
           
           // Coach Settings
@@ -1444,7 +1464,11 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       currentElo: 1200, // Will be updated from user model
       bestMoves: state.bestMoves,
       onPlayAgain: () {
-        context.read<GameBloc>().add(GameStartEvent(widget.config));
+        if (state.mode == GameMode.puzzle) {
+          context.read<GameBloc>().add(const GamePuzzleNextEvent());
+        } else {
+          context.read<GameBloc>().add(GameStartEvent(widget.config));
+        }
       },
       onGoHome: () => context.go('/home'),
       onShare: () => _sharePgn(

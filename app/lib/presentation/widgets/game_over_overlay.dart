@@ -334,6 +334,7 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                   Row(
                     children: [
                       Expanded(
+                        flex: widget.gameMode == GameMode.puzzle ? 2 : 3,
                         child: OutlinedButton.icon(
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppTheme.textPrimary,
@@ -348,7 +349,7 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                       ),
                       const SizedBox(width: 10),
                       Expanded(
-                        flex: 2,
+                        flex: widget.gameMode == GameMode.puzzle ? 4 : 5,
                         child: ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: statusColor,
@@ -358,8 +359,9 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                             elevation: 8,
                           ),
                           onPressed: widget.onPlayAgain,
-                          icon: const Icon(Icons.refresh_rounded, size: 20),
-                          label: Text('REMATCH', style: GoogleFonts.fredoka(fontWeight: FontWeight.w800, fontSize: 16, letterSpacing: 1)),
+                          icon: Icon(widget.gameMode == GameMode.puzzle ? Icons.skip_next_rounded : Icons.refresh_rounded, size: 20),
+                          label: Text(widget.gameMode == GameMode.puzzle ? 'NEXT PUZZLE' : 'REMATCH', 
+                            style: GoogleFonts.fredoka(fontWeight: FontWeight.w800, fontSize: 16, letterSpacing: 1)),
                         ),
                       ),
                     ],
