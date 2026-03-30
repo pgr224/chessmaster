@@ -105,6 +105,9 @@ class _ThinkingOverlayWidgetState extends State<ThinkingOverlayWidget> {
           _AnimatedDots(),
         ],
       ),
+    ).animate().fadeIn().scale(begin: const Offset(0.9, 0.9));
+  }
+
   Widget _buildCompact(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
