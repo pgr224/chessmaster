@@ -59,7 +59,6 @@ class ChessBoardWidget extends StatefulWidget {
 }
 
 class _ChessBoardWidgetState extends State<ChessBoardWidget> {
-
   @override
   Widget build(BuildContext context) {
     return Center(
@@ -67,7 +66,7 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
         builder: (context, constraints) {
           final size = math.min(constraints.maxWidth, constraints.maxHeight);
           final sqSize = size / 8;
-          
+
           return SizedBox(
             width: size,
             height: size,
@@ -125,7 +124,8 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
   }
 
   Widget _squareColor(bool isLight, String theme) {
-    final themeData = AppTheme.boardThemes[theme] ?? AppTheme.boardThemes['classic']!;
+    final themeData =
+        AppTheme.boardThemes[theme] ?? AppTheme.boardThemes['classic']!;
     return ColoredBox(color: isLight ? themeData.light : themeData.dark);
   }
 
@@ -140,11 +140,13 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
         // Hint highlight
         if (widget.hintMove != null) ...[
           _highlight(widget.hintMove!.from, sqSize, AppTheme.hintSq),
-          _highlight(widget.hintMove!.to, sqSize, AppTheme.hintSq.withValues(alpha: 0.9)),
+          _highlight(widget.hintMove!.to, sqSize,
+              AppTheme.hintSq.withValues(alpha: 0.9)),
         ],
         // Selected piece
         if (widget.selectedSquare != null)
-          _highlight(widget.selectedSquare!, sqSize, AppTheme.selectedSq.withValues(alpha: 0.7)),
+          _highlight(widget.selectedSquare!, sqSize,
+              AppTheme.selectedSq.withValues(alpha: 0.7)),
         // Legal moves
         ...widget.legalMoves.map((m) => _legalMoveIndicator(m, sqSize)),
         // Check highlight
@@ -156,8 +158,10 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
         ],
         // Pre Move Glow
         if (widget.preMove != null) ...[
-          _highlight(widget.preMove!.from, sqSize, Colors.redAccent.withValues(alpha: 0.6)),
-          _highlight(widget.preMove!.to, sqSize, Colors.redAccent.withValues(alpha: 0.6)),
+          _highlight(widget.preMove!.from, sqSize,
+              Colors.redAccent.withValues(alpha: 0.6)),
+          _highlight(widget.preMove!.to, sqSize,
+              Colors.redAccent.withValues(alpha: 0.6)),
         ],
       ],
     );
@@ -262,7 +266,10 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
     }
 
     return Positioned(
-      left: x, top: y, width: sqSize, height: sqSize,
+      left: x,
+      top: y,
+      width: sqSize,
+      height: sqSize,
       child: checkLayer
           .animate(onPlay: (c) => c.repeat(reverse: true))
           .fadeIn(duration: 500.ms)
@@ -298,9 +305,9 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
             child: widget.moveAnimationSpeed == 'off'
                 ? pieceChild
                 : pieceChild.animate().scale(
-                    duration: animDuration,
-                    curve: Curves.easeOutBack,
-                  ),
+                      duration: animDuration,
+                      curve: Curves.easeOutBack,
+                    ),
           ),
         );
       }
@@ -320,9 +327,10 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
   }
 
   Widget _buildCoordinates(double sqSize) {
-    final themeData = AppTheme.boardThemes[widget.boardTheme] ?? AppTheme.boardThemes['classic']!;
+    final themeData = AppTheme.boardThemes[widget.boardTheme] ??
+        AppTheme.boardThemes['classic']!;
     final notationColor = themeData.notation.withValues(alpha: 0.8);
-    
+
     return Stack(
       children: [
         // Files (a-h)
@@ -364,7 +372,8 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
   }
 
   Widget _buildSquareLabels(double sqSize) {
-    final themeData = AppTheme.boardThemes[widget.boardTheme] ?? AppTheme.boardThemes['classic']!;
+    final themeData = AppTheme.boardThemes[widget.boardTheme] ??
+        AppTheme.boardThemes['classic']!;
     final notationColor = themeData.notation.withValues(alpha: 0.35); // Subtle
 
     return Positioned.fill(
@@ -374,7 +383,7 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
           final f = index % 8;
           final rank = 7 - r;
           final file = f;
-          
+
           // Logical coordinates based on perspective
           int displayFile, displayRank;
           if (widget.perspective == PieceColor.white) {
@@ -386,7 +395,7 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
           }
 
           final label = '${String.fromCharCode(97 + file)}${rank + 1}';
-          
+
           return Positioned(
             left: displayFile * sqSize + 2,
             top: displayRank * sqSize + 2,
@@ -440,5 +449,3 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
     return (displayFile * sqSize, displayRank * sqSize);
   }
 }
-
-

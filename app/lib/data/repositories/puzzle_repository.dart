@@ -85,9 +85,7 @@ class PuzzleRepository {
       puzzleMoves.add(PuzzleMove(
         move: solutionMoves[i],
         uciMove: solutionMoves[i],
-        hint: isUserMove
-            ? _getChildFriendlyHint(i ~/ 2)
-            : '',
+        hint: isUserMove ? _getChildFriendlyHint(i ~/ 2) : '',
         dialog: isUserMove
             ? _getChildFriendlyChallenge(i ~/ 2)
             : 'Opponent responds... 🤔',
@@ -107,10 +105,14 @@ class PuzzleRepository {
     final puzzleColor = fen.contains(' w ') ? 'black' : 'white';
 
     return Puzzle(
-      id: p['id']?.toString() ?? 'lichess_${DateTime.now().millisecondsSinceEpoch}',
+      id: p['id']?.toString() ??
+          'lichess_${DateTime.now().millisecondsSinceEpoch}',
       title: 'Lichess Puzzle',
-      description: 'Find the winning sequence for ${puzzleColor == 'white' ? 'White' : 'Black'}!',
-      initialFEN: p['fen'] ?? game?['fen'] ?? 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+      description:
+          'Find the winning sequence for ${puzzleColor == 'white' ? 'White' : 'Black'}!',
+      initialFEN: p['fen'] ??
+          game?['fen'] ??
+          'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
       moves: puzzleMoves,
       reward: '50 XP',
       rating: p['rating'],
@@ -146,9 +148,9 @@ class PuzzleRepository {
   Puzzle _getFallbackPuzzle(int targetRating) {
     final puzzles = _allFallbackPuzzles();
     // Sort by closest rating to target
-    puzzles.sort((a, b) =>
-        ((a.rating ?? 1200) - targetRating).abs().compareTo(
-            ((b.rating ?? 1200) - targetRating).abs()));
+    puzzles.sort((a, b) => ((a.rating ?? 1200) - targetRating)
+        .abs()
+        .compareTo(((b.rating ?? 1200) - targetRating).abs()));
     // Pick randomly from top 3 closest
     final candidates = puzzles.take(3).toList();
     return candidates[Random().nextInt(candidates.length)];
@@ -161,17 +163,20 @@ class PuzzleRepository {
         id: 'fallback_easy_1',
         title: '👑 Fork the King!',
         description: 'Use your knight to attack two pieces at once!',
-        initialFEN: 'r1bqkb1r/pppppppp/2n2n2/4N3/4P3/8/PPPP1PPP/RNBQKB1R w KQkq - 0 1',
+        initialFEN:
+            'r1bqkb1r/pppppppp/2n2n2/4N3/4P3/8/PPPP1PPP/RNBQKB1R w KQkq - 0 1',
         moves: [
           PuzzleMove(
-            move: 'e5c6', uciMove: 'e5c6',
+            move: 'e5c6',
+            uciMove: 'e5c6',
             hint: '',
             dialog: 'Opponent takes your knight... 👀',
             successDialog: '',
             isOpponentMove: true,
           ),
           PuzzleMove(
-            move: 'd1h5', uciMove: 'd1h5',
+            move: 'd1h5',
+            uciMove: 'd1h5',
             hint: 'Your queen can attack multiple targets! 👑',
             dialog: 'Find the best queen move! 🧠',
             successDialog: '🌟 Amazing! You forked the king!',
@@ -190,28 +195,32 @@ class PuzzleRepository {
         initialFEN: 'r1b2r1k/1p1n1Npp/p7/3Q4/8/8/PP3PPP/R4RK1 w - - 0 1',
         moves: [
           PuzzleMove(
-            move: 'd5d8', uciMove: 'd5d8',
+            move: 'd5d8',
+            uciMove: 'd5d8',
             hint: '',
             dialog: 'Watch this sacrifice... 👀',
             successDialog: '',
             isOpponentMove: true,
           ),
           PuzzleMove(
-            move: 'f7h6', uciMove: 'f7h6',
+            move: 'f7h6',
+            uciMove: 'f7h6',
             hint: 'Force the king into a worse position! ⚡',
             dialog: 'The king is trapped! Find the check! 🧠',
             successDialog: '✅ Double check! King must go to h8.',
             isOpponentMove: false,
           ),
           PuzzleMove(
-            move: 'h8h7', uciMove: 'h8h7',
+            move: 'h8h7',
+            uciMove: 'h8h7',
             hint: '',
             dialog: 'King retreats... 🤔',
             successDialog: '',
             isOpponentMove: true,
           ),
           PuzzleMove(
-            move: 'h6f7', uciMove: 'h6f7',
+            move: 'h6f7',
+            uciMove: 'h6f7',
             hint: 'Knight jumps in for the final blow! 🐴',
             dialog: 'Finish the smothered mate! 🔥',
             successDialog: '🌟 Brilliant! Smothered mate!',
@@ -230,14 +239,16 @@ class PuzzleRepository {
         initialFEN: '6k1/5ppp/8/8/8/8/5PPP/1R4K1 w - - 0 1',
         moves: [
           PuzzleMove(
-            move: 'g8f8', uciMove: 'g8f8',
+            move: 'g8f8',
+            uciMove: 'g8f8',
             hint: '',
             dialog: 'King moves... 👀',
             successDialog: '',
             isOpponentMove: true,
           ),
           PuzzleMove(
-            move: 'b1b8', uciMove: 'b1b8',
+            move: 'b1b8',
+            uciMove: 'b1b8',
             hint: 'The back rank is weak! Crash through! 💥',
             dialog: 'Deliver the final blow! 🧠',
             successDialog: '🌟 Back rank mate! Beautiful!',
@@ -253,17 +264,20 @@ class PuzzleRepository {
         id: 'fallback_hard_2',
         title: '🔥 Queen Sacrifice',
         description: 'Sometimes you have to give up your strongest piece!',
-        initialFEN: 'r1bqr1k1/ppp2ppp/2n5/3Np1Q1/2B5/8/PPP2PPP/R3K2R w KQ - 0 1',
+        initialFEN:
+            'r1bqr1k1/ppp2ppp/2n5/3Np1Q1/2B5/8/PPP2PPP/R3K2R w KQ - 0 1',
         moves: [
           PuzzleMove(
-            move: 'e8e7', uciMove: 'e8e7',
+            move: 'e8e7',
+            uciMove: 'e8e7',
             hint: '',
             dialog: 'Opponent defends... 👀',
             successDialog: '',
             isOpponentMove: true,
           ),
           PuzzleMove(
-            move: 'g5f6', uciMove: 'g5f6',
+            move: 'g5f6',
+            uciMove: 'g5f6',
             hint: 'Your queen has a devastating move! 👑',
             dialog: 'Find the crushing queen move! 🧠',
             successDialog: '🌟 Incredible attack! The position crumbles!',

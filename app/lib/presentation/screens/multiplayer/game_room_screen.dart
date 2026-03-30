@@ -20,7 +20,7 @@ class GameRoomScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<MultiplayerBloc, MultiplayerState>(
-      listenWhen: (prev, current) => 
+      listenWhen: (prev, current) =>
           prev.status != current.status ||
           prev.gameReason != current.gameReason ||
           prev.drawOfferPending != current.drawOfferPending ||
@@ -31,9 +31,12 @@ class GameRoomScreen extends StatelessWidget {
             const SnackBar(content: Text('Opponent left: disconnect timeout')),
           );
         }
-        if (mpState.status == MultiplayerStatus.gameOver && mpState.gameReason != null) {
+        if (mpState.status == MultiplayerStatus.gameOver &&
+            mpState.gameReason != null) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Match ended: ${_friendlyCause(mpState.gameReason)}')),
+            SnackBar(
+                content:
+                    Text('Match ended: ${_friendlyCause(mpState.gameReason)}')),
           );
         }
         if (mpState.status == MultiplayerStatus.disconnected) {
@@ -51,11 +54,12 @@ class GameRoomScreen extends StatelessWidget {
       builder: (context, mpState) {
         if (mpState.status != MultiplayerStatus.inGame &&
             mpState.status != MultiplayerStatus.gameOver) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          return const Scaffold(
+              body: Center(child: CircularProgressIndicator()));
         }
 
         final themeState = context.read<ThemeBloc>().state;
-        
+
         // Parse time control from multiplayer (e.g. "10+5" -> 600s base, 5s increment)
         int? tcSeconds;
         int incSeconds = 0;
@@ -79,52 +83,62 @@ class GameRoomScreen extends StatelessWidget {
           listeners: [
             // Sync Multiplayer -> Game (Opponent made a move)
             BlocListener<MultiplayerBloc, MultiplayerState>(
-              listenWhen: (prev, current) => 
-                (prev.lastMoveFrom != current.lastMoveFrom || prev.lastMoveTo != current.lastMoveTo) && 
-                current.lastMoveFrom != null,
+              listenWhen: (prev, current) =>
+                  (prev.lastMoveFrom != current.lastMoveFrom ||
+                      prev.lastMoveTo != current.lastMoveTo) &&
+                  current.lastMoveFrom != null,
               listener: (context, state) {
                 context.read<GameBloc>().add(GameMakeMoveEvent(
-                  Square.fromString(state.lastMoveFrom!),
-                  Square.fromString(state.lastMoveTo!),
-                  promotion: state.lastMovePromotion != null ? PieceType.values.byName(state.lastMovePromotion!) : null,
-                ));
+                      Square.fromString(state.lastMoveFrom!),
+                      Square.fromString(state.lastMoveTo!),
+                      promotion: state.lastMovePromotion != null
+                          ? PieceType.values.byName(state.lastMovePromotion!)
+                          : null,
+                    ));
               },
             ),
             // Sync Game -> Multiplayer (Player made a move)
             BlocListener<GameBloc, GameState>(
-              listenWhen: (prev, current) => 
-                prev.moveHistory.length < current.moveHistory.length &&
-                current.currentTurn != current.playerColor, // Means player just moved
+              listenWhen: (prev, current) =>
+                  prev.moveHistory.length < current.moveHistory.length &&
+                  current.currentTurn !=
+                      current.playerColor, // Means player just moved
               listener: (context, state) {
-                if (state.moveHistory.isNotEmpty && state.mode == GameMode.multiplayer) {
+                if (state.moveHistory.isNotEmpty &&
+                    state.mode == GameMode.multiplayer) {
                   final lastMove = state.moveHistory.last;
-                  context.read<MultiplayerBloc>().add(
-                    MpMakeMoveEvent(lastMove.from.toString(), lastMove.to.toString(), promotion: lastMove.promotion?.name)
-                  );
+                  context.read<MultiplayerBloc>().add(MpMakeMoveEvent(
+                      lastMove.from.toString(), lastMove.to.toString(),
+                      promotion: lastMove.promotion?.name));
                 }
               },
             ),
             // Sync Multiplayer -> Game (Opponent UNDO)
             BlocListener<MultiplayerBloc, MultiplayerState>(
-              listenWhen: (prev, current) => current.opponentUndoCount > prev.opponentUndoCount,
+              listenWhen: (prev, current) =>
+                  current.opponentUndoCount > prev.opponentUndoCount,
               listener: (context, state) {
                 context.read<GameBloc>().add(GameUndoEvent());
               },
             ),
             // Sync Game -> Multiplayer (Player UNDO)
             BlocListener<GameBloc, GameState>(
-              listenWhen: (prev, current) => 
-                prev.moveHistory.length > current.moveHistory.length &&
-                current.mode == GameMode.multiplayer,
+              listenWhen: (prev, current) =>
+                  prev.moveHistory.length > current.moveHistory.length &&
+                  current.mode == GameMode.multiplayer,
               listener: (context, state) {
                 context.read<MultiplayerBloc>().add(MpUndoEvent());
               },
             ),
             // Set opponent name in game state
             BlocListener<MultiplayerBloc, MultiplayerState>(
-              listenWhen: (prev, current) => prev.opponentName != current.opponentName && current.opponentName != null,
+              listenWhen: (prev, current) =>
+                  prev.opponentName != current.opponentName &&
+                  current.opponentName != null,
               listener: (context, state) {
-                context.read<GameBloc>().add(GameSetOpponentNameEvent(state.opponentName!));
+                context
+                    .read<GameBloc>()
+                    .add(GameSetOpponentNameEvent(state.opponentName!));
               },
             ),
           ],
@@ -133,7 +147,8 @@ class GameRoomScreen extends StatelessWidget {
             floatingActionButton: FloatingActionButton(
               onPressed: () => _showChat(context),
               backgroundColor: AppTheme.goldPrimary,
-              child: const Icon(Icons.chat_bubble_rounded, color: AppTheme.midnight),
+              child: const Icon(Icons.chat_bubble_rounded,
+                  color: AppTheme.midnight),
             ),
             body: GameScreen(config: config),
           ),
@@ -153,7 +168,8 @@ class GameRoomScreen extends StatelessWidget {
           builder: (context, state) {
             return ChatWidget(
               messages: state.chatMessages,
-              onSendMessage: (msg) => context.read<MultiplayerBloc>().add(MpSendChatEvent(msg)),
+              onSendMessage: (msg) =>
+                  context.read<MultiplayerBloc>().add(MpSendChatEvent(msg)),
             );
           },
         ),
@@ -168,10 +184,12 @@ class GameRoomScreen extends StatelessWidget {
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.navyCard,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: Text('🤝 Draw Offer', style: GoogleFonts.fredoka(color: AppTheme.skyBlue)),
+        title: Text('🤝 Draw Offer',
+            style: GoogleFonts.fredoka(color: AppTheme.skyBlue)),
         content: Text(
           'Your opponent is offering a draw. Do you accept?',
-          style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 16),
+          style:
+              GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 16),
         ),
         actions: [
           TextButton(
@@ -179,19 +197,22 @@ class GameRoomScreen extends StatelessWidget {
               Navigator.pop(ctx);
               context.read<MultiplayerBloc>().add(MpDrawDeclineEvent());
             },
-            child: Text('Decline', style: GoogleFonts.fredoka(color: AppTheme.accentRed)),
+            child: Text('Decline',
+                style: GoogleFonts.fredoka(color: AppTheme.accentRed)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.accentCyan,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14)),
             ),
             onPressed: () {
               Navigator.pop(ctx);
               context.read<MultiplayerBloc>().add(MpDrawAcceptEvent());
               context.read<GameBloc>().add(GameDrawAcceptEvent());
             },
-            child: Text('Accept Draw', style: GoogleFonts.fredoka(color: AppTheme.midnight)),
+            child: Text('Accept Draw',
+                style: GoogleFonts.fredoka(color: AppTheme.midnight)),
           ),
         ],
       ),
@@ -205,10 +226,12 @@ class GameRoomScreen extends StatelessWidget {
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.navyCard,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: Text('💾 Save & Quit?', style: GoogleFonts.fredoka(color: AppTheme.accentCyan)),
+        title: Text('💾 Save & Quit?',
+            style: GoogleFonts.fredoka(color: AppTheme.accentCyan)),
         content: Text(
           'Your opponent wants to save the game progress and quit. If you accept, both players can resume this later.',
-          style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 16),
+          style:
+              GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 16),
         ),
         actions: [
           TextButton(
@@ -216,18 +239,21 @@ class GameRoomScreen extends StatelessWidget {
               Navigator.pop(ctx);
               context.read<MultiplayerBloc>().add(MpSaveDeclineEvent());
             },
-            child: Text('Continue', style: GoogleFonts.fredoka(color: AppTheme.textMuted)),
+            child: Text('Continue',
+                style: GoogleFonts.fredoka(color: AppTheme.textMuted)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.accentCyan,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14)),
             ),
             onPressed: () {
               Navigator.pop(ctx);
               context.read<MultiplayerBloc>().add(MpSaveAcceptEvent());
             },
-            child: Text('Accept & Save', style: GoogleFonts.fredoka(color: AppTheme.midnight)),
+            child: Text('Accept & Save',
+                style: GoogleFonts.fredoka(color: AppTheme.midnight)),
           ),
         ],
       ),

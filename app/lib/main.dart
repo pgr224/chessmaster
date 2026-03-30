@@ -50,10 +50,13 @@ class ChessApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        BlocProvider<AuthBloc>(create: (_) => di.sl<AuthBloc>()..add(AuthInitializeEvent())),
+        BlocProvider<AuthBloc>(
+            create: (_) => di.sl<AuthBloc>()..add(AuthInitializeEvent())),
         BlocProvider<MultiplayerBloc>(create: (_) => di.sl<MultiplayerBloc>()),
-        BlocProvider<ThemeBloc>(create: (_) => di.sl<ThemeBloc>()..add(ThemeLoadEvent())),
-        BlocProvider<SettingsBloc>(create: (_) => di.sl<SettingsBloc>()..add(SettingsLoadEvent())),
+        BlocProvider<ThemeBloc>(
+            create: (_) => di.sl<ThemeBloc>()..add(ThemeLoadEvent())),
+        BlocProvider<SettingsBloc>(
+            create: (_) => di.sl<SettingsBloc>()..add(SettingsLoadEvent())),
       ],
       child: BlocBuilder<SettingsBloc, SettingsState>(
         builder: (context, settingsState) {

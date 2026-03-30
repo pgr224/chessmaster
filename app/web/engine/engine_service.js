@@ -118,6 +118,10 @@
   function handleWorkerMessage(e) {
     const msg = e.data;
     if (msg.type === 'bestmove' && pendingResolve) {
+      if (msg.id !== undefined && msg.id !== requestId) {
+        console.warn(`[EngineService] Ignoring stale resolve for request ${msg.id}`);
+        return; // Ignore stale resolves
+      }
       clearTimeout(pendingTimeout);
       const resolve = pendingResolve;
       pendingResolve = null;
@@ -157,12 +161,13 @@
       }
     },
 
-    async getBestMove(fen) {
+    async getBestMove(fen, requestedBudget) {
       lastFen = fen;
       const id = ++requestId;
 
       let depth = DEPTH_CONFIG[currentDifficulty] || 3;
-      const budget = TIMEOUT_CONFIG[currentDifficulty] || 1500;
+      const defaultBudget = TIMEOUT_CONFIG[currentDifficulty] || 1500;
+      const budget = requestedBudget ? Math.min(requestedBudget, defaultBudget + 2000) : defaultBudget;
 
       if (activeEngineType === ENGINE_VALIDATION) return null;
 
@@ -192,13 +197,13 @@
 
           if (engineType === ENGINE_SUNFISH) {
             const worker = createWorker(ENGINE_SUNFISH);
-            worker.postMessage({ type: 'search', fen, depth: isFallback ? 3 : depth, timeoutMs: timeoutMs - 200 });
+            worker.postMessage({ type: 'search', fen, depth: isFallback ? 3 : depth, timeoutMs: timeoutMs - 200, id });
           } else if (engineType === ENGINE_STOCKFISH) {
             await waitForStockfishReady();
             if (pendingResolve === resolve) {
               // Enable MultiPV 3 for high difficulties
               const multipv = (currentDifficulty === 'advanced' || currentDifficulty === 'impossible' || currentDifficulty === 'aiMode') ? 3 : 1;
-              stockfishWorker.postMessage({ type: 'search', fen, depth, timeoutMs: timeoutMs - 200, multipv });
+              stockfishWorker.postMessage({ type: 'search', fen, depth, timeoutMs: timeoutMs - 200, multipv, id });
             }
           }
         };

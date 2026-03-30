@@ -1,7 +1,7 @@
 /// ELO Rating calculation service for ranked play.
 class EloService {
   static const int defaultRating = 1200;
-  static const int kFactorNew = 40;     // For players with < 30 games
+  static const int kFactorNew = 40; // For players with < 30 games
   static const int kFactorEstablished = 20; // For players with 30+ games
 
   /// Calculate new ELO ratings for both players after a game.
@@ -20,7 +20,8 @@ class EloService {
     final expected2 = 1.0 - expected1;
 
     final newRating1 = (player1Rating + k1 * (score - expected1)).round();
-    final newRating2 = (player2Rating + k2 * ((1.0 - score) - expected2)).round();
+    final newRating2 =
+        (player2Rating + k2 * ((1.0 - score) - expected2)).round();
 
     return (newRating1.clamp(100, 3500), newRating2.clamp(100, 3500));
   }

@@ -127,10 +127,13 @@ class AppRouter {
               child: GameScreen(config: extra.config, tutorial: extra.tutorial),
             );
           }
-          final config = extra is GameConfig 
-              ? extra 
-              : const GameConfig(mode: GameMode.singlePlayer, playerColor: 'white', difficulty: AIDifficulty.basic);
-          
+          final config = extra is GameConfig
+              ? extra
+              : const GameConfig(
+                  mode: GameMode.singlePlayer,
+                  playerColor: 'white',
+                  difficulty: AIDifficulty.basic);
+
           return BlocProvider<GameBloc>(
             create: (_) => di.sl<GameBloc>(),
             child: GameScreen(config: config),
@@ -176,8 +179,6 @@ class AppRouter {
   );
 }
 
-
-
 class MainScaffold extends StatefulWidget {
   final Widget child;
   const MainScaffold({super.key, required this.child});
@@ -200,9 +201,11 @@ class _MainScaffoldState extends State<MainScaffold> {
   final List<_NavItem> _navItems = const [
     _NavItem(icon: Icons.home_rounded, label: 'Home', path: '/home'),
     _NavItem(icon: Icons.school_rounded, label: 'Learn', path: '/learn'),
-    _NavItem(icon: Icons.leaderboard_rounded, label: 'Ranks', path: '/leaderboard'),
+    _NavItem(
+        icon: Icons.leaderboard_rounded, label: 'Ranks', path: '/leaderboard'),
     _NavItem(icon: Icons.person_rounded, label: 'Profile', path: '/profile'),
-    _NavItem(icon: Icons.settings_rounded, label: 'Settings', path: '/settings'),
+    _NavItem(
+        icon: Icons.settings_rounded, label: 'Settings', path: '/settings'),
   ];
 
   DateTime? _lastBackPressed;
@@ -213,7 +216,7 @@ class _MainScaffoldState extends State<MainScaffold> {
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
-        
+
         // If not at home, go home first
         if (_currentIndex != 0) {
           context.go('/home');
@@ -221,11 +224,13 @@ class _MainScaffoldState extends State<MainScaffold> {
         }
 
         final now = DateTime.now();
-        if (_lastBackPressed == null || now.difference(_lastBackPressed!) > const Duration(seconds: 2)) {
+        if (_lastBackPressed == null ||
+            now.difference(_lastBackPressed!) > const Duration(seconds: 2)) {
           _lastBackPressed = now;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Press back again to exit', style: GoogleFonts.fredoka()),
+              content: Text('Press back again to exit',
+                  style: GoogleFonts.fredoka()),
               behavior: SnackBarBehavior.floating,
               duration: const Duration(seconds: 2),
               backgroundColor: const Color(0xFF1F2952),
@@ -254,23 +259,30 @@ class _MainScaffoldState extends State<MainScaffold> {
         backgroundColor: const Color(0xFF0A0E27),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(24),
-          side: BorderSide(color: const Color(0xFFD4AF37).withValues(alpha: 0.3)),
+          side:
+              BorderSide(color: const Color(0xFFD4AF37).withValues(alpha: 0.3)),
         ),
-        title: Text('Quit Game?', style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold)),
-        content: Text('Are you sure you want to exit Chess Master?', style: GoogleFonts.baloo2(color: Colors.white70)),
+        title: Text('Quit Game?',
+            style: GoogleFonts.fredoka(
+                color: Colors.white, fontWeight: FontWeight.bold)),
+        content: Text('Are you sure you want to exit Chess Master?',
+            style: GoogleFonts.baloo2(color: Colors.white70)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Cancel', style: GoogleFonts.fredoka(color: Colors.white60)),
+            child: Text('Cancel',
+                style: GoogleFonts.fredoka(color: Colors.white60)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFD4AF37),
               foregroundColor: Colors.black,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
-            child: Text('Quit', style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
+            child: Text('Quit',
+                style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
           ),
         ],
       ),

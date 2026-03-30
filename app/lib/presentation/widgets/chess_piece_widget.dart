@@ -31,8 +31,8 @@ class ChessPieceWidget extends StatelessWidget {
 
   Widget _buildPieceVisual() {
     final isWhite = piece.color == PieceColor.white;
-    final baseColor = isWhite 
-        ? (whitePieceColor ?? Colors.white) 
+    final baseColor = isWhite
+        ? (whitePieceColor ?? Colors.white)
         : (blackPieceColor ?? Colors.black);
 
     // Legacy / Special Text Styles
@@ -90,28 +90,33 @@ class ChessPieceWidget extends StatelessWidget {
       final typeStr = _getPychessTypeChar(piece.type);
       path = 'assets/pieces/pychess/$shape/$colorStr$typeStr.svg';
     }
-    
+
     return SvgPicture.asset(
       path,
       width: size,
       height: size,
       fit: BoxFit.contain,
       errorBuilder: (context, error, stackTrace) => Icon(
-        Icons.help_outline_rounded, 
-        color: Colors.white24, 
-        size: size * 0.8
-      ),
+          Icons.help_outline_rounded,
+          color: Colors.white24,
+          size: size * 0.8),
     );
   }
 
   String _getPychessTypeChar(PieceType type) {
     switch (type) {
-      case PieceType.pawn: return 'p';
-      case PieceType.knight: return 'n';
-      case PieceType.bishop: return 'b';
-      case PieceType.rook: return 'r';
-      case PieceType.queen: return 'q';
-      case PieceType.king: return 'k';
+      case PieceType.pawn:
+        return 'p';
+      case PieceType.knight:
+        return 'n';
+      case PieceType.bishop:
+        return 'b';
+      case PieceType.rook:
+        return 'r';
+      case PieceType.queen:
+        return 'q';
+      case PieceType.king:
+        return 'k';
     }
   }
 }
@@ -172,10 +177,10 @@ class ChessPiecePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
     final scale = size.width / 100;
-    
+
     // 1. Get Path based on Shape
     final path = PiecePathProvider.getPath(type, shape);
-    
+
     final matrix = Matrix4.identity()
       ..storage[12] = center.dx
       ..storage[13] = center.dy
@@ -201,13 +206,13 @@ class ChessPiecePainter extends CustomPainter {
           ..color = color.withValues(alpha: 0.5)
           ..maskFilter = MaskFilter.blur(BlurStyle.normal, size.width * 0.1);
         canvas.drawPath(path, glowPaint);
-        
+
         // Vibrant stroke
         strokePaint.color = color;
         strokePaint.strokeWidth = size.width * 0.04;
         strokePaint.maskFilter = MaskFilter.blur(BlurStyle.outer, 4);
         canvas.drawPath(path, strokePaint);
-        
+
         // Base thin bright center
         paint.color = Colors.white.withValues(alpha: 0.8);
         canvas.drawPath(path, paint);
@@ -215,37 +220,50 @@ class ChessPiecePainter extends CustomPainter {
 
       case 'metal':
         final gradient = LinearGradient(
-          colors: isWhite 
-              ? [const Color(0xFFFFD700), const Color(0xfff9f9f9), const Color(0xFFB8860B)]
+          colors: isWhite
+              ? [
+                  const Color(0xFFFFD700),
+                  const Color(0xfff9f9f9),
+                  const Color(0xFFB8860B)
+                ]
               : [const Color(0xFF434343), const Color(0xFF000000)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         );
         paint.shader = gradient.createShader(Offset.zero & size);
         canvas.drawPath(path, paint);
-        
+
         // Specular highlight
         final highlightPath = Path();
         final rect = path.getBounds();
-        highlightPath.addOval(Rect.fromLTWH(rect.left + rect.width*0.2, rect.top + rect.height*0.1, rect.width*0.3, rect.height*0.2));
-        canvas.drawPath(highlightPath, Paint()..color = Colors.white.withValues(alpha: 0.3)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5));
+        highlightPath.addOval(Rect.fromLTWH(rect.left + rect.width * 0.2,
+            rect.top + rect.height * 0.1, rect.width * 0.3, rect.height * 0.2));
+        canvas.drawPath(
+            highlightPath,
+            Paint()
+              ..color = Colors.white.withValues(alpha: 0.3)
+              ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5));
         break;
 
       case 'glass':
         paint.color = color.withValues(alpha: 0.3);
         canvas.drawPath(path, paint);
-        
+
         strokePaint.color = Colors.white.withValues(alpha: 0.5);
         canvas.drawPath(path, strokePaint);
-        
+
         // Refraction highlights
-        final highlightPaint = Paint()..color = Colors.white.withValues(alpha: 0.4);
-        canvas.drawCircle(Offset(size.width * 0.4, size.height * 0.35), size.width * 0.1, highlightPaint);
+        final highlightPaint = Paint()
+          ..color = Colors.white.withValues(alpha: 0.4);
+        canvas.drawCircle(Offset(size.width * 0.4, size.height * 0.35),
+            size.width * 0.1, highlightPaint);
         break;
 
       case 'wood':
         final gradient = RadialGradient(
-          colors: isWhite ? [const Color(0xFFD2B48C), const Color(0xFF8B4513)] : [const Color(0xFF5D4037), const Color(0xFF212121)],
+          colors: isWhite
+              ? [const Color(0xFFD2B48C), const Color(0xFF8B4513)]
+              : [const Color(0xFF5D4037), const Color(0xFF212121)],
           radius: 1.2,
         );
         paint.shader = gradient.createShader(Offset.zero & size);
@@ -253,18 +271,20 @@ class ChessPiecePainter extends CustomPainter {
         break;
 
       case 'luxury':
-        paint.color = isWhite ? const Color(0xFFE8D5B5) : const Color(0xFF1A1A1A);
+        paint.color =
+            isWhite ? const Color(0xFFE8D5B5) : const Color(0xFF1A1A1A);
         canvas.drawPath(path, paint);
-        
+
         strokePaint.color = const Color(0xFFC5A059);
         strokePaint.strokeWidth = 2.0;
         canvas.drawPath(path, strokePaint);
         break;
 
       case 'royal':
-        paint.color = isWhite ? const Color(0xFFF5F5F5) : const Color(0xFF4A148C);
+        paint.color =
+            isWhite ? const Color(0xFFF5F5F5) : const Color(0xFF4A148C);
         canvas.drawPath(path, paint);
-        
+
         // Gold trim
         strokePaint.color = const Color(0xFFFFD700);
         strokePaint.strokeWidth = size.width * 0.05;
@@ -280,28 +300,40 @@ class ChessPiecePainter extends CustomPainter {
         );
         paint.shader = gradient.createShader(Offset.zero & size);
         canvas.drawPath(path, paint);
-        
+
         // Drop shadow
-        canvas.drawPath(path.shift(const Offset(2, 2)), Paint()..color=Colors.black26..maskFilter=const MaskFilter.blur(BlurStyle.normal, 2));
+        canvas.drawPath(
+            path.shift(const Offset(2, 2)),
+            Paint()
+              ..color = Colors.black26
+              ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2));
         break;
     }
   }
 
   @override
-  bool shouldRepaint(covariant ChessPiecePainter oldDelegate) => 
-    oldDelegate.type != type || oldDelegate.style != style || oldDelegate.shape != shape;
+  bool shouldRepaint(covariant ChessPiecePainter oldDelegate) =>
+      oldDelegate.type != type ||
+      oldDelegate.style != style ||
+      oldDelegate.shape != shape;
 }
 
 class PiecePathProvider {
   static Path getPath(PieceType type, String shape) {
     switch (shape) {
-      case 'modern': return _getModernPath(type);
-      case 'angular': return _getAngularPath(type);
-      case 'wood': return _getWoodPath(type);
-      case 'fantasy': return _getFantasyPath(type);
-      case 'neo': return _getNeoPath(type);
+      case 'modern':
+        return _getModernPath(type);
+      case 'angular':
+        return _getAngularPath(type);
+      case 'wood':
+        return _getWoodPath(type);
+      case 'fantasy':
+        return _getFantasyPath(type);
+      case 'neo':
+        return _getNeoPath(type);
       case 'classic':
-      default: return _getClassicPath(type);
+      default:
+        return _getClassicPath(type);
     }
   }
 
@@ -309,41 +341,74 @@ class PiecePathProvider {
     final p = Path();
     switch (type) {
       case PieceType.pawn:
-        p.moveTo(-15, 30); p.lineTo(15, 30);
+        p.moveTo(-15, 30);
+        p.lineTo(15, 30);
         p.quadraticBezierTo(10, 25, 10, 10);
         p.addOval(const Rect.fromLTWH(-12, -15, 24, 24));
         break;
       case PieceType.rook:
-        p.moveTo(-18, 30); p.lineTo(18, 30);
-        p.lineTo(15, -10); p.lineTo(18, -10); p.lineTo(18, -25);
-        p.lineTo(10, -25); p.lineTo(10, -20); p.lineTo(6, -20); p.lineTo(6, -25);
-        p.lineTo(-6, -25); p.lineTo(-6, -20); p.lineTo(-10, -20); p.lineTo(-10, -25);
-        p.lineTo(-18, -25); p.lineTo(-18, -10); p.lineTo(-15, -10); p.close();
+        p.moveTo(-18, 30);
+        p.lineTo(18, 30);
+        p.lineTo(15, -10);
+        p.lineTo(18, -10);
+        p.lineTo(18, -25);
+        p.lineTo(10, -25);
+        p.lineTo(10, -20);
+        p.lineTo(6, -20);
+        p.lineTo(6, -25);
+        p.lineTo(-6, -25);
+        p.lineTo(-6, -20);
+        p.lineTo(-10, -20);
+        p.lineTo(-10, -25);
+        p.lineTo(-18, -25);
+        p.lineTo(-18, -10);
+        p.lineTo(-15, -10);
+        p.close();
         break;
       case PieceType.knight:
-        p.moveTo(-15, 30); p.lineTo(15, 30);
+        p.moveTo(-15, 30);
+        p.lineTo(15, 30);
         p.quadraticBezierTo(10, 10, 15, -10);
         p.quadraticBezierTo(20, -25, 0, -30);
         p.quadraticBezierTo(-25, -25, -15, -5);
-        p.lineTo(-5, -5); p.lineTo(-15, 10); p.close();
+        p.lineTo(-5, -5);
+        p.lineTo(-15, 10);
+        p.close();
         break;
       case PieceType.bishop:
-        p.moveTo(-15, 30); p.lineTo(15, 30);
+        p.moveTo(-15, 30);
+        p.lineTo(15, 30);
         p.quadraticBezierTo(10, 15, 10, 0);
         p.addOval(const Rect.fromLTWH(-12, -25, 24, 30));
-        p.moveTo(0, -25); p.lineTo(0, -32);
+        p.moveTo(0, -25);
+        p.lineTo(0, -32);
         break;
       case PieceType.queen:
-        p.moveTo(-18, 30); p.lineTo(18, 30);
+        p.moveTo(-18, 30);
+        p.lineTo(18, 30);
         p.lineTo(12, 0);
-        p.lineTo(20, -15); p.lineTo(8, -10); p.lineTo(0, -30); p.lineTo(-8, -10); p.lineTo(-20, -15);
-        p.lineTo(-12, 0); p.close();
+        p.lineTo(20, -15);
+        p.lineTo(8, -10);
+        p.lineTo(0, -30);
+        p.lineTo(-8, -10);
+        p.lineTo(-20, -15);
+        p.lineTo(-12, 0);
+        p.close();
         break;
       case PieceType.king:
-        p.moveTo(-18, 30); p.lineTo(18, 30);
-        p.lineTo(12, -10); p.lineTo(15, -10); p.lineTo(15, -20);
-        p.lineTo(5, -20); p.lineTo(5, -30); p.lineTo(-5, -30); p.lineTo(-5, -20);
-        p.lineTo(-15, -20); p.lineTo(-15, -10); p.lineTo(-12, -10); p.close();
+        p.moveTo(-18, 30);
+        p.lineTo(18, 30);
+        p.lineTo(12, -10);
+        p.lineTo(15, -10);
+        p.lineTo(15, -20);
+        p.lineTo(5, -20);
+        p.lineTo(5, -30);
+        p.lineTo(-5, -30);
+        p.lineTo(-5, -20);
+        p.lineTo(-15, -20);
+        p.lineTo(-15, -10);
+        p.lineTo(-12, -10);
+        p.close();
         break;
     }
     return p;
@@ -360,10 +425,18 @@ class PiecePathProvider {
         p.addRect(const Rect.fromLTWH(-15, -20, 30, 50));
         break;
       case PieceType.knight:
-        p.moveTo(-15, 30); p.lineTo(15, 30); p.lineTo(15, 0); p.lineTo(0, -30); p.lineTo(-15, 0); p.close();
+        p.moveTo(-15, 30);
+        p.lineTo(15, 30);
+        p.lineTo(15, 0);
+        p.lineTo(0, -30);
+        p.lineTo(-15, 0);
+        p.close();
         break;
       case PieceType.bishop:
-        p.moveTo(0, -30); p.lineTo(15, 30); p.lineTo(-15, 30); p.close();
+        p.moveTo(0, -30);
+        p.lineTo(15, 30);
+        p.lineTo(-15, 30);
+        p.close();
         break;
       case PieceType.queen:
         p.addOval(const Rect.fromLTWH(-20, -20, 40, 40));
@@ -371,7 +444,10 @@ class PiecePathProvider {
         break;
       case PieceType.king:
         p.addRect(const Rect.fromLTWH(-20, -20, 40, 40));
-        p.moveTo(0, -35); p.lineTo(0, -15); p.moveTo(-10, -25); p.lineTo(10, -25);
+        p.moveTo(0, -35);
+        p.lineTo(0, -15);
+        p.moveTo(-10, -25);
+        p.lineTo(10, -25);
         break;
     }
     return p;
@@ -381,13 +457,26 @@ class PiecePathProvider {
     final p = Path();
     switch (type) {
       case PieceType.pawn:
-        p.moveTo(0, -20); p.lineTo(12, 10); p.lineTo(8, 30); p.lineTo(-8, 30); p.lineTo(-12, 10); p.close();
+        p.moveTo(0, -20);
+        p.lineTo(12, 10);
+        p.lineTo(8, 30);
+        p.lineTo(-8, 30);
+        p.lineTo(-12, 10);
+        p.close();
         break;
       case PieceType.rook:
-        p.moveTo(-15, 30); p.lineTo(15, 30); p.lineTo(12, -15); p.lineTo(18, -15); p.lineTo(18, -30);
-        p.lineTo(-18, -30); p.lineTo(-18, -15); p.lineTo(-12, -15); p.close();
+        p.moveTo(-15, 30);
+        p.lineTo(15, 30);
+        p.lineTo(12, -15);
+        p.lineTo(18, -15);
+        p.lineTo(18, -30);
+        p.lineTo(-18, -30);
+        p.lineTo(-18, -15);
+        p.lineTo(-12, -15);
+        p.close();
         break;
-      default: return _getClassicPath(type);
+      default:
+        return _getClassicPath(type);
     }
     return p;
   }
@@ -399,18 +488,25 @@ class PiecePathProvider {
         p.addOval(const Rect.fromLTWH(-15, 5, 30, 25));
         p.addOval(Rect.fromCircle(center: const Offset(0, -10), radius: 12));
         break;
-      default: return _getClassicPath(type);
+      default:
+        return _getClassicPath(type);
     }
     return p;
   }
-  
+
   static Path _getFantasyPath(PieceType type) {
     final p = Path();
     switch (type) {
       case PieceType.knight:
-        p.moveTo(-10, 30); p.lineTo(10, 30); p.lineTo(20, -10); p.lineTo(5, -35); p.lineTo(-15, -10); p.close();
+        p.moveTo(-10, 30);
+        p.lineTo(10, 30);
+        p.lineTo(20, -10);
+        p.lineTo(5, -35);
+        p.lineTo(-15, -10);
+        p.close();
         break;
-      default: return _getClassicPath(type);
+      default:
+        return _getClassicPath(type);
     }
     return p;
   }
@@ -422,24 +518,71 @@ class PiecePathProvider {
         p.addRect(const Rect.fromLTWH(-10, -30, 20, 60));
         p.addRect(const Rect.fromLTWH(-15, -35, 30, 5));
         break;
-      default: return _getClassicPath(type);
+      default:
+        return _getClassicPath(type);
     }
     return p;
   }
 
   static const List<String> pychessShapes = [
-    'alfonso', 'alila', 'alpha', 'atopdown', 'california', 'cardinal', 'cburnett',
-    'celtic', 'chess7', 'chessicons', 'chessmonk', 'chessnut', 'companion',
-    'dubrovny', 'eyes', 'fantasy', 'fantasy_alt', 'freak', 'freestaunton',
-    'fresca', 'gioco', 'governor', 'horsey', 'icpieces', 'kilfiger', 'kosal',
-    'leipzig', 'letter', 'libra', 'maestro', 'magnetic', 'makruk', 'maya',
-    'merida', 'merida_new', 'metaltops', 'pirat', 'pirouetti', 'pixel', 'prmi',
-    'regular', 'reillycraig', 'riohacha', 'shapes', 'sittuyin', 'skulls',
-    'spatial', 'staunty', 'tatiana'
+    'alfonso',
+    'alila',
+    'alpha',
+    'atopdown',
+    'california',
+    'cardinal',
+    'cburnett',
+    'celtic',
+    'chess7',
+    'chessicons',
+    'chessmonk',
+    'chessnut',
+    'companion',
+    'dubrovny',
+    'eyes',
+    'fantasy',
+    'fantasy_alt',
+    'freak',
+    'freestaunton',
+    'fresca',
+    'gioco',
+    'governor',
+    'horsey',
+    'icpieces',
+    'kilfiger',
+    'kosal',
+    'leipzig',
+    'letter',
+    'libra',
+    'maestro',
+    'magnetic',
+    'makruk',
+    'maya',
+    'merida',
+    'merida_new',
+    'metaltops',
+    'pirat',
+    'pirouetti',
+    'pixel',
+    'prmi',
+    'regular',
+    'reillycraig',
+    'riohacha',
+    'shapes',
+    'sittuyin',
+    'skulls',
+    'spatial',
+    'staunty',
+    'tatiana'
   ];
 
   static final Set<String> _customPathShapes = {
-    'classic', 'modern', 'angular', 'wood', 'fantasy', 'neo'
+    'classic',
+    'modern',
+    'angular',
+    'wood',
+    'fantasy',
+    'neo'
   };
 
   static bool isVectorShape(String shape) {

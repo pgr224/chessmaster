@@ -25,7 +25,8 @@ Future<void> init() async {
     var isRecoveringFrom401 = false;
 
     final dio = Dio(BaseOptions(
-      baseUrl: dotenv.env['API_URL'] ?? 'https://chess-master-api.pp942920.workers.dev',
+      baseUrl: dotenv.env['API_URL'] ??
+          'https://chess-master-api.pp942920.workers.dev',
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 30),
       headers: {'Content-Type': 'application/json'},
@@ -36,14 +37,17 @@ Future<void> init() async {
       onRequest: (options, handler) async {
         final token = sl<SharedPreferences>().getString('auth_token');
         if (token != null) {
-          final normalized = token.replaceFirst(RegExp(r'^Bearer\s+', caseSensitive: false), '').trim();
+          final normalized = token
+              .replaceFirst(RegExp(r'^Bearer\s+', caseSensitive: false), '')
+              .trim();
           options.headers['Authorization'] = 'Bearer $normalized';
         }
         handler.next(options);
       },
       onError: (DioException e, handler) async {
         if (e.response?.statusCode == 401) {
-          final hasAuthHeader = e.requestOptions.headers.containsKey('Authorization');
+          final hasAuthHeader =
+              e.requestOptions.headers.containsKey('Authorization');
           if (hasAuthHeader && !isRecoveringFrom401) {
             isRecoveringFrom401 = true;
             try {
@@ -73,12 +77,13 @@ Future<void> init() async {
   // ── BLoCs ──
   sl.registerLazySingleton<AuthBloc>(() => AuthBloc(sl<AuthRepository>()));
   sl.registerFactory<GameBloc>(() => GameBloc(
-    sl<GameRepository>(), 
-    sl<AuthRepository>(),
-    sl<PuzzleRepository>(),
-    sl<ThemeBloc>(),
-  ));
-  sl.registerLazySingleton<MultiplayerBloc>(() => MultiplayerBloc(sl<MultiplayerService>()));
+        sl<GameRepository>(),
+        sl<AuthRepository>(),
+        sl<PuzzleRepository>(),
+        sl<ThemeBloc>(),
+      ));
+  sl.registerLazySingleton<MultiplayerBloc>(
+      () => MultiplayerBloc(sl<MultiplayerService>()));
   sl.registerLazySingleton<ThemeBloc>(() => ThemeBloc());
   sl.registerLazySingleton<SettingsBloc>(() => SettingsBloc());
 }

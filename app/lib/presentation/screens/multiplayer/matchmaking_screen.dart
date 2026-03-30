@@ -14,13 +14,16 @@ class MatchmakingScreen extends StatefulWidget {
   State<MatchmakingScreen> createState() => _MatchmakingScreenState();
 }
 
-class _MatchmakingScreenState extends State<MatchmakingScreen> with SingleTickerProviderStateMixin {
+class _MatchmakingScreenState extends State<MatchmakingScreen>
+    with SingleTickerProviderStateMixin {
   late AnimationController _radarController;
 
   @override
   void initState() {
     super.initState();
-    _radarController = AnimationController(vsync: this, duration: const Duration(seconds: 4))..repeat();
+    _radarController =
+        AnimationController(vsync: this, duration: const Duration(seconds: 4))
+          ..repeat();
   }
 
   @override
@@ -46,16 +49,21 @@ class _MatchmakingScreenState extends State<MatchmakingScreen> with SingleTicker
         return Scaffold(
           backgroundColor: AppTheme.midnight,
           body: Container(
-            decoration: const BoxDecoration(gradient: AppTheme.backgroundGradient),
+            decoration:
+                const BoxDecoration(gradient: AppTheme.backgroundGradient),
             child: SafeArea(
               child: Stack(
                 children: [
-                   Positioned(
-                    top: 16, left: 16,
+                  Positioned(
+                    top: 16,
+                    left: 16,
                     child: IconButton(
-                      icon: const Icon(Icons.close_rounded, color: AppTheme.textMuted, size: 28),
+                      icon: const Icon(Icons.close_rounded,
+                          color: AppTheme.textMuted, size: 28),
                       onPressed: () {
-                        context.read<MultiplayerBloc>().add(MpCancelMatchmakingEvent());
+                        context
+                            .read<MultiplayerBloc>()
+                            .add(MpCancelMatchmakingEvent());
                       },
                     ),
                   ),
@@ -67,14 +75,23 @@ class _MatchmakingScreenState extends State<MatchmakingScreen> with SingleTicker
                         const SizedBox(height: 64),
                         Text(
                           'Searching for opponent...',
-                          style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 24, fontWeight: FontWeight.w700),
+                          style: GoogleFonts.fredoka(
+                              color: AppTheme.textPrimary,
+                              fontSize: 24,
+                              fontWeight: FontWeight.w700),
                         )
-                        .animate(onPlay: (controller) => controller.repeat())
-                        .shimmer(duration: 2.seconds, color: AppTheme.goldPrimary),
+                            .animate(
+                                onPlay: (controller) => controller.repeat())
+                            .shimmer(
+                                duration: 2.seconds,
+                                color: AppTheme.goldPrimary),
                         const SizedBox(height: 12),
                         Text(
                           'Estimated wait: 0:15',
-                          style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 16, fontWeight: FontWeight.w600),
+                          style: GoogleFonts.baloo2(
+                              color: AppTheme.textSecondary,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600),
                         ),
                       ],
                     ),
@@ -90,19 +107,23 @@ class _MatchmakingScreenState extends State<MatchmakingScreen> with SingleTicker
 
   Widget _buildRadar() {
     return SizedBox(
-      width: 200, height: 200,
+      width: 200,
+      height: 200,
       child: Stack(
         alignment: Alignment.center,
         children: [
           Container(
-            width: 100, height: 100,
+            width: 100,
+            height: 100,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: AppTheme.goldPrimary.withValues(alpha: 0.1),
-              border: Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.3), width: 2),
+              border: Border.all(
+                  color: AppTheme.goldPrimary.withValues(alpha: 0.3), width: 2),
             ),
             child: const Center(
-              child: Icon(Icons.search_rounded, color: AppTheme.goldPrimary, size: 40),
+              child: Icon(Icons.search_rounded,
+                  color: AppTheme.goldPrimary, size: 40),
             ),
           ),
           AnimatedBuilder(
@@ -111,7 +132,8 @@ class _MatchmakingScreenState extends State<MatchmakingScreen> with SingleTicker
               return Transform.rotate(
                 angle: _radarController.value * 2 * pi,
                 child: Container(
-                  width: 200, height: 200,
+                  width: 200,
+                  height: 200,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: SweepGradient(

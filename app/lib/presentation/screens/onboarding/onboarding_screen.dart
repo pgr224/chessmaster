@@ -33,7 +33,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       title: 'Welcome to Chess Master!',
       subtitle: 'The most fun way to play chess — anytime, anywhere! 🎉',
       gradient: LinearGradient(
-        begin: Alignment.topCenter, end: Alignment.bottomCenter,
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
         colors: [Color(0xFF1A1A2E), Color(0xFF2D1B69)],
       ),
       accentColor: Color(0xFFFFD93D),
@@ -44,7 +45,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       title: 'Play Against Smart AI!',
       subtitle: 'Our friendly robot will challenge you at YOUR level! 🧠',
       gradient: LinearGradient(
-        begin: Alignment.topCenter, end: Alignment.bottomCenter,
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
         colors: [Color(0xFF0F3460), Color(0xFF1A1A4E)],
       ),
       accentColor: Color(0xFF74B9FF),
@@ -55,7 +57,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       title: 'Play With Friends!',
       subtitle: 'Connect and battle players from around the world! 🤝',
       gradient: LinearGradient(
-        begin: Alignment.topCenter, end: Alignment.bottomCenter,
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
         colors: [Color(0xFF1A1A2E), Color(0xFF2D4059)],
       ),
       accentColor: Color(0xFF6BCB77),
@@ -66,7 +69,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       title: 'Learn & Get Better!',
       subtitle: 'Discover cool tricks and become a chess champion! ⭐',
       gradient: LinearGradient(
-        begin: Alignment.topCenter, end: Alignment.bottomCenter,
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
         colors: [Color(0xFF1A1A2E), Color(0xFF4A1942)],
       ),
       accentColor: Color(0xFFFF6B9D),
@@ -82,7 +86,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           final isConflict = _isRegisterConflict(state.message);
           String? suggestedUsername;
           if (isConflict) {
-            suggestedUsername = _buildUsernameSuggestion(_usernameController.text.trim());
+            suggestedUsername =
+                _buildUsernameSuggestion(_usernameController.text.trim());
             _usernameController.text = suggestedUsername;
             _usernameController.selection = TextSelection.fromPosition(
               TextPosition(offset: _usernameController.text.length),
@@ -107,7 +112,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                isConflict ? 'Username already taken, try another one.' : state.message,
+                isConflict
+                    ? 'Username already taken, try another one.'
+                    : state.message,
                 style: GoogleFonts.baloo2(),
               ),
             ),
@@ -163,14 +170,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     errorBuilder: (_, __, ___) => Container(
                       color: AppTheme.surface,
                       child: Center(
-                        child: Text(page.emoji, style: const TextStyle(fontSize: 96)),
+                        child: Text(page.emoji,
+                            style: const TextStyle(fontSize: 96)),
                       ),
                     ),
                   ),
                 ),
               )
                   .animate()
-                  .scale(begin: const Offset(0.7, 0.7), duration: 600.ms, curve: Curves.elasticOut)
+                  .scale(
+                      begin: const Offset(0.7, 0.7),
+                      duration: 600.ms,
+                      curve: Curves.elasticOut)
                   .fadeIn(duration: 400.ms)
                   .shimmer(duration: 1200.ms, delay: 350.ms),
 
@@ -186,10 +197,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   height: 1.2,
                 ),
                 textAlign: TextAlign.center,
-              )
-                  .animate()
-                  .fadeIn(delay: 200.ms)
-                  .slideY(begin: 0.3),
+              ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.3),
 
               const SizedBox(height: 16),
 
@@ -202,10 +210,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   height: 1.5,
                 ),
                 textAlign: TextAlign.center,
-              )
-                  .animate()
-                  .fadeIn(delay: 400.ms)
-                  .slideY(begin: 0.2),
+              ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.2),
             ],
           ),
         ),
@@ -234,19 +239,26 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           // ── Page dots ──
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(_pages.length, (i) => AnimatedContainer(
-              duration: 300.ms,
-              margin: const EdgeInsets.symmetric(horizontal: 5),
-              width: _currentPage == i ? 32 : 10,
-              height: 10,
-              decoration: BoxDecoration(
-                gradient: _currentPage == i
-                    ? LinearGradient(colors: [_pages[_currentPage].accentColor, AppTheme.goldPrimary])
-                    : null,
-                color: _currentPage == i ? null : AppTheme.textMuted.withValues(alpha: 0.4),
-                borderRadius: BorderRadius.circular(5),
-              ),
-            )),
+            children: List.generate(
+                _pages.length,
+                (i) => AnimatedContainer(
+                      duration: 300.ms,
+                      margin: const EdgeInsets.symmetric(horizontal: 5),
+                      width: _currentPage == i ? 32 : 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        gradient: _currentPage == i
+                            ? LinearGradient(colors: [
+                                _pages[_currentPage].accentColor,
+                                AppTheme.goldPrimary
+                              ])
+                            : null,
+                        color: _currentPage == i
+                            ? null
+                            : AppTheme.textMuted.withValues(alpha: 0.4),
+                        borderRadius: BorderRadius.circular(5),
+                      ),
+                    )),
           ),
 
           const SizedBox(height: 28),
@@ -259,14 +271,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9_]')),
                 LengthLimitingTextInputFormatter(30),
               ],
-              style: GoogleFonts.baloo2(color: AppTheme.textPrimary, fontSize: 18),
+              style:
+                  GoogleFonts.baloo2(color: AppTheme.textPrimary, fontSize: 18),
               decoration: InputDecoration(
                 labelText: '🎮 Pick your player name!',
-                labelStyle: GoogleFonts.fredoka(color: AppTheme.textSecondary, fontSize: 16),
+                labelStyle: GoogleFonts.fredoka(
+                    color: AppTheme.textSecondary, fontSize: 16),
                 hintText: 'SuperChessKid_01',
                 hintStyle: GoogleFonts.baloo2(color: AppTheme.textMuted),
-                prefixIcon: const Icon(Icons.person_rounded, color: AppTheme.goldPrimary, size: 28),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(20)),
+                prefixIcon: const Icon(Icons.person_rounded,
+                    color: AppTheme.goldPrimary, size: 28),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(20)),
                 errorText: _usernameErrorText,
                 filled: true,
                 fillColor: AppTheme.surface,
@@ -281,29 +297,44 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             height: 60,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: isLast ? AppTheme.accentCyan : AppTheme.goldPrimary,
+                backgroundColor:
+                    isLast ? AppTheme.accentCyan : AppTheme.goldPrimary,
                 foregroundColor: AppTheme.midnight,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20)),
                 elevation: 8,
-                shadowColor: (isLast ? AppTheme.accentCyan : AppTheme.goldPrimary).withValues(alpha: 0.5),
+                shadowColor:
+                    (isLast ? AppTheme.accentCyan : AppTheme.goldPrimary)
+                        .withValues(alpha: 0.5),
               ),
-              onPressed: _isLoading ? null : () {
-                if (isLast) {
-                  _register();
-                } else {
-                  _pageController.nextPage(
-                    duration: 400.ms, curve: Curves.easeInOut,
-                  );
-                }
-              },
+              onPressed: _isLoading
+                  ? null
+                  : () {
+                      if (isLast) {
+                        _register();
+                      } else {
+                        _pageController.nextPage(
+                          duration: 400.ms,
+                          curve: Curves.easeInOut,
+                        );
+                      }
+                    },
               child: _isLoading
-                  ? const SizedBox(width: 28, height: 28, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
+                  ? const SizedBox(
+                      width: 28,
+                      height: 28,
+                      child: CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 3))
                   : Text(
                       isLast ? '🚀 Start Playing!' : 'Next →',
-                      style: GoogleFonts.fredoka(fontSize: 20, fontWeight: FontWeight.w700),
+                      style: GoogleFonts.fredoka(
+                          fontSize: 20, fontWeight: FontWeight.w700),
                     ),
             ),
-          ).animate().fadeIn(delay: 100.ms).scale(begin: const Offset(0.95, 0.95)),
+          )
+              .animate()
+              .fadeIn(delay: 100.ms)
+              .scale(begin: const Offset(0.95, 0.95)),
 
           // ── Skip ──
           if (!isLast)
@@ -311,7 +342,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               onPressed: () => _pageController.jumpToPage(_pages.length - 1),
               child: Text(
                 'Skip ⏩',
-                style: GoogleFonts.baloo2(color: AppTheme.textMuted, fontSize: 16),
+                style:
+                    GoogleFonts.baloo2(color: AppTheme.textMuted, fontSize: 16),
               ),
             ),
         ],
@@ -353,7 +385,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         .trim()
         .replaceAll(RegExp(r'\s+'), '_')
         .replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '');
-    final base = cleaned.isEmpty ? 'ChessPlayer' : cleaned.replaceAll(RegExp(r'\d+$'), '');
+    final base = cleaned.isEmpty
+        ? 'ChessPlayer'
+        : cleaned.replaceAll(RegExp(r'\d+$'), '');
     final suffix = 100 + _random.nextInt(900);
     final candidate = '$base$suffix';
     return candidate.length > 30 ? candidate.substring(0, 30) : candidate;

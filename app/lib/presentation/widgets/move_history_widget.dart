@@ -39,8 +39,11 @@ class _MoveHistoryWidgetState extends State<MoveHistoryWidget> {
   Widget build(BuildContext context) {
     if (widget.moves.isEmpty) {
       return Center(
-        child: Text('Waiting for moves...', 
-          style: GoogleFonts.baloo2(color: AppTheme.textMuted, fontSize: 13, fontWeight: FontWeight.w500)),
+        child: Text('Waiting for moves...',
+            style: GoogleFonts.baloo2(
+                color: AppTheme.textMuted,
+                fontSize: 13,
+                fontWeight: FontWeight.w500)),
       );
     }
 
@@ -49,13 +52,16 @@ class _MoveHistoryWidgetState extends State<MoveHistoryWidget> {
       controller: _scrollController,
       scrollDirection: widget.scrollDirection,
       physics: const BouncingScrollPhysics(),
-      padding: widget.scrollDirection == Axis.horizontal 
+      padding: widget.scrollDirection == Axis.horizontal
           ? const EdgeInsets.symmetric(horizontal: 16)
           : const EdgeInsets.symmetric(vertical: 8),
       itemCount: moveCount,
       itemBuilder: (context, index) {
-        final whiteMove = widget.moves.length > index * 2 ? widget.moves[index * 2] : null;
-        final blackMove = widget.moves.length > index * 2 + 1 ? widget.moves[index * 2 + 1] : null;
+        final whiteMove =
+            widget.moves.length > index * 2 ? widget.moves[index * 2] : null;
+        final blackMove = widget.moves.length > index * 2 + 1
+            ? widget.moves[index * 2 + 1]
+            : null;
 
         return Padding(
           padding: widget.scrollDirection == Axis.horizontal
@@ -73,21 +79,31 @@ class _MoveHistoryWidgetState extends State<MoveHistoryWidget> {
               children: [
                 SizedBox(
                   width: 24,
-                  child: Text('${index + 1}.', style: GoogleFonts.fredoka(color: AppTheme.textMuted, fontSize: 11, fontWeight: FontWeight.w600)),
+                  child: Text('${index + 1}.',
+                      style: GoogleFonts.fredoka(
+                          color: AppTheme.textMuted,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600)),
                 ),
                 const SizedBox(width: 4),
                 if (whiteMove != null)
                   Expanded(
                     child: Text(
                       whiteMove.algebraic ?? '?',
-                      style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 14, fontWeight: FontWeight.w700),
+                      style: GoogleFonts.fredoka(
+                          color: AppTheme.textPrimary,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700),
                     ),
                   ),
                 if (blackMove != null)
                   Expanded(
                     child: Text(
                       blackMove.algebraic ?? '?',
-                      style: GoogleFonts.fredoka(color: AppTheme.textSecondary, fontSize: 14, fontWeight: FontWeight.w600),
+                      style: GoogleFonts.fredoka(
+                          color: AppTheme.textSecondary,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600),
                     ),
                   ),
               ],

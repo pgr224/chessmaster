@@ -1,0 +1,115 @@
+# Dynamic Move Time for AI/Impossible Mode
+
+## Background
+
+Currently, the Stockfish engine uses **fixed timeout budgets** per difficulty level:
+- Advanced: 5000ms
+- Impossible: 5000ms  
+- AI Mode: 7000ms
+
+These fixed values mean the AI takes the same amount of time whether it's a simple forced recapture or a deep middlegame calculation — leading to unnecessary wait times on "obvious" positions.
+
+The user wants the AI to **move fast when the position is simple and take more time only when needed**, while keeping Beginner/Intermediate modes untouched (they already use Sunfish with fixed settings).
+
+## Proposed Changes
+
+### Design: Leela-Inspired Dynamic Move Time
+
+After the player makes a move, the system already performs a **background analysis** of the player's move (lines 1410-1437 in game_bloc.dart). This analysis updates the AI personality. We'll extend this to also **compute a position complexity score** that directly feeds into the Stockfish movetime, creating a dynamic, personality-aware time budget.
+
+**Key Principle**: If Stockfish returns a valid move quickly (depth reached, forced line), it should emit it immediately without wasting the full budget. The `movetime` UCI parameter already does this — Stockfish will stop early if it's confident. We just need to set smarter initial budgets.
+
+### Complexity Scoring Formula
+
+```
+Complexity Score = weighted sum of:
+  - Legal moves count (more options = more complex)
+  - Pieces on board (more pieces = more complex middlegame)
+  - Personality urgency (aggressive personality wants to move faster)  
+  - Whether position is a forced line (check/single legal move → instant)
+```
+
+**Move Time Mapping** (Advanced/Impossible/AI Mode):
+| Complexity | Move Time | Example |
+|---|---|---|
+| Forced (1 legal move / recapture) | 300-500ms | Only one legal move, just play it |
+| Simple (< 15 legal moves, few pieces) | 800-1500ms | Endgame, clear plan |
+| Medium (15-30 legal moves) | 1500-3000ms | Typical middlegame |
+| Complex (30+ legal moves, all pieces) | 3000-5000ms (adv/imp) / 3000-7000ms (ai) | Complex middlegame |
+
+> [!IMPORTANT]
+> **Beginner and Intermediate modes are completely unchanged** — they continue using Sunfish with their existing fixed settings.
+
+### Personality-Driven Time Modifier
+
+The personality engine already switches between aggressive/defensive/tricky after each move analysis. We'll apply a time multiplier:
+
+- **Aggressive** → 0.7x (moves faster, more impulsive)
+- **Defensive** → 1.0x (takes full time to be careful)
+- **Tricky** → 0.85x (medium speed, setting traps)
+
+---
+
+### Files to Modify
+
+#### [MODIFY] [engine_controller.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/domain/engine/engine_controller.dart)
+
+- Replace the fixed `_maxTimeMs` map for advanced/impossible/aiMode with dynamic computation
+- Add `_computeDynamicMoveTime()` method that takes FEN, personality, and engine state
+- In `_getSmartMove()`: compute dynamic movetime on both web and native paths
+- Pass the computed movetime to `jsEngineGetBestMove()` via a new parameter
+- For forced positions (king in check with few legal moves, or single legal move), use minimal time (300ms)
+
+#### [MODIFY] [engine_service.js](file:///d:/PP942920DRIVE/PROJECTS/chess/app/web/engine/engine_service.js)
+
+- Update `getBestMove()` to accept an optional `timeoutMs` parameter from the Dart bridge
+- When called with a dynamic timeout, use it instead of the fixed `TIMEOUT_CONFIG`
+- The `TIMEOUT_CONFIG` values become **maximum caps** (fallback safety net)
+- Pass the dynamic timeout to the Stockfish worker
+
+#### [MODIFY] [js_engine_bridge.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/domain/engine/js_engine_bridge.dart)
+
+- Update `jsEngineGetBestMove()` to accept and forward an optional `movetime` parameter
+- Update the JS interop binding to pass movetime to the JS side
+
+#### [MODIFY] [personality_engine.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/domain/engine/personality_engine.dart)
+
+- Add `double get timeMultiplier` getter on each personality
+- Aggressive → 0.7, Defensive → 1.0, Tricky → 0.85, Lazy → 0.6, Random → 0.5
+
+---
+
+## How It Works End-to-End
+
+```
+Player makes move
+  → Background analysis runs (existing) → personality adapts
+  → GameAIRequestEvent fires
+  → engine_controller.getBestMove() called
+  → _getSmartMove() computes complexity:
+      - Count legal moves from engine
+      - Count pieces on board  
+      - Get personality time multiplier
+      - Compute: baseTime = f(complexity)
+      - Apply: moveTime = baseTime * personalityMultiplier
+      - Clamp to [300ms, maxCap]
+  → Passes moveTime to JS bridge
+  → engine_service.js uses moveTime as budget (capped by safety max)
+  → Stockfish worker gets `go depth X movetime Y`
+  → Stockfish returns bestmove (often before budget expires)
+  → Move played immediately
+```
+
+> [!NOTE]  
+> Stockfish's `movetime` parameter already means "take *up to* this long". If it finds a clear best move at depth 8, it won't wait until the full movetime expires. So setting a smart initial budget is mostly about avoiding unnecessarily long *worst case* waits.
+
+## Verification Plan
+
+### Manual Verification
+- In advanced/impossible/AI mode, observe that:
+  - Forced recaptures happen in < 500ms
+  - Simple endgame positions resolve in 1-2s
+  - Complex middlegame positions take 3-5s
+  - Personality shifts visibly affect timing (aggressive AI moves faster)
+- Beginner/Intermediate modes remain completely unchanged
+- No stalls or infinite waits — fallback to Sunfish still works

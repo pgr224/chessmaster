@@ -13,6 +13,7 @@
 let stockfishEngine = null;
 let isReady = false;
 let pendingSearch = null;
+let currentSearchId = null;
 let isSearching = false;
 let candidates = [];
 
@@ -102,9 +103,9 @@ function handleUCIOutput(line) {
     self.postMessage({ type: 'ready' });
 
     if (pendingSearch) {
-      const { fen, depth, timeoutMs, multipv } = pendingSearch;
+      const { fen, depth, timeoutMs, multipv, searchId } = pendingSearch;
       pendingSearch = null;
-      executeSearch(fen, depth, timeoutMs, multipv);
+      executeSearch(fen, depth, timeoutMs, multipv, searchId);
     }
   }
 
@@ -117,12 +118,13 @@ function handleUCIOutput(line) {
     candidates.sort((a, b) => a.multipv - b.multipv);
     const resultCandidates = candidates.map(c => ({ uci: c.uci, score: c.score }));
     
-    self.postMessage({ type: 'bestmove', move, candidates: resultCandidates });
+    self.postMessage({ type: 'bestmove', move, candidates: resultCandidates, id: currentSearchId });
   }
 }
 
-function executeSearch(fen, depth, timeoutMs, multipv = 1) {
+function executeSearch(fen, depth, timeoutMs, multipv = 1, searchId = null) {
   isSearching = true;
+  currentSearchId = searchId;
   candidates = []; // Reset for new search
   
   sendUCI(`setoption name MultiPV value ${multipv}`);
@@ -143,7 +145,7 @@ self.addEventListener('message', async (e) => {
       break;
 
     case 'search': {
-      const { fen, depth = 12, timeoutMs = 14000, multipv = 1 } = msg;
+      const { fen, depth = 12, timeoutMs = 14000, multipv = 1, id } = msg;
 
       if (!stockfishEngine) {
         await loadStockfish();
@@ -154,9 +156,9 @@ self.addEventListener('message', async (e) => {
       }
 
       if (isReady) {
-        executeSearch(fen, depth, timeoutMs, multipv);
+        executeSearch(fen, depth, timeoutMs, multipv, id);
       } else {
-        pendingSearch = { fen, depth, timeoutMs, multipv };
+        pendingSearch = { fen, depth, timeoutMs, multipv, searchId: id };
         sendUCI('isready');
       }
       break;

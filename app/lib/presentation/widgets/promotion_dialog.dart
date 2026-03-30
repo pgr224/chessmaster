@@ -16,7 +16,12 @@ class PromotionDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final types = [PieceType.queen, PieceType.rook, PieceType.bishop, PieceType.knight];
+    final types = [
+      PieceType.queen,
+      PieceType.rook,
+      PieceType.bishop,
+      PieceType.knight
+    ];
 
     return Container(
       color: Colors.black.withValues(alpha: 0.82),
@@ -27,9 +32,13 @@ class PromotionDialog extends StatelessWidget {
           decoration: BoxDecoration(
             gradient: AppTheme.cardGradient,
             borderRadius: BorderRadius.circular(32),
-            border: Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.6), width: 2),
+            border: Border.all(
+                color: AppTheme.goldPrimary.withValues(alpha: 0.6), width: 2),
             boxShadow: [
-              BoxShadow(color: AppTheme.goldPrimary.withValues(alpha: 0.25), blurRadius: 40, spreadRadius: 4),
+              BoxShadow(
+                  color: AppTheme.goldPrimary.withValues(alpha: 0.25),
+                  blurRadius: 40,
+                  spreadRadius: 4),
             ],
           ),
           child: Column(
@@ -38,25 +47,38 @@ class PromotionDialog extends StatelessWidget {
               Text(
                 '✨ Level Up!',
                 style: GoogleFonts.fredoka(
-                  color: AppTheme.goldPrimary, fontSize: 32, fontWeight: FontWeight.w800,
+                  color: AppTheme.goldPrimary,
+                  fontSize: 32,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
               const SizedBox(height: 10),
               Text(
                 'Pick a powerful new piece for your pawn! 🚀',
-                style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 16, fontWeight: FontWeight.w600),
+                style: GoogleFonts.baloo2(
+                    color: AppTheme.textSecondary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),
               Wrap(
-                spacing: 12, runSpacing: 12,
+                spacing: 12,
+                runSpacing: 12,
                 alignment: WrapAlignment.center,
-                children: types.map((type) => _pieceOption(type, color)).toList(),
+                children:
+                    types.map((type) => _pieceOption(type, color)).toList(),
               ),
             ],
           ),
         ),
-      ).animate().scale(begin: const Offset(0.7, 0.7), curve: Curves.elasticOut, duration: 600.ms).fadeIn(),
+      )
+          .animate()
+          .scale(
+              begin: const Offset(0.7, 0.7),
+              curve: Curves.elasticOut,
+              duration: 600.ms)
+          .fadeIn(),
     );
   }
 
@@ -70,12 +92,17 @@ class PromotionDialog extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: const LinearGradient(
             colors: [AppTheme.surface, AppTheme.navyCard],
-            begin: Alignment.topCenter, end: Alignment.bottomCenter,
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
           ),
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.2)),
+          border:
+              Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.2)),
           boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 8, offset: const Offset(0, 4)),
+            BoxShadow(
+                color: Colors.black.withValues(alpha: 0.2),
+                blurRadius: 8,
+                offset: const Offset(0, 4)),
           ],
         ),
         child: Column(
@@ -85,16 +112,23 @@ class PromotionDialog extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               type.name.capitalize(),
-              style: GoogleFonts.fredoka(color: AppTheme.textMuted, fontSize: 12, fontWeight: FontWeight.w600),
+              style: GoogleFonts.fredoka(
+                  color: AppTheme.textMuted,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600),
             ),
           ],
         ),
-      ).animate(onPlay: (c) => c.repeat(reverse: true))
-          .scale(begin: const Offset(0.98, 0.98), end: const Offset(1.02, 1.02), duration: 2.seconds, curve: Curves.easeInOut),
+      ).animate(onPlay: (c) => c.repeat(reverse: true)).scale(
+          begin: const Offset(0.98, 0.98),
+          end: const Offset(1.02, 1.02),
+          duration: 2.seconds,
+          curve: Curves.easeInOut),
     );
   }
 }
 
 extension on String {
-  String capitalize() => isEmpty ? this : '${this[0].toUpperCase()}${substring(1)}';
+  String capitalize() =>
+      isEmpty ? this : '${this[0].toUpperCase()}${substring(1)}';
 }

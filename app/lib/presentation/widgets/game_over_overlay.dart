@@ -64,11 +64,14 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
   @override
   void initState() {
     super.initState();
-    _confettiController = ConfettiController(duration: const Duration(seconds: 4));
-    
-    final isWin = (widget.result == GameResult.whiteWins && widget.playerColor == PieceColor.white) ||
-        (widget.result == GameResult.blackWins && widget.playerColor == PieceColor.black);
-    
+    _confettiController =
+        ConfettiController(duration: const Duration(seconds: 4));
+
+    final isWin = (widget.result == GameResult.whiteWins &&
+            widget.playerColor == PieceColor.white) ||
+        (widget.result == GameResult.blackWins &&
+            widget.playerColor == PieceColor.black);
+
     if (isWin) {
       _confettiController.play();
     }
@@ -82,21 +85,26 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
 
   @override
   Widget build(BuildContext context) {
-    final isWin = (widget.result == GameResult.whiteWins && widget.playerColor == PieceColor.white) ||
-        (widget.result == GameResult.blackWins && widget.playerColor == PieceColor.black);
+    final isWin = (widget.result == GameResult.whiteWins &&
+            widget.playerColor == PieceColor.white) ||
+        (widget.result == GameResult.blackWins &&
+            widget.playerColor == PieceColor.black);
     final isDraw = widget.result == GameResult.draw;
     final isCheckmate = !isDraw && !isWin;
 
-    final statusColor = isWin ? AppTheme.goldPrimary 
-        : isDraw ? AppTheme.accentCyan 
-        : AppTheme.accentRed;
+    final statusColor = isWin
+        ? AppTheme.goldPrimary
+        : isDraw
+            ? AppTheme.accentCyan
+            : AppTheme.accentRed;
 
     return Stack(
       children: [
         Container(color: Colors.black.withValues(alpha: 0.55)),
-        
+
         Positioned(
-          left: 0, right: 0,
+          left: 0,
+          right: 0,
           bottom: 0,
           child: Container(
             constraints: BoxConstraints(
@@ -107,9 +115,13 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
             decoration: BoxDecoration(
               gradient: AppTheme.cardGradient,
               borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: statusColor.withValues(alpha: 0.6), width: 3),
+              border: Border.all(
+                  color: statusColor.withValues(alpha: 0.6), width: 3),
               boxShadow: [
-                BoxShadow(color: statusColor.withValues(alpha: 0.3), blurRadius: 40, spreadRadius: 4),
+                BoxShadow(
+                    color: statusColor.withValues(alpha: 0.3),
+                    blurRadius: 40,
+                    spreadRadius: 4),
               ],
             ),
             child: SingleChildScrollView(
@@ -128,18 +140,32 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                           shape: BoxShape.circle,
                         ),
                         child: Text(
-                          isWin ? '🏆' : isDraw ? '🤝' : '💔',
+                          isWin
+                              ? '🏆'
+                              : isDraw
+                                  ? '🤝'
+                                  : '💔',
                           style: const TextStyle(fontSize: 42),
                         ),
-                      ).animate()
-                          .scale(begin: const Offset(0.4, 0.4), duration: 600.ms, curve: Curves.elasticOut)
+                      )
+                          .animate()
+                          .scale(
+                              begin: const Offset(0.4, 0.4),
+                              duration: 600.ms,
+                              curve: Curves.elasticOut)
                           .fadeIn(),
                       const SizedBox(width: 14),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            isCheckmate ? 'CHECKMATE!' : isWin ? 'VICTORY!' : isDraw ? 'DRAW!' : 'DEFEAT',
+                            isCheckmate
+                                ? 'CHECKMATE!'
+                                : isWin
+                                    ? 'VICTORY!'
+                                    : isDraw
+                                        ? 'DRAW!'
+                                        : 'DEFEAT',
                             style: GoogleFonts.fredoka(
                               color: statusColor,
                               fontSize: 28,
@@ -150,7 +176,10 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                           const SizedBox(height: 2),
                           Text(
                             _resultText(),
-                            style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 13, fontWeight: FontWeight.w600),
+                            style: GoogleFonts.baloo2(
+                                color: AppTheme.textSecondary,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600),
                           ).animate().fadeIn(delay: 350.ms),
                         ],
                       ),
@@ -163,16 +192,26 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                   if (widget.eloChange != 0)
                     Container(
                       margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 10),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: widget.eloChange > 0
-                              ? [AppTheme.accentCyan.withValues(alpha: 0.2), AppTheme.accentCyan.withValues(alpha: 0.05)]
-                              : [AppTheme.accentRed.withValues(alpha: 0.2), AppTheme.accentRed.withValues(alpha: 0.05)],
+                              ? [
+                                  AppTheme.accentCyan.withValues(alpha: 0.2),
+                                  AppTheme.accentCyan.withValues(alpha: 0.05)
+                                ]
+                              : [
+                                  AppTheme.accentRed.withValues(alpha: 0.2),
+                                  AppTheme.accentRed.withValues(alpha: 0.05)
+                                ],
                         ),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: (widget.eloChange > 0 ? AppTheme.accentCyan : AppTheme.accentRed).withValues(alpha: 0.3),
+                          color: (widget.eloChange > 0
+                                  ? AppTheme.accentCyan
+                                  : AppTheme.accentRed)
+                              .withValues(alpha: 0.3),
                         ),
                       ),
                       child: Row(
@@ -189,15 +228,23 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                           ),
                           const SizedBox(width: 10),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
-                              color: (widget.eloChange > 0 ? AppTheme.accentCyan : AppTheme.accentRed).withValues(alpha: 0.2),
+                              color: (widget.eloChange > 0
+                                      ? AppTheme.accentCyan
+                                      : AppTheme.accentRed)
+                                  .withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
-                              widget.eloChange > 0 ? '+${widget.eloChange}' : '${widget.eloChange}',
+                              widget.eloChange > 0
+                                  ? '+${widget.eloChange}'
+                                  : '${widget.eloChange}',
                               style: GoogleFonts.fredoka(
-                                color: widget.eloChange > 0 ? AppTheme.accentCyan : AppTheme.accentRed,
+                                color: widget.eloChange > 0
+                                    ? AppTheme.accentCyan
+                                    : AppTheme.accentRed,
                                 fontSize: 15,
                                 fontWeight: FontWeight.w800,
                               ),
@@ -213,18 +260,25 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                     decoration: BoxDecoration(
                       color: AppTheme.surface.withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: AppTheme.skyBlue.withValues(alpha: 0.1)),
+                      border: Border.all(
+                          color: AppTheme.skyBlue.withValues(alpha: 0.1)),
                     ),
                     child: Column(
                       children: [
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
-                            _statItem('Accuracy', '${widget.accuracy.toStringAsFixed(1)}%', AppTheme.accentCyan),
-                            _statItem('Mistakes', '${widget.mistakes}', AppTheme.lavender),
-                            _statItem('Blunders', '${widget.blunders}', AppTheme.accentRed),
+                            _statItem(
+                                'Accuracy',
+                                '${widget.accuracy.toStringAsFixed(1)}%',
+                                AppTheme.accentCyan),
+                            _statItem('Mistakes', '${widget.mistakes}',
+                                AppTheme.lavender),
+                            _statItem('Blunders', '${widget.blunders}',
+                                AppTheme.accentRed),
                             if (widget.moveCount != null)
-                              _statItem('Moves', '${widget.moveCount}', AppTheme.skyBlue),
+                              _statItem('Moves', '${widget.moveCount}',
+                                  AppTheme.skyBlue),
                           ],
                         ),
                         if (widget.analysisMessage != null) ...[
@@ -251,25 +305,33 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                     Column(
                       children: [
                         GestureDetector(
-                          onTap: () => setState(() => _showAnalysis = !_showAnalysis),
+                          onTap: () =>
+                              setState(() => _showAnalysis = !_showAnalysis),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 8),
                             decoration: BoxDecoration(
                               color: AppTheme.skyBlue.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: AppTheme.skyBlue.withValues(alpha: 0.2)),
+                              border: Border.all(
+                                  color:
+                                      AppTheme.skyBlue.withValues(alpha: 0.2)),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(
-                                  _showAnalysis ? Icons.expand_less_rounded : Icons.analytics_rounded,
+                                  _showAnalysis
+                                      ? Icons.expand_less_rounded
+                                      : Icons.analytics_rounded,
                                   color: AppTheme.skyBlue,
                                   size: 18,
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
-                                  _showAnalysis ? 'Hide Analysis' : '📊 View Game Analysis',
+                                  _showAnalysis
+                                      ? 'Hide Analysis'
+                                      : '📊 View Game Analysis',
                                   style: GoogleFonts.fredoka(
                                     color: AppTheme.skyBlue,
                                     fontSize: 13,
@@ -284,12 +346,16 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                           const SizedBox(height: 12),
                           PostGameAnalysisChart(
                             evalHistory: widget.evalHistory,
-                            totalMoves: widget.moveCount ?? widget.evalHistory.length,
+                            totalMoves:
+                                widget.moveCount ?? widget.evalHistory.length,
                             accuracy: widget.accuracy,
                             mistakes: widget.mistakes,
                             blunders: widget.blunders,
                             bestMoves: widget.bestMoves,
-                          ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.1),
+                          )
+                              .animate()
+                              .fadeIn(duration: 400.ms)
+                              .slideY(begin: 0.1),
                         ],
                         const SizedBox(height: 12),
                       ],
@@ -299,20 +365,36 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                   if (widget.xpGained != 0)
                     Container(
                       margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 10),
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(colors: widget.xpGained > 0
-                            ? [AppTheme.goldPrimary.withValues(alpha: 0.3), AppTheme.goldPrimary.withValues(alpha: 0.1)]
-                            : [AppTheme.accentRed.withValues(alpha: 0.3), AppTheme.accentRed.withValues(alpha: 0.1)]),
+                        gradient: LinearGradient(
+                            colors: widget.xpGained > 0
+                                ? [
+                                    AppTheme.goldPrimary.withValues(alpha: 0.3),
+                                    AppTheme.goldPrimary.withValues(alpha: 0.1)
+                                  ]
+                                : [
+                                    AppTheme.accentRed.withValues(alpha: 0.3),
+                                    AppTheme.accentRed.withValues(alpha: 0.1)
+                                  ]),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: (widget.xpGained > 0 ? AppTheme.goldPrimary : AppTheme.accentRed).withValues(alpha: 0.4)),
+                        border: Border.all(
+                            color: (widget.xpGained > 0
+                                    ? AppTheme.goldPrimary
+                                    : AppTheme.accentRed)
+                                .withValues(alpha: 0.4)),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            widget.xpGained > 0 ? Icons.star_rounded : Icons.trending_down_rounded,
-                            color: widget.xpGained > 0 ? AppTheme.goldPrimary : AppTheme.accentRed,
+                            widget.xpGained > 0
+                                ? Icons.star_rounded
+                                : Icons.trending_down_rounded,
+                            color: widget.xpGained > 0
+                                ? AppTheme.goldPrimary
+                                : AppTheme.accentRed,
                             size: 22,
                           ),
                           const SizedBox(width: 8),
@@ -321,14 +403,19 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                                 ? '+${widget.xpGained} XP GAINED!'
                                 : '${widget.xpGained} XP PENALTY',
                             style: GoogleFonts.fredoka(
-                              color: widget.xpGained > 0 ? AppTheme.goldPrimary : AppTheme.accentRed,
+                              color: widget.xpGained > 0
+                                  ? AppTheme.goldPrimary
+                                  : AppTheme.accentRed,
                               fontSize: 16,
                               fontWeight: FontWeight.w800,
                             ),
                           ),
                         ],
                       ),
-                    ).animate().scale(delay: 700.ms, duration: 400.ms, curve: Curves.easeOutBack),
+                    ).animate().scale(
+                        delay: 700.ms,
+                        duration: 400.ms,
+                        curve: Curves.easeOutBack),
 
                   // ── ACTION BUTTONS ──
                   Row(
@@ -338,13 +425,19 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                         child: OutlinedButton.icon(
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppTheme.textPrimary,
-                            side: BorderSide(color: AppTheme.textMuted.withValues(alpha: 0.3), width: 2),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                            side: BorderSide(
+                                color:
+                                    AppTheme.textMuted.withValues(alpha: 0.3),
+                                width: 2),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(18)),
                             padding: const EdgeInsets.symmetric(vertical: 13),
                           ),
                           onPressed: widget.onShare,
                           icon: const Icon(Icons.share_rounded, size: 18),
-                          label: Text('Share', style: GoogleFonts.fredoka(fontWeight: FontWeight.w600, fontSize: 14)),
+                          label: Text('Share',
+                              style: GoogleFonts.fredoka(
+                                  fontWeight: FontWeight.w600, fontSize: 14)),
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -354,14 +447,25 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: statusColor,
                             foregroundColor: AppTheme.midnight,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(18)),
                             padding: const EdgeInsets.symmetric(vertical: 13),
                             elevation: 8,
                           ),
                           onPressed: widget.onPlayAgain,
-                          icon: Icon(widget.gameMode == GameMode.puzzle ? Icons.skip_next_rounded : Icons.refresh_rounded, size: 20),
-                          label: Text(widget.gameMode == GameMode.puzzle ? 'NEXT PUZZLE' : 'REMATCH', 
-                            style: GoogleFonts.fredoka(fontWeight: FontWeight.w800, fontSize: 16, letterSpacing: 1)),
+                          icon: Icon(
+                              widget.gameMode == GameMode.puzzle
+                                  ? Icons.skip_next_rounded
+                                  : Icons.refresh_rounded,
+                              size: 20),
+                          label: Text(
+                              widget.gameMode == GameMode.puzzle
+                                  ? 'NEXT PUZZLE'
+                                  : 'REMATCH',
+                              style: GoogleFonts.fredoka(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 16,
+                                  letterSpacing: 1)),
                         ),
                       ),
                     ],
@@ -371,16 +475,20 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
 
                   TextButton.icon(
                     onPressed: widget.onGoHome,
-                    icon: const Icon(Icons.home_rounded, color: AppTheme.textMuted, size: 18),
+                    icon: const Icon(Icons.home_rounded,
+                        color: AppTheme.textMuted, size: 18),
                     label: Text('Back to Home',
-                        style: GoogleFonts.fredoka(color: AppTheme.textMuted, fontSize: 14, fontWeight: FontWeight.w600)),
+                        style: GoogleFonts.fredoka(
+                            color: AppTheme.textMuted,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600)),
                   ).animate().fadeIn(delay: 650.ms),
                 ],
               ),
             ),
           ),
         ),
-        
+
         // Confetti
         if (isWin)
           Align(
@@ -410,26 +518,29 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
       children: [
         Text(
           value,
-          style: GoogleFonts.fredoka(color: color, fontSize: 20, fontWeight: FontWeight.w800),
+          style: GoogleFonts.fredoka(
+              color: color, fontSize: 20, fontWeight: FontWeight.w800),
         ),
         Text(
           label,
-          style: GoogleFonts.baloo2(color: AppTheme.textMuted, fontSize: 11, fontWeight: FontWeight.w600),
+          style: GoogleFonts.baloo2(
+              color: AppTheme.textMuted,
+              fontSize: 11,
+              fontWeight: FontWeight.w600),
         ),
       ],
     );
   }
 
   String _resultText() {
-
     if (widget.result == GameResult.draw) {
       return switch (widget.drawReason) {
-        DrawReason.stalemate        => 'Stalemate — no legal moves left! 😅',
+        DrawReason.stalemate => 'Stalemate — no legal moves left! 😅',
         DrawReason.insufficientMaterial => 'Not enough pieces to win! ♟️',
-        DrawReason.fiftyMoveRule    => '50 moves without a catch! ⏳',
+        DrawReason.fiftyMoveRule => '50 moves without a catch! ⏳',
         DrawReason.threefoldRepetition => 'Same position repeated 3 times! 🔄',
-        DrawReason.agreement        => 'Draw by mutual agreement! 🤝',
-        null                        => 'The game ends in a draw! 😊',
+        DrawReason.agreement => 'Draw by mutual agreement! 🤝',
+        null => 'The game ends in a draw! 😊',
       };
     }
     final winner = widget.result == GameResult.whiteWins ? 'White' : 'Black';

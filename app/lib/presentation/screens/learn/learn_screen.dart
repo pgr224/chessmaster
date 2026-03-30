@@ -36,7 +36,11 @@ class _Resource {
   final String name;
   final String description;
   final String url;
-  const _Resource({required this.icon, required this.name, required this.description, required this.url});
+  const _Resource(
+      {required this.icon,
+      required this.name,
+      required this.description,
+      required this.url});
 }
 
 class _WeekPlan {
@@ -44,7 +48,11 @@ class _WeekPlan {
   final String topic;
   final String goal;
   final String time;
-  const _WeekPlan({required this.week, required this.topic, required this.goal, required this.time});
+  const _WeekPlan(
+      {required this.week,
+      required this.topic,
+      required this.goal,
+      required this.time});
 }
 
 // ─── Screen ──────────────────────────────────────────────────────────────────
@@ -54,65 +62,156 @@ class LearnScreen extends StatelessWidget {
 
   static const _categories = [
     _Category(
-      emoji: '🎓', title: 'Fundamentals', description: 'Piece movement, check & checkmate basics',
-      color: AppTheme.goldPrimary, lessonCount: 12, totalTime: '3 hrs', difficulty: 'Beginner', articleId: 'fundamentals',
+      emoji: '🎓',
+      title: 'Fundamentals',
+      description: 'Piece movement, check & checkmate basics',
+      color: AppTheme.goldPrimary,
+      lessonCount: 12,
+      totalTime: '3 hrs',
+      difficulty: 'Beginner',
+      articleId: 'fundamentals',
     ),
     _Category(
-      emoji: '♟️', title: 'Openings', description: 'Control the center from move one',
-      color: AppTheme.skyBlue, lessonCount: 18, totalTime: '5 hrs', difficulty: 'Intermediate', articleId: 'sicilian',
+      emoji: '♟️',
+      title: 'Openings',
+      description: 'Control the center from move one',
+      color: AppTheme.skyBlue,
+      lessonCount: 18,
+      totalTime: '5 hrs',
+      difficulty: 'Intermediate',
+      articleId: 'sicilian',
     ),
     _Category(
-      emoji: '⚡', title: 'Tactics', description: 'Forks, pins, skewers & combinations',
-      color: AppTheme.accentPurple, lessonCount: 24, totalTime: '8 hrs', difficulty: 'Intermediate', articleId: 'tactics',
+      emoji: '⚡',
+      title: 'Tactics',
+      description: 'Forks, pins, skewers & combinations',
+      color: AppTheme.accentPurple,
+      lessonCount: 24,
+      totalTime: '8 hrs',
+      difficulty: 'Intermediate',
+      articleId: 'tactics',
     ),
     _Category(
-      emoji: '⏳', title: 'Endgames', description: 'Convert advantages into wins',
-      color: AppTheme.accentCyan, lessonCount: 16, totalTime: '6 hrs', difficulty: 'Advanced', articleId: 'endgames',
+      emoji: '⏳',
+      title: 'Endgames',
+      description: 'Convert advantages into wins',
+      color: AppTheme.accentCyan,
+      lessonCount: 16,
+      totalTime: '6 hrs',
+      difficulty: 'Advanced',
+      articleId: 'endgames',
     ),
     _Category(
-      emoji: '🏆', title: 'Strategy', description: 'Pawn structure, weak squares & plans',
-      color: Color(0xFF6BCB77), lessonCount: 20, totalTime: '7 hrs', difficulty: 'Advanced', articleId: 'strategy',
+      emoji: '🏆',
+      title: 'Strategy',
+      description: 'Pawn structure, weak squares & plans',
+      color: Color(0xFF6BCB77),
+      lessonCount: 20,
+      totalTime: '7 hrs',
+      difficulty: 'Advanced',
+      articleId: 'strategy',
     ),
   ];
 
   static const _weekPlan = [
-    _WeekPlan(week: 1, topic: 'Piece Values & Movement', goal: 'Know every piece\'s power', time: '3 hrs'),
-    _WeekPlan(week: 2, topic: 'Basic Checkmates', goal: 'Mate with Q+K, R+K', time: '3 hrs'),
-    _WeekPlan(week: 3, topic: 'Opening Principles', goal: 'Control center, develop pieces', time: '2 hrs'),
-    _WeekPlan(week: 4, topic: 'Tactics: Forks & Pins', goal: 'Win material systematically', time: '4 hrs'),
-    _WeekPlan(week: 5, topic: 'Tactics: Skewers & Discovered Attacks', goal: 'Spot 2-move combos', time: '4 hrs'),
-    _WeekPlan(week: 6, topic: 'Common Openings', goal: 'Learn Sicilian, Italian, Ruy López', time: '3 hrs'),
-    _WeekPlan(week: 7, topic: 'Pawn Structure', goal: 'Understand weak & passed pawns', time: '3 hrs'),
-    _WeekPlan(week: 8, topic: 'Rook Endgames', goal: 'Lucena & Philidor positions', time: '3 hrs'),
-    _WeekPlan(week: 9, topic: 'King & Pawn Endgames', goal: 'Opposition & promotion races', time: '2 hrs'),
-    _WeekPlan(week: 10, topic: 'Middlegame Plans', goal: 'Build & execute positional plans', time: '4 hrs'),
-    _WeekPlan(week: 11, topic: 'Game Analysis', goal: 'Review 10 annotated GM games', time: '5 hrs'),
-    _WeekPlan(week: 12, topic: 'Full Game Practice', goal: 'Apply everything in live games', time: '6 hrs'),
+    _WeekPlan(
+        week: 1,
+        topic: 'Piece Values & Movement',
+        goal: 'Know every piece\'s power',
+        time: '3 hrs'),
+    _WeekPlan(
+        week: 2,
+        topic: 'Basic Checkmates',
+        goal: 'Mate with Q+K, R+K',
+        time: '3 hrs'),
+    _WeekPlan(
+        week: 3,
+        topic: 'Opening Principles',
+        goal: 'Control center, develop pieces',
+        time: '2 hrs'),
+    _WeekPlan(
+        week: 4,
+        topic: 'Tactics: Forks & Pins',
+        goal: 'Win material systematically',
+        time: '4 hrs'),
+    _WeekPlan(
+        week: 5,
+        topic: 'Tactics: Skewers & Discovered Attacks',
+        goal: 'Spot 2-move combos',
+        time: '4 hrs'),
+    _WeekPlan(
+        week: 6,
+        topic: 'Common Openings',
+        goal: 'Learn Sicilian, Italian, Ruy López',
+        time: '3 hrs'),
+    _WeekPlan(
+        week: 7,
+        topic: 'Pawn Structure',
+        goal: 'Understand weak & passed pawns',
+        time: '3 hrs'),
+    _WeekPlan(
+        week: 8,
+        topic: 'Rook Endgames',
+        goal: 'Lucena & Philidor positions',
+        time: '3 hrs'),
+    _WeekPlan(
+        week: 9,
+        topic: 'King & Pawn Endgames',
+        goal: 'Opposition & promotion races',
+        time: '2 hrs'),
+    _WeekPlan(
+        week: 10,
+        topic: 'Middlegame Plans',
+        goal: 'Build & execute positional plans',
+        time: '4 hrs'),
+    _WeekPlan(
+        week: 11,
+        topic: 'Game Analysis',
+        goal: 'Review 10 annotated GM games',
+        time: '5 hrs'),
+    _WeekPlan(
+        week: 12,
+        topic: 'Full Game Practice',
+        goal: 'Apply everything in live games',
+        time: '6 hrs'),
   ];
 
   static const _resources = [
     _Resource(
-      icon: '♟', name: 'Lichess.org', description: 'Free, open-source chess server with 50 000+ puzzles & lessons',
+      icon: '♟',
+      name: 'Lichess.org',
+      description:
+          'Free, open-source chess server with 50 000+ puzzles & lessons',
       url: 'https://lichess.org/learn',
     ),
     _Resource(
-      icon: '🌐', name: 'Chess.com Learn', description: 'Interactive video lessons by top GMs and coaches',
+      icon: '🌐',
+      name: 'Chess.com Learn',
+      description: 'Interactive video lessons by top GMs and coaches',
       url: 'https://www.chess.com/learn-chess',
     ),
     _Resource(
-      icon: '🏅', name: 'FIDE Handbook', description: 'Official rules, ratings & arbiters\' regulations',
+      icon: '🏅',
+      name: 'FIDE Handbook',
+      description: 'Official rules, ratings & arbiters\' regulations',
       url: 'https://handbook.fide.com',
     ),
     _Resource(
-      icon: '📖', name: 'ChessBase Library', description: 'Annotated opening databases & GM repertoires',
+      icon: '📖',
+      name: 'ChessBase Library',
+      description: 'Annotated opening databases & GM repertoires',
       url: 'https://en.chessbase.com',
     ),
     _Resource(
-      icon: '🎥', name: 'GothamChess (YouTube)', description: 'Levy Rozman — beginner to advanced video tutorials',
+      icon: '🎥',
+      name: 'GothamChess (YouTube)',
+      description: 'Levy Rozman — beginner to advanced video tutorials',
       url: 'https://www.youtube.com/@GothamChess',
     ),
     _Resource(
-      icon: '📚', name: 'Chess Tempo', description: 'Rated puzzle trainer & opening drills',
+      icon: '📚',
+      name: 'Chess Tempo',
+      description: 'Rated puzzle trainer & opening drills',
       url: 'https://chesstempo.com',
     ),
   ];
@@ -124,8 +223,12 @@ class LearnScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: Text('📚 Chess Academy',
-          style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 26, fontWeight: FontWeight.w700),
+        title: Text(
+          '📚 Chess Academy',
+          style: GoogleFonts.fredoka(
+              color: AppTheme.textPrimary,
+              fontSize: 26,
+              fontWeight: FontWeight.w700),
         ),
         centerTitle: true,
       ),
@@ -167,14 +270,19 @@ class LearnScreen extends StatelessWidget {
         ),
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
-          BoxShadow(color: AppTheme.goldPrimary.withValues(alpha: 0.35), blurRadius: 24, offset: const Offset(0, 10)),
+          BoxShadow(
+              color: AppTheme.goldPrimary.withValues(alpha: 0.35),
+              blurRadius: 24,
+              offset: const Offset(0, 10)),
         ],
       ),
       child: Stack(
         children: [
           Positioned(
-            right: -10, bottom: -10,
-            child: Icon(Icons.star_rounded, size: 120, color: Colors.white.withValues(alpha: 0.15)),
+            right: -10,
+            bottom: -10,
+            child: Icon(Icons.star_rounded,
+                size: 120, color: Colors.white.withValues(alpha: 0.15)),
           ),
           Padding(
             padding: const EdgeInsets.all(26),
@@ -182,27 +290,42 @@ class LearnScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text('✨ FEATURED LESSON', style: GoogleFonts.fredoka(
-                  color: AppTheme.midnight, fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: 1.2,
-                )),
+                Text('✨ FEATURED LESSON',
+                    style: GoogleFonts.fredoka(
+                      color: AppTheme.midnight,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 1.2,
+                    )),
                 const SizedBox(height: 8),
-                Text('Master the\nSicilian Defense', style: GoogleFonts.fredoka(
-                  color: AppTheme.midnight, fontSize: 28, fontWeight: FontWeight.w700, height: 1.15,
-                )),
+                Text('Master the\nSicilian Defense',
+                    style: GoogleFonts.fredoka(
+                      color: AppTheme.midnight,
+                      fontSize: 28,
+                      fontWeight: FontWeight.w700,
+                      height: 1.15,
+                    )),
                 const SizedBox(height: 6),
-                Text('45 min · Intermediate · GM-level analysis', style: GoogleFonts.baloo2(
-                  color: AppTheme.midnight.withValues(alpha: 0.7), fontSize: 13, fontWeight: FontWeight.w600,
-                )),
+                Text('45 min · Intermediate · GM-level analysis',
+                    style: GoogleFonts.baloo2(
+                      color: AppTheme.midnight.withValues(alpha: 0.7),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    )),
                 const Spacer(),
                 ElevatedButton(
                   onPressed: () => context.push('/learn/article/sicilian'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.midnight,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 22, vertical: 12),
                   ),
-                  child: Text('Start Now! 🚀', style: GoogleFonts.fredoka(fontWeight: FontWeight.w600, fontSize: 16)),
+                  child: Text('Start Now! 🚀',
+                      style: GoogleFonts.fredoka(
+                          fontWeight: FontWeight.w600, fontSize: 16)),
                 ),
               ],
             ),
@@ -217,9 +340,12 @@ class LearnScreen extends StatelessWidget {
   Widget _buildSectionHeader(String title) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 28, 24, 14),
-      child: Text(title, style: GoogleFonts.fredoka(
-        color: AppTheme.textPrimary, fontSize: 22, fontWeight: FontWeight.w700,
-      )),
+      child: Text(title,
+          style: GoogleFonts.fredoka(
+            color: AppTheme.textPrimary,
+            fontSize: 22,
+            fontWeight: FontWeight.w700,
+          )),
     );
   }
 
@@ -235,27 +361,42 @@ class LearnScreen extends StatelessWidget {
           gradient: AppTheme.cardGradient,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(color: cat.color.withValues(alpha: 0.2)),
-          boxShadow: [BoxShadow(color: cat.color.withValues(alpha: 0.1), blurRadius: 14, offset: const Offset(0, 4))],
+          boxShadow: [
+            BoxShadow(
+                color: cat.color.withValues(alpha: 0.1),
+                blurRadius: 14,
+                offset: const Offset(0, 4))
+          ],
         ),
         child: Row(
           children: [
             Container(
-              width: 54, height: 54,
-              decoration: BoxDecoration(color: cat.color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(16)),
-              child: Center(child: Text(cat.emoji, style: const TextStyle(fontSize: 26))),
+              width: 54,
+              height: 54,
+              decoration: BoxDecoration(
+                  color: cat.color.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(16)),
+              child: Center(
+                  child: Text(cat.emoji, style: const TextStyle(fontSize: 26))),
             ),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(cat.title, style: GoogleFonts.fredoka(
-                    color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.w700,
-                  )),
+                  Text(cat.title,
+                      style: GoogleFonts.fredoka(
+                        color: AppTheme.textPrimary,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                      )),
                   const SizedBox(height: 3),
-                  Text(cat.description, style: GoogleFonts.baloo2(
-                    color: AppTheme.textSecondary, fontSize: 13, fontWeight: FontWeight.w500,
-                  )),
+                  Text(cat.description,
+                      style: GoogleFonts.baloo2(
+                        color: AppTheme.textSecondary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      )),
                   const SizedBox(height: 10),
                   Row(
                     children: [
@@ -283,7 +424,9 @@ class LearnScreen extends StatelessWidget {
         color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Text(label, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w700)),
+      child: Text(label,
+          style: TextStyle(
+              color: color, fontSize: 11, fontWeight: FontWeight.w700)),
     );
   }
 
@@ -303,16 +446,23 @@ class LearnScreen extends StatelessWidget {
             padding: const EdgeInsets.all(20),
             child: Row(
               children: [
-                const Icon(Icons.calendar_month_rounded, color: AppTheme.goldPrimary, size: 22),
+                const Icon(Icons.calendar_month_rounded,
+                    color: AppTheme.goldPrimary, size: 22),
                 const SizedBox(width: 10),
-                Text('Complete Beginner → Club Player', style: GoogleFonts.baloo2(
-                  color: AppTheme.textSecondary, fontSize: 14, fontWeight: FontWeight.w600,
-                )),
+                Text('Complete Beginner → Club Player',
+                    style: GoogleFonts.baloo2(
+                      color: AppTheme.textSecondary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    )),
               ],
             ),
           ),
           const Divider(color: Colors.white10, height: 1),
-          ...List.generate(_weekPlan.length, (i) => _buildWeekRow(context, _weekPlan[i], i == _weekPlan.length - 1)),
+          ...List.generate(
+              _weekPlan.length,
+              (i) => _buildWeekRow(
+                  context, _weekPlan[i], i == _weekPlan.length - 1)),
         ],
       ),
     ).animate().fadeIn(delay: 100.ms);
@@ -323,58 +473,77 @@ class LearnScreen extends StatelessWidget {
     return GestureDetector(
       onTap: () => context.push('/learn/week/${plan.week}'),
       child: Container(
-      decoration: BoxDecoration(
-        color: isEven ? Colors.white.withValues(alpha: 0.02) : Colors.transparent,
-        borderRadius: isLast ? const BorderRadius.only(
-          bottomLeft: Radius.circular(24), bottomRight: Radius.circular(24),
-        ) : null,
+        decoration: BoxDecoration(
+          color: isEven
+              ? Colors.white.withValues(alpha: 0.02)
+              : Colors.transparent,
+          borderRadius: isLast
+              ? const BorderRadius.only(
+                  bottomLeft: Radius.circular(24),
+                  bottomRight: Radius.circular(24),
+                )
+              : null,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: AppTheme.goldPrimary.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Text('${plan.week}',
+                    style: GoogleFonts.fredoka(
+                      color: AppTheme.goldPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    )),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(plan.topic,
+                      style: GoogleFonts.baloo2(
+                        color: AppTheme.textPrimary,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      )),
+                  const SizedBox(height: 2),
+                  Text('Goal: ${plan.goal}',
+                      style: GoogleFonts.baloo2(
+                        color: AppTheme.textSecondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      )),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppTheme.accentCyan.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(plan.time,
+                  style: TextStyle(
+                    color: AppTheme.accentCyan,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  )),
+            ),
+            const SizedBox(width: 6),
+            const Icon(Icons.chevron_right_rounded,
+                color: AppTheme.textMuted, size: 18),
+          ],
+        ),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 34, height: 34,
-            decoration: BoxDecoration(
-              color: AppTheme.goldPrimary.withValues(alpha: 0.15),
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text('${plan.week}', style: GoogleFonts.fredoka(
-                color: AppTheme.goldPrimary, fontSize: 14, fontWeight: FontWeight.w700,
-              )),
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(plan.topic, style: GoogleFonts.baloo2(
-                  color: AppTheme.textPrimary, fontSize: 15, fontWeight: FontWeight.w700,
-                )),
-                const SizedBox(height: 2),
-                Text('Goal: ${plan.goal}', style: GoogleFonts.baloo2(
-                  color: AppTheme.textSecondary, fontSize: 12, fontWeight: FontWeight.w500,
-                )),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: AppTheme.accentCyan.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(plan.time, style: TextStyle(
-              color: AppTheme.accentCyan, fontSize: 11, fontWeight: FontWeight.w700,
-            )),
-          ),
-          const SizedBox(width: 6),
-          const Icon(Icons.chevron_right_rounded, color: AppTheme.textMuted, size: 18),
-        ],
-      ),
-    ),
     );
   }
 
@@ -386,7 +555,12 @@ class LearnScreen extends StatelessWidget {
       ('📌 The Pin', 'Intermediate', 'intermediate2', AppTheme.accentPurple),
       ('💥 Back Rank Mate', 'Intermediate', 'intermediate3', AppTheme.skyBlue),
       ('🎭 The Skewer', 'Intermediate', 'intermediate4', AppTheme.accentCyan),
-      ('🔄 Discovered Attack', 'Intermediate', 'intermediate5', Color(0xFF6BCB77)),
+      (
+        '🔄 Discovered Attack',
+        'Intermediate',
+        'intermediate5',
+        Color(0xFF6BCB77)
+      ),
       ("🛡️ Scholar's Mate", 'Advanced', 'advanced1', AppTheme.accentRed),
       ('💎 Zwischenzug', 'Advanced', 'advanced5', AppTheme.lavender),
     ];
@@ -405,10 +579,11 @@ class LearnScreen extends StatelessWidget {
                 (l) => l.id == tutId,
                 orElse: () => tutorialLessons.first,
               );
-              context.push('/game/play', extra: GameRouteExtra(
-                config: const GameConfig(mode: GameMode.tutorial),
-                tutorial: lesson,
-              ));
+              context.push('/game/play',
+                  extra: GameRouteExtra(
+                    config: const GameConfig(mode: GameMode.tutorial),
+                    tutorial: lesson,
+                  ));
             },
             child: Container(
               width: 170,
@@ -422,23 +597,36 @@ class LearnScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: GoogleFonts.fredoka(
-                    color: AppTheme.textPrimary, fontSize: 15, fontWeight: FontWeight.w700,
-                  )),
+                  Text(title,
+                      style: GoogleFonts.fredoka(
+                        color: AppTheme.textPrimary,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      )),
                   const SizedBox(height: 4),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: color.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(6),
                     ),
-                    child: Text(diff, style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w800)),
+                    child: Text(diff,
+                        style: TextStyle(
+                            color: color,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800)),
                   ),
                   const Spacer(),
                   Row(children: [
-                    Icon(Icons.play_circle_fill_rounded, color: color, size: 20),
+                    Icon(Icons.play_circle_fill_rounded,
+                        color: color, size: 20),
                     const SizedBox(width: 6),
-                    Text('Try It!', style: GoogleFonts.fredoka(color: color, fontSize: 13, fontWeight: FontWeight.w600)),
+                    Text('Try It!',
+                        style: GoogleFonts.fredoka(
+                            color: color,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600)),
                   ]),
                 ],
               ),
@@ -479,22 +667,32 @@ class LearnScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(res.name, style: GoogleFonts.baloo2(
-                    color: AppTheme.textPrimary, fontSize: 15, fontWeight: FontWeight.w700,
-                  )),
+                  Text(res.name,
+                      style: GoogleFonts.baloo2(
+                        color: AppTheme.textPrimary,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      )),
                   const SizedBox(height: 2),
-                  Text(res.description, style: GoogleFonts.baloo2(
-                    color: AppTheme.textSecondary, fontSize: 12, fontWeight: FontWeight.w500,
-                  )),
+                  Text(res.description,
+                      style: GoogleFonts.baloo2(
+                        color: AppTheme.textSecondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      )),
                   const SizedBox(height: 6),
-                  Text(res.url, style: const TextStyle(
-                    color: AppTheme.skyBlue, fontSize: 11, decoration: TextDecoration.underline,
-                    decorationColor: AppTheme.skyBlue,
-                  )),
+                  Text(res.url,
+                      style: const TextStyle(
+                        color: AppTheme.skyBlue,
+                        fontSize: 11,
+                        decoration: TextDecoration.underline,
+                        decorationColor: AppTheme.skyBlue,
+                      )),
                 ],
               ),
             ),
-            const Icon(Icons.open_in_new_rounded, color: AppTheme.skyBlue, size: 16),
+            const Icon(Icons.open_in_new_rounded,
+                color: AppTheme.skyBlue, size: 16),
           ],
         ),
       ),
@@ -515,32 +713,48 @@ class LearnScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Contact & Curriculum Sources', style: GoogleFonts.fredoka(
-            color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.w700,
-          )),
+          Text('Contact & Curriculum Sources',
+              style: GoogleFonts.fredoka(
+                color: AppTheme.textPrimary,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+              )),
           const SizedBox(height: 16),
-          _contactRow(Icons.language_rounded, 'FIDE Official', 'fide.com', 'https://www.fide.com'),
-          _contactRow(Icons.email_rounded, 'Chess Academy Support', 'academy@chessmaster.app', 'mailto:academy@chessmaster.app'),
-          _contactRow(Icons.school_rounded, 'Curriculum Based On', 'FIDE Laws of Chess 2023', 'https://handbook.fide.com/chapter/E012023'),
-          _contactRow(Icons.people_rounded, 'Community Discord', 'discord.gg/chessmaster', 'https://discord.gg/chessmaster'),
-          _contactRow(Icons.feed_rounded, 'Chess News (TWIC)', 'theweekinchess.com', 'https://theweekinchess.com'),
+          _contactRow(Icons.language_rounded, 'FIDE Official', 'fide.com',
+              'https://www.fide.com'),
+          _contactRow(Icons.email_rounded, 'Chess Academy Support',
+              'academy@chessmaster.app', 'mailto:academy@chessmaster.app'),
+          _contactRow(
+              Icons.school_rounded,
+              'Curriculum Based On',
+              'FIDE Laws of Chess 2023',
+              'https://handbook.fide.com/chapter/E012023'),
+          _contactRow(Icons.people_rounded, 'Community Discord',
+              'discord.gg/chessmaster', 'https://discord.gg/chessmaster'),
+          _contactRow(Icons.feed_rounded, 'Chess News (TWIC)',
+              'theweekinchess.com', 'https://theweekinchess.com'),
           const SizedBox(height: 14),
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: AppTheme.goldPrimary.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.2)),
+              border: Border.all(
+                  color: AppTheme.goldPrimary.withValues(alpha: 0.2)),
             ),
             child: Row(
               children: [
-                const Icon(Icons.info_outline_rounded, color: AppTheme.goldPrimary, size: 18),
+                const Icon(Icons.info_outline_rounded,
+                    color: AppTheme.goldPrimary, size: 18),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     'All lessons follow FIDE Official Rules (July 2023 edition). '
                     'Puzzle ratings are calibrated using the Glicko-2 system.',
-                    style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 12, height: 1.5),
+                    style: GoogleFonts.baloo2(
+                        color: AppTheme.textSecondary,
+                        fontSize: 12,
+                        height: 1.5),
                   ),
                 ),
               ],
@@ -560,12 +774,19 @@ class LearnScreen extends StatelessWidget {
           children: [
             Icon(icon, color: AppTheme.accentPurple, size: 18),
             const SizedBox(width: 10),
-            Text('$label: ', style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+            Text('$label: ',
+                style: GoogleFonts.baloo2(
+                    color: AppTheme.textSecondary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600)),
             Flexible(
-              child: Text(value, style: const TextStyle(
-                color: AppTheme.accentPurple, fontSize: 13,
-                decoration: TextDecoration.underline, decorationColor: AppTheme.accentPurple,
-              )),
+              child: Text(value,
+                  style: const TextStyle(
+                    color: AppTheme.accentPurple,
+                    fontSize: 13,
+                    decoration: TextDecoration.underline,
+                    decorationColor: AppTheme.accentPurple,
+                  )),
             ),
           ],
         ),
@@ -577,6 +798,7 @@ class LearnScreen extends StatelessWidget {
 
   Future<void> _launchUrl(String url) async {
     final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (await canLaunchUrl(uri))
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 }

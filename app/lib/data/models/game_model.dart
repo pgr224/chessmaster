@@ -50,7 +50,8 @@ class GameModel {
 
     return GameModel(
       id: (json['id'] ?? json['game_id'] ?? '').toString(),
-      fen: (json['final_fen'] ?? json['fen'] ?? json['initial_fen'] ?? '').toString(),
+      fen: (json['final_fen'] ?? json['fen'] ?? json['initial_fen'] ?? '')
+          .toString(),
       pgn: json['pgn']?.toString(),
       mode: (json['mode'] ?? 'singlePlayer').toString(),
       status: (json['status'] ?? 'active').toString(),
@@ -67,19 +68,19 @@ class GameModel {
   }
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'fen': fen,
-    'pgn': pgn,
-    'mode': mode,
-    'status': status,
-    'result': result,
-    'termination': termination,
-    'white_user_id': whiteUserId,
-    'black_user_id': blackUserId,
-    'white_username': whiteUsername,
-    'black_username': blackUsername,
-    'move_count': moveCount,
-    'player_color': playerColor,
-    'updated_at': updatedAt.toIso8601String(),
-  };
+        'id': id,
+        'fen': fen,
+        'pgn': pgn,
+        'mode': mode,
+        'status': status,
+        'result': result,
+        'termination': termination,
+        'white_user_id': whiteUserId,
+        'black_user_id': blackUserId,
+        'white_username': whiteUsername,
+        'black_username': blackUsername,
+        'move_count': moveCount,
+        'player_color': playerColor,
+        'updated_at': updatedAt.toIso8601String(),
+      };
 }

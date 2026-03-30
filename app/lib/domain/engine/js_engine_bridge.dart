@@ -5,8 +5,9 @@ import 'candidate_model.dart';
 @JS('ChessEngineService')
 extension type _JSEngineService._(JSObject _) {
   external void initEngine(JSString mode, JSString difficulty);
-  external JSPromise<JSAny?> getBestMove(JSString fen);
-  external JSBoolean validateMove(JSString fen, JSString from, JSString to, JSString? promotion);
+  external JSPromise<JSAny?> getBestMove(JSString fen, [JSNumber? movetime]);
+  external JSBoolean validateMove(
+      JSString fen, JSString from, JSString to, JSString? promotion);
   external JSArray<JSString> getLegalMoves(JSString fen, JSString square);
   external JSObject getGameState(JSString fen);
   external JSString getActiveEngine();
@@ -35,12 +36,13 @@ void jsEngineInit(String mode, String difficulty) {
 }
 
 /// Get best move (or move+candidates) from JS
-Future<Map<String, dynamic>?> jsEngineGetBestMove(String fen) async {
+Future<Map<String, dynamic>?> jsEngineGetBestMove(String fen,
+    {int? movetime}) async {
   final svc = _getService();
   if (svc == null) return null;
-  
+
   try {
-    final result = await svc.getBestMove(fen.toJS).toDart;
+    final result = await svc.getBestMove(fen.toJS, movetime?.toJS).toDart;
     if (result == null) return null;
 
     if (result.isA<JSString>()) {
@@ -51,7 +53,7 @@ Future<Map<String, dynamic>?> jsEngineGetBestMove(String fen) async {
       final obj = result as JSObject;
       final move = (obj['move'] as JSString?)?.toDart;
       final candidatesRaw = obj['candidates'] as JSArray<JSObject>?;
-      
+
       final List<MoveCandidate> candidates = [];
       if (candidatesRaw != null) {
         final dartArray = candidatesRaw.toDart;
@@ -73,8 +75,10 @@ Future<Map<String, dynamic>?> jsEngineGetBestMove(String fen) async {
 }
 
 /// Get top candidate moves from JS
-Future<List<MoveCandidate>> jsEngineGetTopMoves(String fen, int depth, int count, {int? movetime}) async {
-  final res = await jsEngineGetBestMove(fen);
+Future<List<MoveCandidate>> jsEngineGetTopMoves(
+    String fen, int depth, int count,
+    {int? movetime}) async {
+  final res = await jsEngineGetBestMove(fen, movetime: movetime);
   if (res?['candidates'] != null) {
     return List<MoveCandidate>.from(res!['candidates'] as List);
   }
@@ -82,7 +86,8 @@ Future<List<MoveCandidate>> jsEngineGetTopMoves(String fen, int depth, int count
 }
 
 /// Validate a move using the JS engine (synchronous)
-bool jsEngineValidateMove(String fen, String from, String to, String? promotion) {
+bool jsEngineValidateMove(
+    String fen, String from, String to, String? promotion) {
   final svc = _getService();
   if (svc == null) return false;
   return svc.validateMove(fen.toJS, from.toJS, to.toJS, promotion?.toJS).toDart;

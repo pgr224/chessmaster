@@ -38,29 +38,36 @@ class _HomeScreenState extends State<HomeScreen> {
     final id = await _gameRepository.getLastActiveGameId();
     if (mounted) setState(() => _lastActiveGameId = id);
   }
+
   @override
   Widget build(BuildContext context) {
     final bgTheme = context.watch<SettingsBloc>().state.backgroundTheme;
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, authState) {
-        final user = authState is AuthAuthenticatedState ? authState.user : null;
+        final user =
+            authState is AuthAuthenticatedState ? authState.user : null;
         if (user != null && _recentForUser != user.id) {
           _recentForUser = user.id;
-          _recentGamesFuture = _gameRepository.getRecentGames(user.id, limit: 8);
+          _recentGamesFuture =
+              _gameRepository.getRecentGames(user.id, limit: 8);
         }
         return Scaffold(
           backgroundColor: Colors.transparent,
           body: Container(
-            decoration: BoxDecoration(gradient: AppTheme.getBackground(bgTheme)),
+            decoration:
+                BoxDecoration(gradient: AppTheme.getBackground(bgTheme)),
             child: SafeArea(
               child: CustomScrollView(
                 physics: const BouncingScrollPhysics(),
                 slivers: [
                   SliverToBoxAdapter(child: _buildHeader(user)),
                   SliverToBoxAdapter(child: _buildQuickStats(user)),
-                  if (user != null && user.xp < 0) SliverToBoxAdapter(child: _buildLowXPWarning(user)),
-                  if (_lastActiveGameId != null) SliverToBoxAdapter(child: _buildResumeCard()),
-                  SliverToBoxAdapter(child: _buildSectionTitle('🎮 Game Modes')),
+                  if (user != null && user.xp < 0)
+                    SliverToBoxAdapter(child: _buildLowXPWarning(user)),
+                  if (_lastActiveGameId != null)
+                    SliverToBoxAdapter(child: _buildResumeCard()),
+                  SliverToBoxAdapter(
+                      child: _buildSectionTitle('🎮 Game Modes')),
                   SliverPadding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     sliver: SliverList(
@@ -73,7 +80,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             colors: [Color(0xFF74B9FF), Color(0xFFA29BFE)],
                           ),
                           shadowColor: const Color(0xFF74B9FF),
-                          onTap: () => context.push('/game/setup', extra: GameMode.singlePlayer),
+                          onTap: () => context.push('/game/setup',
+                              extra: GameMode.singlePlayer),
                           delay: 0,
                         ),
                         _buildModeCard(
@@ -84,7 +92,9 @@ class _HomeScreenState extends State<HomeScreen> {
                             colors: [Color(0xFF6BCB77), Color(0xFF4ECDC4)],
                           ),
                           shadowColor: const Color(0xFF6BCB77),
-                          onTap: () => context.go('/game/play', extra: const GameConfig(mode: GameMode.twoPlayer)),
+                          onTap: () => context.go('/game/play',
+                              extra:
+                                  const GameConfig(mode: GameMode.twoPlayer)),
                           delay: 80,
                         ),
                         _buildModeCard(
@@ -106,7 +116,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             colors: [Color(0xFFA29BFE), Color(0xFF6C5CE7)],
                           ),
                           shadowColor: const Color(0xFFA29BFE),
-                          onTap: () => context.go('/game/play', extra: const GameConfig(mode: GameMode.practice)),
+                          onTap: () => context.go('/game/play',
+                              extra: const GameConfig(mode: GameMode.practice)),
                           delay: 180,
                         ),
                         _buildModeCard(
@@ -114,7 +125,10 @@ class _HomeScreenState extends State<HomeScreen> {
                           title: 'Chess World',
                           subtitle: 'News, events, and career tips!',
                           gradient: LinearGradient(
-                            colors: [const Color(0xFFFFD93D), const Color(0xFFFF8A5C)],
+                            colors: [
+                              const Color(0xFFFFD93D),
+                              const Color(0xFFFF8A5C)
+                            ],
                           ),
                           shadowColor: const Color(0xFFFFD93D),
                           onTap: () => context.push('/chess_world'),
@@ -145,9 +159,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       ]),
                     ),
                   ),
-                  SliverToBoxAdapter(child: _buildSectionTitle('🧩 Daily Puzzle')),
+                  SliverToBoxAdapter(
+                      child: _buildSectionTitle('🧩 Daily Puzzle')),
                   SliverToBoxAdapter(child: _buildDailyPuzzle()),
-                  SliverToBoxAdapter(child: _buildSectionTitle('🕹️ Recent Games')),
+                  SliverToBoxAdapter(
+                      child: _buildSectionTitle('🕹️ Recent Games')),
                   SliverToBoxAdapter(child: _buildRecentGames(user)),
                   const SliverToBoxAdapter(child: SizedBox(height: 32)),
                 ],
@@ -208,8 +224,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
                 child: user?.avatarUrl != null
-                    ? ClipOval(child: Image.network(user!.avatarUrl!, fit: BoxFit.cover))
-                    : const Icon(Icons.person_rounded, color: AppTheme.midnight, size: 32),
+                    ? ClipOval(
+                        child:
+                            Image.network(user!.avatarUrl!, fit: BoxFit.cover))
+                    : const Icon(Icons.person_rounded,
+                        color: AppTheme.midnight, size: 32),
               ),
             ),
           ).animate().scale(duration: 500.ms, curve: Curves.elasticOut),
@@ -233,13 +252,19 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           _statItem('${user?.stats.gamesPlayed ?? 0}', '🎮 Games', null),
           _divider(),
-          _statItem('${user?.stats.wins ?? 0}', '🏆 Wins', AppTheme.goldPrimary),
+          _statItem(
+              '${user?.stats.wins ?? 0}', '🏆 Wins', AppTheme.goldPrimary),
           _divider(),
-          _statItem('${user?.stats.winRate.toStringAsFixed(0) ?? 0}%',
-            '📈 Rate', AppTheme.accentCyan,
+          _statItem(
+            '${user?.stats.winRate.toStringAsFixed(0) ?? 0}%',
+            '📈 Rate',
+            AppTheme.accentCyan,
           ),
           _divider(),
-          _statItem('${user?.stats.eloRating ?? 1200}', '${EloService.getRankEmoji(user?.stats.eloRating ?? 1200)} ELO', AppTheme.lavender),
+          _statItem(
+              '${user?.stats.eloRating ?? 1200}',
+              '${EloService.getRankEmoji(user?.stats.eloRating ?? 1200)} ELO',
+              AppTheme.lavender),
         ],
       ),
     ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.1);
@@ -256,7 +281,8 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       child: Row(
         children: [
-          const Icon(Icons.warning_amber_rounded, color: AppTheme.accentRed, size: 36),
+          const Icon(Icons.warning_amber_rounded,
+              color: AppTheme.accentRed, size: 36),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
@@ -290,25 +316,35 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _statItem(String value, String label, Color? color) {
     return Column(
       children: [
-        Text(value, style: GoogleFonts.fredoka(
-          color: color ?? AppTheme.textPrimary,
-          fontSize: 22, fontWeight: FontWeight.w700,
-        )),
+        Text(value,
+            style: GoogleFonts.fredoka(
+              color: color ?? AppTheme.textPrimary,
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+            )),
         const SizedBox(height: 4),
-        Text(label, style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 13)),
+        Text(label,
+            style: GoogleFonts.baloo2(
+                color: AppTheme.textSecondary, fontSize: 13)),
       ],
     );
   }
 
   Widget _divider() => Container(
-    width: 1, height: 44,
-    decoration: BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.topCenter, end: Alignment.bottomCenter,
-        colors: [Colors.transparent, AppTheme.textMuted.withValues(alpha: 0.3), Colors.transparent],
-      ),
-    ),
-  );
+        width: 1,
+        height: 44,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.transparent,
+              AppTheme.textMuted.withValues(alpha: 0.3),
+              Colors.transparent
+            ],
+          ),
+        ),
+      );
 
   Widget _buildSectionTitle(String title) {
     return Padding(
@@ -316,16 +352,20 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Row(
         children: [
           Container(
-            width: 5, height: 24,
+            width: 5,
+            height: 24,
             decoration: BoxDecoration(
               gradient: AppTheme.rainbowGradient,
               borderRadius: BorderRadius.circular(3),
             ),
           ),
           const SizedBox(width: 12),
-          Text(title, style: GoogleFonts.fredoka(
-            color: AppTheme.textPrimary, fontSize: 22, fontWeight: FontWeight.w600,
-          )),
+          Text(title,
+              style: GoogleFonts.fredoka(
+                color: AppTheme.textPrimary,
+                fontSize: 22,
+                fontWeight: FontWeight.w600,
+              )),
         ],
       ),
     );
@@ -395,18 +435,24 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(title, style: GoogleFonts.fredoka(
-                          color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.w600,
-                        )),
+                        Text(title,
+                            style: GoogleFonts.fredoka(
+                              color: AppTheme.textPrimary,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w600,
+                            )),
                         const SizedBox(height: 3),
-                        Text(subtitle, style: GoogleFonts.baloo2(
-                          color: AppTheme.textSecondary, fontSize: 15,
-                        )),
+                        Text(subtitle,
+                            style: GoogleFonts.baloo2(
+                              color: AppTheme.textSecondary,
+                              fontSize: 15,
+                            )),
                       ],
                     ),
                   ),
                   Container(
-                    width: 36, height: 36,
+                    width: 36,
+                    height: 36,
                     decoration: BoxDecoration(
                       color: shadowColor.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(12),
@@ -436,7 +482,8 @@ class _HomeScreenState extends State<HomeScreen> {
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: AppTheme.lavender.withValues(alpha: 0.4)),
         boxShadow: [
-          BoxShadow(color: AppTheme.lavender.withValues(alpha: 0.15), blurRadius: 20),
+          BoxShadow(
+              color: AppTheme.lavender.withValues(alpha: 0.15), blurRadius: 20),
         ],
       ),
       child: Row(
@@ -447,17 +494,25 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('DAILY PUZZLE', style: GoogleFonts.fredoka(
-                  color: AppTheme.lavender, fontSize: 13, fontWeight: FontWeight.w600,
-                  letterSpacing: 1.5,
-                )),
-                Text('White to move and win!', style: GoogleFonts.fredoka(
-                  color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.w600,
-                )),
+                Text('DAILY PUZZLE',
+                    style: GoogleFonts.fredoka(
+                      color: AppTheme.lavender,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 1.5,
+                    )),
+                Text('White to move and win!',
+                    style: GoogleFonts.fredoka(
+                      color: AppTheme.textPrimary,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    )),
                 const SizedBox(height: 4),
-                Text('Difficulty: ⭐⭐⭐', style: GoogleFonts.baloo2(
-                  color: AppTheme.textSecondary, fontSize: 14,
-                )),
+                Text('Difficulty: ⭐⭐⭐',
+                    style: GoogleFonts.baloo2(
+                      color: AppTheme.textSecondary,
+                      fontSize: 14,
+                    )),
               ],
             ),
           ),
@@ -466,19 +521,23 @@ class _HomeScreenState extends State<HomeScreen> {
               backgroundColor: AppTheme.lavender,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
             ),
             onPressed: () async {
               final puzzle = await _puzzleRepository.getDailyPuzzle();
               if (mounted) {
-                context.go('/game/play', extra: GameConfig(
-                  mode: GameMode.puzzle,
-                  puzzle: puzzle,
-                  playerColor: 'white',
-                ));
+                context.go('/game/play',
+                    extra: GameConfig(
+                      mode: GameMode.puzzle,
+                      puzzle: puzzle,
+                      playerColor: 'white',
+                    ));
               }
             },
-            child: Text('Solve!', style: GoogleFonts.fredoka(fontWeight: FontWeight.w600, fontSize: 16)),
+            child: Text('Solve!',
+                style: GoogleFonts.fredoka(
+                    fontWeight: FontWeight.w600, fontSize: 16)),
           ),
         ],
       ),
@@ -490,7 +549,8 @@ class _HomeScreenState extends State<HomeScreen> {
       return _emptyRecentGames('Sign in to see recent matches.');
     }
 
-    final future = _recentGamesFuture ?? _gameRepository.getRecentGames(user.id, limit: 8);
+    final future =
+        _recentGamesFuture ?? _gameRepository.getRecentGames(user.id, limit: 8);
     _recentGamesFuture = future;
 
     return FutureBuilder<List<GameModel>>(
@@ -505,7 +565,8 @@ class _HomeScreenState extends State<HomeScreen> {
               borderRadius: BorderRadius.circular(24),
               border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
             ),
-            child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+            child:
+                const Center(child: CircularProgressIndicator(strokeWidth: 2)),
           );
         }
 
@@ -525,7 +586,8 @@ class _HomeScreenState extends State<HomeScreen> {
           child: ListView.separated(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             itemCount: games.length.clamp(0, 4),
-            separatorBuilder: (_, __) => const Divider(color: Colors.white10, height: 8),
+            separatorBuilder: (_, __) =>
+                const Divider(color: Colors.white10, height: 8),
             itemBuilder: (context, index) {
               final g = games[index];
               final outcome = _outcomeLabel(g, user.id);
@@ -540,13 +602,17 @@ class _HomeScreenState extends State<HomeScreen> {
                       children: [
                         Text(
                           '${g.mode} • ${outcome.$2}',
-                          style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w600),
+                          style: GoogleFonts.fredoka(
+                              color: AppTheme.textPrimary,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                         Text(
                           'Cause: $cause',
-                          style: GoogleFonts.baloo2(color: AppTheme.textMuted, fontSize: 12),
+                          style: GoogleFonts.baloo2(
+                              color: AppTheme.textMuted, fontSize: 12),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -579,7 +645,8 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 8),
             Text(
               message,
-              style: GoogleFonts.baloo2(color: AppTheme.textMuted, fontSize: 16),
+              style:
+                  GoogleFonts.baloo2(color: AppTheme.textMuted, fontSize: 16),
             ),
           ],
         ),
@@ -627,7 +694,10 @@ class _HomeScreenState extends State<HomeScreen> {
         gradient: AppTheme.rainbowGradient,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
-          BoxShadow(color: AppTheme.goldPrimary.withValues(alpha: 0.3), blurRadius: 15, offset: const Offset(0, 5)),
+          BoxShadow(
+              color: AppTheme.goldPrimary.withValues(alpha: 0.3),
+              blurRadius: 15,
+              offset: const Offset(0, 5)),
         ],
       ),
       child: Row(
@@ -638,8 +708,17 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('UNFINISHED BATTLE!', style: GoogleFonts.fredoka(color: AppTheme.midnight, fontSize: 13, fontWeight: FontWeight.w800, letterSpacing: 1.2)),
-                Text('Your last game is waiting...', style: GoogleFonts.baloo2(color: AppTheme.midnight.withValues(alpha: 0.8), fontSize: 16, fontWeight: FontWeight.w600)),
+                Text('UNFINISHED BATTLE!',
+                    style: GoogleFonts.fredoka(
+                        color: AppTheme.midnight,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.2)),
+                Text('Your last game is waiting...',
+                    style: GoogleFonts.baloo2(
+                        color: AppTheme.midnight.withValues(alpha: 0.8),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600)),
               ],
             ),
           ),
@@ -647,14 +726,22 @@ class _HomeScreenState extends State<HomeScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.midnight,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             ),
-            onPressed: () => context.go('/game/play', extra: GameConfig(mode: GameMode.singlePlayer, activeGameId: _lastActiveGameId)),
-            child: Text('RESUME', style: GoogleFonts.fredoka(fontWeight: FontWeight.w700)),
+            onPressed: () => context.go('/game/play',
+                extra: GameConfig(
+                    mode: GameMode.singlePlayer,
+                    activeGameId: _lastActiveGameId)),
+            child: Text('RESUME',
+                style: GoogleFonts.fredoka(fontWeight: FontWeight.w700)),
           ),
         ],
       ),
-    ).animate().shimmer(duration: 2.seconds).scale(begin: const Offset(0.95, 0.95), duration: 400.ms, curve: Curves.easeOutBack);
+    ).animate().shimmer(duration: 2.seconds).scale(
+        begin: const Offset(0.95, 0.95),
+        duration: 400.ms,
+        curve: Curves.easeOutBack);
   }
 }

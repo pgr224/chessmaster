@@ -51,35 +51,35 @@ class UserModel {
   }
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'username': username,
-    'avatar_url': avatarUrl,
-    'local_avatar': localAvatar,
-    'xp': xp,
-    'is_online': isOnline ? 1 : 0,
-    'device_id': deviceId,
-    'is_ghibli': isGhibli,
-    'stats': {
-      'games_played': stats.gamesPlayed,
-      'wins': stats.wins,
-      'losses': stats.losses,
-      'draws': stats.draws,
-      'longest_streak': stats.longestStreak,
-      'current_streak': stats.currentStreak,
-      'ai_games': stats.aiGames,
-      'ai_wins': stats.aiWins,
-      'multiplayer_games': stats.multiplayerGames,
-      'multiplayer_wins': stats.multiplayerWins,
-      'two_player_games': stats.twoPlayerGames,
-      'two_player_wins': stats.twoPlayerWins,
-      'tournament_wins': stats.tournamentWins,
-      'practice_difficulty': stats.practiceDifficulty,
-      'elo_rating': stats.eloRating,
-      'puzzles_solved': stats.puzzlesSolved,
-      'puzzle_rating': stats.puzzleRating,
-    },
-    'recent_games': recentGames.map((g) => g.toJson()).toList(),
-  };
+        'id': id,
+        'username': username,
+        'avatar_url': avatarUrl,
+        'local_avatar': localAvatar,
+        'xp': xp,
+        'is_online': isOnline ? 1 : 0,
+        'device_id': deviceId,
+        'is_ghibli': isGhibli,
+        'stats': {
+          'games_played': stats.gamesPlayed,
+          'wins': stats.wins,
+          'losses': stats.losses,
+          'draws': stats.draws,
+          'longest_streak': stats.longestStreak,
+          'current_streak': stats.currentStreak,
+          'ai_games': stats.aiGames,
+          'ai_wins': stats.aiWins,
+          'multiplayer_games': stats.multiplayerGames,
+          'multiplayer_wins': stats.multiplayerWins,
+          'two_player_games': stats.twoPlayerGames,
+          'two_player_wins': stats.twoPlayerWins,
+          'tournament_wins': stats.tournamentWins,
+          'practice_difficulty': stats.practiceDifficulty,
+          'elo_rating': stats.eloRating,
+          'puzzles_solved': stats.puzzlesSolved,
+          'puzzle_rating': stats.puzzleRating,
+        },
+        'recent_games': recentGames.map((g) => g.toJson()).toList(),
+      };
 
   UserModel copyWith({
     String? id,
@@ -149,8 +149,10 @@ class UserStats {
 
   double get winRate => gamesPlayed > 0 ? wins / gamesPlayed * 100 : 0;
   double get aiWinRate => aiGames > 0 ? aiWins / aiGames * 100 : 0;
-  double get mpWinRate => multiplayerGames > 0 ? multiplayerWins / multiplayerGames * 100 : 0;
-  double get twoPlayerWinRate => twoPlayerGames > 0 ? twoPlayerWins / twoPlayerGames * 100 : 0;
+  double get mpWinRate =>
+      multiplayerGames > 0 ? multiplayerWins / multiplayerGames * 100 : 0;
+  double get twoPlayerWinRate =>
+      twoPlayerGames > 0 ? twoPlayerWins / twoPlayerGames * 100 : 0;
 
   factory UserStats.fromJson(Map<String, dynamic> json) {
     return UserStats(
@@ -167,7 +169,8 @@ class UserStats {
       twoPlayerGames: json['two_player_games'] as int? ?? 0,
       twoPlayerWins: json['two_player_wins'] as int? ?? 0,
       tournamentWins: json['tournament_wins'] as int? ?? 0,
-      practiceDifficulty: (json['practice_difficulty'] as num?)?.toDouble() ?? 1.0,
+      practiceDifficulty:
+          (json['practice_difficulty'] as num?)?.toDouble() ?? 1.0,
       eloRating: json['elo_rating'] as int? ?? 1200,
       puzzlesSolved: json['puzzles_solved'] as int? ?? 0,
       puzzleRating: json['puzzle_rating'] as int? ?? 1200,

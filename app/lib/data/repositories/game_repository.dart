@@ -31,7 +31,7 @@ class GameRepository {
   Future<String> saveGame(GameModel game) async {
     final box = await _getBox();
     final id = game.id.isEmpty ? const Uuid().v4() : game.id;
-    
+
     final updatedGame = GameModel(
       id: id,
       fen: game.fen,
@@ -150,9 +150,11 @@ class GameRepository {
     return box.get(_lastActiveKey)?.toString();
   }
 
-  Future<List<GameModel>> getRecentGames(String userId, {int limit = 10}) async {
+  Future<List<GameModel>> getRecentGames(String userId,
+      {int limit = 10}) async {
     try {
-      final res = await _dio.get('/api/game/user/$userId', queryParameters: {'limit': limit});
+      final res = await _dio
+          .get('/api/game/user/$userId', queryParameters: {'limit': limit});
       if (res.data is! Map<String, dynamic>) return const [];
 
       final rows = (res.data['games'] as List?) ?? const [];

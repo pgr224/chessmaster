@@ -36,7 +36,7 @@ class _TimerWidgetState extends State<TimerWidget> {
     super.didUpdateWidget(oldWidget);
     // Sync with server authoritative time
     _currentTime = widget.timeInSeconds;
-    
+
     if (widget.isActive != oldWidget.isActive) {
       if (widget.isActive) {
         _startLocalCountdown();
@@ -73,7 +73,7 @@ class _TimerWidgetState extends State<TimerWidget> {
     final int mins = (seconds / 60).floor();
     final int secs = (seconds % 60).floor();
     final int ms = ((seconds % 1) * 10).floor();
-    
+
     if (seconds < 10) {
       return '$secs.$ms';
     }
@@ -96,21 +96,25 @@ class _TimerWidgetState extends State<TimerWidget> {
     Widget content = Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        color: widget.isActive 
-            ? AppTheme.navyCard.withValues(alpha: 0.95) 
+        color: widget.isActive
+            ? AppTheme.navyCard.withValues(alpha: 0.95)
             : Colors.black.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: widget.isActive ? color.withValues(alpha: 0.6) : Colors.transparent,
+          color: widget.isActive
+              ? color.withValues(alpha: 0.6)
+              : Colors.transparent,
           width: 2,
         ),
-        boxShadow: widget.isActive ? [
-          BoxShadow(
-            color: color.withValues(alpha: 0.3),
-            blurRadius: 12,
-            spreadRadius: 2,
-          )
-        ] : null,
+        boxShadow: widget.isActive
+            ? [
+                BoxShadow(
+                  color: color.withValues(alpha: 0.3),
+                  blurRadius: 12,
+                  spreadRadius: 2,
+                )
+              ]
+            : null,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -131,21 +135,23 @@ class _TimerWidgetState extends State<TimerWidget> {
             ),
           ),
           if (isWarning) ...[
-             const SizedBox(width: 8),
-             Text(
-               "⚡", 
-               style: const TextStyle(fontSize: 16)
-             ).animate(onPlay: (c) => c.repeat()).shake(hz: 3, curve: Curves.easeInOut),
+            const SizedBox(width: 8),
+            Text("⚡", style: const TextStyle(fontSize: 16))
+                .animate(onPlay: (c) => c.repeat())
+                .shake(hz: 3, curve: Curves.easeInOut),
           ]
         ],
       ),
     );
 
     if (isCritical) {
-      return content.animate(onPlay: (c) => c.repeat())
-          .scaleXY(begin: 1.0, end: 1.05, duration: 400.ms, curve: Curves.easeInOut)
+      return content
+          .animate(onPlay: (c) => c.repeat())
+          .scaleXY(
+              begin: 1.0, end: 1.05, duration: 400.ms, curve: Curves.easeInOut)
           .then()
-          .scaleXY(begin: 1.05, end: 1.0, duration: 400.ms, curve: Curves.easeInOut)
+          .scaleXY(
+              begin: 1.05, end: 1.0, duration: 400.ms, curve: Curves.easeInOut)
           .shimmer(color: Colors.white24);
     }
 

@@ -57,7 +57,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               children: [
                 BlocBuilder<AuthBloc, AuthState>(
                   builder: (context, authState) {
-                    final user = authState is AuthAuthenticatedState ? authState.user : null;
+                    final user = authState is AuthAuthenticatedState
+                        ? authState.user
+                        : null;
                     return _sectionCard(
                       title: 'General',
                       child: Column(
@@ -76,7 +78,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             title: 'Notifications',
                             subtitle: 'Match invites and multiplayer updates',
                             value: settings.notificationsEnabled,
-                            onChanged: (v) => context.read<SettingsBloc>().add(SettingsNotificationsEvent(v)),
+                            onChanged: (v) => context
+                                .read<SettingsBloc>()
+                                .add(SettingsNotificationsEvent(v)),
                           ),
                         ],
                       ),
@@ -117,37 +121,49 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         title: 'Show Coordinates',
                         subtitle: 'Display ranks/files on the board edge',
                         value: settings.showCoordinates,
-                        onChanged: (v) => context.read<SettingsBloc>().add(SettingsShowCoordinatesEvent(v)),
+                        onChanged: (v) => context
+                            .read<SettingsBloc>()
+                            .add(SettingsShowCoordinatesEvent(v)),
                       ),
                       _switchTile(
                         title: 'Show Legal Move Dots',
                         subtitle: 'Display target hints for selected pieces',
                         value: settings.showLegalMoves,
-                        onChanged: (v) => context.read<SettingsBloc>().add(SettingsShowLegalMovesEvent(v)),
+                        onChanged: (v) => context
+                            .read<SettingsBloc>()
+                            .add(SettingsShowLegalMovesEvent(v)),
                       ),
                       _switchTile(
                         title: 'Confirm Moves',
                         subtitle: 'Tap twice or press check to move',
                         value: settings.confirmMoves,
-                        onChanged: (v) => context.read<SettingsBloc>().add(SettingsConfirmMovesEvent(v)),
+                        onChanged: (v) => context
+                            .read<SettingsBloc>()
+                            .add(SettingsConfirmMovesEvent(v)),
                       ),
                       _switchTile(
                         title: 'Auto-Queen',
                         subtitle: 'Always promote pawns to queen',
                         value: settings.autoQueen,
-                        onChanged: (v) => context.read<SettingsBloc>().add(SettingsAutoQueenEvent(v)),
+                        onChanged: (v) => context
+                            .read<SettingsBloc>()
+                            .add(SettingsAutoQueenEvent(v)),
                       ),
                       _switchTile(
                         title: 'Auto-Flip Board (2 Player)',
                         subtitle: 'Rotate board to side-to-move in local games',
                         value: settings.autoFlipBoard,
-                        onChanged: (v) => context.read<SettingsBloc>().add(SettingsAutoFlipBoardEvent(v)),
+                        onChanged: (v) => context
+                            .read<SettingsBloc>()
+                            .add(SettingsAutoFlipBoardEvent(v)),
                       ),
                       _switchTile(
                         title: 'Confirm Before Resign',
                         subtitle: 'Show confirmation dialog before resigning',
                         value: settings.confirmResign,
-                        onChanged: (v) => context.read<SettingsBloc>().add(SettingsConfirmResignEvent(v)),
+                        onChanged: (v) => context
+                            .read<SettingsBloc>()
+                            .add(SettingsConfirmResignEvent(v)),
                       ),
                     ],
                   ),
@@ -161,13 +177,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         title: 'Sound Effects',
                         subtitle: 'Move, check, and game result sounds',
                         value: settings.soundEnabled,
-                        onChanged: (v) => context.read<SettingsBloc>().add(SettingsSoundEvent(v)),
+                        onChanged: (v) => context
+                            .read<SettingsBloc>()
+                            .add(SettingsSoundEvent(v)),
                       ),
                       _switchTile(
                         title: 'Vibration',
                         subtitle: 'Haptic feedback on check and actions',
                         value: settings.vibrationEnabled,
-                        onChanged: (v) => context.read<SettingsBloc>().add(SettingsVibrationEvent(v)),
+                        onChanged: (v) => context
+                            .read<SettingsBloc>()
+                            .add(SettingsVibrationEvent(v)),
                       ),
                     ],
                   ),
@@ -230,10 +250,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildBoardThemeChips() {
-    final themes = ['classic', 'grey', 'dark', 'amoled', 'lewis', 'cherry', 'sage', 'tan', 'jade'];
+    final themes = [
+      'classic',
+      'grey',
+      'dark',
+      'amoled',
+      'lewis',
+      'cherry',
+      'sage',
+      'tan',
+      'jade'
+    ];
     final emoji = {
-      'classic': '🟫', 'grey': '⬜', 'dark': '⬛', 'amoled': '🌑', 
-      'lewis': '📽️', 'cherry': '🍒', 'sage': '🌿', 'tan': '🏜️', 'jade': '🐉'
+      'classic': '🟫',
+      'grey': '⬜',
+      'dark': '⬛',
+      'amoled': '🌑',
+      'lewis': '📽️',
+      'cherry': '🍒',
+      'sage': '🌿',
+      'tan': '🏜️',
+      'jade': '🐉'
     };
     return Wrap(
       spacing: 8,
@@ -245,13 +282,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
           onSelected: (_) {
             setState(() => _boardTheme = t);
             context.read<ThemeBloc>().add(ThemeChangeEvent(
-              boardTheme: _boardTheme, 
-              pieceShape: _pieceShape,
-              pieceStyle: _pieceStyle
-            ));
+                boardTheme: _boardTheme,
+                pieceShape: _pieceShape,
+                pieceStyle: _pieceStyle));
           },
-          label: Text('${emoji[t] ?? '♟'} ${_cap(t)}', style: GoogleFonts.fredoka(fontSize: 12)),
-          labelStyle: TextStyle(color: selected ? AppTheme.midnight : AppTheme.textPrimary),
+          label: Text('${emoji[t] ?? '♟'} ${_cap(t)}',
+              style: GoogleFonts.fredoka(fontSize: 12)),
+          labelStyle: TextStyle(
+              color: selected ? AppTheme.midnight : AppTheme.textPrimary),
           selectedColor: AppTheme.goldPrimary,
           backgroundColor: AppTheme.surface.withValues(alpha: 0.7),
         );
@@ -275,7 +313,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Wrap(
-          spacing: 8, runSpacing: 8,
+          spacing: 8,
+          runSpacing: 8,
           children: shapes.map((s) {
             final id = s['id']!;
             final selected = _pieceShape == id;
@@ -285,17 +324,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onSelected: (_) {
                 setState(() => _pieceShape = id);
                 context.read<ThemeBloc>().add(ThemeChangeEvent(
-                  boardTheme: _boardTheme, 
-                  pieceShape: _pieceShape, 
-                  pieceStyle: _pieceStyle
-                ));
+                    boardTheme: _boardTheme,
+                    pieceShape: _pieceShape,
+                    pieceStyle: _pieceStyle));
               },
               label: Text(s['name']!, style: GoogleFonts.fredoka(fontSize: 12)),
               labelStyle: TextStyle(
                 color: selected ? AppTheme.midnight : AppTheme.textPrimary,
-                fontWeight: id == 'shuffled' ? FontWeight.w800 : FontWeight.w500,
+                fontWeight:
+                    id == 'shuffled' ? FontWeight.w800 : FontWeight.w500,
               ),
-              selectedColor: id == 'shuffled' ? AppTheme.accentCyan : AppTheme.goldPrimary,
+              selectedColor:
+                  id == 'shuffled' ? AppTheme.accentCyan : AppTheme.goldPrimary,
             );
           }).toList(),
         ),
@@ -323,10 +363,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         child: Column(
           children: [
-            const Icon(Icons.shuffle_rounded, color: AppTheme.accentCyan, size: 32),
+            const Icon(Icons.shuffle_rounded,
+                color: AppTheme.accentCyan, size: 32),
             const SizedBox(height: 8),
-            Text('SHUFFLE MODE', style: GoogleFonts.fredoka(color: AppTheme.accentCyan, fontSize: 14, fontWeight: FontWeight.bold)),
-            Text('A new random theme every game!', style: GoogleFonts.fredoka(color: AppTheme.textSecondary, fontSize: 10)),
+            Text('SHUFFLE MODE',
+                style: GoogleFonts.fredoka(
+                    color: AppTheme.accentCyan,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold)),
+            Text('A new random theme every game!',
+                style: GoogleFonts.fredoka(
+                    color: AppTheme.textSecondary, fontSize: 10)),
           ],
         ),
       );
@@ -345,11 +392,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Live Preview: ${_cap(_pieceShape)}', style: GoogleFonts.fredoka(color: AppTheme.textSecondary, fontSize: 12, fontWeight: FontWeight.w600)),
+              Text('Live Preview: ${_cap(_pieceShape)}',
+                  style: GoogleFonts.fredoka(
+                      color: AppTheme.textSecondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600)),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(color: AppTheme.goldPrimary.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(8)),
-                child: Text(_pieceStyle.toUpperCase(), style: GoogleFonts.fredoka(color: AppTheme.goldPrimary, fontSize: 10, fontWeight: FontWeight.bold)),
+                decoration: BoxDecoration(
+                    color: AppTheme.goldPrimary.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(8)),
+                child: Text(_pieceStyle.toUpperCase(),
+                    style: GoogleFonts.fredoka(
+                        color: AppTheme.goldPrimary,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold)),
               ),
             ],
           ),
@@ -369,7 +426,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _glassButton({required IconData icon, required String label, required VoidCallback onTap}) {
+  Widget _glassButton(
+      {required IconData icon,
+      required String label,
+      required VoidCallback onTap}) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -385,7 +445,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             Icon(icon, color: AppTheme.skyBlue, size: 20),
             const SizedBox(width: 10),
-            Text(label, style: GoogleFonts.fredoka(color: AppTheme.skyBlue, fontSize: 13, fontWeight: FontWeight.w600)),
+            Text(label,
+                style: GoogleFonts.fredoka(
+                    color: AppTheme.skyBlue,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600)),
           ],
         ),
       ),
@@ -409,14 +473,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
         child: Column(
           children: [
             const SizedBox(height: 12),
-            Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
+            Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                    color: Colors.white24,
+                    borderRadius: BorderRadius.circular(2))),
             Padding(
               padding: const EdgeInsets.all(24),
               child: Row(
                 children: [
-                  Text('PyChess Shapes', style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 22, fontWeight: FontWeight.w700)),
+                  Text('PyChess Shapes',
+                      style: GoogleFonts.fredoka(
+                          color: AppTheme.textPrimary,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700)),
                   const Spacer(),
-                  _glassAction(icon: Icons.close_rounded, size: 32, onTap: () => Navigator.pop(context)),
+                  _glassAction(
+                      icon: Icons.close_rounded,
+                      size: 32,
+                      onTap: () => Navigator.pop(context)),
                 ],
               ),
             ),
@@ -424,7 +500,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: GridView.builder(
                 padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2, crossAxisSpacing: 16, mainAxisSpacing: 16, childAspectRatio: 1.1,
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                  childAspectRatio: 1.1,
                 ),
                 itemCount: pychessShapes.length,
                 itemBuilder: (context, index) {
@@ -434,24 +513,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     onTap: () {
                       setState(() => _pieceShape = s);
                       context.read<ThemeBloc>().add(ThemeChangeEvent(
-                        boardTheme: _boardTheme, 
-                        pieceShape: _pieceShape, 
-                        pieceStyle: _pieceStyle
-                      ));
+                          boardTheme: _boardTheme,
+                          pieceShape: _pieceShape,
+                          pieceStyle: _pieceStyle));
                       Navigator.pop(context);
                     },
                     child: Container(
                       decoration: BoxDecoration(
-                        color: isSelected ? AppTheme.goldPrimary.withValues(alpha: 0.1) : AppTheme.surface.withValues(alpha: 0.4),
+                        color: isSelected
+                            ? AppTheme.goldPrimary.withValues(alpha: 0.1)
+                            : AppTheme.surface.withValues(alpha: 0.4),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: isSelected ? AppTheme.goldPrimary : Colors.white12, width: 2),
+                        border: Border.all(
+                            color: isSelected
+                                ? AppTheme.goldPrimary
+                                : Colors.white12,
+                            width: 2),
                       ),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           _pychessPreview(s),
                           const SizedBox(height: 8),
-                          Text(_cap(s), style: GoogleFonts.fredoka(color: isSelected ? AppTheme.goldPrimary : AppTheme.textSecondary, fontSize: 10, fontWeight: FontWeight.w600)),
+                          Text(_cap(s),
+                              style: GoogleFonts.fredoka(
+                                  color: isSelected
+                                      ? AppTheme.goldPrimary
+                                      : AppTheme.textSecondary,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600)),
                         ],
                       ),
                     ),
@@ -497,8 +587,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _getPieceAvatar(String id) {
-    if (id == 'shuffled') return Icon(Icons.shuffle, size: 16, color: _pieceShape == 'shuffled' ? AppTheme.midnight : Colors.white);
-    
+    if (id == 'shuffled')
+      return Icon(Icons.shuffle,
+          size: 16,
+          color: _pieceShape == 'shuffled' ? AppTheme.midnight : Colors.white);
+
     // Use Knight as the most distinctive piece for the avatar
     return Padding(
       padding: const EdgeInsets.all(2.0),
@@ -511,13 +604,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-
-  Widget _glassAction({required IconData icon, required double size, required VoidCallback onTap}) {
+  Widget _glassAction(
+      {required IconData icon,
+      required double size,
+      required VoidCallback onTap}) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(6),
-        decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.1), shape: BoxShape.circle),
+        decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.1), shape: BoxShape.circle),
         child: Icon(icon, color: AppTheme.textPrimary, size: size - 12),
       ),
     );
@@ -535,7 +631,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       {'id': 'royal', 'name': 'Royal'},
     ];
     return Wrap(
-      spacing: 8, runSpacing: 8,
+      spacing: 8,
+      runSpacing: 8,
       children: styles.map((s) {
         final id = s['id']!;
         final selected = _pieceStyle == id;
@@ -544,13 +641,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           onSelected: (_) {
             setState(() => _pieceStyle = id);
             context.read<ThemeBloc>().add(ThemeChangeEvent(
-              boardTheme: _boardTheme, 
-              pieceShape: _pieceShape, 
-              pieceStyle: _pieceStyle
-            ));
+                boardTheme: _boardTheme,
+                pieceShape: _pieceShape,
+                pieceStyle: _pieceStyle));
           },
           label: Text(s['name']!, style: GoogleFonts.fredoka(fontSize: 12)),
-          labelStyle: TextStyle(color: selected ? AppTheme.midnight : AppTheme.textPrimary),
+          labelStyle: TextStyle(
+              color: selected ? AppTheme.midnight : AppTheme.textPrimary),
           selectedColor: AppTheme.goldPrimary,
         );
       }).toList(),
@@ -572,9 +669,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
         final selected = selectedSpeed == id;
         return ChoiceChip(
           selected: selected,
-          onSelected: (_) => context.read<SettingsBloc>().add(SettingsMoveAnimationSpeedEvent(id)),
+          onSelected: (_) => context
+              .read<SettingsBloc>()
+              .add(SettingsMoveAnimationSpeedEvent(id)),
           label: Text(opt['label']!, style: GoogleFonts.fredoka()),
-          labelStyle: TextStyle(color: selected ? AppTheme.midnight : AppTheme.textPrimary),
+          labelStyle: TextStyle(
+              color: selected ? AppTheme.midnight : AppTheme.textPrimary),
           selectedColor: AppTheme.goldPrimary,
           backgroundColor: AppTheme.surface.withValues(alpha: 0.7),
         );
@@ -614,7 +714,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           fontSize: 12,
         ),
       ),
-      trailing: const Icon(Icons.chevron_right_rounded, color: AppTheme.textMuted),
+      trailing:
+          const Icon(Icons.chevron_right_rounded, color: AppTheme.textMuted),
     );
   }
 
@@ -647,14 +748,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  String _cap(String s) => s.isEmpty ? s : '${s[0].toUpperCase()}${s.substring(1)}';
+  String _cap(String s) =>
+      s.isEmpty ? s : '${s[0].toUpperCase()}${s.substring(1)}';
 
   Widget _buildBackgroundThemeChips(String selected) {
     final themes = <Map<String, dynamic>>[
-      {'id': 'midnight', 'label': '🌙 Midnight', 'colors': <Color>[const Color(0xFF1A1A2E), const Color(0xFF0F3460)]},
-      {'id': 'ocean', 'label': '🌊 Ocean', 'colors': <Color>[const Color(0xFF0D1B2A), const Color(0xFF006D77)]},
-      {'id': 'forest', 'label': '🌿 Forest', 'colors': <Color>[const Color(0xFF1A1C16), const Color(0xFF2D6A4F)]},
-      {'id': 'sunset', 'label': '🌅 Sunset', 'colors': <Color>[const Color(0xFF2D1B33), const Color(0xFF6B1D3F)]},
+      {
+        'id': 'midnight',
+        'label': '🌙 Midnight',
+        'colors': <Color>[const Color(0xFF1A1A2E), const Color(0xFF0F3460)]
+      },
+      {
+        'id': 'ocean',
+        'label': '🌊 Ocean',
+        'colors': <Color>[const Color(0xFF0D1B2A), const Color(0xFF006D77)]
+      },
+      {
+        'id': 'forest',
+        'label': '🌿 Forest',
+        'colors': <Color>[const Color(0xFF1A1C16), const Color(0xFF2D6A4F)]
+      },
+      {
+        'id': 'sunset',
+        'label': '🌅 Sunset',
+        'colors': <Color>[const Color(0xFF2D1B33), const Color(0xFF6B1D3F)]
+      },
     ];
     return Wrap(
       spacing: 8,
@@ -664,7 +782,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         final isSelected = selected == id;
         final colors = (t['colors'] as List).cast<Color>();
         return GestureDetector(
-          onTap: () => context.read<SettingsBloc>().add(SettingsBackgroundEvent(id)),
+          onTap: () =>
+              context.read<SettingsBloc>().add(SettingsBackgroundEvent(id)),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             width: 145,
@@ -676,12 +795,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 color: isSelected ? AppTheme.goldPrimary : Colors.transparent,
                 width: isSelected ? 2.5 : 1,
               ),
-              boxShadow: isSelected ? [BoxShadow(color: AppTheme.goldPrimary.withValues(alpha: 0.2), blurRadius: 8)] : null,
+              boxShadow: isSelected
+                  ? [
+                      BoxShadow(
+                          color: AppTheme.goldPrimary.withValues(alpha: 0.2),
+                          blurRadius: 8)
+                    ]
+                  : null,
             ),
-            child: Text(t['label'] as String, style: GoogleFonts.fredoka(
-              color: isSelected ? AppTheme.goldPrimary : AppTheme.textPrimary,
-              fontSize: 13, fontWeight: FontWeight.w600,
-            )),
+            child: Text(t['label'] as String,
+                style: GoogleFonts.fredoka(
+                  color:
+                      isSelected ? AppTheme.goldPrimary : AppTheme.textPrimary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                )),
           ),
         );
       }).toList(),

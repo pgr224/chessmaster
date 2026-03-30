@@ -21,7 +21,7 @@ class AuthRepository {
   /// Generate a deterministic device fingerprint
   Future<String> getDeviceId() async {
     final prefs = await SharedPreferences.getInstance();
-    
+
     // Check if we already have a stored device ID
     final stored = prefs.getString(_deviceIdKey);
     if (stored != null) return stored;
@@ -51,8 +51,8 @@ class AuthRepository {
   Future<UserModel?> getCurrentUser({bool forceRefresh = false}) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString(_tokenKey);
-    
-    // Even if we have a token, if we want to refresh or if we only have deviceId, 
+
+    // Even if we have a token, if we want to refresh or if we only have deviceId,
     // try to silent login to get latest user data
     if (token == null || forceRefresh) {
       try {
@@ -65,7 +65,7 @@ class AuthRepository {
 
     final userData = prefs.getString(_userKey);
     if (token == null || userData == null) return null;
-    
+
     try {
       final Map<String, dynamic> data = jsonDecode(userData);
       return UserModel.fromJson(data);
@@ -80,7 +80,8 @@ class AuthRepository {
     final response = await _dio.post(
       '/api/auth/login',
       data: {'deviceId': deviceId},
-      options: Options(validateStatus: (status) => status == 200 || status == 404),
+      options:
+          Options(validateStatus: (status) => status == 200 || status == 404),
     );
 
     if (response.statusCode == 404) {
@@ -92,7 +93,8 @@ class AuthRepository {
       );
     }
 
-    final rawToken = (response.data['token'] ?? response.data['accessToken']) as String;
+    final rawToken =
+        (response.data['token'] ?? response.data['accessToken']) as String;
     final token = _normalizeToken(rawToken);
     final userId = response.data['userId'] as String;
 
@@ -114,17 +116,20 @@ class AuthRepository {
 
   Future<bool> checkUsername(String username) async {
     try {
-      final response = await _dio.get('/api/auth/check-username', queryParameters: {'username': username});
+      final response = await _dio.get('/api/auth/check-username',
+          queryParameters: {'username': username});
       return response.data['available'] == true;
     } catch (_) {
       return false;
     }
   }
 
-  Future<UserModel> register({required String username, String? avatarPath}) async {
+  Future<UserModel> register(
+      {required String username, String? avatarPath}) async {
     final normalizedUsername = _normalizeUsername(username);
     if (!_usernamePattern.hasMatch(normalizedUsername)) {
-      throw Exception('Username must be 2-30 characters and use only letters, numbers, or underscore.');
+      throw Exception(
+          'Username must be 2-30 characters and use only letters, numbers, or underscore.');
     }
 
     final deviceId = await getDeviceId();
@@ -153,7 +158,8 @@ class AuthRepository {
       throw Exception(_extractConflictMessage(response.data));
     }
 
-    final rawToken = (response.data['token'] ?? response.data['accessToken']) as String;
+    final rawToken =
+        (response.data['token'] ?? response.data['accessToken']) as String;
     final token = _normalizeToken(rawToken);
     final userId = response.data['userId'] as String;
 
@@ -184,7 +190,10 @@ class AuthRepository {
     if (responseData is! Map<String, dynamic>) return null;
 
     final tokenValue = responseData['token'] ?? responseData['accessToken'];
-    final userIdValue = responseData['userId'] ?? (responseData['user'] is Map<String, dynamic> ? responseData['user']['id'] : null);
+    final userIdValue = responseData['userId'] ??
+        (responseData['user'] is Map<String, dynamic>
+            ? responseData['user']['id']
+            : null);
 
     if (tokenValue is String) {
       final prefs = await SharedPreferences.getInstance();
@@ -210,7 +219,11 @@ class AuthRepository {
 
   String _extractConflictMessage(dynamic responseData) {
     if (responseData is Map<String, dynamic>) {
-      final candidates = [responseData['message'], responseData['error'], responseData['detail']];
+      final candidates = [
+        responseData['message'],
+        responseData['error'],
+        responseData['detail']
+      ];
       for (final value in candidates) {
         if (value is String && value.trim().isNotEmpty) {
           return value.trim();
@@ -227,13 +240,19 @@ class AuthRepository {
         final fieldErrors = details['fieldErrors'];
         if (fieldErrors is Map<String, dynamic>) {
           final usernameErrors = fieldErrors['username'];
-          if (usernameErrors is List && usernameErrors.isNotEmpty && usernameErrors.first is String) {
+          if (usernameErrors is List &&
+              usernameErrors.isNotEmpty &&
+              usernameErrors.first is String) {
             return usernameErrors.first as String;
           }
         }
       }
 
-      final candidates = [responseData['message'], responseData['error'], responseData['detail']];
+      final candidates = [
+        responseData['message'],
+        responseData['error'],
+        responseData['detail']
+      ];
       for (final value in candidates) {
         if (value is String && value.trim().isNotEmpty) {
           return value.trim();
@@ -269,7 +288,7 @@ class AuthRepository {
         return status >= 200 && status < 500;
       }),
     );
-    
+
     if (response.statusCode == 409) {
       throw Exception('Username already taken');
     } else if (response.statusCode != 200) {
@@ -278,13 +297,13 @@ class AuthRepository {
 
     final updatedData = response.data as Map<String, dynamic>;
     final prefs = await SharedPreferences.getInstance();
-    
+
     if (updatedData.containsKey('token') && updatedData['token'] != null) {
       final token = _normalizeToken(updatedData['token'] as String);
       await prefs.setString(_tokenKey, token);
       _dio.options.headers['Authorization'] = 'Bearer $token';
     }
-    
+
     // Merge local data
     final userData = prefs.getString(_userKey);
     final current = userData != null ? jsonDecode(userData) : {};
@@ -310,10 +329,10 @@ class AuthRepository {
     try {
       final dynamic decoded = jsonDecode(userData);
       if (decoded is! Map<String, dynamic>) return;
-      
+
       final current = decoded;
       final currentStats = current['stats'] as Map<String, dynamic>? ?? {};
-      
+
       // Update local data first (for instant feedback/offline play)
       current['xp'] = (current['xp'] as int? ?? 0) + xpDelta;
       statUpdates.forEach((key, value) {
@@ -340,13 +359,14 @@ class AuthRepository {
     }
   }
 
-  Future<void> updatePracticeDifficulty(String userId, double difficulty) async {
+  Future<void> updatePracticeDifficulty(
+      String userId, double difficulty) async {
     try {
       await _dio.put(
         '/api/profile/$userId/difficulty',
         data: {'practiceDifficulty': difficulty},
       );
-      
+
       final prefs = await SharedPreferences.getInstance();
       final userData = prefs.getString(_userKey);
       if (userData != null) {
@@ -359,7 +379,8 @@ class AuthRepository {
     } catch (_) {}
   }
 
-  Future<bool> donateXP({required String recipientId, required int amount}) async {
+  Future<bool> donateXP(
+      {required String recipientId, required int amount}) async {
     try {
       final response = await _dio.post(
         '/api/profile/xp/transfer',
@@ -438,7 +459,9 @@ class AuthRepository {
   }
 
   String _normalizeToken(String token) {
-    return token.replaceFirst(RegExp(r'^Bearer\s+', caseSensitive: false), '').trim();
+    return token
+        .replaceFirst(RegExp(r'^Bearer\s+', caseSensitive: false), '')
+        .trim();
   }
 
   /// Debug/cleanup method: Remove ALL user session & device data
@@ -447,8 +470,8 @@ class AuthRepository {
   /// Used for testing session persistence across app restarts
   Future<void> clearAllData() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_tokenKey);    // Clear auth token
-    await prefs.remove(_userKey);     // Clear user profile
+    await prefs.remove(_tokenKey); // Clear auth token
+    await prefs.remove(_userKey); // Clear user profile
     await prefs.remove(_deviceIdKey); // Clear device fingerprint
     _dio.options.headers.remove('Authorization');
   }

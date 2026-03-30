@@ -23,10 +23,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final authState = context.read<AuthBloc>().state;
     if (authState is AuthAuthenticatedState) {
       context.read<MultiplayerBloc>().add(MpConnectLobbyEvent(
-        authState.user.id,
-        authState.user.username,
-        rating: authState.user.xp,
-      ));
+            authState.user.id,
+            authState.user.username,
+            rating: authState.user.xp,
+          ));
     }
   }
 
@@ -34,23 +34,28 @@ class _LobbyScreenState extends State<LobbyScreen> {
   Widget build(BuildContext context) {
     return BlocConsumer<MultiplayerBloc, MultiplayerState>(
       listenWhen: (previous, current) =>
-          previous.status != current.status || previous.lobbyNotice != current.lobbyNotice,
+          previous.status != current.status ||
+          previous.lobbyNotice != current.lobbyNotice,
       listener: (context, state) {
         if (state.status == MultiplayerStatus.matchmaking) {
           context.push('/matchmaking');
-        } else if (state.status == MultiplayerStatus.inGame && state.gameId != null) {
+        } else if (state.status == MultiplayerStatus.inGame &&
+            state.gameId != null) {
           context.go('/room/${state.gameId}');
         }
 
         if (state.lobbyNotice != null) {
-          if (state.lobbyNotice!.contains('invited you') && state.challengerId != null) {
-             _showChallengeDialog(context, state.lobbyNotice!, state.challengerId!);
+          if (state.lobbyNotice!.contains('invited you') &&
+              state.challengerId != null) {
+            _showChallengeDialog(
+                context, state.lobbyNotice!, state.challengerId!);
           } else {
             ScaffoldMessenger.of(context)
               ..hideCurrentSnackBar()
               ..showSnackBar(SnackBar(
                 content: Text(state.lobbyNotice!),
-                onVisible: () => context.read<MultiplayerBloc>().add(MpClearNoticeEvent()),
+                onVisible: () =>
+                    context.read<MultiplayerBloc>().add(MpClearNoticeEvent()),
               ));
           }
         }
@@ -62,7 +67,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
             backgroundColor: Colors.transparent,
             elevation: 0,
             leading: IconButton(
-              icon: const Icon(Icons.arrow_back_rounded, color: AppTheme.textPrimary),
+              icon: const Icon(Icons.arrow_back_rounded,
+                  color: AppTheme.textPrimary),
               onPressed: () {
                 context.read<MultiplayerBloc>().add(MpDisconnectLobbyEvent());
                 context.pop();
@@ -79,7 +85,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
             centerTitle: true,
           ),
           body: Container(
-            decoration: const BoxDecoration(gradient: AppTheme.backgroundGradient),
+            decoration:
+                const BoxDecoration(gradient: AppTheme.backgroundGradient),
             child: SafeArea(
               child: LayoutBuilder(
                 builder: (context, constraints) {
@@ -92,7 +99,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(child: SingleChildScrollView(child: content)),
+                          Expanded(
+                              child: SingleChildScrollView(child: content)),
                           const SizedBox(width: 20),
                           SizedBox(
                             width: 340,
@@ -137,13 +145,16 @@ class _LobbyScreenState extends State<LobbyScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            width: 10, height: 10,
+            width: 10,
+            height: 10,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: isConnected ? AppTheme.accentGreen : AppTheme.accentRed,
               boxShadow: [
                 BoxShadow(
-                  color: (isConnected ? AppTheme.accentGreen : AppTheme.accentRed).withValues(alpha: 0.5),
+                  color:
+                      (isConnected ? AppTheme.accentGreen : AppTheme.accentRed)
+                          .withValues(alpha: 0.5),
                   blurRadius: 8,
                 ),
               ],
@@ -152,7 +163,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              hasError 
+              hasError
                   ? 'Network Error: ${state.connectionError}'
                   : isConnected
                       ? 'Connected to Global Server • ${state.onlineCount} players online'
@@ -167,21 +178,26 @@ class _LobbyScreenState extends State<LobbyScreen> {
             ),
           ),
           if (hasError)
-             TextButton(
-               onPressed: () {
-                 final auth = context.read<AuthBloc>().state;
-                 if (auth is AuthAuthenticatedState) {
-                   context.read<MultiplayerBloc>().add(MpConnectLobbyEvent(auth.user.id, auth.user.username, rating: auth.user.xp));
-                 }
-               },
-               child: Text('TRY AGAIN', style: GoogleFonts.fredoka(color: Colors.white, fontWeight: FontWeight.bold)),
-             ),
+            TextButton(
+              onPressed: () {
+                final auth = context.read<AuthBloc>().state;
+                if (auth is AuthAuthenticatedState) {
+                  context.read<MultiplayerBloc>().add(MpConnectLobbyEvent(
+                      auth.user.id, auth.user.username,
+                      rating: auth.user.xp));
+                }
+              },
+              child: Text('TRY AGAIN',
+                  style: GoogleFonts.fredoka(
+                      color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
         ],
       ),
     );
   }
 
-  Widget _buildMainContent(MultiplayerState state, BoxConstraints constraints, bool isWide) {
+  Widget _buildMainContent(
+      MultiplayerState state, BoxConstraints constraints, bool isWide) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -198,7 +214,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
           ),
         ).animate().fadeIn().slideY(),
         const SizedBox(height: 16),
-        _buildTimeGrid(state, constraints.maxWidth).animate().fadeIn(delay: 200.ms).slideY(),
+        _buildTimeGrid(state, constraints.maxWidth)
+            .animate()
+            .fadeIn(delay: 200.ms)
+            .slideY(),
         const SizedBox(height: 18),
         if (!isWide) ...[
           _buildOnlinePlayersButton(state),
@@ -216,15 +235,18 @@ class _LobbyScreenState extends State<LobbyScreen> {
               child: OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 18),
-                  side: BorderSide(color: AppTheme.goldPrimary.withValues(alpha: 0.5)),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  side: BorderSide(
+                      color: AppTheme.goldPrimary.withValues(alpha: 0.5)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20)),
                 ),
                 onPressed: () {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Private rooms coming soon!')),
                   );
                 },
-                icon: const Icon(Icons.lock_rounded, color: AppTheme.goldPrimary),
+                icon:
+                    const Icon(Icons.lock_rounded, color: AppTheme.goldPrimary),
                 label: Text(
                   'Create Private Game',
                   style: GoogleFonts.fredoka(
@@ -333,7 +355,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
         'info': '30 min per side. Thoughtful, classical chess.',
       },
     ];
-    
+
     final crossAxisCount = width < 520 ? 2 : 3;
     final aspectRatio = width < 520 ? 2.2 : 2.0;
 
@@ -351,28 +373,41 @@ class _LobbyScreenState extends State<LobbyScreen> {
         final item = times[index];
         final isSelected = state.selectedTimeControl == item['time'];
         final accentColor = item['color'] as Color;
-        
+
         return GestureDetector(
-          onTap: () => context.read<MultiplayerBloc>().add(MpChangeSelectedTimeEvent(item['time'] as String)),
+          onTap: () => context
+              .read<MultiplayerBloc>()
+              .add(MpChangeSelectedTimeEvent(item['time'] as String)),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             decoration: BoxDecoration(
-              gradient: isSelected 
-                ? LinearGradient(
-                    colors: [accentColor.withValues(alpha: 0.15), accentColor.withValues(alpha: 0.05)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  )
-                : null,
-              color: isSelected ? null : AppTheme.surface.withValues(alpha: 0.6),
+              gradient: isSelected
+                  ? LinearGradient(
+                      colors: [
+                        accentColor.withValues(alpha: 0.15),
+                        accentColor.withValues(alpha: 0.05)
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    )
+                  : null,
+              color:
+                  isSelected ? null : AppTheme.surface.withValues(alpha: 0.6),
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                color: isSelected ? accentColor : AppTheme.textMuted.withValues(alpha: 0.1),
+                color: isSelected
+                    ? accentColor
+                    : AppTheme.textMuted.withValues(alpha: 0.1),
                 width: isSelected ? 2 : 1,
               ),
-              boxShadow: isSelected 
-                ? [BoxShadow(color: accentColor.withValues(alpha: 0.2), blurRadius: 8, offset: const Offset(0, 2))]
-                : null,
+              boxShadow: isSelected
+                  ? [
+                      BoxShadow(
+                          color: accentColor.withValues(alpha: 0.2),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2))
+                    ]
+                  : null,
             ),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
@@ -391,7 +426,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       Text(
                         item['time'] as String,
                         style: GoogleFonts.fredoka(
-                          color: isSelected ? AppTheme.textPrimary : AppTheme.textSecondary,
+                          color: isSelected
+                              ? AppTheme.textPrimary
+                              : AppTheme.textSecondary,
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
                         ),
@@ -411,7 +448,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   Text(
                     item['info'] as String,
                     style: GoogleFonts.baloo2(
-                      color: isSelected ? AppTheme.textSecondary : AppTheme.textMuted.withValues(alpha: 0.7),
+                      color: isSelected
+                          ? AppTheme.textSecondary
+                          : AppTheme.textMuted.withValues(alpha: 0.7),
                       fontSize: 9,
                       fontWeight: FontWeight.w500,
                       height: 1.2,
@@ -450,7 +489,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
   }
 
   Widget _buildOnlinePlayersPreview(MultiplayerState state) {
-    final previewPlayers = state.availablePlayers.take(3).toList(growable: false);
+    final previewPlayers =
+        state.availablePlayers.take(3).toList(growable: false);
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -463,7 +503,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
         children: [
           Row(
             children: [
-              const Icon(Icons.person_search_rounded, color: AppTheme.goldPrimary),
+              const Icon(Icons.person_search_rounded,
+                  color: AppTheme.goldPrimary),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
@@ -488,7 +529,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
           const SizedBox(height: 10),
           Text(
             'Challenge a player directly or invite them to a friendly tournament room.',
-            style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 15, fontWeight: FontWeight.w600),
+            style: GoogleFonts.baloo2(
+                color: AppTheme.textSecondary,
+                fontSize: 15,
+                fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 12),
           ...previewPlayers.map(_buildPreviewPlayerTile),
@@ -499,7 +543,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
               onPressed: () => _showPlayersWindow(state),
               child: Text(
                 'Open full player window',
-                style: GoogleFonts.fredoka(color: AppTheme.goldPrimary, fontWeight: FontWeight.w600),
+                style: GoogleFonts.fredoka(
+                    color: AppTheme.goldPrimary, fontWeight: FontWeight.w600),
               ),
             ),
           ),
@@ -520,16 +565,24 @@ class _LobbyScreenState extends State<LobbyScreen> {
         children: [
           CircleAvatar(
             radius: 18,
-            backgroundColor: player.isAvailable ? AppTheme.accentCyan : AppTheme.textMuted,
-            child: Text(player.name.characters.first.toUpperCase(), style: GoogleFonts.fredoka(color: AppTheme.midnight)),
+            backgroundColor:
+                player.isAvailable ? AppTheme.accentCyan : AppTheme.textMuted,
+            child: Text(player.name.characters.first.toUpperCase(),
+                style: GoogleFonts.fredoka(color: AppTheme.midnight)),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(player.name, style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
-                Text('${player.xp} XP • ${player.flair}', style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 13)),
+                Text(player.name,
+                    style: GoogleFonts.fredoka(
+                        color: AppTheme.textPrimary,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600)),
+                Text('${player.xp} XP • ${player.flair}',
+                    style: GoogleFonts.baloo2(
+                        color: AppTheme.textSecondary, fontSize: 13)),
               ],
             ),
           ),
@@ -543,7 +596,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: (isAvailable ? AppTheme.accentCyan : AppTheme.textMuted).withValues(alpha: 0.16),
+        color: (isAvailable ? AppTheme.accentCyan : AppTheme.textMuted)
+            .withValues(alpha: 0.16),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
@@ -593,19 +647,26 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       const SizedBox(height: 14),
                       Text(
                         'Available Online Players',
-                        style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 26, fontWeight: FontWeight.w700),
+                        style: GoogleFonts.fredoka(
+                            color: AppTheme.textPrimary,
+                            fontSize: 26,
+                            fontWeight: FontWeight.w700),
                       ),
                       const SizedBox(height: 6),
                       Text(
                         'Choose a player and send either a 1v1 challenge or a tournament invite.',
-                        style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 16, fontWeight: FontWeight.w600),
+                        style: GoogleFonts.baloo2(
+                            color: AppTheme.textSecondary,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600),
                       ),
                       const SizedBox(height: 16),
                       Expanded(
                         child: ListView.builder(
                           controller: scrollController,
                           itemCount: state.availablePlayers.length,
-                          itemBuilder: (context, index) => _buildChallengeCard(state.availablePlayers[index]),
+                          itemBuilder: (context, index) => _buildChallengeCard(
+                              state.availablePlayers[index]),
                         ),
                       ),
                     ],
@@ -635,16 +696,26 @@ class _LobbyScreenState extends State<LobbyScreen> {
             children: [
               CircleAvatar(
                 radius: 22,
-                backgroundColor: player.isAvailable ? AppTheme.goldPrimary : AppTheme.textMuted,
-                child: Text(player.name.characters.first.toUpperCase(), style: GoogleFonts.fredoka(color: AppTheme.midnight, fontSize: 20)),
+                backgroundColor: player.isAvailable
+                    ? AppTheme.goldPrimary
+                    : AppTheme.textMuted,
+                child: Text(player.name.characters.first.toUpperCase(),
+                    style: GoogleFonts.fredoka(
+                        color: AppTheme.midnight, fontSize: 20)),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(player.name, style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.w700)),
-                    Text('${player.xp} XP • ${player.flair}', style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 14)),
+                    Text(player.name,
+                        style: GoogleFonts.fredoka(
+                            color: AppTheme.textPrimary,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700)),
+                    Text('${player.xp} XP • ${player.flair}',
+                        style: GoogleFonts.baloo2(
+                            color: AppTheme.textSecondary, fontSize: 14)),
                   ],
                 ),
               ),
@@ -662,7 +733,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           MpSendChallengeEvent(
                             opponent: player,
                             mode: ChallengeMode.duel,
-                            timeControl: context.read<MultiplayerBloc>().state.selectedTimeControl,
+                            timeControl: context
+                                .read<MultiplayerBloc>()
+                                .state
+                                .selectedTimeControl,
                           ),
                         )
                     : null,
@@ -675,7 +749,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           MpSendChallengeEvent(
                             opponent: player,
                             mode: ChallengeMode.tournament,
-                            timeControl: context.read<MultiplayerBloc>().state.selectedTimeControl,
+                            timeControl: context
+                                .read<MultiplayerBloc>()
+                                .state
+                                .selectedTimeControl,
                           ),
                         )
                     : null,
@@ -699,59 +776,78 @@ class _LobbyScreenState extends State<LobbyScreen> {
         elevation: 8,
         shadowColor: AppTheme.goldPrimary.withValues(alpha: 0.5),
       ),
-      onPressed: isReady ? () {
-        context.read<MultiplayerBloc>().add(MpStartMatchmakingEvent());
-      } : null,
-      child: isReady 
-        ? Text('Find Match', style: GoogleFonts.fredoka(
-            color: AppTheme.midnight, fontSize: 22, fontWeight: FontWeight.w800,
-          ))
-        : Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.midnight)),
-              const SizedBox(width: 12),
-              Text(
-                'Connecting...',
-                style: GoogleFonts.fredoka(
-                  color: AppTheme.midnight,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
+      onPressed: isReady
+          ? () {
+              context.read<MultiplayerBloc>().add(MpStartMatchmakingEvent());
+            }
+          : null,
+      child: isReady
+          ? Text('Find Match',
+              style: GoogleFonts.fredoka(
+                color: AppTheme.midnight,
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+              ))
+          : Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: AppTheme.midnight)),
+                const SizedBox(width: 12),
+                Text(
+                  'Connecting...',
+                  style: GoogleFonts.fredoka(
+                    color: AppTheme.midnight,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
     );
   }
 
-  void _showChallengeDialog(BuildContext context, String message, String challengerId) {
+  void _showChallengeDialog(
+      BuildContext context, String message, String challengerId) {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.midnight,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: Text('⚔️ New Challenge!', style: GoogleFonts.fredoka(color: AppTheme.goldPrimary)),
-        content: Text(message, style: GoogleFonts.baloo2(color: AppTheme.textPrimary, fontSize: 16)),
+        title: Text('⚔️ New Challenge!',
+            style: GoogleFonts.fredoka(color: AppTheme.goldPrimary)),
+        content: Text(message,
+            style:
+                GoogleFonts.baloo2(color: AppTheme.textPrimary, fontSize: 16)),
         actions: [
           TextButton(
             onPressed: () {
               context.read<MultiplayerBloc>().add(MpClearNoticeEvent());
               Navigator.pop(ctx);
             },
-            child: Text('Decline', style: GoogleFonts.fredoka(color: AppTheme.accentRed, fontWeight: FontWeight.w600)),
+            child: Text('Decline',
+                style: GoogleFonts.fredoka(
+                    color: AppTheme.accentRed, fontWeight: FontWeight.w600)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.goldPrimary, 
+              backgroundColor: AppTheme.goldPrimary,
               foregroundColor: AppTheme.midnight,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14)),
             ),
             onPressed: () {
-              context.read<MultiplayerBloc>().add(MpAcceptChallengeEvent(challengerId));
+              context
+                  .read<MultiplayerBloc>()
+                  .add(MpAcceptChallengeEvent(challengerId));
               Navigator.pop(ctx);
             },
-            child: Text('Accept', style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
+            child: Text('Accept',
+                style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
           ),
         ],
       ),

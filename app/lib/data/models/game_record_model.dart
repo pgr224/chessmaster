@@ -1,5 +1,3 @@
-
-
 class GameRecord {
   final String id;
   final String date;
@@ -29,11 +27,11 @@ class GameRecord {
   }
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'date': date,
-    'opponent': opponent,
-    'result': result,
-    'mode': mode,
-    'moves': moves,
-  };
+        'id': id,
+        'date': date,
+        'opponent': opponent,
+        'result': result,
+        'mode': mode,
+        'moves': moves,
+      };
 }

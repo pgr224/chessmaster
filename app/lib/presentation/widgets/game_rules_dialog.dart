@@ -37,9 +37,11 @@ class GameRulesDialog extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppTheme.navyCard,
           borderRadius: BorderRadius.circular(32),
-          border: Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.3), width: 2),
+          border: Border.all(
+              color: AppTheme.goldPrimary.withValues(alpha: 0.3), width: 2),
           boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 40),
+            BoxShadow(
+                color: Colors.black.withValues(alpha: 0.5), blurRadius: 40),
           ],
         ),
         child: Column(
@@ -47,17 +49,32 @@ class GameRulesDialog extends StatelessWidget {
           children: [
             const Icon(Icons.timer_sharp, color: AppTheme.goldPrimary, size: 48)
                 .animate(onPlay: (c) => c.repeat())
-                .scale(begin: const Offset(1,1), end: const Offset(1.1, 1.1), duration: 1.seconds, curve: Curves.easeInOut)
+                .scale(
+                    begin: const Offset(1, 1),
+                    end: const Offset(1.1, 1.1),
+                    duration: 1.seconds,
+                    curve: Curves.easeInOut)
                 .then()
-                .scale(begin: const Offset(1.1,1.1), end: const Offset(1, 1), duration: 1.seconds, curve: Curves.easeInOut),
+                .scale(
+                    begin: const Offset(1.1, 1.1),
+                    end: const Offset(1, 1),
+                    duration: 1.seconds,
+                    curve: Curves.easeInOut),
             const SizedBox(height: 16),
-            Text(title.toUpperCase(), style: GoogleFonts.fredoka(color: AppTheme.goldPrimary, fontSize: 24, fontWeight: FontWeight.bold)),
+            Text(title.toUpperCase(),
+                style: GoogleFonts.fredoka(
+                    color: AppTheme.goldPrimary,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            Text(description, style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 16)),
+            Text(description,
+                style: GoogleFonts.baloo2(
+                    color: AppTheme.textSecondary, fontSize: 16)),
             const SizedBox(height: 24),
             _ruleItem(Icons.access_time_filled, details),
             _ruleItem(Icons.flash_on, "Increment support enabled (Fischer)"),
-            _ruleItem(Icons.gavel, "Lose on time unless opponent has insufficient material"),
+            _ruleItem(Icons.gavel,
+                "Lose on time unless opponent has insufficient material"),
             _ruleItem(Icons.verified_user, "Authoritative server clock synced"),
             const SizedBox(height: 32),
             SizedBox(
@@ -67,10 +84,13 @@ class GameRulesDialog extends StatelessWidget {
                   backgroundColor: AppTheme.goldPrimary,
                   foregroundColor: Colors.black,
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16)),
                 ),
                 onPressed: () => Navigator.pop(context),
-                child: Text("LET'S PLAY!", style: GoogleFonts.fredoka(fontWeight: FontWeight.bold, fontSize: 18)),
+                child: Text("LET'S PLAY!",
+                    style: GoogleFonts.fredoka(
+                        fontWeight: FontWeight.bold, fontSize: 18)),
               ),
             ),
           ],
@@ -84,9 +104,13 @@ class GameRulesDialog extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
-          Icon(icon, color: AppTheme.goldPrimary.withValues(alpha: 0.8), size: 18),
+          Icon(icon,
+              color: AppTheme.goldPrimary.withValues(alpha: 0.8), size: 18),
           const SizedBox(width: 12),
-          Expanded(child: Text(text, style: GoogleFonts.baloo2(color: AppTheme.textPrimary, fontSize: 14))),
+          Expanded(
+              child: Text(text,
+                  style: GoogleFonts.baloo2(
+                      color: AppTheme.textPrimary, fontSize: 14))),
         ],
       ),
     );

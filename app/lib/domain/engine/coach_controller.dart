@@ -15,18 +15,18 @@ class CoachController {
   // ═══════════════════════════════════════════
   CoachSettings _settings;
   AIDifficulty _difficulty;
-  
+
   // Evaluation cache to avoid redundant computation
   final Map<String, int> _evalCache = {};
 
   CoachController({
     CoachSettings? settings,
     AIDifficulty difficulty = AIDifficulty.intermediate,
-  }) : _settings = settings ?? const CoachSettings(),
-       _difficulty = difficulty;
+  })  : _settings = settings ?? const CoachSettings(),
+        _difficulty = difficulty;
 
   CoachSettings get settings => _settings;
-  
+
   void updateSettings(CoachSettings settings) => _settings = settings;
   void updateDifficulty(AIDifficulty diff) => _difficulty = diff;
 
@@ -36,7 +36,7 @@ class CoachController {
 
   /// Evaluates a player's move by comparing it to the engine's best move.
   /// Returns a [CoachFeedback] with classification, message, and explanation.
-  /// 
+  ///
   /// [engineBeforeMove] - A snapshot of the engine BEFORE the player's move
   /// [playedMove] - The move the player actually made
   /// [engineAfterMove] - The engine AFTER the move was made
@@ -48,7 +48,9 @@ class CoachController {
     try {
       // Get the best move from the position before the player moved
       final topMoves = await AIEngine.getTopMoves(
-        engineBeforeMove, _difficulty, count: 3,
+        engineBeforeMove,
+        _difficulty,
+        count: 3,
       );
 
       if (topMoves.isEmpty) {
@@ -68,8 +70,12 @@ class CoachController {
           final gap = bestMoveScore - secondBestScore;
           if (gap > 200) {
             return _buildFeedback(
-              MoveClassification.brilliant, 0, bestMoveStr, null,
-              pattern: _detectPattern(engineBeforeMove, engineAfterMove, playedMove),
+              MoveClassification.brilliant,
+              0,
+              bestMoveStr,
+              null,
+              pattern:
+                  _detectPattern(engineBeforeMove, engineAfterMove, playedMove),
             );
           }
         }
@@ -89,21 +95,26 @@ class CoachController {
       playedScore ??= -(await AIEngine.evaluatePosition(engineAfterMove));
 
       final centipawnLoss = bestMoveScore - playedScore;
-      
+
       // Classify the move
       final classification = _classifyMove(centipawnLoss);
-      
+
       // Detect tactical pattern
-      final pattern = _detectPattern(engineBeforeMove, engineAfterMove, playedMove);
-      
+      final pattern =
+          _detectPattern(engineBeforeMove, engineAfterMove, playedMove);
+
       // Find alternative move
       String? altMove;
-      if (topMoves.length >= 2 && topMoves[1].$1.toAlgebraic() != playedMoveStr) {
+      if (topMoves.length >= 2 &&
+          topMoves[1].$1.toAlgebraic() != playedMoveStr) {
         altMove = topMoves[1].$1.toAlgebraic();
       }
 
       return _buildFeedback(
-        classification, centipawnLoss, bestMoveStr, altMove,
+        classification,
+        centipawnLoss,
+        bestMoveStr,
+        altMove,
         pattern: pattern,
       );
     } catch (e) {
@@ -158,8 +169,10 @@ class CoachController {
 
     // Detect center control (e4, d4, e5, d5)
     final centerSquares = [
-      const Square(3, 3), const Square(4, 3),
-      const Square(3, 4), const Square(4, 4),
+      const Square(3, 3),
+      const Square(4, 3),
+      const Square(3, 4),
+      const Square(4, 4),
     ];
     if (centerSquares.any((s) => s == move.to)) {
       return TacticalPattern.centerControl;
@@ -195,7 +208,8 @@ class CoachController {
     final level = _settings.level;
 
     final message = _getMessage(classification, personality, pattern);
-    final explanation = _getExplanation(classification, level, cpLoss, bestMove, pattern);
+    final explanation =
+        _getExplanation(classification, level, cpLoss, bestMove, pattern);
 
     return CoachFeedback(
       classification: classification,
@@ -224,7 +238,8 @@ class CoachController {
     return switch (personality) {
       CoachPersonality.friendly => _friendlyMessage(classification, pattern),
       CoachPersonality.strict => _strictMessage(classification, pattern),
-      CoachPersonality.motivational => _motivationalMessage(classification, pattern),
+      CoachPersonality.motivational =>
+        _motivationalMessage(classification, pattern),
     };
   }
 
@@ -233,7 +248,8 @@ class CoachController {
       MoveClassification.brilliant => 'WOW! Brilliant move! 💎✨',
       MoveClassification.best => 'Nice move! That was the best one! ⭐',
       MoveClassification.good => 'Good move! 👍',
-      MoveClassification.needsImprovement => 'Not bad, but there was a stronger option 🤔',
+      MoveClassification.needsImprovement =>
+        'Not bad, but there was a stronger option 🤔',
       MoveClassification.mistake => 'Oops! You missed something better ⚠️',
       MoveClassification.blunder => 'Oh no! That was a big mistake! 😱',
     };
@@ -244,20 +260,27 @@ class CoachController {
       MoveClassification.brilliant => 'Excellent. A precise move.',
       MoveClassification.best => 'Correct. That was the strongest move.',
       MoveClassification.good => 'Acceptable move.',
-      MoveClassification.needsImprovement => 'That was inaccurate. Think deeper.',
-      MoveClassification.mistake => 'That was a mistake. Analyze before moving.',
-      MoveClassification.blunder => 'Critical error. You lost significant advantage.',
+      MoveClassification.needsImprovement =>
+        'That was inaccurate. Think deeper.',
+      MoveClassification.mistake =>
+        'That was a mistake. Analyze before moving.',
+      MoveClassification.blunder =>
+        'Critical error. You lost significant advantage.',
     };
   }
 
   String _motivationalMessage(MoveClassification c, TacticalPattern p) {
     return switch (c) {
-      MoveClassification.brilliant => 'INCREDIBLE! You played like a grandmaster! 🔥',
+      MoveClassification.brilliant =>
+        'INCREDIBLE! You played like a grandmaster! 🔥',
       MoveClassification.best => 'Perfect! Keep up this amazing play! 🚀',
       MoveClassification.good => 'Great job! You\'re getting stronger! 💪',
-      MoveClassification.needsImprovement => 'So close! You\'re improving every move! 📈',
-      MoveClassification.mistake => 'That\'s OK! Champions learn from mistakes! 🌟',
-      MoveClassification.blunder => 'Don\'t worry! Every master was once a beginner! 💝',
+      MoveClassification.needsImprovement =>
+        'So close! You\'re improving every move! 📈',
+      MoveClassification.mistake =>
+        'That\'s OK! Champions learn from mistakes! 🌟',
+      MoveClassification.blunder =>
+        'Don\'t worry! Every master was once a beginner! 💝',
     };
   }
 
@@ -287,7 +310,8 @@ class CoachController {
     }
 
     // Best move suggestion (don't reveal full solution instantly)
-    if (bestMove != null && classification.index >= MoveClassification.needsImprovement.index) {
+    if (bestMove != null &&
+        classification.index >= MoveClassification.needsImprovement.index) {
       if (level == CoachingLevel.beginner) {
         // Beginner: hint at the square without full move
         final toSquare = bestMove.substring(2, 4);
@@ -304,20 +328,22 @@ class CoachController {
   // ═══════════════════════════════════════════
   // HINT SYSTEM — On Demand
   // ═══════════════════════════════════════════
-  
+
   /// Returns a hint for the current position.
   /// Each hint costs 10 XP.
   Future<HintResult?> getHint(ChessEngine engine) async {
     try {
       final topMoves = await AIEngine.getTopMoves(
-        engine, _difficulty, count: 2,
+        engine,
+        _difficulty,
+        count: 2,
       );
 
       if (topMoves.isEmpty) return null;
 
       final bestMove = topMoves[0];
       final bestMoveStr = bestMove.$1.toAlgebraic();
-      
+
       // Build explanation
       final pattern = _detectPatternForHint(engine, bestMove.$1);
       String explanation;
@@ -363,8 +389,10 @@ class CoachController {
 
     // Center control
     final centerSquares = [
-      const Square(3, 3), const Square(4, 3),
-      const Square(3, 4), const Square(4, 4),
+      const Square(3, 3),
+      const Square(4, 3),
+      const Square(3, 4),
+      const Square(4, 4),
     ];
     if (centerSquares.any((s) => s == move.to)) {
       return TacticalPattern.centerControl;
@@ -381,19 +409,23 @@ class CoachController {
     return TacticalPattern.none;
   }
 
-  String _buildHintExplanation(Move move, TacticalPattern pattern, ChessEngine engine) {
+  String _buildHintExplanation(
+      Move move, TacticalPattern pattern, ChessEngine engine) {
     final piece = engine.pieceAt(move.from);
     if (piece == null) return 'Try this move!';
 
     final pieceName = _pieceName(piece.type);
 
     return switch (pattern) {
-      TacticalPattern.fork => 'Try moving your $pieceName to attack two pieces at once! 🔱',
+      TacticalPattern.fork =>
+        'Try moving your $pieceName to attack two pieces at once! 🔱',
       TacticalPattern.pin => 'Pin the opponent\'s piece so it can\'t move! 📌',
       TacticalPattern.materialGain => 'There\'s a piece you can capture! 💰',
       TacticalPattern.kingSafety => 'Castle to protect your king! 🏰',
-      TacticalPattern.centerControl => 'Control the center with your $pieceName! 🎯',
-      TacticalPattern.development => 'Develop your $pieceName to a better square! 🚀',
+      TacticalPattern.centerControl =>
+        'Control the center with your $pieceName! 🎯',
+      TacticalPattern.development =>
+        'Develop your $pieceName to a better square! 🚀',
       TacticalPattern.pawnPromotion => 'Push your pawn to become a queen! 👑',
       TacticalPattern.checkmate => 'There\'s a checkmate available! 🏆',
       _ => 'Try moving your $pieceName for a strong position! ♟️',
@@ -409,13 +441,13 @@ class CoachController {
   }
 
   String _pieceName(PieceType type) => switch (type) {
-    PieceType.pawn => 'pawn',
-    PieceType.knight => 'knight',
-    PieceType.bishop => 'bishop',
-    PieceType.rook => 'rook',
-    PieceType.queen => 'queen',
-    PieceType.king => 'king',
-  };
+        PieceType.pawn => 'pawn',
+        PieceType.knight => 'knight',
+        PieceType.bishop => 'bishop',
+        PieceType.rook => 'rook',
+        PieceType.queen => 'queen',
+        PieceType.king => 'king',
+      };
 
   // ═══════════════════════════════════════════
   // POST-GAME ANALYSIS
@@ -440,16 +472,19 @@ class CoachController {
       improvementTip = 'Try harder opponents to keep growing!';
     } else if (accuracy >= 80) {
       overallMessage = '🚀 Excellent game! Very precise play!';
-      improvementTip = 'Focus on the middlegame tactics to reach the next level.';
+      improvementTip =
+          'Focus on the middlegame tactics to reach the next level.';
     } else if (accuracy >= 60) {
       overallMessage = '🔥 Solid performance! Room for improvement.';
       improvementTip = 'Practice tactical puzzles to sharpen your vision.';
     } else if (accuracy >= 40) {
       overallMessage = '💎 Good effort! Keep practicing!';
-      improvementTip = 'Take more time before each move. Look for captures and checks first.';
+      improvementTip =
+          'Take more time before each move. Look for captures and checks first.';
     } else {
       overallMessage = '💪 Every game is a learning opportunity!';
-      improvementTip = 'Try playing slower games to build your pattern recognition.';
+      improvementTip =
+          'Try playing slower games to build your pattern recognition.';
     }
 
     return PostGameAnalysis(

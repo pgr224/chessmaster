@@ -28,7 +28,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
   Future<void> _loadAchievements() async {
     final prefs = await SharedPreferences.getInstance();
     final savedData = prefs.getString('achievements');
-    
+
     if (savedData != null) {
       try {
         final List<dynamic> saved = jsonDecode(savedData) as List<dynamic>;
@@ -60,10 +60,12 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
     final displayed = _selectedCategory != null
         ? _achievements.where((a) => a.category == _selectedCategory).toList()
         : _achievements;
-    
+
     final unlocked = _achievements.where((a) => a.isUnlocked).length;
     final total = _achievements.length;
-    final totalPoints = _achievements.where((a) => a.isUnlocked).fold(0, (sum, a) => sum + a.points);
+    final totalPoints = _achievements
+        .where((a) => a.isUnlocked)
+        .fold(0, (sum, a) => sum + a.points);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -71,7 +73,8 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
         decoration: const BoxDecoration(gradient: AppTheme.backgroundGradient),
         child: SafeArea(
           child: _loading
-              ? const Center(child: CircularProgressIndicator(color: AppTheme.goldPrimary))
+              ? const Center(
+                  child: CircularProgressIndicator(color: AppTheme.goldPrimary))
               : CustomScrollView(
                   physics: const BouncingScrollPhysics(),
                   slivers: [
@@ -81,7 +84,8 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
                       elevation: 0,
                       leading: IconButton(
                         onPressed: () => context.pop(),
-                        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppTheme.textPrimary),
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                            color: AppTheme.textPrimary),
                       ),
                       title: Text(
                         '🏆 ACHIEVEMENTS',
@@ -99,12 +103,15 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
                     // Progress summary
                     SliverToBoxAdapter(
                       child: Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        margin: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
                           gradient: AppTheme.cardGradient,
                           borderRadius: BorderRadius.circular(24),
-                          border: Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.25)),
+                          border: Border.all(
+                              color:
+                                  AppTheme.goldPrimary.withValues(alpha: 0.25)),
                           boxShadow: AppTheme.cardShadow,
                         ),
                         child: Column(
@@ -112,9 +119,11 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceAround,
                               children: [
-                                _summaryItem('$unlocked/$total', 'Unlocked', AppTheme.goldPrimary),
+                                _summaryItem('$unlocked/$total', 'Unlocked',
+                                    AppTheme.goldPrimary),
                                 _divider(),
-                                _summaryItem('$totalPoints', 'Points', AppTheme.accentCyan),
+                                _summaryItem('$totalPoints', 'Points',
+                                    AppTheme.accentCyan),
                                 _divider(),
                                 _summaryItem(
                                   '${(unlocked / total * 100).toStringAsFixed(0)}%',
@@ -129,8 +138,10 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
                               borderRadius: BorderRadius.circular(6),
                               child: LinearProgressIndicator(
                                 value: unlocked / total,
-                                backgroundColor: Colors.white.withValues(alpha: 0.05),
-                                valueColor: const AlwaysStoppedAnimation(AppTheme.goldPrimary),
+                                backgroundColor:
+                                    Colors.white.withValues(alpha: 0.05),
+                                valueColor: const AlwaysStoppedAnimation(
+                                    AppTheme.goldPrimary),
                                 minHeight: 8,
                               ),
                             ),
@@ -148,8 +159,8 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
                           padding: const EdgeInsets.symmetric(horizontal: 12),
                           children: [
                             _categoryChip(null, '🏷️ All'),
-                            ...AchievementCategory.values.map((cat) =>
-                              _categoryChip(cat, categoryName(cat)),
+                            ...AchievementCategory.values.map(
+                              (cat) => _categoryChip(cat, categoryName(cat)),
                             ),
                           ],
                         ),
@@ -162,7 +173,8 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
                     SliverPadding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       sliver: SliverGrid(
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 2,
                           mainAxisSpacing: 12,
                           crossAxisSpacing: 12,
@@ -208,7 +220,9 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
         selectedColor: AppTheme.goldPrimary,
         checkmarkColor: AppTheme.midnight,
         side: BorderSide(
-          color: isSelected ? AppTheme.goldPrimary : Colors.white.withValues(alpha: 0.06),
+          color: isSelected
+              ? AppTheme.goldPrimary
+              : Colors.white.withValues(alpha: 0.06),
         ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -219,22 +233,32 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
   Widget _summaryItem(String value, String label, Color color) {
     return Column(
       children: [
-        Text(value, style: GoogleFonts.fredoka(color: color, fontSize: 22, fontWeight: FontWeight.w700)),
+        Text(value,
+            style: GoogleFonts.fredoka(
+                color: color, fontSize: 22, fontWeight: FontWeight.w700)),
         const SizedBox(height: 2),
-        Text(label, style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 12)),
+        Text(label,
+            style: GoogleFonts.baloo2(
+                color: AppTheme.textSecondary, fontSize: 12)),
       ],
     );
   }
 
   Widget _divider() => Container(
-    width: 1, height: 40,
-    decoration: BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.topCenter, end: Alignment.bottomCenter,
-        colors: [Colors.transparent, AppTheme.textMuted.withValues(alpha: 0.3), Colors.transparent],
-      ),
-    ),
-  );
+        width: 1,
+        height: 40,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.transparent,
+              AppTheme.textMuted.withValues(alpha: 0.3),
+              Colors.transparent
+            ],
+          ),
+        ),
+      );
 }
 
 class _AchievementCard extends StatelessWidget {
@@ -246,7 +270,8 @@ class _AchievementCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isUnlocked = achievement.isUnlocked;
-    final hasProgress = achievement.requiredCount != null && achievement.requiredCount! > 0;
+    final hasProgress =
+        achievement.requiredCount != null && achievement.requiredCount! > 0;
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -268,13 +293,15 @@ class _AchievementCard extends StatelessWidget {
               : Colors.white.withValues(alpha: 0.05),
           width: isUnlocked ? 2 : 1,
         ),
-        boxShadow: isUnlocked ? [
-          BoxShadow(
-            color: AppTheme.goldPrimary.withValues(alpha: 0.15),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ] : null,
+        boxShadow: isUnlocked
+            ? [
+                BoxShadow(
+                  color: AppTheme.goldPrimary.withValues(alpha: 0.15),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -297,7 +324,9 @@ class _AchievementCard extends StatelessWidget {
                     achievement.icon,
                     style: TextStyle(
                       fontSize: 26,
-                      color: isUnlocked ? null : Colors.white.withValues(alpha: 0.3),
+                      color: isUnlocked
+                          ? null
+                          : Colors.white.withValues(alpha: 0.3),
                     ),
                   ),
                 ),
@@ -305,13 +334,16 @@ class _AchievementCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: (isUnlocked ? AppTheme.goldPrimary : AppTheme.textMuted).withValues(alpha: 0.1),
+                  color:
+                      (isUnlocked ? AppTheme.goldPrimary : AppTheme.textMuted)
+                          .withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   '${achievement.points}pts',
                   style: GoogleFonts.fredoka(
-                    color: isUnlocked ? AppTheme.goldPrimary : AppTheme.textMuted,
+                    color:
+                        isUnlocked ? AppTheme.goldPrimary : AppTheme.textMuted,
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                   ),
@@ -360,14 +392,18 @@ class _AchievementCard extends StatelessWidget {
             const SizedBox(height: 3),
             Text(
               '${achievement.currentProgress}/${achievement.requiredCount}',
-              style: GoogleFonts.jura(color: AppTheme.textMuted, fontSize: 10, fontWeight: FontWeight.bold),
+              style: GoogleFonts.jura(
+                  color: AppTheme.textMuted,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold),
             ),
           ],
           if (isUnlocked) ...[
             const SizedBox(height: 6),
             Row(
               children: [
-                const Icon(Icons.check_circle_rounded, color: AppTheme.goldPrimary, size: 14),
+                const Icon(Icons.check_circle_rounded,
+                    color: AppTheme.goldPrimary, size: 14),
                 const SizedBox(width: 4),
                 Text(
                   'UNLOCKED',

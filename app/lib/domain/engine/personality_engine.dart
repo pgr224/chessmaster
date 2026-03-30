@@ -2,22 +2,30 @@ import 'dart:math' as math;
 
 enum AIPersonality {
   aggressive, // Focuses on checks and captures
-  defensive,  // Avoids threats, prioritizes king safety
-  tricky,     // Plays slightly suboptimal moves to set traps
-  lazy,       // Makes occasional random moves
-  random      // Purely random (used as fallback or for extreme blunders)
+  defensive, // Avoids threats, prioritizes king safety
+  tricky, // Plays slightly suboptimal moves to set traps
+  lazy, // Makes occasional random moves
+  random // Purely random (used as fallback or for extreme blunders)
 }
 
 extension AIPersonalityInfo on AIPersonality {
   String get message => switch (this) {
-    AIPersonality.aggressive => "I'm coming for your King! 😈🔥",
-    AIPersonality.defensive => "My defense is unbreakable! 🏰🛡️",
-    AIPersonality.tricky => "Hehe, can you spot my trap? 🃏✨",
-    AIPersonality.lazy => "Ho hum, just an ordinary move... 🥱☕",
-    AIPersonality.random => "Wait, what's a chess? 🤪🌀",
-  };
+        AIPersonality.aggressive => "I'm coming for your King! 😈🔥",
+        AIPersonality.defensive => "My defense is unbreakable! 🏰🛡️",
+        AIPersonality.tricky => "Hehe, can you spot my trap? 🃏✨",
+        AIPersonality.lazy => "Ho hum, just an ordinary move... 🥱☕",
+        AIPersonality.random => "Wait, what's a chess? 🤪🌀",
+      };
 
   String get label => name[0].toUpperCase() + name.substring(1);
+
+  double get timeMultiplier => switch (this) {
+        AIPersonality.aggressive => 0.7,
+        AIPersonality.defensive => 1.0,
+        AIPersonality.tricky => 0.85,
+        AIPersonality.lazy => 0.6,
+        AIPersonality.random => 0.5,
+      };
 }
 
 class PersonalityEngine {

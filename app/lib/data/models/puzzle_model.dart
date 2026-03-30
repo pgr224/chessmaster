@@ -26,7 +26,18 @@ class Puzzle extends Equatable {
   });
 
   @override
-  List<Object?> get props => [id, title, description, initialFEN, moves, reward, rating, themes, gameId, playerColor];
+  List<Object?> get props => [
+        id,
+        title,
+        description,
+        initialFEN,
+        moves,
+        reward,
+        rating,
+        themes,
+        gameId,
+        playerColor
+      ];
 }
 
 class PuzzleMove extends Equatable {
@@ -35,7 +46,8 @@ class PuzzleMove extends Equatable {
   final String hint;
   final String dialog;
   final String successDialog;
-  final bool isOpponentMove; // true = auto-played by engine, false = user must find this move
+  final bool
+      isOpponentMove; // true = auto-played by engine, false = user must find this move
 
   const PuzzleMove({
     required this.move,
@@ -47,5 +59,6 @@ class PuzzleMove extends Equatable {
   });
 
   @override
-  List<Object?> get props => [move, uciMove, hint, dialog, successDialog, isOpponentMove];
+  List<Object?> get props =>
+      [move, uciMove, hint, dialog, successDialog, isOpponentMove];
 }

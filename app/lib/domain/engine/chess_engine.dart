@@ -3,6 +3,7 @@
 library;
 
 enum PieceType { pawn, rook, knight, bishop, queen, king }
+
 enum PieceColor { white, black }
 
 class ChessPiece {
@@ -46,8 +47,12 @@ class ChessPiece {
 
   String toFEN() {
     final chars = {
-      PieceType.pawn: 'p', PieceType.rook: 'r', PieceType.knight: 'n',
-      PieceType.bishop: 'b', PieceType.queen: 'q', PieceType.king: 'k',
+      PieceType.pawn: 'p',
+      PieceType.rook: 'r',
+      PieceType.knight: 'n',
+      PieceType.bishop: 'b',
+      PieceType.queen: 'q',
+      PieceType.king: 'k',
     };
     final c = chars[type]!;
     return color == PieceColor.white ? c.toUpperCase() : c;
@@ -69,7 +74,8 @@ class Square {
 
   bool get isValid => file >= 0 && file < 8 && rank >= 0 && rank < 8;
 
-  Square operator +(List<int> delta) => Square(file + delta[0], rank + delta[1]);
+  Square operator +(List<int> delta) =>
+      Square(file + delta[0], rank + delta[1]);
 
   String toAlgebraic() => '${String.fromCharCode(97 + file)}${rank + 1}';
 
@@ -105,8 +111,10 @@ class Move {
     final s = '${from.toAlgebraic()}${to.toAlgebraic()}';
     if (promotion != null) {
       final p = {
-        PieceType.queen: 'q', PieceType.rook: 'r',
-        PieceType.bishop: 'b', PieceType.knight: 'n'
+        PieceType.queen: 'q',
+        PieceType.rook: 'r',
+        PieceType.bishop: 'b',
+        PieceType.knight: 'n'
       }[promotion];
       return '$s$p';
     }
@@ -131,8 +139,10 @@ class Move {
     if (s.length > 4) {
       final pChar = s[4].toLowerCase();
       promo = {
-        'q': PieceType.queen, 'r': PieceType.rook,
-        'b': PieceType.bishop, 'n': PieceType.knight
+        'q': PieceType.queen,
+        'r': PieceType.rook,
+        'b': PieceType.bishop,
+        'n': PieceType.knight
       }[pChar];
     }
     return Move(from: from, to: to, promotion: promo);
@@ -143,7 +153,15 @@ class Move {
 }
 
 enum GameResult { ongoing, whiteWins, blackWins, draw }
-enum DrawReason { stalemate, insufficientMaterial, fiftyMoveRule, threefoldRepetition, agreement }
+
+enum DrawReason {
+  stalemate,
+  insufficientMaterial,
+  fiftyMoveRule,
+  threefoldRepetition,
+  agreement
+}
+
 enum GameStatus { active, check, checkmate, stalemate, draw }
 
 class ChessEngine {
@@ -185,8 +203,14 @@ class ChessEngine {
   void _placePieces(PieceColor color, int backRank) {
     final pawnRank = color == PieceColor.white ? 1 : 6;
     final order = [
-      PieceType.rook, PieceType.knight, PieceType.bishop, PieceType.queen,
-      PieceType.king, PieceType.bishop, PieceType.knight, PieceType.rook,
+      PieceType.rook,
+      PieceType.knight,
+      PieceType.bishop,
+      PieceType.queen,
+      PieceType.king,
+      PieceType.bishop,
+      PieceType.knight,
+      PieceType.rook,
     ];
     for (int f = 0; f < 8; f++) {
       _board[backRank][f] = ChessPiece(type: order[f], color: color);
@@ -233,8 +257,9 @@ class ChessEngine {
   /// Make a move — returns true if successful
   bool makeMove(Move move) {
     final legal = legalMovesFrom(move.from);
-    final legalMove = legal.where((m) => m.to == move.to &&
-        m.promotion == move.promotion).firstOrNull;
+    final legalMove = legal
+        .where((m) => m.to == move.to && m.promotion == move.promotion)
+        .firstOrNull;
     if (legalMove == null) return false;
 
     // Generate algebraic representation for the UI
@@ -252,7 +277,8 @@ class ChessEngine {
     final move = _moveHistory.removeLast();
     _unmakeMove(move);
     _currentTurn = _opponent(_currentTurn);
-    if (_currentTurn == PieceColor.black) _fullMoveNumber--; // Redo full move count correctly
+    if (_currentTurn == PieceColor.black)
+      _fullMoveNumber--; // Redo full move count correctly
     _positionHistory.removeLast();
     _updateStatus();
     return true;
@@ -260,12 +286,13 @@ class ChessEngine {
 
   void _unmakeMove(Move move) {
     final piece = _board[move.to.rank][move.to.file]!;
-    
+
     // Restore piece to 'from'
     final restoredPiece = move.promotion != null
-        ? ChessPiece(type: PieceType.pawn, color: piece.color, hasMoved: piece.hasMoved)
+        ? ChessPiece(
+            type: PieceType.pawn, color: piece.color, hasMoved: piece.hasMoved)
         : piece;
-    
+
     _board[move.from.rank][move.from.file] = restoredPiece;
     _board[move.to.rank][move.to.file] = move.capturedPiece;
 
@@ -281,7 +308,8 @@ class ChessEngine {
 
     if (move.isEnPassant) {
       final captureRank = move.from.rank;
-      _board[captureRank][move.to.file] = ChessPiece(type: PieceType.pawn, color: _opponent(piece.color));
+      _board[captureRank][move.to.file] =
+          ChessPiece(type: PieceType.pawn, color: _opponent(piece.color));
       _board[move.to.rank][move.to.file] = null; // En passant 'to' was empty
     }
 
@@ -306,12 +334,31 @@ class ChessEngine {
 
   List<Move> _getPseudoLegalMoves(Square from, ChessPiece piece) {
     return switch (piece.type) {
-      PieceType.pawn   => _pawnMoves(from, piece.color),
-      PieceType.rook   => _slidingMoves(from, piece.color, [[0,1],[0,-1],[1,0],[-1,0]]),
-      PieceType.bishop => _slidingMoves(from, piece.color, [[1,1],[1,-1],[-1,1],[-1,-1]]),
-      PieceType.queen  => _slidingMoves(from, piece.color, [[0,1],[0,-1],[1,0],[-1,0],[1,1],[1,-1],[-1,1],[-1,-1]]),
+      PieceType.pawn => _pawnMoves(from, piece.color),
+      PieceType.rook => _slidingMoves(from, piece.color, [
+          [0, 1],
+          [0, -1],
+          [1, 0],
+          [-1, 0]
+        ]),
+      PieceType.bishop => _slidingMoves(from, piece.color, [
+          [1, 1],
+          [1, -1],
+          [-1, 1],
+          [-1, -1]
+        ]),
+      PieceType.queen => _slidingMoves(from, piece.color, [
+          [0, 1],
+          [0, -1],
+          [1, 0],
+          [-1, 0],
+          [1, 1],
+          [1, -1],
+          [-1, 1],
+          [-1, -1]
+        ]),
       PieceType.knight => _knightMoves(from, piece.color),
-      PieceType.king   => _kingMoves(from, piece.color),
+      PieceType.king => _kingMoves(from, piece.color),
     };
   }
 
@@ -349,8 +396,11 @@ class ChessEngine {
       // En passant
       if (_enPassantTarget == target) {
         final ep = Move(
-          from: from, to: target, isEnPassant: true,
-          capturedPiece: ChessPiece(type: PieceType.pawn, color: _opponent(color)),
+          from: from,
+          to: target,
+          isEnPassant: true,
+          capturedPiece:
+              ChessPiece(type: PieceType.pawn, color: _opponent(color)),
         );
         moves.add(ep);
       }
@@ -359,17 +409,28 @@ class ChessEngine {
   }
 
   void _addPawnMove(List<Move> moves, Square from, Square to, PieceColor color,
-      bool isPromoRank, {ChessPiece? capturedPiece}) {
+      bool isPromoRank,
+      {ChessPiece? capturedPiece}) {
     if (isPromoRank) {
-      for (final promo in [PieceType.queen, PieceType.rook, PieceType.bishop, PieceType.knight]) {
-        moves.add(Move(from: from, to: to, promotion: promo, capturedPiece: capturedPiece));
+      for (final promo in [
+        PieceType.queen,
+        PieceType.rook,
+        PieceType.bishop,
+        PieceType.knight
+      ]) {
+        moves.add(Move(
+            from: from,
+            to: to,
+            promotion: promo,
+            capturedPiece: capturedPiece));
       }
     } else {
       moves.add(Move(from: from, to: to, capturedPiece: capturedPiece));
     }
   }
 
-  List<Move> _slidingMoves(Square from, PieceColor color, List<List<int>> dirs) {
+  List<Move> _slidingMoves(
+      Square from, PieceColor color, List<List<int>> dirs) {
     final moves = <Move>[];
     for (final dir in dirs) {
       var cur = from + dir;
@@ -390,7 +451,16 @@ class ChessEngine {
   }
 
   List<Move> _knightMoves(Square from, PieceColor color) {
-    final deltas = [[2,1],[2,-1],[-2,1],[-2,-1],[1,2],[1,-2],[-1,2],[-1,-2]];
+    final deltas = [
+      [2, 1],
+      [2, -1],
+      [-2, 1],
+      [-2, -1],
+      [1, 2],
+      [1, -2],
+      [-1, 2],
+      [-1, -2]
+    ];
     final moves = <Move>[];
     for (final d in deltas) {
       final to = from + d;
@@ -404,7 +474,16 @@ class ChessEngine {
   }
 
   List<Move> _kingMoves(Square from, PieceColor color) {
-    final deltas = [[0,1],[0,-1],[1,0],[-1,0],[1,1],[1,-1],[-1,1],[-1,-1]];
+    final deltas = [
+      [0, 1],
+      [0, -1],
+      [1, 0],
+      [-1, 0],
+      [1, 1],
+      [1, -1],
+      [-1, 1],
+      [-1, -1]
+    ];
     final moves = <Move>[];
     for (final d in deltas) {
       final to = from + d;
@@ -426,16 +505,24 @@ class ChessEngine {
     if (_isKingInCheck(color)) return moves;
 
     // Kingside
-    final ks = color == PieceColor.white ? _whiteKingsideCastle : _blackKingsideCastle;
-    if (ks && _board[rank][5] == null && _board[rank][6] == null &&
+    final ks =
+        color == PieceColor.white ? _whiteKingsideCastle : _blackKingsideCastle;
+    if (ks &&
+        _board[rank][5] == null &&
+        _board[rank][6] == null &&
         !_isSquareAttacked(Square(5, rank), _opponent(color)) &&
         !_isSquareAttacked(Square(6, rank), _opponent(color))) {
       moves.add(Move(from: from, to: Square(6, rank), isCastle: true));
     }
 
     // Queenside
-    final qs = color == PieceColor.white ? _whiteQueensideCastle : _blackQueensideCastle;
-    if (qs && _board[rank][3] == null && _board[rank][2] == null && _board[rank][1] == null &&
+    final qs = color == PieceColor.white
+        ? _whiteQueensideCastle
+        : _blackQueensideCastle;
+    if (qs &&
+        _board[rank][3] == null &&
+        _board[rank][2] == null &&
+        _board[rank][1] == null &&
         !_isSquareAttacked(Square(3, rank), _opponent(color)) &&
         !_isSquareAttacked(Square(2, rank), _opponent(color))) {
       moves.add(Move(from: from, to: Square(2, rank), isCastle: true));
@@ -449,7 +536,7 @@ class ChessEngine {
   // ═══════════════════════════════════════════
   void applyMoveInternal(Move move) {
     final piece = _board[move.from.rank][move.from.file]!;
-    
+
     // Capture state for unmaking
     move.prevEnPassant = _enPassantTarget;
     move.prevWhiteKingside = _whiteKingsideCastle;
@@ -480,14 +567,17 @@ class ChessEngine {
     // Promotion
     final movedPiece = move.promotion != null
         ? ChessPiece(type: move.promotion!, color: piece.color, hasMoved: true)
-        : piece..hasMoved = true;
+        : piece
+      ..hasMoved = true;
 
     _board[move.to.rank][move.to.file] = movedPiece;
     _board[move.from.rank][move.from.file] = null;
 
     // Double pawn push → set en passant target
-    if (piece.type == PieceType.pawn && (move.to.rank - move.from.rank).abs() == 2) {
-      _enPassantTarget = Square(move.from.file, (move.from.rank + move.to.rank) ~/ 2);
+    if (piece.type == PieceType.pawn &&
+        (move.to.rank - move.from.rank).abs() == 2) {
+      _enPassantTarget =
+          Square(move.from.file, (move.from.rank + move.to.rank) ~/ 2);
     }
 
     // Update castling rights
@@ -499,7 +589,7 @@ class ChessEngine {
     } else {
       _halfMoveClock++;
     }
-    
+
     if (_currentTurn == PieceColor.black) _fullMoveNumber++;
 
     _moveHistory.add(move);
@@ -543,7 +633,8 @@ class ChessEngine {
       if (inCheck) {
         _status = GameStatus.checkmate;
         _result = _currentTurn == PieceColor.white
-            ? GameResult.blackWins : GameResult.whiteWins;
+            ? GameResult.blackWins
+            : GameResult.whiteWins;
       } else {
         _status = GameStatus.stalemate;
         _result = GameResult.draw;
@@ -599,26 +690,44 @@ class ChessEngine {
       final from = Square(sq.file + df, sq.rank + pawnDir);
       if (from.isValid) {
         final p = _board[from.rank][from.file];
-        if (p != null && p.type == PieceType.pawn && p.color == byColor) return true;
+        if (p != null && p.type == PieceType.pawn && p.color == byColor)
+          return true;
       }
     }
 
     // Knight attacks
-    for (final d in [[2,1],[2,-1],[-2,1],[-2,-1],[1,2],[1,-2],[-1,2],[-1,-2]]) {
+    for (final d in [
+      [2, 1],
+      [2, -1],
+      [-2, 1],
+      [-2, -1],
+      [1, 2],
+      [1, -2],
+      [-1, 2],
+      [-1, -2]
+    ]) {
       final from = sq + d;
       if (from.isValid) {
         final p = _board[from.rank][from.file];
-        if (p != null && p.type == PieceType.knight && p.color == byColor) return true;
+        if (p != null && p.type == PieceType.knight && p.color == byColor)
+          return true;
       }
     }
 
     // Sliding attacks (rook/queen)
-    for (final dir in [[0,1],[0,-1],[1,0],[-1,0]]) {
+    for (final dir in [
+      [0, 1],
+      [0, -1],
+      [1, 0],
+      [-1, 0]
+    ]) {
       var cur = sq + dir;
       while (cur.isValid) {
         final p = _board[cur.rank][cur.file];
         if (p != null) {
-          if (p.color == byColor && (p.type == PieceType.rook || p.type == PieceType.queen)) return true;
+          if (p.color == byColor &&
+              (p.type == PieceType.rook || p.type == PieceType.queen))
+            return true;
           break;
         }
         cur = cur + dir;
@@ -626,12 +735,19 @@ class ChessEngine {
     }
 
     // Diagonal attacks (bishop/queen)
-    for (final dir in [[1,1],[1,-1],[-1,1],[-1,-1]]) {
+    for (final dir in [
+      [1, 1],
+      [1, -1],
+      [-1, 1],
+      [-1, -1]
+    ]) {
       var cur = sq + dir;
       while (cur.isValid) {
         final p = _board[cur.rank][cur.file];
         if (p != null) {
-          if (p.color == byColor && (p.type == PieceType.bishop || p.type == PieceType.queen)) return true;
+          if (p.color == byColor &&
+              (p.type == PieceType.bishop || p.type == PieceType.queen))
+            return true;
           break;
         }
         cur = cur + dir;
@@ -639,11 +755,21 @@ class ChessEngine {
     }
 
     // King attacks
-    for (final d in [[0,1],[0,-1],[1,0],[-1,0],[1,1],[1,-1],[-1,1],[-1,-1]]) {
+    for (final d in [
+      [0, 1],
+      [0, -1],
+      [1, 0],
+      [-1, 0],
+      [1, 1],
+      [1, -1],
+      [-1, 1],
+      [-1, -1]
+    ]) {
       final from = sq + d;
       if (from.isValid) {
         final p = _board[from.rank][from.file];
-        if (p != null && p.type == PieceType.king && p.color == byColor) return true;
+        if (p != null && p.type == PieceType.king && p.color == byColor)
+          return true;
       }
     }
     return false;
@@ -675,8 +801,9 @@ class ChessEngine {
       _board[rank][kingside ? 5 : 3] = _board[rank][kingside ? 7 : 0];
       _board[rank][kingside ? 7 : 0] = null;
     }
-    _board[move.to.rank][move.to.file] =
-        move.promotion != null ? ChessPiece(type: move.promotion!, color: piece.color) : piece;
+    _board[move.to.rank][move.to.file] = move.promotion != null
+        ? ChessPiece(type: move.promotion!, color: piece.color)
+        : piece;
     _board[move.from.rank][move.from.file] = null;
   }
 
@@ -696,7 +823,8 @@ class ChessEngine {
     }
     if (pieces.length == 2) return true; // K vs K
     if (pieces.length == 3) {
-      return pieces.any((p) => p.type == PieceType.knight || p.type == PieceType.bishop);
+      return pieces
+          .any((p) => p.type == PieceType.knight || p.type == PieceType.bishop);
     }
     return false;
   }
@@ -733,7 +861,8 @@ class ChessEngine {
     }
     buf.write(move.to.toAlgebraic());
     if (move.promotion != null) {
-      buf.write('=${ChessPiece(type: move.promotion!, color: piece.color).toFEN().toUpperCase()}');
+      buf.write(
+          '=${ChessPiece(type: move.promotion!, color: piece.color).toFEN().toUpperCase()}');
     }
     return buf.toString();
   }
@@ -750,7 +879,10 @@ class ChessEngine {
         if (p == null) {
           empty++;
         } else {
-          if (empty > 0) { buf.write(empty); empty = 0; }
+          if (empty > 0) {
+            buf.write(empty);
+            empty = 0;
+          }
           buf.write(p.toFEN());
         }
       }
@@ -785,7 +917,8 @@ class ChessEngine {
         if (RegExp(r'\d').hasMatch(c)) {
           f += int.parse(c);
         } else {
-          final color = c == c.toUpperCase() ? PieceColor.white : PieceColor.black;
+          final color =
+              c == c.toUpperCase() ? PieceColor.white : PieceColor.black;
           final type = switch (c.toLowerCase()) {
             'p' => PieceType.pawn,
             'r' => PieceType.rook,
@@ -819,11 +952,15 @@ class ChessEngine {
 
   /// Export game as PGN string
   String toPGN({
-    String? white, String? black, String? event, String? date,
+    String? white,
+    String? black,
+    String? event,
+    String? date,
   }) {
     final buf = StringBuffer();
     buf.writeln('[Event "${event ?? "Chess Master Game"}"]');
-    buf.writeln('[Date "${date ?? DateTime.now().toString().substring(0, 10)}"]');
+    buf.writeln(
+        '[Date "${date ?? DateTime.now().toString().substring(0, 10)}"]');
     buf.writeln('[White "${white ?? "White"}"]');
     buf.writeln('[Black "${black ?? "Black"}"]');
     buf.writeln('[Result "${_pgnResult()}"]');
@@ -840,9 +977,9 @@ class ChessEngine {
   }
 
   String _pgnResult() => switch (_result) {
-    GameResult.whiteWins => '1-0',
-    GameResult.blackWins => '0-1',
-    GameResult.draw => '1/2-1/2',
-    GameResult.ongoing => '*',
-  };
+        GameResult.whiteWins => '1-0',
+        GameResult.blackWins => '0-1',
+        GameResult.draw => '1/2-1/2',
+        GameResult.ongoing => '*',
+      };
 }

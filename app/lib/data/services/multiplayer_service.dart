@@ -7,7 +7,7 @@ import 'package:flutter/foundation.dart';
 class MultiplayerService {
   WebSocketChannel? _lobbyChannel;
   WebSocketChannel? _gameChannel;
-  
+
   StreamController<Map<String, dynamic>>? _lobbyStreamCtrl;
   StreamController<Map<String, dynamic>>? _gameStreamCtrl;
 
@@ -47,18 +47,23 @@ class MultiplayerService {
   }
 
   /// Connect to the global lobby
-  Future<void> connectLobby(String userId, String username, {int rating = 1200}) async {
+  Future<void> connectLobby(String userId, String username,
+      {int rating = 1200}) async {
     _userId = userId;
     _username = username;
     _rating = rating;
     _ensureStreams();
 
-    final baseUrl = dotenv.env['WS_URL'] ?? 'wss://chess-master-api.pp942920.workers.dev';
-    final url = '$baseUrl/multiplayer/lobby?userId=$userId&username=$username&rating=$rating';
-    
+    final baseUrl =
+        dotenv.env['WS_URL'] ?? 'wss://chess-master-api.pp942920.workers.dev';
+    final url =
+        '$baseUrl/multiplayer/lobby?userId=$userId&username=$username&rating=$rating';
+
     // Close existing lobby connection gracefully
-    try { await _lobbyChannel?.sink.close(); } catch (_) {}
-    
+    try {
+      await _lobbyChannel?.sink.close();
+    } catch (_) {}
+
     _lobbyChannel = WebSocketChannel.connect(Uri.parse(url));
     _lobbyChannel!.stream.listen((msg) {
       final data = jsonDecode(msg) as Map<String, dynamic>;
@@ -74,7 +79,8 @@ class MultiplayerService {
     }, onError: (err) {
       _lobbyChannel = null;
       if (!(_lobbyStreamCtrl?.isClosed ?? true)) {
-        _lobbyStreamCtrl!.add({'type': 'CONNECTION_LOST', 'error': err.toString()});
+        _lobbyStreamCtrl!
+            .add({'type': 'CONNECTION_LOST', 'error': err.toString()});
       }
     });
   }
@@ -91,12 +97,16 @@ class MultiplayerService {
 
   /// Connect to a specific game room
   Future<void> joinRoom(String gameId, String color) async {
-    final baseUrl = dotenv.env['WS_URL'] ?? 'wss://chess-master-api.pp942920.workers.dev';
-    final url = '$baseUrl/multiplayer/game/$gameId?userId=$_userId&username=$_username&color=$color&gameId=$gameId';
-    
-    try { await _gameChannel?.sink.close(); } catch (_) {}
+    final baseUrl =
+        dotenv.env['WS_URL'] ?? 'wss://chess-master-api.pp942920.workers.dev';
+    final url =
+        '$baseUrl/multiplayer/game/$gameId?userId=$_userId&username=$_username&color=$color&gameId=$gameId';
+
+    try {
+      await _gameChannel?.sink.close();
+    } catch (_) {}
     _ensureStreams();
-    
+
     _gameChannel = WebSocketChannel.connect(Uri.parse(url));
     _gameChannel!.stream.listen((msg) {
       final data = jsonDecode(msg) as Map<String, dynamic>;
@@ -169,7 +179,7 @@ class MultiplayerService {
     _gameChannel?.sink.add(jsonEncode({'type': 'DRAW_DECLINE'}));
   }
 
-  /// Send undo request (notify opponent)  
+  /// Send undo request (notify opponent)
   void sendUndo() {
     _gameChannel?.sink.add(jsonEncode({'type': 'UNDO'}));
   }
@@ -201,20 +211,28 @@ class MultiplayerService {
 
   /// Disconnect lobby only — keeps streams alive for reconnection
   void disconnectLobby() {
-    try { _lobbyChannel?.sink.close(); } catch (_) {}
+    try {
+      _lobbyChannel?.sink.close();
+    } catch (_) {}
     _lobbyChannel = null;
   }
 
   /// Disconnect game only
   void disconnectGame() {
-    try { _gameChannel?.sink.close(); } catch (_) {}
+    try {
+      _gameChannel?.sink.close();
+    } catch (_) {}
     _gameChannel = null;
   }
 
   /// Full dispose — closes everything, streams can be re-created on next connect
   void dispose() {
-    try { _lobbyChannel?.sink.close(); } catch (_) {}
-    try { _gameChannel?.sink.close(); } catch (_) {}
+    try {
+      _lobbyChannel?.sink.close();
+    } catch (_) {}
+    try {
+      _gameChannel?.sink.close();
+    } catch (_) {}
     _lobbyChannel = null;
     _gameChannel = null;
     // Close stream controllers — they'll be lazily re-created

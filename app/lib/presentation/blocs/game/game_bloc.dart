@@ -27,20 +27,23 @@ import '../../../domain/engine/candidate_model.dart';
 // ═══════════════════════════════════════════
 abstract class GameEvent extends Equatable {
   const GameEvent();
-  @override List<Object?> get props => [];
+  @override
+  List<Object?> get props => [];
 }
 
 class GameStartEvent extends GameEvent {
   final GameConfig config;
   final TutorialLesson? tutorial;
   const GameStartEvent(this.config, {this.tutorial});
-  @override List<Object?> get props => [config, tutorial];
+  @override
+  List<Object?> get props => [config, tutorial];
 }
 
 class GameResumeEvent extends GameEvent {
   final String gameId;
   const GameResumeEvent(this.gameId);
-  @override List<Object?> get props => [gameId];
+  @override
+  List<Object?> get props => [gameId];
 }
 
 class GameExitEvent extends GameEvent {}
@@ -48,7 +51,8 @@ class GameExitEvent extends GameEvent {}
 class GameSelectPieceEvent extends GameEvent {
   final Square square;
   const GameSelectPieceEvent(this.square);
-  @override List<Object?> get props => [square];
+  @override
+  List<Object?> get props => [square];
 }
 
 class GameDiscardEvent extends GameEvent {}
@@ -58,70 +62,112 @@ class GameMakeMoveEvent extends GameEvent {
   final Square to;
   final PieceType? promotion;
   const GameMakeMoveEvent(this.from, this.to, {this.promotion});
-  @override List<Object?> get props => [from, to, promotion];
+  @override
+  List<Object?> get props => [from, to, promotion];
 }
 
 class GameUndoEvent extends GameEvent {}
+
 class GameRedoEvent extends GameEvent {}
+
 class GameResignEvent extends GameEvent {}
+
 class GameDrawOfferEvent extends GameEvent {}
+
 class GameDrawAcceptEvent extends GameEvent {}
+
 class GameDrawDeclineEvent extends GameEvent {}
+
 class GameSaveEvent extends GameEvent {}
+
 class GameRequestHintEvent extends GameEvent {}
+
 class GameSetOpponentNameEvent extends GameEvent {
   final String name;
   const GameSetOpponentNameEvent(this.name);
-  @override List<Object?> get props => [name];
+  @override
+  List<Object?> get props => [name];
 }
 
 class GameUpdatePersonalityEvent extends GameEvent {
   final AIPersonality personality;
   final String message;
-  const GameUpdatePersonalityEvent({required this.personality, required this.message});
-  @override List<Object?> get props => [personality, message];
+  const GameUpdatePersonalityEvent(
+      {required this.personality, required this.message});
+  @override
+  List<Object?> get props => [personality, message];
 }
 
 class GamePromotionRequiredEvent extends GameEvent {
   final Square from;
   final Square to;
   const GamePromotionRequiredEvent(this.from, this.to);
-  @override List<Object?> get props => [from, to];
+  @override
+  List<Object?> get props => [from, to];
 }
 
 class GameUpdateSettingsEvent extends GameEvent {
   final bool confirmMoves;
   final bool autoQueen;
-  const GameUpdateSettingsEvent({this.confirmMoves = false, this.autoQueen = false});
-  @override List<Object?> get props => [confirmMoves, autoQueen];
+  const GameUpdateSettingsEvent(
+      {this.confirmMoves = false, this.autoQueen = false});
+  @override
+  List<Object?> get props => [confirmMoves, autoQueen];
 }
 
 class GameConfirmMoveEvent extends GameEvent {}
 
-class GameDrawReceiveEvent extends GameEvent { final String? fromId; const GameDrawReceiveEvent(this.fromId); }
-class GameDismissMiniLessonEvent extends GameEvent { const GameDismissMiniLessonEvent(); }
-class GamePuzzleRushTickEvent extends GameEvent { const GamePuzzleRushTickEvent(); }
-class GameExplainPuzzleMoveEvent extends GameEvent { const GameExplainPuzzleMoveEvent(); }
-class GamePuzzleGiveUpEvent extends GameEvent { const GamePuzzleGiveUpEvent(); }
-class GamePuzzleNextEvent extends GameEvent { const GamePuzzleNextEvent(); }
+class GameDrawReceiveEvent extends GameEvent {
+  final String? fromId;
+  const GameDrawReceiveEvent(this.fromId);
+}
+
+class GameDismissMiniLessonEvent extends GameEvent {
+  const GameDismissMiniLessonEvent();
+}
+
+class GamePuzzleRushTickEvent extends GameEvent {
+  const GamePuzzleRushTickEvent();
+}
+
+class GameExplainPuzzleMoveEvent extends GameEvent {
+  const GameExplainPuzzleMoveEvent();
+}
+
+class GamePuzzleGiveUpEvent extends GameEvent {
+  const GamePuzzleGiveUpEvent();
+}
+
+class GamePuzzleNextEvent extends GameEvent {
+  const GamePuzzleNextEvent();
+}
+
 class GameDismissCoachFeedbackEvent extends GameEvent {}
+
 class GameDismissHintEvent extends GameEvent {}
+
 class GameClockTickEvent extends GameEvent {}
+
 class GameTimerSyncEvent extends GameEvent {
   final double whiteTime;
   final double blackTime;
   const GameTimerSyncEvent(this.whiteTime, this.blackTime);
-  @override List<Object?> get props => [whiteTime, blackTime];
+  @override
+  List<Object?> get props => [whiteTime, blackTime];
 }
+
 class GameUpdateEvalEvent extends GameEvent {
   final double evalScore;
   const GameUpdateEvalEvent(this.evalScore);
-  @override List<Object?> get props => [evalScore];
+  @override
+  List<Object?> get props => [evalScore];
 }
+
 class GameUpdateCoachSettingsEvent extends GameEvent {
   final CoachSettings coachSettings;
   const GameUpdateCoachSettingsEvent(this.coachSettings);
-  @override List<Object?> get props => [coachSettings];
+  @override
+  List<Object?> get props => [coachSettings];
 }
 
 class MpGameOverSyncEvent extends GameEvent {
@@ -129,10 +175,12 @@ class MpGameOverSyncEvent extends GameEvent {
   final DrawReason? reason;
   final int xpGained;
   const MpGameOverSyncEvent(this.result, this.reason, this.xpGained);
-  @override List<Object?> get props => [result, reason, xpGained];
+  @override
+  List<Object?> get props => [result, reason, xpGained];
 }
 
 class GameAIRequestEvent extends GameEvent {}
+
 class GameDismissErrorEvent extends GameEvent {}
 
 // ═══════════════════════════════════════════
@@ -182,7 +230,7 @@ class GameState extends Equatable {
   final double evalScore;
   final String? aiMessage;
   final AIPersonality? activePersonality;
-  
+
   // Analytics & Rewards
   final double accuracy;
   final int mistakes;
@@ -221,7 +269,7 @@ class GameState extends Equatable {
   final double blackTimeMs;
   final int incrementMs; // increment in ms per move
   final bool clockRunning;
-  
+
   // Premove
   final Move? preMove;
 
@@ -308,11 +356,12 @@ class GameState extends Equatable {
     this.eloChange = 0,
   });
 
-  bool get isGameOver => status == GameStatus.checkmate ||
-      status == GameStatus.stalemate || status == GameStatus.draw;
+  bool get isGameOver =>
+      status == GameStatus.checkmate ||
+      status == GameStatus.stalemate ||
+      status == GameStatus.draw;
 
-  bool get isPlayerTurn =>
-      playerColor == null || currentTurn == playerColor;
+  bool get isPlayerTurn => playerColor == null || currentTurn == playerColor;
 
   int get hintsRemaining => maxHints - hintsUsed;
 
@@ -416,7 +465,8 @@ class GameState extends Equatable {
     return GameState(
       board: board ?? this.board,
       currentTurn: currentTurn ?? this.currentTurn,
-      selectedSquare: clearSelected ? null : (selectedSquare ?? this.selectedSquare),
+      selectedSquare:
+          clearSelected ? null : (selectedSquare ?? this.selectedSquare),
       legalMoves: clearSelected ? [] : (legalMoves ?? this.legalMoves),
       moveHistory: moveHistory ?? this.moveHistory,
       status: status ?? this.status,
@@ -441,10 +491,13 @@ class GameState extends Equatable {
       showPromotionDialog: showPromotionDialog ?? this.showPromotionDialog,
       promotionFrom: promotionFrom ?? this.promotionFrom,
       promotionTo: promotionTo ?? this.promotionTo,
-      drawOfferFrom: clearDrawOffer ? null : (drawOfferFrom ?? this.drawOfferFrom),
+      drawOfferFrom:
+          clearDrawOffer ? null : (drawOfferFrom ?? this.drawOfferFrom),
       tutorial: tutorial ?? this.tutorial,
       tutorialStep: tutorialStep ?? this.tutorialStep,
-      tutorialMessage: clearTutorialMessage ? null : (tutorialMessage ?? this.tutorialMessage),
+      tutorialMessage: clearTutorialMessage
+          ? null
+          : (tutorialMessage ?? this.tutorialMessage),
       puzzle: puzzle ?? this.puzzle,
       puzzleStep: puzzleStep ?? this.puzzleStep,
       isPuzzleHintUsed: isPuzzleHintUsed ?? this.isPuzzleHintUsed,
@@ -462,10 +515,12 @@ class GameState extends Equatable {
       bestMoves: bestMoves ?? this.bestMoves,
       xpGained: xpGained ?? this.xpGained,
       analysisMessage: analysisMessage ?? this.analysisMessage,
-      coachMessage: clearCoachMessage ? null : (coachMessage ?? this.coachMessage),
+      coachMessage:
+          clearCoachMessage ? null : (coachMessage ?? this.coachMessage),
       engineError: clearEngineError ? null : (engineError ?? this.engineError),
       showMiniLesson: showMiniLesson ?? this.showMiniLesson,
-      coachFeedback: clearCoachFeedback ? null : (coachFeedback ?? this.coachFeedback),
+      coachFeedback:
+          clearCoachFeedback ? null : (coachFeedback ?? this.coachFeedback),
       activeHint: clearActiveHint ? null : (activeHint ?? this.activeHint),
       coachSettings: coachSettings ?? this.coachSettings,
       gameCoachHistory: gameCoachHistory ?? this.gameCoachHistory,
@@ -473,8 +528,10 @@ class GameState extends Equatable {
       puzzleRushStrikes: puzzleRushStrikes ?? this.puzzleRushStrikes,
       puzzleRushTime: puzzleRushTime ?? this.puzzleRushTime,
       isPuzzleRush: isPuzzleRush ?? this.isPuzzleRush,
-      lastCorrectPuzzleMove: lastCorrectPuzzleMove ?? this.lastCorrectPuzzleMove,
-      showPuzzleCelebration: showPuzzleCelebration ?? this.showPuzzleCelebration,
+      lastCorrectPuzzleMove:
+          lastCorrectPuzzleMove ?? this.lastCorrectPuzzleMove,
+      showPuzzleCelebration:
+          showPuzzleCelebration ?? this.showPuzzleCelebration,
       puzzleExplanation: puzzleExplanation ?? this.puzzleExplanation,
       totalPuzzleXP: totalPuzzleXP ?? this.totalPuzzleXP,
       puzzleGaveUp: puzzleGaveUp ?? this.puzzleGaveUp,
@@ -492,21 +549,61 @@ class GameState extends Equatable {
 
   @override
   List<Object?> get props => [
-    status, result, isAIThinking, hintMove, hintsUsed, currentFEN,
-    selectedSquare, legalMoves, currentTurn, moveHistory,
-    showPromotionDialog, tutorial, tutorialStep, tutorialMessage, 
-    pieceShape, pieceStyle,
-    lastMoveTimestamp, opponentName,
-    confirmMoves, autoQueen, pendingMove,
-    accuracy, mistakes, blunders, missedWins, bestMoves, xpGained,
-    coachMessage, showMiniLesson, analysisMessage,
-    coachFeedback, activeHint, coachSettings, gameCoachHistory,
-    puzzleStreak, puzzleRushStrikes, puzzleRushTime, isPuzzleRush, 
-    lastCorrectPuzzleMove, showPuzzleCelebration, puzzleExplanation, totalPuzzleXP,
-    coachMove, hintedIndices,
-    whiteTimeMs, blackTimeMs, incrementMs, clockRunning, preMove, evalScore,
-    aiMessage, activePersonality, evalHistory, eloChange,
-  ];
+        status,
+        result,
+        isAIThinking,
+        hintMove,
+        hintsUsed,
+        currentFEN,
+        selectedSquare,
+        legalMoves,
+        currentTurn,
+        moveHistory,
+        showPromotionDialog,
+        tutorial,
+        tutorialStep,
+        tutorialMessage,
+        pieceShape,
+        pieceStyle,
+        lastMoveTimestamp,
+        opponentName,
+        confirmMoves,
+        autoQueen,
+        pendingMove,
+        accuracy,
+        mistakes,
+        blunders,
+        missedWins,
+        bestMoves,
+        xpGained,
+        coachMessage,
+        showMiniLesson,
+        analysisMessage,
+        coachFeedback,
+        activeHint,
+        coachSettings,
+        gameCoachHistory,
+        puzzleStreak,
+        puzzleRushStrikes,
+        puzzleRushTime,
+        isPuzzleRush,
+        lastCorrectPuzzleMove,
+        showPuzzleCelebration,
+        puzzleExplanation,
+        totalPuzzleXP,
+        coachMove,
+        hintedIndices,
+        whiteTimeMs,
+        blackTimeMs,
+        incrementMs,
+        clockRunning,
+        preMove,
+        evalScore,
+        aiMessage,
+        activePersonality,
+        evalHistory,
+        eloChange,
+      ];
 }
 
 // ═══════════════════════════════════════════
@@ -530,10 +627,12 @@ class GameBloc extends Bloc<GameEvent, GameState> {
   AIEngineController get engineController => _engineController;
   CoachController get coachController => _coachController;
 
-  GameBloc(this._gameRepository, this._authRepository, this._puzzleRepository, this._themeBloc) : super(GameState(
-    board: List.generate(8, (_) => List.filled(8, null)),
-    currentTurn: PieceColor.white,
-  )) {
+  GameBloc(this._gameRepository, this._authRepository, this._puzzleRepository,
+      this._themeBloc)
+      : super(GameState(
+          board: List.generate(8, (_) => List.filled(8, null)),
+          currentTurn: PieceColor.white,
+        )) {
     on<GameStartEvent>(_onStart);
     on<GameResumeEvent>(_onResume);
     on<GameExitEvent>(_onExit);
@@ -549,25 +648,31 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     on<GameDismissMiniLessonEvent>(_onDismissMiniLesson);
     on<GamePromotionRequiredEvent>(_onPromotionRequired);
     on<GameConfirmMoveEvent>(_onConfirmMove);
-    on<GameUpdateSettingsEvent>((e, emit) => emit(state.copyWith(confirmMoves: e.confirmMoves, autoQueen: e.autoQueen)));
-    on<GameSetOpponentNameEvent>((event, emit) => emit(state.copyWith(opponentName: event.name)));
+    on<GameUpdateSettingsEvent>((e, emit) => emit(
+        state.copyWith(confirmMoves: e.confirmMoves, autoQueen: e.autoQueen)));
+    on<GameSetOpponentNameEvent>(
+        (event, emit) => emit(state.copyWith(opponentName: event.name)));
     on<GameDiscardEvent>(_onDiscard);
     on<GamePuzzleRushTickEvent>(_onPuzzleRushTick);
     on<GameExplainPuzzleMoveEvent>(_onExplainPuzzleMove);
     on<GamePuzzleGiveUpEvent>(_onPuzzleGiveUp);
     on<GamePuzzleNextEvent>(_onPuzzleNext);
     on<GameUpdateEvalEvent>(_onUpdateEval);
-    on<GameDismissCoachFeedbackEvent>((e, emit) => emit(state.copyWith(clearCoachFeedback: true)));
-    on<GameDismissHintEvent>((e, emit) => emit(state.copyWith(clearActiveHint: true)));
+    on<GameDismissCoachFeedbackEvent>(
+        (e, emit) => emit(state.copyWith(clearCoachFeedback: true)));
+    on<GameDismissHintEvent>(
+        (e, emit) => emit(state.copyWith(clearActiveHint: true)));
     on<GameUpdateCoachSettingsEvent>((e, emit) {
       _coachController.updateSettings(e.coachSettings);
       emit(state.copyWith(coachSettings: e.coachSettings));
     });
     on<GameAIRequestEvent>(_onAIRequest);
-    on<GameDismissErrorEvent>((e, emit) => emit(state.copyWith(clearEngineError: true)));
+    on<GameDismissErrorEvent>(
+        (e, emit) => emit(state.copyWith(clearEngineError: true)));
     on<MpGameOverSyncEvent>((e, emit) {
       _stopClock();
-      final status = e.result == GameResult.draw ? GameStatus.draw : GameStatus.checkmate;
+      final status =
+          e.result == GameResult.draw ? GameStatus.draw : GameStatus.checkmate;
       emit(state.copyWith(
         status: status,
         result: e.result,
@@ -579,19 +684,21 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     on<GameClockTickEvent>(_onClockTick);
     on<GameUpdatePersonalityEvent>(_onUpdatePersonality);
     on<GameTimerSyncEvent>((e, emit) => emit(state.copyWith(
-      whiteTimeMs: e.whiteTime,
-      blackTimeMs: e.blackTime,
-    )));
+          whiteTimeMs: e.whiteTime,
+          blackTimeMs: e.blackTime,
+        )));
   }
 
-  void _onUpdatePersonality(GameUpdatePersonalityEvent event, Emitter<GameState> emit) {
+  void _onUpdatePersonality(
+      GameUpdatePersonalityEvent event, Emitter<GameState> emit) {
     emit(state.copyWith(
       activePersonality: event.personality,
       aiMessage: event.message,
     ));
   }
 
-  Future<void> _onDiscard(GameDiscardEvent event, Emitter<GameState> emit) async {
+  Future<void> _onDiscard(
+      GameDiscardEvent event, Emitter<GameState> emit) async {
     if (_gameId != null) {
       await _gameRepository.deleteGame(_gameId!);
       await _gameRepository.setLastActiveGameId(null);
@@ -606,11 +713,13 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     // Trigger shuffle if the user has chosen it
     _themeBloc.add(ThemeShuffleEvent());
 
-    _engine = ChessEngine.fromFEN(event.config.puzzle?.initialFEN ?? event.tutorial?.initialFEN ?? 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
+    _engine = ChessEngine.fromFEN(event.config.puzzle?.initialFEN ??
+        event.tutorial?.initialFEN ??
+        'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
     final config = event.config;
 
     AIDifficulty? difficulty = config.difficulty;
-    
+
     // Fetch user's persistent difficulty if in Practice Mode
     if (config.mode == GameMode.practice) {
       final user = await _authRepository.getCurrentUser();
@@ -630,13 +739,17 @@ class GameBloc extends Bloc<GameEvent, GameState> {
 
     _engineController.init(config.mode, difficulty);
 
-    final playerColor = config.playerColor == 'black'
-        ? PieceColor.black : PieceColor.white;
- 
+    final playerColor =
+        config.playerColor == 'black' ? PieceColor.black : PieceColor.white;
+
     final initialState = GameState(
       board: _engine.board,
       currentTurn: _engine.currentTurn,
-      playerColor: (config.mode == GameMode.singlePlayer || config.mode == GameMode.multiplayer || config.mode == GameMode.practice) ? playerColor : null,
+      playerColor: (config.mode == GameMode.singlePlayer ||
+              config.mode == GameMode.multiplayer ||
+              config.mode == GameMode.practice)
+          ? playerColor
+          : null,
       mode: config.mode,
       aiDifficulty: difficulty,
       boardTheme: config.boardTheme ?? 'classic',
@@ -646,10 +759,10 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       blackPieceColor: config.blackPieceColor ?? Colors.black,
       currentFEN: _engine.toFEN(),
       tutorial: event.tutorial,
-      tutorialMessage: (config.puzzle?.moves.isNotEmpty ?? false) 
-          ? config.puzzle!.moves.first.dialog 
-          : (event.tutorial?.steps.isNotEmpty ?? false) 
-              ? event.tutorial!.steps.first.text 
+      tutorialMessage: (config.puzzle?.moves.isNotEmpty ?? false)
+          ? config.puzzle!.moves.first.dialog
+          : (event.tutorial?.steps.isNotEmpty ?? false)
+              ? event.tutorial!.steps.first.text
               : null,
       puzzle: config.puzzle,
     );
@@ -667,7 +780,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       ));
       _startClock();
     }
- 
+
     // Initialize game record
     _gameId = null; // reset
     final firstGame = GameModel(
@@ -685,28 +798,33 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     final id = await _gameRepository.saveGame(firstGame);
     _gameId = id;
     _gameRepository.setLastActiveGameId(id);
- 
+
     if (config.mode == GameMode.puzzle && config.isPuzzleRush) {
       _rushTimer?.cancel();
       _rushTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
         add(const GamePuzzleRushTickEvent());
       });
-      emit(state.copyWith(isPuzzleRush: true, puzzleRushTime: 180, puzzleRushStrikes: 0));
+      emit(state.copyWith(
+          isPuzzleRush: true, puzzleRushTime: 180, puzzleRushStrikes: 0));
     }
 
-    if (config.mode == GameMode.puzzle && config.puzzle != null && config.puzzle!.moves.isNotEmpty) {
+    if (config.mode == GameMode.puzzle &&
+        config.puzzle != null &&
+        config.puzzle!.moves.isNotEmpty) {
       final firstMove = config.puzzle!.moves[0];
       if (firstMove.isOpponentMove) {
         await Future.delayed(const Duration(milliseconds: 600));
         if (isClosed) return;
         final setupMove = Move.fromAlgebraic(firstMove.uciMove);
-        add(GameMakeMoveEvent(setupMove.from, setupMove.to, promotion: setupMove.promotion));
+        add(GameMakeMoveEvent(setupMove.from, setupMove.to,
+            promotion: setupMove.promotion));
       }
     }
 
     // NEW: Trigger AI if it's AI's turn to start (e.g. user plays Black)
     if (!state.isGameOver &&
-        (config.mode == GameMode.singlePlayer || config.mode == GameMode.practice) &&
+        (config.mode == GameMode.singlePlayer ||
+            config.mode == GameMode.practice) &&
         initialState.currentTurn != initialState.playerColor) {
       add(GameAIRequestEvent());
     }
@@ -721,38 +839,44 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     _gameId = game.id;
     _gameRepository.setLastActiveGameId(game.id);
 
-    final mode = GameMode.values.firstWhere((m) => m.name == game.mode, orElse: () => GameMode.singlePlayer);
-    
+    final mode = GameMode.values.firstWhere((m) => m.name == game.mode,
+        orElse: () => GameMode.singlePlayer);
+
     // Puzzle Rush check on resume
     if (mode == GameMode.puzzle) {
-        // Usually we don't resume puzzle rush, but if we do, timer should restart
+      // Usually we don't resume puzzle rush, but if we do, timer should restart
     }
 
     AIDifficulty difficulty = AIDifficulty.intermediate;
     if (mode == GameMode.practice) {
-       final user = await _authRepository.getCurrentUser();
-       if (user != null) {
-          final d = user.stats.practiceDifficulty;
-          if (d < 1.0) {
-            difficulty = AIDifficulty.basic;
-          } else if (d < 2.0) {
-            difficulty = AIDifficulty.intermediate;
-          } else if (d < 3.0) {
-            difficulty = AIDifficulty.advanced;
-          } else {
-            difficulty = AIDifficulty.impossible;
-          }
-       }
+      final user = await _authRepository.getCurrentUser();
+      if (user != null) {
+        final d = user.stats.practiceDifficulty;
+        if (d < 1.0) {
+          difficulty = AIDifficulty.basic;
+        } else if (d < 2.0) {
+          difficulty = AIDifficulty.intermediate;
+        } else if (d < 3.0) {
+          difficulty = AIDifficulty.advanced;
+        } else {
+          difficulty = AIDifficulty.impossible;
+        }
+      }
     }
-    
+
     _engineController.init(mode, difficulty);
 
-    final playerColorStr = (game.whiteUserId == 'me') ? PieceColor.white : PieceColor.black;
+    final playerColorStr =
+        (game.whiteUserId == 'me') ? PieceColor.white : PieceColor.black;
 
     emit(GameState(
       board: _engine.board,
       currentTurn: _engine.currentTurn,
-      playerColor: (mode == GameMode.singlePlayer || mode == GameMode.multiplayer || mode == GameMode.practice) ? playerColorStr : null,
+      playerColor: (mode == GameMode.singlePlayer ||
+              mode == GameMode.multiplayer ||
+              mode == GameMode.practice)
+          ? playerColorStr
+          : null,
       mode: mode,
       aiDifficulty: difficulty,
       moveHistory: _engine.moveHistory,
@@ -761,8 +885,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     ));
 
     // After resume, trigger AI if it's its turn
-    if (!state.isGameOver && 
-        (mode == GameMode.singlePlayer || mode == GameMode.practice) && 
+    if (!state.isGameOver &&
+        (mode == GameMode.singlePlayer || mode == GameMode.practice) &&
         _engine.currentTurn != playerColorStr) {
       add(GameAIRequestEvent());
     }
@@ -773,34 +897,43 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     _gameRepository.setLastActiveGameId(null);
   }
 
-  void _onPuzzleRushTick(GamePuzzleRushTickEvent event, Emitter<GameState> emit) {
-    if (state.puzzleRushTime <= 0 || state.puzzleRushStrikes >= 3 || state.isGameOver) {
+  void _onPuzzleRushTick(
+      GamePuzzleRushTickEvent event, Emitter<GameState> emit) {
+    if (state.puzzleRushTime <= 0 ||
+        state.puzzleRushStrikes >= 3 ||
+        state.isGameOver) {
       _rushTimer?.cancel();
       return;
     }
     final newTime = state.puzzleRushTime - 1;
     if (newTime <= 0) {
       _rushTimer?.cancel();
-      emit(state.copyWith(puzzleRushTime: 0, status: GameStatus.draw, result: GameResult.ongoing));
+      emit(state.copyWith(
+          puzzleRushTime: 0,
+          status: GameStatus.draw,
+          result: GameResult.ongoing));
     } else {
       emit(state.copyWith(puzzleRushTime: newTime));
     }
   }
 
-  Future<void> _onExplainPuzzleMove(GameExplainPuzzleMoveEvent event, Emitter<GameState> emit) async {
+  Future<void> _onExplainPuzzleMove(
+      GameExplainPuzzleMoveEvent event, Emitter<GameState> emit) async {
     if (state.puzzle == null) return;
     emit(state.copyWith(puzzleExplanation: 'Analyzing position...'));
     // Use engine to evaluate and find why this move is good
     final eval = await AIEngine.evaluatePosition(_engine);
-    
+
     // Simplified child-friendly explanation logic
-    String explanation = "This move helps you control the center and prepares a strong attack! 🧠";
+    String explanation =
+        "This move helps you control the center and prepares a strong attack! 🧠";
     if (eval > 300) {
-      explanation = "Great move! This wins material and puts your opponent in big trouble! 🚀";
+      explanation =
+          "Great move! This wins material and puts your opponent in big trouble! 🚀";
     } else if (state.status == GameStatus.check) {
       explanation = "Correct! This move puts the King in danger! ⚔️";
     }
-    
+
     emit(state.copyWith(puzzleExplanation: explanation));
   }
 
@@ -810,13 +943,16 @@ class GameBloc extends Bloc<GameEvent, GameState> {
 
     // Deselect if clicking same square
     if (state.selectedSquare == sq) {
-      emit(state.copyWith(clearSelected: true, clearHint: true, clearPendingMove: true));
+      emit(state.copyWith(
+          clearSelected: true, clearHint: true, clearPendingMove: true));
       return;
     }
 
     // Premove logic for multiplayer
     bool isPremove = false;
-    if (state.mode == GameMode.multiplayer && state.playerColor != null && !state.isPlayerTurn) {
+    if (state.mode == GameMode.multiplayer &&
+        state.playerColor != null &&
+        !state.isPlayerTurn) {
       isPremove = true;
     }
 
@@ -826,7 +962,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       if (state.selectedSquare == null) {
         final clickedPiece = _engine.pieceAt(sq);
         if (clickedPiece == null || clickedPiece.color != state.playerColor) {
-          emit(state.copyWith(clearSelected: true, clearPendingMove: true, clearPreMove: true));
+          emit(state.copyWith(
+              clearSelected: true, clearPendingMove: true, clearPreMove: true));
           return;
         }
       }
@@ -835,19 +972,19 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     // If a piece is already selected, try to make a move (or premove)
     if (state.selectedSquare != null) {
       if (isPremove) {
-          final from = state.selectedSquare!;
-          emit(state.copyWith(
-             preMove: Move(from: from, to: sq),
-             clearSelected: true,
-          ));
-          return;
+        final from = state.selectedSquare!;
+        emit(state.copyWith(
+          preMove: Move(from: from, to: sq),
+          clearSelected: true,
+        ));
+        return;
       }
 
       final isLegal = state.legalMoves.any((m) => m.to == sq);
       if (isLegal) {
         final from = state.selectedSquare!;
         final piece = _engine.pieceAt(from);
-        
+
         // Auto-Queen
         if (state.autoQueen && piece?.type == PieceType.pawn) {
           final toRank = sq.rank;
@@ -887,16 +1024,16 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     // Select new piece
     final piece = _engine.pieceAt(sq);
     if (!isPremove) {
-        if (piece == null || piece.color != _engine.currentTurn) {
-          emit(state.copyWith(clearSelected: true, clearPendingMove: true));
-          return;
-        }
-        if (!state.isPlayerTurn) return;
+      if (piece == null || piece.color != _engine.currentTurn) {
+        emit(state.copyWith(clearSelected: true, clearPendingMove: true));
+        return;
+      }
+      if (!state.isPlayerTurn) return;
     } else {
-        if (piece == null || piece.color != state.playerColor) {
-          emit(state.copyWith(clearSelected: true, clearPendingMove: true));
-          return;
-        }
+      if (piece == null || piece.color != state.playerColor) {
+        emit(state.copyWith(clearSelected: true, clearPendingMove: true));
+        return;
+      }
     }
 
     final moves = isPremove ? <Move>[] : _engine.legalMovesFrom(sq);
@@ -916,13 +1053,17 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     }
   }
 
-  Future<void> _onMakeMove(GameMakeMoveEvent event, Emitter<GameState> emit) async {
-    final move = Move(from: event.from, to: event.to, promotion: event.promotion);
+  Future<void> _onMakeMove(
+      GameMakeMoveEvent event, Emitter<GameState> emit) async {
+    final move =
+        Move(from: event.from, to: event.to, promotion: event.promotion);
 
     // Tutorial check — wrong moves show error BUT keep instruction visible
     if (state.mode == GameMode.tutorial && state.tutorial != null) {
       final step = state.tutorial!.steps[state.tutorialStep];
-      if (step.expectedMove != null && step.expectedMove!.isNotEmpty && move.toAlgebraic() != step.expectedMove) {
+      if (step.expectedMove != null &&
+          step.expectedMove!.isNotEmpty &&
+          move.toAlgebraic() != step.expectedMove) {
         // Show error for 2 seconds, then restore the original instruction
         final errorMsg = '❌ Not quite! Try again.\n\n${step.text}';
         emit(state.copyWith(
@@ -936,10 +1077,11 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     // Puzzle check — only validate user moves (not opponent auto-plays)
     if (state.mode == GameMode.puzzle && state.puzzle != null) {
       final currentMove = state.puzzle!.moves[state.puzzleStep];
-      
+
       // Skip validation if this is an auto-played opponent move
       if (!currentMove.isOpponentMove) {
-        if (move.toAlgebraic() != currentMove.uciMove && move.toAlgebraic() != currentMove.move) {
+        if (move.toAlgebraic() != currentMove.uciMove &&
+            move.toAlgebraic() != currentMove.move) {
           // WRONG MOVE
           Vibration.vibrate(duration: 400);
           int newStrikes = state.puzzleRushStrikes;
@@ -959,17 +1101,20 @@ class GameBloc extends Bloc<GameEvent, GameState> {
           emit(state.copyWith(
             puzzleRushStrikes: newStrikes,
             puzzleStreak: 0, // Reset streak on wrong move
-            tutorialMessage: '❌ Oopsie! That\'s not quite right. Try again little champion! 🤔',
+            tutorialMessage:
+                '❌ Oopsie! That\'s not quite right. Try again little champion! 🤔',
             clearSelected: true,
           ));
           return;
         }
       }
-      
+
       // CORRECT MOVE (or auto-played opponent move)
       emit(state.copyWith(
         lastCorrectPuzzleMove: move,
-        puzzleStreak: currentMove.isOpponentMove ? state.puzzleStreak : state.puzzleStreak + 1,
+        puzzleStreak: currentMove.isOpponentMove
+            ? state.puzzleStreak
+            : state.puzzleStreak + 1,
       ));
     }
 
@@ -1004,10 +1149,10 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     ));
 
     // Update Evaluation asynchronously to not block the UI
-    final isAIAssistantMode = state.mode == GameMode.singlePlayer || 
-                             state.mode == GameMode.practice || 
-                             state.mode == GameMode.puzzle;
-                             
+    final isAIAssistantMode = state.mode == GameMode.singlePlayer ||
+        state.mode == GameMode.practice ||
+        state.mode == GameMode.puzzle;
+
     if (!state.isGameOver && isAIAssistantMode) {
       final fenSnapshot = _engine.toFEN();
       final currTurn = _engine.currentTurn;
@@ -1021,109 +1166,129 @@ class GameBloc extends Bloc<GameEvent, GameState> {
 
     // Sound logic
     final theme = state.boardTheme ?? 'default';
-    if (_engine.status == GameStatus.checkmate || _engine.status == GameStatus.draw) {
-       AudioService().playSound('game-end', theme);
+    if (_engine.status == GameStatus.checkmate ||
+        _engine.status == GameStatus.draw) {
+      AudioService().playSound('game-end', theme);
     } else if (_engine.status == GameStatus.check) {
-       AudioService().playSound('check', theme);
+      AudioService().playSound('check', theme);
     } else if (move.promotion != null) {
-       AudioService().playSound('promote', theme);
-    } else if (move.isCastle == true) { // We might not have isCastle property natively here but we can check if it's capture
-       // Actually let's assume move has no isCastle
-       AudioService().playSound((captured.$1.length + captured.$2.length) > (state.capturedWhite.length + state.capturedBlack.length) ? 'capture' : 'move-self', theme);
+      AudioService().playSound('promote', theme);
+    } else if (move.isCastle == true) {
+      // We might not have isCastle property natively here but we can check if it's capture
+      // Actually let's assume move has no isCastle
+      AudioService().playSound(
+          (captured.$1.length + captured.$2.length) >
+                  (state.capturedWhite.length + state.capturedBlack.length)
+              ? 'capture'
+              : 'move-self',
+          theme);
     } else {
-       AudioService().playSound((captured.$1.length + captured.$2.length) > (state.capturedWhite.length + state.capturedBlack.length) ? 'capture' : 'move-self', theme);
+      AudioService().playSound(
+          (captured.$1.length + captured.$2.length) >
+                  (state.capturedWhite.length + state.capturedBlack.length)
+              ? 'capture'
+              : 'move-self',
+          theme);
     }
-
 
     // Apply increment to the player who just moved
     if (state.incrementMs > 0 && state.whiteTimeMs > 0) {
-      final justMoved = state.currentTurn; // currentTurn already flipped, so the OTHER color just moved
-      final movedColor = justMoved == PieceColor.white ? PieceColor.black : PieceColor.white;
+      final justMoved = state
+          .currentTurn; // currentTurn already flipped, so the OTHER color just moved
+      final movedColor =
+          justMoved == PieceColor.white ? PieceColor.black : PieceColor.white;
       if (movedColor == PieceColor.white) {
-        emit(state.copyWith(whiteTimeMs: state.whiteTimeMs + state.incrementMs));
+        emit(
+            state.copyWith(whiteTimeMs: state.whiteTimeMs + state.incrementMs));
       } else {
-        emit(state.copyWith(blackTimeMs: state.blackTimeMs + state.incrementMs));
+        emit(
+            state.copyWith(blackTimeMs: state.blackTimeMs + state.incrementMs));
       }
     }
 
     // 2. AI COACH MOVE ANALYSIS (only for Human Player moves)
     // We determine this by checking if the turn just flipped to the computer
-    final wasHumanMove = (state.playerColor == null) || (state.currentTurn != state.playerColor);
-    
-    bool shouldAnalyze = wasHumanMove && (state.mode == GameMode.practice || state.mode == GameMode.singlePlayer);
-    
+    final wasHumanMove =
+        (state.playerColor == null) || (state.currentTurn != state.playerColor);
+
+    bool shouldAnalyze = wasHumanMove &&
+        (state.mode == GameMode.practice ||
+            state.mode == GameMode.singlePlayer);
+
     if (shouldAnalyze && state.coachSettings.enableRealTimeCoaching) {
-    int mistakes = state.mistakes;
-    int blunders = state.blunders;
-    int bestMoves = state.bestMoves;
-    int missedWins = state.missedWins;
-    double accuracy = state.accuracy;
+      int mistakes = state.mistakes;
+      int blunders = state.blunders;
+      int bestMoves = state.bestMoves;
+      int missedWins = state.missedWins;
+      double accuracy = state.accuracy;
 
-    try {
-      // Use pre-move FEN captured before engine.makeMove()
-      final engineBefore = ChessEngine.fromFEN(fenBeforeMove);
-      
-      final feedback = await _coachController.evaluateMove(
-        engineBeforeMove: engineBefore,
-        playedMove: move,
-        engineAfterMove: _engine,
-      );
+      try {
+        // Use pre-move FEN captured before engine.makeMove()
+        final engineBefore = ChessEngine.fromFEN(fenBeforeMove);
 
-      // Update stats based on classification
-      switch (feedback.classification) {
-        case MoveClassification.brilliant:
-        case MoveClassification.best:
-          bestMoves++;
-        case MoveClassification.good:
-          break;
-        case MoveClassification.needsImprovement:
-          break;
-        case MoveClassification.mistake:
-          mistakes++;
-        case MoveClassification.blunder:
-          blunders++;
+        final feedback = await _coachController.evaluateMove(
+          engineBeforeMove: engineBefore,
+          playedMove: move,
+          engineAfterMove: _engine,
+        );
+
+        // Update stats based on classification
+        switch (feedback.classification) {
+          case MoveClassification.brilliant:
+          case MoveClassification.best:
+            bestMoves++;
+          case MoveClassification.good:
+            break;
+          case MoveClassification.needsImprovement:
+            break;
+          case MoveClassification.mistake:
+            mistakes++;
+          case MoveClassification.blunder:
+            blunders++;
+        }
+
+        // Update accuracy
+        final moveCountTotal = state.moveHistory.length + 1;
+        final double moveAccuracy =
+            (100.0 - (feedback.centipawnLoss / 10.0)).clamp(0.0, 100.0);
+        accuracy = (state.accuracy * (moveCountTotal - 1) + moveAccuracy) /
+            moveCountTotal;
+
+        // Track coach history for post-game analysis
+        final updatedHistory = [...state.gameCoachHistory, feedback];
+
+        // Highlight best move if user made a mistake
+        Move? coachMove;
+        if (feedback.isNegative && feedback.bestMoveAlgebraic != null) {
+          try {
+            coachMove = Move.fromAlgebraic(feedback.bestMoveAlgebraic!);
+          } catch (_) {}
+        }
+
+        // Track if this move was made with a hint
+        final newHintedIndices = Set<int>.from(state.hintedIndices);
+        if (state.activeHint != null) {
+          newHintedIndices.add(_engine.moveHistory.length - 1);
+        }
+
+        emit(state.copyWith(
+          accuracy: accuracy,
+          mistakes: mistakes,
+          blunders: blunders,
+          bestMoves: bestMoves,
+          missedWins: missedWins,
+          coachFeedback: feedback,
+          coachMessage: feedback.isNegative ? feedback.message : null,
+          showMiniLesson: feedback.classification == MoveClassification.blunder,
+          gameCoachHistory: updatedHistory,
+          coachMove: coachMove,
+          hintedIndices: newHintedIndices,
+          clearActiveHint: true,
+        ));
+      } catch (e) {
+        debugPrint('[Coach Analysis Error] $e');
       }
-
-      // Update accuracy
-      final moveCountTotal = state.moveHistory.length + 1;
-      final double moveAccuracy = (100.0 - (feedback.centipawnLoss / 10.0)).clamp(0.0, 100.0);
-      accuracy = (state.accuracy * (moveCountTotal - 1) + moveAccuracy) / moveCountTotal;
-
-      // Track coach history for post-game analysis
-      final updatedHistory = [...state.gameCoachHistory, feedback];
-
-      // Highlight best move if user made a mistake
-      Move? coachMove;
-      if (feedback.isNegative && feedback.bestMoveAlgebraic != null) {
-        try {
-          coachMove = Move.fromAlgebraic(feedback.bestMoveAlgebraic!);
-        } catch (_) {}
-      }
-
-      // Track if this move was made with a hint
-      final newHintedIndices = Set<int>.from(state.hintedIndices);
-      if (state.activeHint != null) {
-        newHintedIndices.add(_engine.moveHistory.length - 1);
-      }
-
-      emit(state.copyWith(
-        accuracy: accuracy,
-        mistakes: mistakes,
-        blunders: blunders,
-        bestMoves: bestMoves,
-        missedWins: missedWins,
-        coachFeedback: feedback,
-        coachMessage: feedback.isNegative ? feedback.message : null,
-        showMiniLesson: feedback.classification == MoveClassification.blunder,
-        gameCoachHistory: updatedHistory,
-        coachMove: coachMove,
-        hintedIndices: newHintedIndices,
-        clearActiveHint: true,
-      ));
-    } catch (e) {
-      debugPrint('[Coach Analysis Error] $e');
     }
-  }
 
     // Note: We avoid Future.delayed here as it can cause late emits after bloc closure.
     // UI should handle the ephemeral display of coach messages.
@@ -1145,7 +1310,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       if (isLastStep || currentStep.isCompletion) {
         // Tutorial complete!
         emit(state.copyWith(
-          tutorialMessage: '🎓 Lesson Complete! ${currentStep.successMessage ?? "Well done!"}',
+          tutorialMessage:
+              '🎓 Lesson Complete! ${currentStep.successMessage ?? "Well done!"}',
           status: GameStatus.draw, // Mark as finished
         ));
       } else {
@@ -1175,7 +1341,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         // Puzzle solved! Award 50 XP
         emit(state.copyWith(
           showPuzzleCelebration: true,
-          status: GameStatus.checkmate, 
+          status: GameStatus.checkmate,
           tutorialMessage: '🌟 WOW! You solved it like a real grandmaster! 🧠✨',
           totalPuzzleXP: state.totalPuzzleXP + 50,
           xpGained: state.xpGained + 50,
@@ -1189,7 +1355,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
           final diff = (state.puzzle!.rating ?? 1200) - puzzleRating;
           final ratingGain = (diff > 0 ? 30 : 15).clamp(5, 50);
           final newPuzzleRating = puzzleRating + ratingGain;
-          
+
           await _authRepository.updateXPProgress(
             userId: user.id,
             xpDelta: 50,
@@ -1203,11 +1369,12 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         // In Puzzle Rush, automatically go to the next puzzle
         if (state.isPuzzleRush) {
           await Future.delayed(const Duration(milliseconds: 1500));
-          if (isClosed || state.puzzleRushTime <= 0 || !state.isPuzzleRush) return;
-          
+          if (isClosed || state.puzzleRushTime <= 0 || !state.isPuzzleRush)
+            return;
+
           final userForRating = await _authRepository.getCurrentUser();
           final rating = userForRating?.stats.puzzleRating ?? 1200;
-          final nextPuzzle = await _puzzleRepository.getAdaptivePuzzle(rating); 
+          final nextPuzzle = await _puzzleRepository.getAdaptivePuzzle(rating);
           add(GameStartEvent(GameConfig(
             mode: GameMode.puzzle,
             playerColor: nextPuzzle.playerColor ?? 'white',
@@ -1218,19 +1385,20 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       } else {
         final nextIdx = state.puzzleStep + 1;
         final nextMove = state.puzzle!.moves[nextIdx];
-        
+
         emit(state.copyWith(
           puzzleStep: nextIdx,
           tutorialMessage: nextMove.dialog,
         ));
-        
+
         // AUTO-PLAY opponent moves after a brief delay
         if (nextMove.isOpponentMove) {
           await Future.delayed(const Duration(milliseconds: 800));
           if (isClosed || state.isGameOver) return;
-          
+
           final opponentMove = Move.fromAlgebraic(nextMove.uciMove);
-          add(GameMakeMoveEvent(opponentMove.from, opponentMove.to, promotion: opponentMove.promotion));
+          add(GameMakeMoveEvent(opponentMove.from, opponentMove.to,
+              promotion: opponentMove.promotion));
         }
       }
     }
@@ -1242,7 +1410,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
 
     // Trigger AI if needed
     if (!state.isGameOver &&
-        (state.mode == GameMode.singlePlayer || state.mode == GameMode.practice) &&
+        (state.mode == GameMode.singlePlayer ||
+            state.mode == GameMode.practice) &&
         _engine.currentTurn != state.playerColor) {
       add(GameAIRequestEvent());
     }
@@ -1257,12 +1426,15 @@ class GameBloc extends Bloc<GameEvent, GameState> {
           final user = await _authRepository.getCurrentUser();
           if (user != null) {
             double currentD = user.stats.practiceDifficulty;
-            final isWin = (state.result == GameResult.whiteWins && state.playerColor == PieceColor.white) ||
-                         (state.result == GameResult.blackWins && state.playerColor == PieceColor.black);
-            
+            final isWin = (state.result == GameResult.whiteWins &&
+                    state.playerColor == PieceColor.white) ||
+                (state.result == GameResult.blackWins &&
+                    state.playerColor == PieceColor.black);
+
             if (isWin) {
               currentD += 0.5;
-            } else if (state.result != GameResult.draw && state.result != GameResult.ongoing) {
+            } else if (state.result != GameResult.draw &&
+                state.result != GameResult.ongoing) {
               currentD = math.max(1.0, currentD - 0.5);
             }
             await _authRepository.updatePracticeDifficulty(user.id, currentD);
@@ -1279,36 +1451,45 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         if (state.mode != GameMode.practice) {
           final user = await _authRepository.getCurrentUser();
           if (user != null) {
-            final isWin = (state.result == GameResult.whiteWins && state.playerColor == PieceColor.white) ||
-                         (state.result == GameResult.blackWins && state.playerColor == PieceColor.black);
-            final isLoss = (state.result == GameResult.blackWins && state.playerColor == PieceColor.white) ||
-                          (state.result == GameResult.whiteWins && state.playerColor == PieceColor.black);
+            final isWin = (state.result == GameResult.whiteWins &&
+                    state.playerColor == PieceColor.white) ||
+                (state.result == GameResult.blackWins &&
+                    state.playerColor == PieceColor.black);
+            final isLoss = (state.result == GameResult.blackWins &&
+                    state.playerColor == PieceColor.white) ||
+                (state.result == GameResult.whiteWins &&
+                    state.playerColor == PieceColor.black);
             final isDraw = state.result == GameResult.draw;
 
             if (isWin) {
               xp += 100; // Base win XP
-              
+
               // Bonus for every 10th win
               if ((user.stats.wins + 1) % 10 == 0) {
                 xp += 100;
               }
 
               // Checkmate in 5 moves (10 half-moves)
-              if (state.status == GameStatus.checkmate && state.moveHistory.length <= 10) {
+              if (state.status == GameStatus.checkmate &&
+                  state.moveHistory.length <= 10) {
                 xp += 500;
               }
 
               // Win without losing piece
-              final myCaptured = state.playerColor == PieceColor.black ? state.capturedBlack : state.capturedWhite;
+              final myCaptured = state.playerColor == PieceColor.black
+                  ? state.capturedBlack
+                  : state.capturedWhite;
               if (myCaptured.isEmpty) {
                 xp += 10000;
               }
-              
+
               mapUpdates['wins'] = 1;
-              if (state.mode == GameMode.singlePlayer) mapUpdates['ai_wins'] = 1;
-              if (state.mode == GameMode.multiplayer) mapUpdates['multiplayer_wins'] = 1;
-              if (state.mode == GameMode.tournament) mapUpdates['tournament_wins'] = 1;
-              
+              if (state.mode == GameMode.singlePlayer)
+                mapUpdates['ai_wins'] = 1;
+              if (state.mode == GameMode.multiplayer)
+                mapUpdates['multiplayer_wins'] = 1;
+              if (state.mode == GameMode.tournament)
+                mapUpdates['tournament_wins'] = 1;
             } else if (isLoss) {
               xp -= 20; // Defeat: -20 XP (per game rules)
 
@@ -1321,13 +1502,15 @@ class GameBloc extends Bloc<GameEvent, GameState> {
             // Sync with Repo
             await _authRepository.updateXPProgress(
               userId: user.id,
-              xpDelta: xp + state.xpGained, // include hint penalties already in state
+              xpDelta: xp +
+                  state.xpGained, // include hint penalties already in state
               statUpdates: mapUpdates,
               isOnlineMatch: state.mode == GameMode.multiplayer,
             );
 
             // ── ELO CALCULATION ──
-            if (state.mode == GameMode.singlePlayer || state.mode == GameMode.multiplayer) {
+            if (state.mode == GameMode.singlePlayer ||
+                state.mode == GameMode.multiplayer) {
               final currentElo = user.stats.eloRating;
               final playerGames = user.stats.gamesPlayed;
               double score = isDraw ? 0.5 : (isWin ? 1.0 : 0.0);
@@ -1343,7 +1526,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
                 newElo = result.$1;
               } else {
                 // Multiplayer: assume opponent is similar rating
-                final opponentElo = currentElo; // Server would provide actual opponent ELO
+                final opponentElo =
+                    currentElo; // Server would provide actual opponent ELO
                 final result = EloService.calculateNewRatings(
                   player1Rating: currentElo,
                   player2Rating: opponentElo,
@@ -1368,7 +1552,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         String msg = '';
         if (state.accuracy >= 80) {
           msg = '🚀 Incredible! Your precision was professional level.';
-          if (state.aiDifficulty != AIDifficulty.impossible && state.aiDifficulty != AIDifficulty.aiMode) {
+          if (state.aiDifficulty != AIDifficulty.impossible &&
+              state.aiDifficulty != AIDifficulty.aiMode) {
             msg += '\nReady to try the next level?';
           }
         } else if (state.accuracy >= 60) {
@@ -1391,60 +1576,67 @@ class GameBloc extends Bloc<GameEvent, GameState> {
           status: state.status.name,
           result: state.result.name,
           moveCount: state.moveHistory.length,
-          playerColor: state.playerColor == PieceColor.black ? 'black' : 'white',
+          playerColor:
+              state.playerColor == PieceColor.black ? 'black' : 'white',
           updatedAt: DateTime.now(),
         );
         _gameRepository.completeGame(game);
-        
+
         // Persist XP to user profile (if repository supports it)
         try {
           // Assuming user profile exists or we handle it via a different service
           // _userRepository.addXP(xp);
         } catch (_) {}
-
       } else {
         add(GameSaveEvent());
       }
     }
 
     // ── HUMANOID AI: BACKGROUND PLAYER ANALYSIS (AI MODE ONLY) ──
-    if (!state.isGameOver && state.mode == GameMode.singlePlayer && state.aiDifficulty == AIDifficulty.aiMode && _engine.currentTurn != state.playerColor) {
-       final fenBefore = fenBeforeMove; // Captured at start of _onMakeMove
-       final lastMove = move.toAlgebraic();
-       
-       // Asynchronous analysis using the unified bridge (via controller)
-       _engineController.analyzeMoveBackground(fenBefore, nodes: 1000).then((res) {
-          if (res == null) return;
-          final best = res['move'] as String?;
-          if (best == null) return;
-          
-          // Heuristic: if user played a quick tactical blow (capture/check), shift to Defensive
-          final isCheck = lastMove.contains('+') || lastMove.contains('#');
-          if (move.capturedPiece != null || isCheck) {
-             PersonalityEngine().forcePersonality(AIPersonality.defensive);
-          } else if (math.Random().nextDouble() > 0.6) {
-             // Random shift to keep it dynamic and human-like
-             PersonalityEngine().forcePersonality(AIPersonality.aggressive);
-          }
+    if (!state.isGameOver &&
+        state.mode == GameMode.singlePlayer &&
+        state.aiDifficulty == AIDifficulty.aiMode &&
+        _engine.currentTurn != state.playerColor) {
+      final fenBefore = fenBeforeMove; // Captured at start of _onMakeMove
+      final lastMove = move.toAlgebraic();
 
-          if (!isClosed) {
-            add(GameUpdatePersonalityEvent(
-              personality: PersonalityEngine().currentPersonality,
-              message: _engineController.aiMessage ?? "Calculating...",
-            ));
-          }
-       }).catchError((_) {});
+      // Asynchronous analysis using the unified bridge (via controller)
+      _engineController
+          .analyzeMoveBackground(fenBefore, nodes: 1000)
+          .then((res) {
+        if (res == null) return;
+        final best = res['move'] as String?;
+        if (best == null) return;
+
+        // Heuristic: if user played a quick tactical blow (capture/check), shift to Defensive
+        final isCheck = lastMove.contains('+') || lastMove.contains('#');
+        if (move.capturedPiece != null || isCheck) {
+          PersonalityEngine().forcePersonality(AIPersonality.defensive);
+        } else if (math.Random().nextDouble() > 0.6) {
+          // Random shift to keep it dynamic and human-like
+          PersonalityEngine().forcePersonality(AIPersonality.aggressive);
+        }
+
+        if (!isClosed) {
+          add(GameUpdatePersonalityEvent(
+            personality: PersonalityEngine().currentPersonality,
+            message: _engineController.aiMessage ?? "Calculating...",
+          ));
+        }
+      }).catchError((_) {});
     }
 
     // After everything, check if we have a pending preMove and it's now our turn
     if (state.preMove != null && _engine.currentTurn == state.playerColor) {
       final pre = state.preMove!;
       emit(state.copyWith(clearPreMove: true)); // Clear it to avoid looping
-      
+
       final legals = _engine.legalMovesFrom(pre.from);
       final legit = legals.where((m) => m.to == pre.to).firstOrNull;
       if (legit != null) {
-        add(GameMakeMoveEvent(legit.from, legit.to, promotion: legit.promotion ?? (state.autoQueen ? PieceType.queen : null)));
+        add(GameMakeMoveEvent(legit.from, legit.to,
+            promotion:
+                legit.promotion ?? (state.autoQueen ? PieceType.queen : null)));
       }
     }
   }
@@ -1453,10 +1645,10 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     if (state.mode == GameMode.multiplayer) {
       if (state.mpUndosUsed >= 2) return;
       if (state.lastMoveTimestamp == null) return;
-      
-      // In multiplayer, the move turned the board to the OPPONENT. 
+
+      // In multiplayer, the move turned the board to the OPPONENT.
       // We can only undo if it's currently NOT our turn (meaning we just moved).
-      if (state.isPlayerTurn) return; 
+      if (state.isPlayerTurn) return;
 
       final elapsed = DateTime.now().difference(state.lastMoveTimestamp!);
       if (elapsed.inSeconds >= 5) return;
@@ -1479,14 +1671,15 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       return;
     }
     // Undo 2 moves if vs AI (take back player's move + AI's response)
-    final isVsAI = state.mode == GameMode.singlePlayer || state.mode == GameMode.practice;
-    
-    // In practice/single player, we usually undo 2. 
-    // But if it was hinted, the user might only get 1 undo? 
+    final isVsAI =
+        state.mode == GameMode.singlePlayer || state.mode == GameMode.practice;
+
+    // In practice/single player, we usually undo 2.
+    // But if it was hinted, the user might only get 1 undo?
     // Actually, "Undo stays" but "only undo ONCE for that move if hint given"
     // I will interpret as: you can undo it, but we can prevent further undos?
     // Let's just do the undo and clear the suggested move.
-    
+
     final undoCount = isVsAI ? 2 : 1;
     for (int i = 0; i < undoCount; i++) {
       if (_engine.moveHistory.isNotEmpty) _engine.undoMove();
@@ -1508,7 +1701,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     _aiRequestEpoch++;
     emit(state.copyWith(
       result: state.currentTurn == PieceColor.white
-          ? GameResult.blackWins : GameResult.whiteWins,
+          ? GameResult.blackWins
+          : GameResult.whiteWins,
       status: GameStatus.checkmate,
       isAIThinking: false,
     ));
@@ -1549,19 +1743,20 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     } catch (_) {}
   }
 
-  Future<void> _onRequestHint(GameRequestHintEvent event, Emitter<GameState> emit) async {
+  Future<void> _onRequestHint(
+      GameRequestHintEvent event, Emitter<GameState> emit) async {
     // Puzzle Hint Logic — costs 10 XP
     if (state.mode == GameMode.puzzle && state.puzzle != null) {
       final currentMove = state.puzzle!.moves[state.puzzleStep];
       if (currentMove.isOpponentMove) return; // Can't hint on opponent's turn
-      
+
       final newXp = state.xpGained - 10;
       emit(state.copyWith(
         tutorialMessage: "💡 Psst! Here's a little hint: ${currentMove.hint}",
         isPuzzleHintUsed: true,
         xpGained: newXp,
       ));
-      
+
       // Deduct XP from server
       final user = await _authRepository.getCurrentUser();
       if (user != null) {
@@ -1575,12 +1770,13 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     }
 
     if (state.hintsRemaining <= 0) return;
-    if (state.mode != GameMode.singlePlayer && state.mode != GameMode.practice) return;
+    if (state.mode != GameMode.singlePlayer && state.mode != GameMode.practice)
+      return;
     if (!state.isPlayerTurn) return;
 
     final aiRequestEpoch = ++_aiRequestEpoch;
     emit(state.copyWith(isAIThinking: true));
-    
+
     // Use AI Coach for rich hint with explanation
     final hintResult = await _coachController.getHint(_engine);
 
@@ -1598,21 +1794,24 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     }
   }
 
-  void _onDismissMiniLesson(GameDismissMiniLessonEvent event, Emitter<GameState> emit) {
+  void _onDismissMiniLesson(
+      GameDismissMiniLessonEvent event, Emitter<GameState> emit) {
     emit(state.copyWith(showMiniLesson: false));
   }
 
   /// Give up puzzle — reveal solution with child-friendly message
-  Future<void> _onPuzzleGiveUp(GamePuzzleGiveUpEvent event, Emitter<GameState> emit) async {
+  Future<void> _onPuzzleGiveUp(
+      GamePuzzleGiveUpEvent event, Emitter<GameState> emit) async {
     if (state.mode != GameMode.puzzle || state.puzzle == null) return;
     if (state.isGameOver) return;
 
     // Build the solution explanation
     final puzzle = state.puzzle!;
-    final remainingMoves = puzzle.moves.sublist(state.puzzleStep)
+    final remainingMoves = puzzle.moves
+        .sublist(state.puzzleStep)
         .where((m) => !m.isOpponentMove)
         .toList();
-    
+
     // Generate child-friendly give-up messages
     final giveUpMessages = [
       "Aww, don't worry! 🤗 Even grandmasters get stuck sometimes!",
@@ -1621,16 +1820,17 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       "Oopsie daisy! 🌻 But guess what? Now you'll know this trick forever!",
       "It's okay to ask for help! 🎈 Smart players learn from solutions!",
     ];
-    final randomMsg = giveUpMessages[DateTime.now().millisecond % giveUpMessages.length];
-    
+    final randomMsg =
+        giveUpMessages[DateTime.now().millisecond % giveUpMessages.length];
+
     // Build solution text
     final solutionSteps = <String>[];
     for (int i = 0; i < remainingMoves.length; i++) {
       solutionSteps.add('${i + 1}. ${remainingMoves[i].uciMove}');
     }
-    
+
     final solutionText = solutionSteps.join(' → ');
-    
+
     // Child-friendly explanation of the solution
     final explanations = [
       "If you had just played $solutionText... it was sooo simple! 😄",
@@ -1639,15 +1839,16 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       "The answer was $solutionText! Next time you'll spot it right away! 🔍",
       "Just $solutionText and BOOM! 💥 You would've won! Remember this pattern!",
     ];
-    final explanation = explanations[DateTime.now().millisecond % explanations.length];
-    
+    final explanation =
+        explanations[DateTime.now().millisecond % explanations.length];
+
     emit(state.copyWith(
       status: GameStatus.draw,
       tutorialMessage: '$randomMsg\n\n🧩 Solution: $explanation',
       showPuzzleCelebration: false,
       puzzleGaveUp: true,
     ));
-    
+
     // Decrease puzzle rating on failure (adaptive difficulty)
     final user = await _authRepository.getCurrentUser();
     if (user != null) {
@@ -1655,7 +1856,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       final diff = puzzleRating - (puzzle.rating ?? 1200);
       final ratingLoss = (diff > 0 ? 25 : 10).clamp(5, 40);
       final newPuzzleRating = (puzzleRating - ratingLoss).clamp(400, 3000);
-      
+
       await _authRepository.updateXPProgress(
         userId: user.id,
         xpDelta: 0,
@@ -1667,11 +1868,12 @@ class GameBloc extends Bloc<GameEvent, GameState> {
   }
 
   /// Load next adaptive puzzle
-  Future<void> _onPuzzleNext(GamePuzzleNextEvent event, Emitter<GameState> emit) async {
+  Future<void> _onPuzzleNext(
+      GamePuzzleNextEvent event, Emitter<GameState> emit) async {
     final user = await _authRepository.getCurrentUser();
     final rating = user?.stats.puzzleRating ?? 1200;
     final nextPuzzle = await _puzzleRepository.getAdaptivePuzzle(rating);
-    
+
     add(GameStartEvent(GameConfig(
       mode: GameMode.puzzle,
       playerColor: nextPuzzle.playerColor ?? 'white',
@@ -1706,7 +1908,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     if (state.whiteTimeMs <= 0 && state.blackTimeMs <= 0) return;
 
     final now = DateTime.now();
-    final elapsedMs = now.difference(_lastClockTickTime ?? now).inMilliseconds.toDouble();
+    final elapsedMs =
+        now.difference(_lastClockTickTime ?? now).inMilliseconds.toDouble();
     _lastClockTickTime = now;
 
     double white = state.whiteTimeMs;
@@ -1742,10 +1945,12 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       return;
     }
 
-    emit(state.copyWith(whiteTimeMs: white, blackTimeMs: black, clockRunning: true));
+    emit(state.copyWith(
+        whiteTimeMs: white, blackTimeMs: black, clockRunning: true));
   }
 
-  void _onPromotionRequired(GamePromotionRequiredEvent event, Emitter<GameState> emit) {
+  void _onPromotionRequired(
+      GamePromotionRequiredEvent event, Emitter<GameState> emit) {
     emit(state.copyWith(
       showPromotionDialog: true,
       promotionFrom: event.from,
@@ -1757,8 +1962,11 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     final capturedWhite = <ChessPiece>[];
     final capturedBlack = <ChessPiece>[];
     final initialPieces = {
-      PieceType.pawn: 8, PieceType.rook: 2, PieceType.knight: 2,
-      PieceType.bishop: 2, PieceType.queen: 1,
+      PieceType.pawn: 8,
+      PieceType.rook: 2,
+      PieceType.knight: 2,
+      PieceType.bishop: 2,
+      PieceType.queen: 1,
     };
     final onBoardWhite = <PieceType, int>{};
     final onBoardBlack = <PieceType, int>{};
@@ -1777,10 +1985,10 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     for (final entry in initialPieces.entries) {
       final wCount = (entry.value) - (onBoardWhite[entry.key] ?? 0);
       final bCount = (entry.value) - (onBoardBlack[entry.key] ?? 0);
-      capturedWhite.addAll(List.generate(wCount, (_) =>
-          ChessPiece(type: entry.key, color: PieceColor.white)));
-      capturedBlack.addAll(List.generate(bCount, (_) =>
-          ChessPiece(type: entry.key, color: PieceColor.black)));
+      capturedWhite.addAll(List.generate(
+          wCount, (_) => ChessPiece(type: entry.key, color: PieceColor.white)));
+      capturedBlack.addAll(List.generate(
+          bCount, (_) => ChessPiece(type: entry.key, color: PieceColor.black)));
     }
 
     return (capturedWhite, capturedBlack);
@@ -1788,38 +1996,44 @@ class GameBloc extends Bloc<GameEvent, GameState> {
 
   void _onUpdateEval(GameUpdateEvalEvent event, Emitter<GameState> emit) {
     final updatedHistory = [...state.evalHistory, event.evalScore];
-    emit(state.copyWith(evalScore: event.evalScore, evalHistory: updatedHistory));
+    emit(state.copyWith(
+        evalScore: event.evalScore, evalHistory: updatedHistory));
   }
 
   /// Centralized AI move generation logic now correctly handled as a Bloc event.
-  Future<void> _onAIRequest(GameAIRequestEvent event, Emitter<GameState> emit) async {
+  Future<void> _onAIRequest(
+      GameAIRequestEvent event, Emitter<GameState> emit) async {
     if (state.isGameOver) return;
 
     final aiRequestEpoch = ++_aiRequestEpoch;
     emit(state.copyWith(isAIThinking: true));
-    
+
     // UI Delay for "human feel"
     await Future.delayed(const Duration(milliseconds: 400));
     if (isClosed || aiRequestEpoch != _aiRequestEpoch) return;
 
     try {
       final moveStr = await _engineController.getBestMove(
-        _engine.toFEN(), 
-        engine: _engine, 
+        _engine.toFEN(),
+        engine: _engine,
         moveNumber: state.moveHistory.length,
       );
-      
+
       if (isClosed || aiRequestEpoch != _aiRequestEpoch) return;
 
-      if (moveStr != null && !state.isGameOver && _engine.status == GameStatus.active) {
+      final isPlayable = _engine.status == GameStatus.active ||
+          _engine.status == GameStatus.check;
+      if (moveStr != null && !state.isGameOver && isPlayable) {
         // Clear AI specific message after move is decided
-        emit(state.copyWith(clearTutorialMessage: true)); 
-        
+        emit(state.copyWith(clearTutorialMessage: true));
+
         final aiMove = Move.fromAlgebraic(moveStr);
-        add(GameMakeMoveEvent(aiMove.from, aiMove.to, promotion: aiMove.promotion));
-      } else if (!state.isGameOver && _engine.status == GameStatus.active) {
+        add(GameMakeMoveEvent(aiMove.from, aiMove.to,
+            promotion: aiMove.promotion));
+      } else if (!state.isGameOver && isPlayable) {
         // FAILSAFE: Try fallback first
-        final fallback = await _engineController.fallbackMove(_engine.toFEN(), engine: _engine);
+        final fallback = await _engineController.fallbackMove(_engine.toFEN(),
+            engine: _engine);
         if (fallback != null) {
           final fm = Move.fromAlgebraic(fallback);
           add(GameMakeMoveEvent(fm.from, fm.to, promotion: fm.promotion));
@@ -1827,16 +2041,19 @@ class GameBloc extends Bloc<GameEvent, GameState> {
           // TOTAL FAILURE: Popup Error Message
           emit(state.copyWith(
             isAIThinking: false,
-            engineError: "Ooops! I'm having a little trouble thinking right now. 😵‍💫 My engine stalled, please reload the game!",
+            engineError:
+                "Ooops! I'm having a little trouble thinking right now. 😵‍💫 My engine stalled, please reload the game!",
           ));
         }
       }
     } catch (e) {
       debugPrint('[AI Execution Error] $e');
-      if (!isClosed) emit(state.copyWith(
-        isAIThinking: false,
-        engineError: "Sorry! Something went wrong behind the scenes. 🤯 I can't think anymore!",
-      ));
+      if (!isClosed)
+        emit(state.copyWith(
+          isAIThinking: false,
+          engineError:
+              "Sorry! Something went wrong behind the scenes. 🤯 I can't think anymore!",
+        ));
     }
   }
 }

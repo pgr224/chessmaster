@@ -47,11 +47,16 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
                 backgroundColor: Colors.transparent,
                 elevation: 0,
                 leading: IconButton(
-                  icon: const Icon(Icons.arrow_back_rounded, color: AppTheme.textPrimary, size: 28),
+                  icon: const Icon(Icons.arrow_back_rounded,
+                      color: AppTheme.textPrimary, size: 28),
                   onPressed: () => context.pop(),
                 ),
-                title: Text('🤖 New Game vs AI',
-                  style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 22, fontWeight: FontWeight.w600),
+                title: Text(
+                  '🤖 New Game vs AI',
+                  style: GoogleFonts.fredoka(
+                      color: AppTheme.textPrimary,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w600),
                 ),
                 centerTitle: true,
               ),
@@ -59,7 +64,6 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
                 padding: const EdgeInsets.all(20),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
-
                     // ── DIFFICULTY ──
                     _sectionCard(
                       title: '🧠 Difficulty',
@@ -84,7 +88,7 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
 
                     const SizedBox(height: 18),
 
-                     const SizedBox(height: 18),
+                    const SizedBox(height: 18),
 
                     // ── OPTIONS ──
                     _sectionCard(
@@ -103,16 +107,23 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.accentCyan,
                           foregroundColor: AppTheme.midnight,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(22)),
                           elevation: 10,
-                          shadowColor: AppTheme.accentCyan.withValues(alpha: 0.5),
+                          shadowColor:
+                              AppTheme.accentCyan.withValues(alpha: 0.5),
                         ),
                         icon: const Icon(Icons.play_arrow_rounded, size: 34),
-                        label: Text('Start Game! 🚀',
-                          style: GoogleFonts.fredoka(fontSize: 22, fontWeight: FontWeight.w700),
+                        label: Text(
+                          'Start Game! 🚀',
+                          style: GoogleFonts.fredoka(
+                              fontSize: 22, fontWeight: FontWeight.w700),
                         ),
                       ),
-                    ).animate().fadeIn(delay: 500.ms).scale(begin: const Offset(0.9, 0.9)),
+                    )
+                        .animate()
+                        .fadeIn(delay: 500.ms)
+                        .scale(begin: const Offset(0.9, 0.9)),
                   ]),
                 ),
               ),
@@ -135,9 +146,12 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: GoogleFonts.fredoka(
-            color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.w600,
-          )),
+          Text(title,
+              style: GoogleFonts.fredoka(
+                color: AppTheme.textPrimary,
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+              )),
           const SizedBox(height: 18),
           child,
         ],
@@ -169,17 +183,27 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
             child: Row(children: [
               Text(info['emoji']!, style: const TextStyle(fontSize: 30)),
               const SizedBox(width: 14),
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(info['name']!, style: GoogleFonts.fredoka(
-                  color: isSelected ? AppTheme.goldPrimary : AppTheme.textPrimary,
-                  fontWeight: FontWeight.w600, fontSize: 18,
-                )),
-                Text(info['desc']!, style: GoogleFonts.baloo2(
-                  color: AppTheme.textSecondary, fontSize: 14,
-                )),
-              ])),
+              Expanded(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                    Text(info['name']!,
+                        style: GoogleFonts.fredoka(
+                          color: isSelected
+                              ? AppTheme.goldPrimary
+                              : AppTheme.textPrimary,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 18,
+                        )),
+                    Text(info['desc']!,
+                        style: GoogleFonts.baloo2(
+                          color: AppTheme.textSecondary,
+                          fontSize: 14,
+                        )),
+                  ])),
               if (isSelected)
-                const Icon(Icons.check_circle_rounded, color: AppTheme.goldPrimary, size: 26),
+                const Icon(Icons.check_circle_rounded,
+                    color: AppTheme.goldPrimary, size: 26),
             ]),
           ),
         );
@@ -190,7 +214,8 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
   Widget _buildColorSelector() {
     return Column(
       children: [
-        Row(children: ['white', 'custom', 'black'].map((color) {
+        Row(
+            children: ['white', 'custom', 'black'].map((color) {
           final isSelected = _playerColor == color;
           return Expanded(
             child: GestureDetector(
@@ -205,18 +230,26 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
                       : AppTheme.surface.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: isSelected ? AppTheme.goldPrimary : Colors.transparent,
+                    color:
+                        isSelected ? AppTheme.goldPrimary : Colors.transparent,
                     width: 2,
                   ),
                 ),
-                child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Text(_colorEmoji(color), style: const TextStyle(fontSize: 32)),
-                  const SizedBox(height: 6),
-                  Text(_colorName(color), style: GoogleFonts.fredoka(
-                    color: isSelected ? AppTheme.goldPrimary : AppTheme.textSecondary,
-                    fontSize: 14, fontWeight: FontWeight.w600,
-                  )),
-                ]),
+                child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(_colorEmoji(color),
+                          style: const TextStyle(fontSize: 32)),
+                      const SizedBox(height: 6),
+                      Text(_colorName(color),
+                          style: GoogleFonts.fredoka(
+                            color: isSelected
+                                ? AppTheme.goldPrimary
+                                : AppTheme.textSecondary,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          )),
+                    ]),
               ),
             ),
           );
@@ -241,39 +274,53 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Custom Piece Colors', style: GoogleFonts.fredoka(
-            color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600,
-          )),
+          Text('Custom Piece Colors',
+              style: GoogleFonts.fredoka(
+                color: AppTheme.textPrimary,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              )),
           const SizedBox(height: 10),
           Row(
             children: [
-              Expanded(child: _colorPill('Start As', _customStartColor == 'white' ? AppTheme.boardThemes['classic']!.light : AppTheme.boardThemes['classic']!.dark, () {
+              Expanded(
+                  child: _colorPill(
+                      'Start As',
+                      _customStartColor == 'white'
+                          ? AppTheme.boardThemes['classic']!.light
+                          : AppTheme.boardThemes['classic']!.dark, () {
                 setState(() {
-                  _customStartColor = _customStartColor == 'white' ? 'black' : 'white';
+                  _customStartColor =
+                      _customStartColor == 'white' ? 'black' : 'white';
                 });
               }, labelSuffix: _customStartColor.capitalize())),
               const SizedBox(width: 10),
-              Expanded(child: _colorPill('White Pieces', _whitePieceColor, () async {
+              Expanded(
+                  child: _colorPill('White Pieces', _whitePieceColor, () async {
                 final picked = await _pickColor(context, _whitePieceColor);
                 if (picked != null) setState(() => _whitePieceColor = picked);
               })),
               const SizedBox(width: 10),
-              Expanded(child: _colorPill('Black Pieces', _blackPieceColor, () async {
+              Expanded(
+                  child: _colorPill('Black Pieces', _blackPieceColor, () async {
                 final picked = await _pickColor(context, _blackPieceColor);
                 if (picked != null) setState(() => _blackPieceColor = picked);
               })),
             ],
           ),
           const SizedBox(height: 8),
-          Text('Tap a color chip to choose your custom palette.', style: GoogleFonts.baloo2(
-            color: AppTheme.textMuted, fontSize: 12,
-          )),
+          Text('Tap a color chip to choose your custom palette.',
+              style: GoogleFonts.baloo2(
+                color: AppTheme.textMuted,
+                fontSize: 12,
+              )),
         ],
       ),
     );
   }
 
-  Widget _colorPill(String label, Color color, VoidCallback onTap, {String? labelSuffix}) {
+  Widget _colorPill(String label, Color color, VoidCallback onTap,
+      {String? labelSuffix}) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -302,9 +349,18 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
 
   Future<Color?> _pickColor(BuildContext context, Color initial) async {
     const swatches = [
-      Color(0xFFFFFFFF), Color(0xFF111111), Color(0xFFFFD93D), Color(0xFF6BCB77),
-      Color(0xFF74B9FF), Color(0xFFFF6B9D), Color(0xFFFF8A5C), Color(0xFFA29BFE),
-      Color(0xFFF5E6CA), Color(0xFF8B6B4A), Color(0xFF2ECC71), Color(0xFFE74C3C),
+      Color(0xFFFFFFFF),
+      Color(0xFF111111),
+      Color(0xFFFFD93D),
+      Color(0xFF6BCB77),
+      Color(0xFF74B9FF),
+      Color(0xFFFF6B9D),
+      Color(0xFFFF8A5C),
+      Color(0xFFA29BFE),
+      Color(0xFFF5E6CA),
+      Color(0xFF8B6B4A),
+      Color(0xFF2ECC71),
+      Color(0xFFE74C3C),
     ];
     Color selected = initial;
 
@@ -312,7 +368,8 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.navyCard,
-        title: Text('Pick Color', style: GoogleFonts.fredoka(color: AppTheme.textPrimary)),
+        title: Text('Pick Color',
+            style: GoogleFonts.fredoka(color: AppTheme.textPrimary)),
         content: StatefulBuilder(
           builder: (context, setLocalState) {
             return SizedBox(
@@ -331,7 +388,9 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
                         color: c,
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: isSelected ? AppTheme.goldPrimary : Colors.white24,
+                          color: isSelected
+                              ? AppTheme.goldPrimary
+                              : Colors.white24,
                           width: isSelected ? 3 : 1,
                         ),
                       ),
@@ -345,11 +404,13 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Cancel', style: GoogleFonts.fredoka(color: AppTheme.textMuted)),
+            child: Text('Cancel',
+                style: GoogleFonts.fredoka(color: AppTheme.textMuted)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, selected),
-            child: Text('Apply', style: GoogleFonts.fredoka(color: AppTheme.midnight)),
+            child: Text('Apply',
+                style: GoogleFonts.fredoka(color: AppTheme.midnight)),
           ),
         ],
       ),
@@ -358,21 +419,27 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
 
   Widget _buildThemeSelector() {
     final themes = ['classic', 'wood', 'neon', 'minimal'];
-    final themeEmoji = {'classic': '♜', 'wood': '🪵', 'neon': '💜', 'minimal': '⬜'};
+    final themeEmoji = {
+      'classic': '♜',
+      'wood': '🪵',
+      'neon': '💜',
+      'minimal': '⬜'
+    };
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      child: Row(children: themes.map((theme) {
+      child: Row(
+          children: themes.map((theme) {
         final isSelected = _boardTheme == theme;
         return GestureDetector(
           onTap: () {
             setState(() => _boardTheme = theme);
             context.read<ThemeBloc>().add(
-              ThemeChangeEvent(
-                boardTheme: _boardTheme, 
-                pieceShape: context.read<ThemeBloc>().state.pieceShape,
-                pieceStyle: context.read<ThemeBloc>().state.pieceStyle,
-              ),
-            );
+                  ThemeChangeEvent(
+                    boardTheme: _boardTheme,
+                    pieceShape: context.read<ThemeBloc>().state.pieceShape,
+                    pieceStyle: context.read<ThemeBloc>().state.pieceStyle,
+                  ),
+                );
           },
           child: AnimatedContainer(
             duration: 250.ms,
@@ -390,12 +457,17 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
             ),
             child: Row(
               children: [
-                Text(themeEmoji[theme] ?? '', style: const TextStyle(fontSize: 18)),
+                Text(themeEmoji[theme] ?? '',
+                    style: const TextStyle(fontSize: 18)),
                 const SizedBox(width: 8),
-                Text(theme.capitalize(), style: GoogleFonts.fredoka(
-                  color: isSelected ? AppTheme.goldPrimary : AppTheme.textSecondary,
-                  fontWeight: FontWeight.w600, fontSize: 16,
-                )),
+                Text(theme.capitalize(),
+                    style: GoogleFonts.fredoka(
+                      color: isSelected
+                          ? AppTheme.goldPrimary
+                          : AppTheme.textSecondary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                    )),
               ],
             ),
           ),
@@ -406,12 +478,16 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
 
   Widget _buildOptions() {
     return SwitchListTile(
-      title: Text('💡 Enable Hints (max 3)', style: GoogleFonts.fredoka(
-        color: AppTheme.textPrimary, fontSize: 17,
-      )),
-      subtitle: Text('Get best move suggestions!', style: GoogleFonts.baloo2(
-        color: AppTheme.textMuted, fontSize: 14,
-      )),
+      title: Text('💡 Enable Hints (max 3)',
+          style: GoogleFonts.fredoka(
+            color: AppTheme.textPrimary,
+            fontSize: 17,
+          )),
+      subtitle: Text('Get best move suggestions!',
+          style: GoogleFonts.baloo2(
+            color: AppTheme.textMuted,
+            fontSize: 14,
+          )),
       value: _hintsEnabled,
       activeThumbColor: AppTheme.goldPrimary,
       contentPadding: EdgeInsets.zero,
@@ -425,33 +501,58 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
 
     final themeState = context.read<ThemeBloc>().state;
 
-    context.go('/game/play', extra: GameConfig(
-      mode: GameMode.singlePlayer,
-      difficulty: _difficulty,
-      playerColor: resolvedColor,
-      boardTheme: _boardTheme,
-      pieceShape: themeState.pieceShape,
-      pieceStyle: themeState.pieceStyle,
-      whitePieceColor: useCustomColors ? _whitePieceColor : null,
-      blackPieceColor: useCustomColors ? _blackPieceColor : null,
-      hintsEnabled: _hintsEnabled,
-    ));
+    context.go('/game/play',
+        extra: GameConfig(
+          mode: GameMode.singlePlayer,
+          difficulty: _difficulty,
+          playerColor: resolvedColor,
+          boardTheme: _boardTheme,
+          pieceShape: themeState.pieceShape,
+          pieceStyle: themeState.pieceStyle,
+          whitePieceColor: useCustomColors ? _whitePieceColor : null,
+          blackPieceColor: useCustomColors ? _blackPieceColor : null,
+          hintsEnabled: _hintsEnabled,
+        ));
   }
 
   Map<String, String> _difficultyInfo(AIDifficulty d) => switch (d) {
-    AIDifficulty.basic        => {'emoji': '🌱', 'name': 'Easy', 'desc': 'Perfect for beginners!'},
-    AIDifficulty.intermediate => {'emoji': '⚔️', 'name': 'Medium', 'desc': 'A good challenge!'},
-    AIDifficulty.advanced     => {'emoji': '🔥', 'name': 'Hard', 'desc': 'Serious play!'},
-    AIDifficulty.impossible   => {'emoji': '🤖', 'name': 'Impossible', 'desc': 'Can you beat the machine?'},
-    AIDifficulty.aiMode       => {'emoji': '🧠', 'name': 'AI Mode', 'desc': 'Adaptive neural network AI'},
-  };
+        AIDifficulty.basic => {
+            'emoji': '🌱',
+            'name': 'Easy-Beginner',
+            'desc': 'Perfect for beginners!'
+          },
+        AIDifficulty.intermediate => {
+            'emoji': '⚔️',
+            'name': 'Medium-Intermediate',
+            'desc': 'A good challenge!'
+          },
+        AIDifficulty.advanced => {
+            'emoji': '🔥',
+            'name': 'Hard-Advanced',
+            'desc': 'Serious play!'
+          },
+        AIDifficulty.impossible => {
+            'emoji': '🤖',
+            'name': 'Impossible',
+            'desc': 'Can you beat the machine?'
+          },
+        AIDifficulty.aiMode => {
+            'emoji': '🧠',
+            'name': 'AI Mode',
+            'desc': 'Adaptive neural network AI'
+          },
+      };
 
   String _colorEmoji(String color) => switch (color) {
-    'white'  => '♔', 'black' => '♚', _ => '🎨',
-  };
+        'white' => '♔',
+        'black' => '♚',
+        _ => '🎨',
+      };
   String _colorName(String color) => switch (color) {
-    'white'  => 'White', 'black' => 'Black', _ => 'Custom',
-  };
+        'white' => 'White',
+        'black' => 'Black',
+        _ => 'Custom',
+      };
 }
 
 class _MiniKingPainter extends CustomPainter {
@@ -502,5 +603,6 @@ class _MiniKingPainter extends CustomPainter {
 }
 
 extension on String {
-  String capitalize() => isEmpty ? this : '${this[0].toUpperCase()}${substring(1)}';
+  String capitalize() =>
+      isEmpty ? this : '${this[0].toUpperCase()}${substring(1)}';
 }

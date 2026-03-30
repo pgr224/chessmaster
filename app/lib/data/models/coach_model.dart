@@ -18,31 +18,31 @@ enum MoveClassification {
 
 extension MoveClassificationEmoji on MoveClassification {
   String get emoji => switch (this) {
-    MoveClassification.brilliant => '💎',
-    MoveClassification.best => '⭐',
-    MoveClassification.good => '👍',
-    MoveClassification.needsImprovement => '🤔',
-    MoveClassification.mistake => '⚠️',
-    MoveClassification.blunder => '❌',
-  };
+        MoveClassification.brilliant => '💎',
+        MoveClassification.best => '⭐',
+        MoveClassification.good => '👍',
+        MoveClassification.needsImprovement => '🤔',
+        MoveClassification.mistake => '⚠️',
+        MoveClassification.blunder => '❌',
+      };
 
   String get label => switch (this) {
-    MoveClassification.brilliant => 'Brilliant',
-    MoveClassification.best => 'Best Move',
-    MoveClassification.good => 'Good Move',
-    MoveClassification.needsImprovement => 'Needs Improvement',
-    MoveClassification.mistake => 'Mistake',
-    MoveClassification.blunder => 'Blunder',
-  };
+        MoveClassification.brilliant => 'Brilliant',
+        MoveClassification.best => 'Best Move',
+        MoveClassification.good => 'Good Move',
+        MoveClassification.needsImprovement => 'Needs Improvement',
+        MoveClassification.mistake => 'Mistake',
+        MoveClassification.blunder => 'Blunder',
+      };
 
   double get colorHue => switch (this) {
-    MoveClassification.brilliant => 280.0,  // purple
-    MoveClassification.best => 120.0,       // green
-    MoveClassification.good => 160.0,       // teal
-    MoveClassification.needsImprovement => 45.0,  // orange
-    MoveClassification.mistake => 30.0,     // warm orange
-    MoveClassification.blunder => 0.0,      // red
-  };
+        MoveClassification.brilliant => 280.0, // purple
+        MoveClassification.best => 120.0, // green
+        MoveClassification.good => 160.0, // teal
+        MoveClassification.needsImprovement => 45.0, // orange
+        MoveClassification.mistake => 30.0, // warm orange
+        MoveClassification.blunder => 0.0, // red
+      };
 }
 
 // ═══════════════════════════════════════════
@@ -69,42 +69,44 @@ enum TacticalPattern {
 
 extension TacticalPatternInfo on TacticalPattern {
   String get explanation => switch (this) {
-    TacticalPattern.fork => 'attacks two pieces at once',
-    TacticalPattern.pin => 'piece cannot move without exposing a more valuable piece',
-    TacticalPattern.skewer => 'attacks through a piece to one behind it',
-    TacticalPattern.discoveredAttack => 'moving one piece reveals an attack by another',
-    TacticalPattern.doubleCheck => 'two pieces give check simultaneously',
-    TacticalPattern.checkmate => 'the King has no escape!',
-    TacticalPattern.materialGain => 'wins material advantage',
-    TacticalPattern.materialLoss => 'loses material',
-    TacticalPattern.centerControl => 'controls the center of the board',
-    TacticalPattern.development => 'develops a piece to an active square',
-    TacticalPattern.kingSafety => 'improves king safety',
-    TacticalPattern.pawnPromotion => 'a pawn is close to becoming a queen!',
-    TacticalPattern.trappedPiece => 'a piece has no safe squares',
-    TacticalPattern.hangingPiece => 'a piece is left undefended',
-    TacticalPattern.backRankWeakness => 'the back rank is weak',
-    TacticalPattern.none => '',
-  };
+        TacticalPattern.fork => 'attacks two pieces at once',
+        TacticalPattern.pin =>
+          'piece cannot move without exposing a more valuable piece',
+        TacticalPattern.skewer => 'attacks through a piece to one behind it',
+        TacticalPattern.discoveredAttack =>
+          'moving one piece reveals an attack by another',
+        TacticalPattern.doubleCheck => 'two pieces give check simultaneously',
+        TacticalPattern.checkmate => 'the King has no escape!',
+        TacticalPattern.materialGain => 'wins material advantage',
+        TacticalPattern.materialLoss => 'loses material',
+        TacticalPattern.centerControl => 'controls the center of the board',
+        TacticalPattern.development => 'develops a piece to an active square',
+        TacticalPattern.kingSafety => 'improves king safety',
+        TacticalPattern.pawnPromotion => 'a pawn is close to becoming a queen!',
+        TacticalPattern.trappedPiece => 'a piece has no safe squares',
+        TacticalPattern.hangingPiece => 'a piece is left undefended',
+        TacticalPattern.backRankWeakness => 'the back rank is weak',
+        TacticalPattern.none => '',
+      };
 
   String get emoji => switch (this) {
-    TacticalPattern.fork => '🔱',
-    TacticalPattern.pin => '📌',
-    TacticalPattern.skewer => '🗡️',
-    TacticalPattern.discoveredAttack => '💥',
-    TacticalPattern.doubleCheck => '⚡',
-    TacticalPattern.checkmate => '🏆',
-    TacticalPattern.materialGain => '💰',
-    TacticalPattern.materialLoss => '💸',
-    TacticalPattern.centerControl => '🎯',
-    TacticalPattern.development => '🚀',
-    TacticalPattern.kingSafety => '🏰',
-    TacticalPattern.pawnPromotion => '👑',
-    TacticalPattern.trappedPiece => '🪤',
-    TacticalPattern.hangingPiece => '⚠️',
-    TacticalPattern.backRankWeakness => '🚪',
-    TacticalPattern.none => '',
-  };
+        TacticalPattern.fork => '🔱',
+        TacticalPattern.pin => '📌',
+        TacticalPattern.skewer => '🗡️',
+        TacticalPattern.discoveredAttack => '💥',
+        TacticalPattern.doubleCheck => '⚡',
+        TacticalPattern.checkmate => '🏆',
+        TacticalPattern.materialGain => '💰',
+        TacticalPattern.materialLoss => '💸',
+        TacticalPattern.centerControl => '🎯',
+        TacticalPattern.development => '🚀',
+        TacticalPattern.kingSafety => '🏰',
+        TacticalPattern.pawnPromotion => '👑',
+        TacticalPattern.trappedPiece => '🪤',
+        TacticalPattern.hangingPiece => '⚠️',
+        TacticalPattern.backRankWeakness => '🚪',
+        TacticalPattern.none => '',
+      };
 }
 
 // ═══════════════════════════════════════════
@@ -118,22 +120,22 @@ enum CoachPersonality {
 
 extension CoachPersonalityInfo on CoachPersonality {
   String get name => switch (this) {
-    CoachPersonality.friendly => 'Friendly Coach',
-    CoachPersonality.strict => 'Strict Coach',
-    CoachPersonality.motivational => 'Motivational Coach',
-  };
+        CoachPersonality.friendly => 'Friendly Coach',
+        CoachPersonality.strict => 'Strict Coach',
+        CoachPersonality.motivational => 'Motivational Coach',
+      };
 
   String get emoji => switch (this) {
-    CoachPersonality.friendly => '😊',
-    CoachPersonality.strict => '🧐',
-    CoachPersonality.motivational => '🔥',
-  };
+        CoachPersonality.friendly => '😊',
+        CoachPersonality.strict => '🧐',
+        CoachPersonality.motivational => '🔥',
+      };
 
   String get avatar => switch (this) {
-    CoachPersonality.friendly => '🐱',
-    CoachPersonality.strict => '🦁',
-    CoachPersonality.motivational => '🦊',
-  };
+        CoachPersonality.friendly => '🐱',
+        CoachPersonality.strict => '🦁',
+        CoachPersonality.motivational => '🦊',
+      };
 }
 
 // ═══════════════════════════════════════════
@@ -150,10 +152,10 @@ extension CoachingLevelInfo on CoachingLevel {
   bool get showHintsByDefault => this == CoachingLevel.beginner;
   bool get showPatternNames => this != CoachingLevel.beginner;
   int get maxAutoHints => switch (this) {
-    CoachingLevel.beginner => 5,
-    CoachingLevel.intermediate => 3,
-    CoachingLevel.advanced => 1,
-  };
+        CoachingLevel.beginner => 5,
+        CoachingLevel.intermediate => 3,
+        CoachingLevel.advanced => 1,
+      };
 }
 
 // ═══════════════════════════════════════════
@@ -270,13 +272,16 @@ class CoachSettings {
     bool? enableRealTimeCoaching,
     bool? enablePostGameAnalysis,
     bool? showEvalBar,
-  }) => CoachSettings(
-    personality: personality ?? this.personality,
-    level: level ?? this.level,
-    enableRealTimeCoaching: enableRealTimeCoaching ?? this.enableRealTimeCoaching,
-    enablePostGameAnalysis: enablePostGameAnalysis ?? this.enablePostGameAnalysis,
-    showEvalBar: showEvalBar ?? this.showEvalBar,
-  );
+  }) =>
+      CoachSettings(
+        personality: personality ?? this.personality,
+        level: level ?? this.level,
+        enableRealTimeCoaching:
+            enableRealTimeCoaching ?? this.enableRealTimeCoaching,
+        enablePostGameAnalysis:
+            enablePostGameAnalysis ?? this.enablePostGameAnalysis,
+        showEvalBar: showEvalBar ?? this.showEvalBar,
+      );
 
   /// Derive coaching level from AI difficulty
   static CoachingLevel levelFromDifficulty(AIDifficulty? difficulty) {

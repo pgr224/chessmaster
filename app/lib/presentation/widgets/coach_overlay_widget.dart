@@ -183,14 +183,16 @@ class _CoachOverlayWidgetState extends State<CoachOverlayWidget> {
           ],
         ],
       ),
-    ).animate()
-      .slideY(begin: -0.3, duration: 350.ms, curve: Curves.easeOutCubic)
-      .fadeIn(duration: 250.ms)
-      .then()
-      .shimmer(
-        duration: 800.ms,
-        color: _classificationColor(feedback.classification).withValues(alpha: 0.15),
-      );
+    )
+        .animate()
+        .slideY(begin: -0.3, duration: 350.ms, curve: Curves.easeOutCubic)
+        .fadeIn(duration: 250.ms)
+        .then()
+        .shimmer(
+          duration: 800.ms,
+          color: _classificationColor(feedback.classification)
+              .withValues(alpha: 0.15),
+        );
   }
 
   Widget _buildBadge(MoveClassification c, Color color, Color bgColor) {
@@ -261,13 +263,13 @@ class _CoachOverlayWidgetState extends State<CoachOverlayWidget> {
   }
 
   Color _classificationColor(MoveClassification c) => switch (c) {
-    MoveClassification.brilliant => const Color(0xFFA855F7),  // purple
-    MoveClassification.best => const Color(0xFF22C55E),       // green
-    MoveClassification.good => const Color(0xFF4ECDC4),       // teal
-    MoveClassification.needsImprovement => const Color(0xFFF59E0B), // amber
-    MoveClassification.mistake => const Color(0xFFF97316),    // orange
-    MoveClassification.blunder => const Color(0xFFEF4444),    // red
-  };
+        MoveClassification.brilliant => const Color(0xFFA855F7), // purple
+        MoveClassification.best => const Color(0xFF22C55E), // green
+        MoveClassification.good => const Color(0xFF4ECDC4), // teal
+        MoveClassification.needsImprovement => const Color(0xFFF59E0B), // amber
+        MoveClassification.mistake => const Color(0xFFF97316), // orange
+        MoveClassification.blunder => const Color(0xFFEF4444), // red
+      };
 }
 
 /// Widget displaying the hint result with explanation and best move.
@@ -389,7 +391,8 @@ class HintOverlayWidget extends StatelessWidget {
                 if (hint.pattern != TacticalPattern.none) ...[
                   const SizedBox(height: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
                       color: AppTheme.goldPrimary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
@@ -420,9 +423,10 @@ class HintOverlayWidget extends StatelessWidget {
                 ],
               ],
             ),
-          ).animate()
-            .slideY(begin: 0.2, duration: 350.ms, curve: Curves.easeOutCubic)
-            .fadeIn(duration: 250.ms),
+          )
+              .animate()
+              .slideY(begin: 0.2, duration: 350.ms, curve: Curves.easeOutCubic)
+              .fadeIn(duration: 250.ms),
         ),
       ),
     );
@@ -471,17 +475,17 @@ class CoachEvalIndicator extends StatelessWidget {
         ],
       ),
     ).animate().fadeIn(duration: 200.ms).scale(
-      begin: const Offset(0.8, 0.8),
-      duration: 200.ms,
-    );
+          begin: const Offset(0.8, 0.8),
+          duration: 200.ms,
+        );
   }
 
   Color _classColor(MoveClassification c) => switch (c) {
-    MoveClassification.brilliant => const Color(0xFFA855F7),
-    MoveClassification.best => const Color(0xFF22C55E),
-    MoveClassification.good => const Color(0xFF4ECDC4),
-    MoveClassification.needsImprovement => const Color(0xFFF59E0B),
-    MoveClassification.mistake => const Color(0xFFF97316),
-    MoveClassification.blunder => const Color(0xFFEF4444),
-  };
+        MoveClassification.brilliant => const Color(0xFFA855F7),
+        MoveClassification.best => const Color(0xFF22C55E),
+        MoveClassification.good => const Color(0xFF4ECDC4),
+        MoveClassification.needsImprovement => const Color(0xFFF59E0B),
+        MoveClassification.mistake => const Color(0xFFF97316),
+        MoveClassification.blunder => const Color(0xFFEF4444),
+      };
 }

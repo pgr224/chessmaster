@@ -11,7 +11,8 @@ export '../../../data/models/multiplayer_models.dart';
 // EVENTS
 abstract class MultiplayerEvent extends Equatable {
   const MultiplayerEvent();
-  @override List<Object?> get props => [];
+  @override
+  List<Object?> get props => [];
 }
 
 class MpConnectLobbyEvent extends MultiplayerEvent {
@@ -19,10 +20,12 @@ class MpConnectLobbyEvent extends MultiplayerEvent {
   final String username;
   final int rating;
   const MpConnectLobbyEvent(this.userId, this.username, {this.rating = 1200});
-  @override List<Object?> get props => [userId, username, rating];
+  @override
+  List<Object?> get props => [userId, username, rating];
 }
 
 class MpStartMatchmakingEvent extends MultiplayerEvent {}
+
 class MpCancelMatchmakingEvent extends MultiplayerEvent {}
 
 class MpGameFoundEvent extends MultiplayerEvent {
@@ -31,7 +34,8 @@ class MpGameFoundEvent extends MultiplayerEvent {
   final String opponentName;
   final String? mode;
   final String? timeControl;
-  const MpGameFoundEvent(this.gameId, this.color, this.opponentName, {this.mode, this.timeControl});
+  const MpGameFoundEvent(this.gameId, this.color, this.opponentName,
+      {this.mode, this.timeControl});
 }
 
 class MpMakeMoveEvent extends MultiplayerEvent {
@@ -76,36 +80,52 @@ class MpSendChallengeEvent extends MultiplayerEvent {
   final OnlineLobbyUser opponent;
   final ChallengeMode mode;
   final String timeControl;
-  const MpSendChallengeEvent({required this.opponent, required this.mode, required this.timeControl});
-  @override List<Object?> get props => [opponent, mode, timeControl];
+  const MpSendChallengeEvent(
+      {required this.opponent, required this.mode, required this.timeControl});
+  @override
+  List<Object?> get props => [opponent, mode, timeControl];
 }
 
 class MpAcceptChallengeEvent extends MultiplayerEvent {
   final String challengerId;
   const MpAcceptChallengeEvent(this.challengerId);
 }
+
 class MpClearNoticeEvent extends MultiplayerEvent {}
 
 class MpResignEvent extends MultiplayerEvent {}
+
 class MpDrawOfferEvent extends MultiplayerEvent {}
+
 class MpDrawReceivedEvent extends MultiplayerEvent {}
+
 class MpDrawAcceptEvent extends MultiplayerEvent {}
+
 class MpDrawDeclineEvent extends MultiplayerEvent {}
+
 class MpLobbyNoticeEvent extends MultiplayerEvent {
   final String message;
   final String? challengerId;
   final String? mode;
   final String? timeControl;
-  const MpLobbyNoticeEvent(this.message, {this.challengerId, this.mode, this.timeControl});
+  const MpLobbyNoticeEvent(this.message,
+      {this.challengerId, this.mode, this.timeControl});
 }
+
 class MpUndoEvent extends MultiplayerEvent {}
+
 class MpOpponentUndoEvent extends MultiplayerEvent {}
+
 class MpDisconnectLobbyEvent extends MultiplayerEvent {}
+
 class MpReconnectEvent extends MultiplayerEvent {}
 
 class MpSaveRequestEvent extends MultiplayerEvent {}
+
 class MpSaveAcceptEvent extends MultiplayerEvent {}
+
 class MpSaveDeclineEvent extends MultiplayerEvent {}
+
 class MpGameSavedEvent extends MultiplayerEvent {}
 
 class MpChangeSelectedTimeEvent extends MultiplayerEvent {
@@ -175,7 +195,6 @@ class MultiplayerState extends Equatable {
     this.opponentUndoCount = 0,
   });
 
-
   MultiplayerState copyWith({
     MultiplayerStatus? status,
     int? onlineCount,
@@ -221,10 +240,15 @@ class MultiplayerState extends Equatable {
       lastMovePromotion: lastMovePromotion ?? this.lastMovePromotion,
       gameResult: gameResult ?? this.gameResult,
       gameReason: gameReason ?? this.gameReason,
-      lobbyNotice: (lobbyNotice == null && challengerId == null) ? null : (lobbyNotice ?? this.lobbyNotice),
-      challengerId: (lobbyNotice == null && challengerId == null) ? null : (challengerId ?? this.challengerId),
+      lobbyNotice: (lobbyNotice == null && challengerId == null)
+          ? null
+          : (lobbyNotice ?? this.lobbyNotice),
+      challengerId: (lobbyNotice == null && challengerId == null)
+          ? null
+          : (challengerId ?? this.challengerId),
       challengerMode: challengerMode ?? this.challengerMode,
-      challengerTimeControl: challengerTimeControl ?? this.challengerTimeControl,
+      challengerTimeControl:
+          challengerTimeControl ?? this.challengerTimeControl,
       selectedTimeControl: selectedTimeControl ?? this.selectedTimeControl,
       drawOfferPending: drawOfferPending ?? this.drawOfferPending,
       saveOfferPending: saveOfferPending ?? this.saveOfferPending,
@@ -236,12 +260,29 @@ class MultiplayerState extends Equatable {
     );
   }
 
-  @override List<Object?> get props => [
-    status, onlineCount, searchingCount, availablePlayers.length, gameId, 
-    playerColor, opponentName, chatMessages.length, lastMoveFrom, lastMoveTo, 
-    gameResult, lobbyNotice, challengerId, drawOfferPending, saveOfferPending,
-    connectionError, whiteTime, blackTime, xpGained, opponentUndoCount
-  ];
+  @override
+  List<Object?> get props => [
+        status,
+        onlineCount,
+        searchingCount,
+        availablePlayers.length,
+        gameId,
+        playerColor,
+        opponentName,
+        chatMessages.length,
+        lastMoveFrom,
+        lastMoveTo,
+        gameResult,
+        lobbyNotice,
+        challengerId,
+        drawOfferPending,
+        saveOfferPending,
+        connectionError,
+        whiteTime,
+        blackTime,
+        xpGained,
+        opponentUndoCount
+      ];
 }
 
 class MpTimerSyncEvent extends MultiplayerEvent {
@@ -264,45 +305,43 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
       // Reconnect will be triggered by MpConnectLobbyEvent from the UI
       emit(state.copyWith(connectionError: 'Reconnecting...'));
     });
-    on<MpDrawReceivedEvent>((event, emit) => emit(state.copyWith(drawOfferPending: true)));
+    on<MpDrawReceivedEvent>(
+        (event, emit) => emit(state.copyWith(drawOfferPending: true)));
     on<MpStartMatchmakingEvent>(_onMatchmaking);
     on<MpCancelMatchmakingEvent>(_onCancelMatchmaking);
     on<MpLobbyUpdateEvent>((event, emit) => emit(state.copyWith(
-      onlineCount: event.online, 
-      searchingCount: event.searching,
-      availablePlayers: event.availablePlayers
-    )));
+        onlineCount: event.online,
+        searchingCount: event.searching,
+        availablePlayers: event.availablePlayers)));
     on<MpGameFoundEvent>(_onGameFound);
     on<MpMakeMoveEvent>(_onMakeMove);
     on<MpOpponentMoveEvent>(_onOpponentMove);
     on<MpUndoEvent>((event, emit) => _service.sendUndo());
     on<MpOpponentUndoEvent>((event, emit) => emit(state.copyWith(
-      opponentUndoCount: state.opponentUndoCount + 1,
-    )));
+          opponentUndoCount: state.opponentUndoCount + 1,
+        )));
     on<MpSendChatEvent>(_onSendChat);
     on<MpChatReceivedEvent>(_onChatReceived);
     on<MpResignEvent>((event, emit) => _service.resign());
     on<MpDrawOfferEvent>((event, emit) => _service.sendDrawOffer());
     on<MpDrawAcceptEvent>((event, emit) => _service.sendDrawAccept());
     on<MpDrawDeclineEvent>((event, emit) => _service.sendDrawDecline());
-    
+
     on<MpTimerSyncEvent>((event, emit) => emit(state.copyWith(
-      whiteTime: event.whiteTime,
-      blackTime: event.blackTime
-    )));
-    
+        whiteTime: event.whiteTime, blackTime: event.blackTime)));
+
     // Save & Quit
     on<MpSaveRequestEvent>((event, emit) => _service.sendSaveRequest());
     on<MpSaveAcceptEvent>((event, emit) => _service.sendSaveAccept());
     on<MpSaveDeclineEvent>((event, emit) => _service.sendSaveDecline());
     on<MpGameSavedEvent>((event, emit) => emit(state.copyWith(
-      status: MultiplayerStatus.gameOver,
-      gameReason: 'manual_save'
-    )));
+        status: MultiplayerStatus.gameOver, gameReason: 'manual_save')));
 
     on<MpSendChallengeEvent>((event, emit) {
-      _service.sendChallenge(event.opponent.id, event.mode.name, event.timeControl);
-      emit(state.copyWith(lobbyNotice: 'Challenge sent to ${event.opponent.name}!'));
+      _service.sendChallenge(
+          event.opponent.id, event.mode.name, event.timeControl);
+      emit(state.copyWith(
+          lobbyNotice: 'Challenge sent to ${event.opponent.name}!'));
     });
     on<MpDisconnectLobbyEvent>((event, emit) {
       _lobbySub?.cancel();
@@ -312,10 +351,12 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
     });
     on<MpGameOverEvent>((event, emit) {
       int xp = 0;
-      final isWin = (event.result == 'white' && state.playerColor == PieceColor.white) ||
-                    (event.result == 'black' && state.playerColor == PieceColor.black);
-      final isLoss = (event.result == 'white' && state.playerColor == PieceColor.black) ||
-                     (event.result == 'black' && state.playerColor == PieceColor.white);
+      final isWin = (event.result == 'white' &&
+              state.playerColor == PieceColor.white) ||
+          (event.result == 'black' && state.playerColor == PieceColor.black);
+      final isLoss = (event.result == 'white' &&
+              state.playerColor == PieceColor.black) ||
+          (event.result == 'black' && state.playerColor == PieceColor.white);
 
       if (isWin) {
         if (event.reason == 'checkmate') {
@@ -336,54 +377,62 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
       }
 
       emit(state.copyWith(
-        status: MultiplayerStatus.gameOver, 
-        gameResult: event.result, 
+        status: MultiplayerStatus.gameOver,
+        gameResult: event.result,
         gameReason: event.reason,
         xpGained: xp,
       ));
     });
     on<MpLobbyNoticeEvent>((event, emit) => emit(state.copyWith(
-      lobbyNotice: event.message, 
-      challengerId: event.challengerId,
-      challengerMode: event.mode,
-      challengerTimeControl: event.timeControl,
-    )));
+          lobbyNotice: event.message,
+          challengerId: event.challengerId,
+          challengerMode: event.mode,
+          challengerTimeControl: event.timeControl,
+        )));
     on<MpAcceptChallengeEvent>((event, emit) {
       if (state.challengerId != null) {
         _service.acceptChallenge(
-          state.challengerId!, 
-          state.challengerMode ?? 'duel', 
-          state.challengerTimeControl ?? '10+0'
-        );
+            state.challengerId!,
+            state.challengerMode ?? 'duel',
+            state.challengerTimeControl ?? '10+0');
       } else {
         _service.acceptChallenge(event.challengerId, 'duel', '10+0');
       }
       emit(state.copyWith(lobbyNotice: null, challengerId: null));
     });
-    on<MpChangeSelectedTimeEvent>((event, emit) => emit(state.copyWith(selectedTimeControl: event.timeControl)));
-    on<MpClearNoticeEvent>((event, emit) => emit(state.copyWith(lobbyNotice: null, challengerId: null)));
+    on<MpChangeSelectedTimeEvent>((event, emit) =>
+        emit(state.copyWith(selectedTimeControl: event.timeControl)));
+    on<MpClearNoticeEvent>((event, emit) =>
+        emit(state.copyWith(lobbyNotice: null, challengerId: null)));
     // MpTimerSyncEvent already registered above at line ~287
   }
 
-  Future<void> _onConnectLobby(MpConnectLobbyEvent event, Emitter<MultiplayerState> emit) async {
+  Future<void> _onConnectLobby(
+      MpConnectLobbyEvent event, Emitter<MultiplayerState> emit) async {
     _myUserId = event.userId;
-    await _service.connectLobby(event.userId, event.username, rating: event.rating);
+    await _service.connectLobby(event.userId, event.username,
+        rating: event.rating);
     _lobbySub?.cancel();
     _lobbySub = _service.lobbyUpdates.listen((msg) {
       if (msg['type'] == 'LOBBY_UPDATE') {
         final playersRaw = msg['data']['players'] as List?;
-        final list = playersRaw
-          ?.where((p) => (p as Map)['id'] != _myUserId)
-          .map((p) {
-            final player = p as Map;
-            return OnlineLobbyUser(
-              id: player['id']?.toString() ?? '',
-              name: player['name']?.toString() ?? 'Unknown',
-              xp: (player['rating'] is int) ? player['rating'] as int : int.tryParse(player['rating']?.toString() ?? '0') ?? 1200,
-              isAvailable: player['status'] == 'idle',
-              flair: player['status'] == 'searching' ? 'Searching...' : (player['status'] == 'idle' ? 'Ready!' : 'Playing'),
-            );
-          }).toList() ?? <OnlineLobbyUser>[];
+        final list =
+            playersRaw?.where((p) => (p as Map)['id'] != _myUserId).map((p) {
+                  final player = p as Map;
+                  return OnlineLobbyUser(
+                    id: player['id']?.toString() ?? '',
+                    name: player['name']?.toString() ?? 'Unknown',
+                    xp: (player['rating'] is int)
+                        ? player['rating'] as int
+                        : int.tryParse(player['rating']?.toString() ?? '0') ??
+                            1200,
+                    isAvailable: player['status'] == 'idle',
+                    flair: player['status'] == 'searching'
+                        ? 'Searching...'
+                        : (player['status'] == 'idle' ? 'Ready!' : 'Playing'),
+                  );
+                }).toList() ??
+                <OnlineLobbyUser>[];
         add(MpLobbyUpdateEvent(
           msg['data']['onlinePlayers'] as int? ?? 0,
           msg['data']['searchingPlayers'] as int? ?? 0,
@@ -414,20 +463,24 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
     }, onDone: () {
       add(MpLobbyNoticeEvent('Disconnected from lobby.'));
     });
-    emit(state.copyWith(status: MultiplayerStatus.inLobby, connectionError: null));
+    emit(state.copyWith(
+        status: MultiplayerStatus.inLobby, connectionError: null));
   }
 
-  void _onMatchmaking(MpStartMatchmakingEvent event, Emitter<MultiplayerState> emit) {
+  void _onMatchmaking(
+      MpStartMatchmakingEvent event, Emitter<MultiplayerState> emit) {
     _service.findMatch();
     emit(state.copyWith(status: MultiplayerStatus.matchmaking));
   }
 
-  void _onCancelMatchmaking(MpCancelMatchmakingEvent event, Emitter<MultiplayerState> emit) {
+  void _onCancelMatchmaking(
+      MpCancelMatchmakingEvent event, Emitter<MultiplayerState> emit) {
     _service.cancelFindMatch();
     emit(state.copyWith(status: MultiplayerStatus.inLobby));
   }
 
-  Future<void> _onGameFound(MpGameFoundEvent event, Emitter<MultiplayerState> emit) async {
+  Future<void> _onGameFound(
+      MpGameFoundEvent event, Emitter<MultiplayerState> emit) async {
     await _service.joinRoom(event.gameId, event.color);
     _gameSub?.cancel();
     _gameSub = _service.gameUpdates.listen((msg) {
@@ -437,7 +490,8 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
           if (msg['data']['undo'] == true) {
             add(MpOpponentUndoEvent());
           } else {
-            add(MpOpponentMoveEvent(msg['data'] as Map<String, dynamic>? ?? {}));
+            add(MpOpponentMoveEvent(
+                msg['data'] as Map<String, dynamic>? ?? {}));
             // Update timers immediately from move update to prevent visual skip
             if (msg['data']['whiteTime'] != null) {
               add(MpTimerSyncEvent(
@@ -459,8 +513,11 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
             add(MpChatReceivedEvent(ChatMessage(
               userId: chatData['userId']?.toString() ?? '',
               username: chatData['username']?.toString() ?? 'Unknown',
-              message: '${chatData['message']?.toString() ?? ''} ${chatData['emoji']?.toString() ?? ''}',
-              timestamp: DateTime.fromMillisecondsSinceEpoch(chatData['ts'] as int? ?? DateTime.now().millisecondsSinceEpoch),
+              message:
+                  '${chatData['message']?.toString() ?? ''} ${chatData['emoji']?.toString() ?? ''}',
+              timestamp: DateTime.fromMillisecondsSinceEpoch(
+                  chatData['ts'] as int? ??
+                      DateTime.now().millisecondsSinceEpoch),
               isMe: chatData['userId']?.toString() == _myUserId,
             )));
           }
@@ -510,7 +567,8 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
     });
   }
 
-  void _onOpponentMove(MpOpponentMoveEvent event, Emitter<MultiplayerState> emit) {
+  void _onOpponentMove(
+      MpOpponentMoveEvent event, Emitter<MultiplayerState> emit) {
     emit(state.copyWith(
       lastMoveFrom: event.moveData['move']['from'],
       lastMoveTo: event.moveData['move']['to'],
@@ -522,7 +580,8 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
     _service.sendChat(event.message, emoji: event.emoji);
   }
 
-  void _onChatReceived(MpChatReceivedEvent event, Emitter<MultiplayerState> emit) {
+  void _onChatReceived(
+      MpChatReceivedEvent event, Emitter<MultiplayerState> emit) {
     final history = List<ChatMessage>.from(state.chatMessages);
     // On the backend, data includes userId
     // Ensure we tag correctly for the UI

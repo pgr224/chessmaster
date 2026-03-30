@@ -53,7 +53,7 @@ class _ThinkingOverlayWidgetState extends State<ThinkingOverlayWidget> {
     if (widget.compact) {
       return _buildCompact(context);
     }
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       decoration: BoxDecoration(
@@ -159,12 +159,13 @@ class _ThinkingOverlayWidgetState extends State<ThinkingOverlayWidget> {
 class _AnimatedDots extends StatefulWidget {
   final double size;
   const _AnimatedDots({this.size = 16});
-  
+
   @override
   State<_AnimatedDots> createState() => _AnimatedDotsState();
 }
 
-class _AnimatedDotsState extends State<_AnimatedDots> with SingleTickerProviderStateMixin {
+class _AnimatedDotsState extends State<_AnimatedDots>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
 
   @override
@@ -189,7 +190,10 @@ class _AnimatedDotsState extends State<_AnimatedDots> with SingleTickerProviderS
           width: widget.size * 1.5,
           child: Text(
             '.' * dots,
-            style: GoogleFonts.fredoka(color: AppTheme.accentCyan, fontSize: widget.size, fontWeight: FontWeight.bold),
+            style: GoogleFonts.fredoka(
+                color: AppTheme.accentCyan,
+                fontSize: widget.size,
+                fontWeight: FontWeight.bold),
           ),
         );
       },

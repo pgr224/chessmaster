@@ -5,9 +5,12 @@ import '../../widgets/chess_piece_widget.dart';
 
 abstract class ThemeEvent extends Equatable {
   const ThemeEvent();
-  @override List<Object?> get props => [];
+  @override
+  List<Object?> get props => [];
 }
+
 class ThemeLoadEvent extends ThemeEvent {}
+
 class ThemeChangeEvent extends ThemeEvent {
   final String boardTheme;
   final String pieceShape;
@@ -17,7 +20,8 @@ class ThemeChangeEvent extends ThemeEvent {
     required this.pieceShape,
     required this.pieceStyle,
   });
-  @override List<Object?> get props => [boardTheme, pieceShape, pieceStyle];
+  @override
+  List<Object?> get props => [boardTheme, pieceShape, pieceStyle];
 }
 
 class ThemeShuffleEvent extends ThemeEvent {}
@@ -31,13 +35,15 @@ class ThemeState extends Equatable {
     this.pieceShape = 'classic',
     this.pieceStyle = '3d',
   });
-  ThemeState copyWith({String? boardTheme, String? pieceShape, String? pieceStyle}) =>
+  ThemeState copyWith(
+          {String? boardTheme, String? pieceShape, String? pieceStyle}) =>
       ThemeState(
         boardTheme: boardTheme ?? this.boardTheme,
         pieceShape: pieceShape ?? this.pieceShape,
         pieceStyle: pieceStyle ?? this.pieceStyle,
       );
-  @override List<Object?> get props => [boardTheme, pieceShape, pieceStyle];
+  @override
+  List<Object?> get props => [boardTheme, pieceShape, pieceStyle];
 }
 
 class ThemeBloc extends Bloc<ThemeEvent, ThemeState> {
@@ -51,9 +57,11 @@ class ThemeBloc extends Bloc<ThemeEvent, ThemeState> {
 
   void _onShuffle(ThemeShuffleEvent event, Emitter<ThemeState> emit) async {
     final prefs = await SharedPreferences.getInstance();
-    final isShuffled = (prefs.getString('piece_shape') ?? 'classic') == 'shuffled';
+    final isShuffled =
+        (prefs.getString('piece_shape') ?? 'classic') == 'shuffled';
     if (isShuffled) {
-      final randomShape = pychessShapes[DateTime.now().millisecondsSinceEpoch % pychessShapes.length];
+      final randomShape = pychessShapes[
+          DateTime.now().millisecondsSinceEpoch % pychessShapes.length];
       emit(state.copyWith(pieceShape: randomShape));
     }
   }
@@ -62,7 +70,7 @@ class ThemeBloc extends Bloc<ThemeEvent, ThemeState> {
     final prefs = await SharedPreferences.getInstance();
     final storedShape = prefs.getString('piece_shape') ?? 'classic';
     final storedStyle = prefs.getString('piece_style') ?? '3d';
-    
+
     emit(ThemeState(
       boardTheme: prefs.getString('board_theme') ?? 'classic',
       pieceShape: storedShape,
@@ -70,7 +78,8 @@ class ThemeBloc extends Bloc<ThemeEvent, ThemeState> {
     ));
   }
 
-  Future<void> _onChange(ThemeChangeEvent event, Emitter<ThemeState> emit) async {
+  Future<void> _onChange(
+      ThemeChangeEvent event, Emitter<ThemeState> emit) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('board_theme', event.boardTheme);
     await prefs.setString('piece_shape', event.pieceShape);
@@ -82,4 +91,3 @@ class ThemeBloc extends Bloc<ThemeEvent, ThemeState> {
     ));
   }
 }
-

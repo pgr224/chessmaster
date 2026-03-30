@@ -52,15 +52,15 @@ class NativeStockfish {
 
       for (int i = 0; i < parts.length; i++) {
         if (parts[i] == 'multipv' && i + 1 < parts.length) {
-          multipv = int.tryParse(parts[i+1]);
+          multipv = int.tryParse(parts[i + 1]);
         } else if (parts[i] == 'score' && i + 2 < parts.length) {
-          if (parts[i+1] == 'cp') {
-            score = int.tryParse(parts[i+2]);
-          } else if (parts[i+1] == 'mate') {
+          if (parts[i + 1] == 'cp') {
+            score = int.tryParse(parts[i + 2]);
+          } else if (parts[i + 1] == 'mate') {
             score = 10000;
           }
         } else if (parts[i] == 'pv' && i + 1 < parts.length) {
-          move = parts[i+1];
+          move = parts[i + 1];
         }
       }
 
@@ -77,7 +77,7 @@ class NativeStockfish {
     _engine!.stdin = 'setoption name MultiPV value 1';
     _engine!.stdin = 'isready';
     _engine!.stdin = 'position fen $fen';
-    
+
     if (movetime != null) {
       _engine!.stdin = 'go movetime $movetime';
     } else {
@@ -86,7 +86,8 @@ class NativeStockfish {
     return _moveCompleter!.future;
   }
 
-  Future<List<MoveCandidate>> getTopMoves(String fen, int depth, int count, {int? movetime}) async {
+  Future<List<MoveCandidate>> getTopMoves(String fen, int depth, int count,
+      {int? movetime}) async {
     if (_engine == null) init();
     stop();
     _candidatesCompleter = Completer<List<MoveCandidate>>();
@@ -94,7 +95,7 @@ class NativeStockfish {
     _engine!.stdin = 'setoption name MultiPV value $count';
     _engine!.stdin = 'isready';
     _engine!.stdin = 'position fen $fen';
-    
+
     if (movetime != null) {
       _engine!.stdin = 'go movetime $movetime';
     } else {
@@ -106,12 +107,12 @@ class NativeStockfish {
   void stop() {
     _engine?.stdin = 'stop';
     if (_moveCompleter != null && !_moveCompleter!.isCompleted) {
-       _moveCompleter!.complete(null);
-       _moveCompleter = null;
+      _moveCompleter!.complete(null);
+      _moveCompleter = null;
     }
     if (_candidatesCompleter != null && !_candidatesCompleter!.isCompleted) {
-       _candidatesCompleter!.complete([]);
-       _candidatesCompleter = null;
+      _candidatesCompleter!.complete([]);
+      _candidatesCompleter = null;
     }
   }
 

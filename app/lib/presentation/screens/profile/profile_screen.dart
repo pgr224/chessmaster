@@ -42,13 +42,17 @@ class ProfileScreen extends StatelessWidget {
               children: [
                 const Text('👤', style: TextStyle(fontSize: 64)),
                 const SizedBox(height: 16),
-                Text('User session expired', 
-                  style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 18)),
+                Text('User session expired',
+                    style: GoogleFonts.fredoka(
+                        color: AppTheme.textPrimary, fontSize: 18)),
                 const SizedBox(height: 24),
                 ElevatedButton(
-                  onPressed: () => context.read<AuthBloc>().add(AuthInitializeEvent()),
-                  style: ElevatedButton.styleFrom(backgroundColor: AppTheme.goldPrimary),
-                  child: const Text('Try Again', style: TextStyle(color: Colors.black)),
+                  onPressed: () =>
+                      context.read<AuthBloc>().add(AuthInitializeEvent()),
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.goldPrimary),
+                  child: const Text('Try Again',
+                      style: TextStyle(color: Colors.black)),
                 ),
               ],
             ),
@@ -92,7 +96,8 @@ class _ProfileContent extends StatelessWidget {
       elevation: 0,
       leading: IconButton(
         onPressed: () => context.pop(),
-        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppTheme.textPrimary),
+        icon: const Icon(Icons.arrow_back_ios_new_rounded,
+            color: AppTheme.textPrimary),
       ),
       actions: [
         IconButton(
@@ -143,7 +148,8 @@ class _ProfileContent extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.stars_rounded, color: AppTheme.goldPrimary, size: 18),
+                const Icon(Icons.stars_rounded,
+                    color: AppTheme.goldPrimary, size: 18),
                 const SizedBox(width: 6),
                 Text(
                   'GRANDMASTER STRATEGIST',
@@ -157,7 +163,10 @@ class _ProfileContent extends StatelessWidget {
               ],
             ),
           ],
-        ).animate().fadeIn(duration: 600.ms).slideY(begin: 0.2, curve: Curves.easeOutQuad),
+        )
+            .animate()
+            .fadeIn(duration: 600.ms)
+            .slideY(begin: 0.2, curve: Curves.easeOutQuad),
       ),
     );
   }
@@ -189,7 +198,10 @@ class _ProfileContent extends StatelessWidget {
     );
   }
 
-  Widget _actionBtn({required String label, required IconData icon, required VoidCallback onTap}) {
+  Widget _actionBtn(
+      {required String label,
+      required IconData icon,
+      required VoidCallback onTap}) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -207,7 +219,11 @@ class _ProfileContent extends StatelessWidget {
             children: [
               Icon(icon, color: AppTheme.textSecondary, size: 16),
               const SizedBox(width: 8),
-              Text(label, style: GoogleFonts.baloo2(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
+              Text(label,
+                  style: GoogleFonts.baloo2(
+                      color: AppTheme.textPrimary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600)),
             ],
           ),
         ),
@@ -229,7 +245,8 @@ class _ProfileContent extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppTheme.navyCard.withValues(alpha: 0.8),
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.1)),
+            border:
+                Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.1)),
           ),
           child: Column(
             children: [
@@ -239,17 +256,27 @@ class _ProfileContent extends StatelessWidget {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Rank Progress', style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 14)),
-                      Text('LEVEL $level', style: GoogleFonts.fredoka(color: AppTheme.goldPrimary, fontSize: 24, fontWeight: FontWeight.w700)),
+                      Text('Rank Progress',
+                          style: GoogleFonts.baloo2(
+                              color: AppTheme.textSecondary, fontSize: 14)),
+                      Text('LEVEL $level',
+                          style: GoogleFonts.fredoka(
+                              color: AppTheme.goldPrimary,
+                              fontSize: 24,
+                              fontWeight: FontWeight.w700)),
                     ],
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color: AppTheme.goldPrimary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Text('${user.xp} XP', style: GoogleFonts.fredoka(color: AppTheme.goldPrimary, fontWeight: FontWeight.w700)),
+                    child: Text('${user.xp} XP',
+                        style: GoogleFonts.fredoka(
+                            color: AppTheme.goldPrimary,
+                            fontWeight: FontWeight.w700)),
                   ),
                 ],
               ),
@@ -267,8 +294,12 @@ class _ProfileContent extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('$currentLevelXP XP', style: GoogleFonts.baloo2(color: AppTheme.textMuted, fontSize: 12)),
-                  Text('Next: $nextLevelXP XP', style: GoogleFonts.baloo2(color: AppTheme.textMuted, fontSize: 12)),
+                  Text('$currentLevelXP XP',
+                      style: GoogleFonts.baloo2(
+                          color: AppTheme.textMuted, fontSize: 12)),
+                  Text('Next: $nextLevelXP XP',
+                      style: GoogleFonts.baloo2(
+                          color: AppTheme.textMuted, fontSize: 12)),
                 ],
               ),
             ],
@@ -287,10 +318,14 @@ class _ProfileContent extends StatelessWidget {
         crossAxisSpacing: 16,
         childAspectRatio: 1.6,
         children: [
-          _statTile('Wins', '${user.stats.wins}', AppTheme.goldPrimary, Icons.emoji_events_rounded),
-          _statTile('Losses', '${user.stats.losses}', AppTheme.accentRed, Icons.close_rounded),
-          _statTile('Win Rate', '${user.stats.winRate.toStringAsFixed(0)}%', AppTheme.accentCyan, Icons.insights_rounded),
-          _statTile('Matches', '${user.stats.gamesPlayed}', AppTheme.skyBlue, Icons.sports_esports_rounded),
+          _statTile('Wins', '${user.stats.wins}', AppTheme.goldPrimary,
+              Icons.emoji_events_rounded),
+          _statTile('Losses', '${user.stats.losses}', AppTheme.accentRed,
+              Icons.close_rounded),
+          _statTile('Win Rate', '${user.stats.winRate.toStringAsFixed(0)}%',
+              AppTheme.accentCyan, Icons.insights_rounded),
+          _statTile('Matches', '${user.stats.gamesPlayed}', AppTheme.skyBlue,
+              Icons.sports_esports_rounded),
         ],
       ),
     );
@@ -319,8 +354,14 @@ class _ProfileContent extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(value, style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.bold)),
-              Text(label, style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 13)),
+              Text(value,
+                  style: GoogleFonts.fredoka(
+                      color: AppTheme.textPrimary,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold)),
+              Text(label,
+                  style: GoogleFonts.baloo2(
+                      color: AppTheme.textSecondary, fontSize: 13)),
             ],
           ),
         ],
@@ -346,22 +387,32 @@ class _ProfileContent extends StatelessWidget {
                 children: [
                   const Text('📜', style: TextStyle(fontSize: 24)),
                   const SizedBox(width: 12),
-                  Text('Game Rules & XP', style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.w700)),
+                  Text('Game Rules & XP',
+                      style: GoogleFonts.fredoka(
+                          color: AppTheme.textPrimary,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700)),
                 ],
               ),
               const SizedBox(height: 20),
               _ruleItem('🏆 Base Win', '+100 XP', AppTheme.goldPrimary),
-              _ruleItem('🔟 Every 10th Win', '+100 XP Bonus', AppTheme.goldPrimary),
+              _ruleItem(
+                  '🔟 Every 10th Win', '+100 XP Bonus', AppTheme.goldPrimary),
               _ruleItem('⚡ Mate in 5 Moves', '+500 XP', AppTheme.accentCyan),
-              _ruleItem('💎 Perfect Game (No pieces lost)', '+10,000 XP', AppTheme.accentCyan),
+              _ruleItem('💎 Perfect Game (No pieces lost)', '+10,000 XP',
+                  AppTheme.accentCyan),
               _ruleItem('🤝 Draw', '+0 XP', AppTheme.textMuted),
               _ruleItem('💀 Defeat', '-20 XP', AppTheme.accentRed),
               _ruleItem('💡 Hint Usage', '-10 XP', AppTheme.accentRed),
               _ruleItem('🧩 Solving Puzzle', '+50 XP', AppTheme.accentCyan),
               const Padding(
                 padding: EdgeInsets.only(top: 16),
-                child: Text('Note: Practice mode awards 0 XP. Puzzles award +50 XP and adjust your adaptive puzzle rating. Online matches influence your global leaderboard standing.', 
-                  style: TextStyle(color: AppTheme.textMuted, fontSize: 12, fontStyle: FontStyle.italic)),
+                child: Text(
+                    'Note: Practice mode awards 0 XP. Puzzles award +50 XP and adjust your adaptive puzzle rating. Online matches influence your global leaderboard standing.',
+                    style: TextStyle(
+                        color: AppTheme.textMuted,
+                        fontSize: 12,
+                        fontStyle: FontStyle.italic)),
               ),
             ],
           ),
@@ -376,14 +427,18 @@ class _ProfileContent extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 15)),
+          Text(label,
+              style: GoogleFonts.baloo2(
+                  color: AppTheme.textSecondary, fontSize: 15)),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(6),
             ),
-            child: Text(value, style: GoogleFonts.fredoka(color: color, fontSize: 14, fontWeight: FontWeight.w600)),
+            child: Text(value,
+                style: GoogleFonts.fredoka(
+                    color: color, fontSize: 14, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -402,7 +457,11 @@ class _ProfileContent extends StatelessWidget {
           children: [
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 16),
-              child: Text('Recent Battles', style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.w700)),
+              child: Text('Recent Battles',
+                  style: GoogleFonts.fredoka(
+                      color: AppTheme.textPrimary,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700)),
             ),
             ...games.take(5).map((game) => _buildGameTile(game)),
           ],
@@ -414,7 +473,9 @@ class _ProfileContent extends StatelessWidget {
   Widget _buildGameTile(GameRecord game) {
     final isWin = game.result.toLowerCase() == 'won';
     final isDraw = game.result.toLowerCase() == 'draw';
-    final color = isWin ? AppTheme.goldPrimary : (isDraw ? AppTheme.textMuted : AppTheme.accentRed);
+    final color = isWin
+        ? AppTheme.goldPrimary
+        : (isDraw ? AppTheme.textMuted : AppTheme.accentRed);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -432,23 +493,34 @@ class _ProfileContent extends StatelessWidget {
               color: color.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: Text(isWin ? '🏆' : (isDraw ? '🤝' : '💀'), style: const TextStyle(fontSize: 18)),
+            child: Text(isWin ? '🏆' : (isDraw ? '🤝' : '💀'),
+                style: const TextStyle(fontSize: 18)),
           ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('vs ${game.opponent}', style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
-                Text('${game.mode} • ${game.date}', style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 12)),
+                Text('vs ${game.opponent}',
+                    style: GoogleFonts.fredoka(
+                        color: AppTheme.textPrimary,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600)),
+                Text('${game.mode} • ${game.date}',
+                    style: GoogleFonts.baloo2(
+                        color: AppTheme.textSecondary, fontSize: 12)),
               ],
             ),
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(game.result.toUpperCase(), style: GoogleFonts.fredoka(color: color, fontSize: 13, fontWeight: FontWeight.bold)),
-              Text('${game.moves} moves', style: GoogleFonts.baloo2(color: AppTheme.textMuted, fontSize: 11)),
+              Text(game.result.toUpperCase(),
+                  style: GoogleFonts.fredoka(
+                      color: color, fontSize: 13, fontWeight: FontWeight.bold)),
+              Text('${game.moves} moves',
+                  style: GoogleFonts.baloo2(
+                      color: AppTheme.textMuted, fontSize: 11)),
             ],
           ),
         ],
@@ -475,172 +547,232 @@ void showEditProfileModal(BuildContext context, UserModel user) {
         .trim()
         .replaceAll(RegExp(r'\s+'), '_')
         .replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '');
-    final base = cleaned.isEmpty ? 'ChessPlayer' : cleaned.replaceAll(RegExp(r'\d+$'), '');
+    final base = cleaned.isEmpty
+        ? 'ChessPlayer'
+        : cleaned.replaceAll(RegExp(r'\d+$'), '');
     final suffix = 100 + Random().nextInt(900);
     final candidate = '$base$suffix';
     return candidate.length > 30 ? candidate.substring(0, 30) : candidate;
   }
 
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (ctx) => StatefulBuilder(
-        builder: (builderContext, setLocalState) {
-          return Container(
-            padding: EdgeInsets.fromLTRB(28, 28, 28, MediaQuery.of(builderContext).viewInsets.bottom + 40),
-            decoration: const BoxDecoration(
-              gradient: AppTheme.backgroundGradient,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-              boxShadow: [BoxShadow(color: Colors.black54, blurRadius: 40)],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
-                const SizedBox(height: 24),
-                Text('👤 IDENTITY STUDIO', style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 24, fontWeight: FontWeight.w700, letterSpacing: 1.5)),
-                const SizedBox(height: 32),
-                
-                GestureDetector(
-                  onTap: () async {
-                    final picker = ImagePicker();
-                    final XFile? image = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
-                    if (image == null) return;
-                    
-                    final croppedFile = await ImageCropper().cropImage(
-                      sourcePath: image.path,
-                      aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
-                      compressFormat: ImageCompressFormat.jpg,
-                      uiSettings: [
-                        AndroidUiSettings(toolbarTitle: 'Crop Avatar', toolbarColor: AppTheme.midnight, toolbarWidgetColor: Colors.white, lockAspectRatio: true),
-                        IOSUiSettings(title: 'Crop Avatar', aspectRatioLockEnabled: true),
-                      ],
-                    );
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: Colors.transparent,
+    isScrollControlled: true,
+    builder: (ctx) => StatefulBuilder(
+      builder: (builderContext, setLocalState) {
+        return Container(
+          padding: EdgeInsets.fromLTRB(
+              28, 28, 28, MediaQuery.of(builderContext).viewInsets.bottom + 40),
+          decoration: const BoxDecoration(
+            gradient: AppTheme.backgroundGradient,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+            boxShadow: [BoxShadow(color: Colors.black54, blurRadius: 40)],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                      color: Colors.white24,
+                      borderRadius: BorderRadius.circular(2))),
+              const SizedBox(height: 24),
+              Text('👤 IDENTITY STUDIO',
+                  style: GoogleFonts.fredoka(
+                      color: AppTheme.textPrimary,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.5)),
+              const SizedBox(height: 32),
+              GestureDetector(
+                onTap: () async {
+                  final picker = ImagePicker();
+                  final XFile? image = await picker.pickImage(
+                      source: ImageSource.gallery, imageQuality: 85);
+                  if (image == null) return;
 
-                    if (croppedFile != null) {
-                      final bytes = await croppedFile.readAsBytes();
-                      setLocalState(() => localAvatarPreview = base64Encode(bytes));
-                    }
-                  },
-                  child: Stack(
-                    alignment: Alignment.bottomRight,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(shape: BoxShape.circle, gradient: AppTheme.rainbowGradient),
-                        child: _UserAvatar(user: user.copyWith(localAvatar: localAvatarPreview), size: 100),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: const BoxDecoration(color: AppTheme.goldPrimary, shape: BoxShape.circle),
-                        child: const Icon(Icons.camera_alt_rounded, size: 20, color: Colors.black),
-                      ),
+                  final croppedFile = await ImageCropper().cropImage(
+                    sourcePath: image.path,
+                    aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
+                    compressFormat: ImageCompressFormat.jpg,
+                    uiSettings: [
+                      AndroidUiSettings(
+                          toolbarTitle: 'Crop Avatar',
+                          toolbarColor: AppTheme.midnight,
+                          toolbarWidgetColor: Colors.white,
+                          lockAspectRatio: true),
+                      IOSUiSettings(
+                          title: 'Crop Avatar', aspectRatioLockEnabled: true),
                     ],
-                  ),
-                ),
-                
-                const SizedBox(height: 32),
-                TextField(
-                  controller: nameController,
-                  style: GoogleFonts.fredoka(color: AppTheme.textPrimary),
-                  onChanged: (val) async {
-                    if (val == user.username) {
-                      setLocalState(() {
-                        checkingName = false;
-                        nameAvailable = null;
-                        suggestedName = null;
-                      });
-                      return;
-                    }
-                    setLocalState(() {
-                       checkingName = true;
-                       suggestedName = null;
-                    });
-                    final available = await context.read<AuthRepository>().checkUsername(val);
-                    if (nameController.text == val) {
-                      setLocalState(() {
-                        checkingName = false;
-                        nameAvailable = available;
-                        if (!available) {
-                          suggestedName = buildUsernameSuggestion(val);
-                        }
-                      });
-                    }
-                  },
-                  decoration: InputDecoration(
-                    labelText: 'PLAYER NAME',
-                    labelStyle: GoogleFonts.fredoka(color: AppTheme.textSecondary, letterSpacing: 1),
-                    prefixIcon: const Icon(Icons.stars_rounded, color: AppTheme.goldPrimary),
-                    suffixIcon: checkingName 
-                        ? const Padding(padding: EdgeInsets.all(12), child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.goldPrimary)))
-                        : (nameAvailable == null ? null : (nameAvailable! ? const Icon(Icons.check_circle, color: Colors.green) : const Icon(Icons.error, color: Colors.red))),
-                    filled: true,
-                    fillColor: Colors.white.withValues(alpha: 0.03),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
-                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: AppTheme.goldPrimary, width: 1.5)),
-                  ),
-                ),
-                if (suggestedName != null) ...[
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      const Icon(Icons.info_outline, color: AppTheme.textMuted, size: 14),
-                      const SizedBox(width: 6),
-                      Text('Taken. Try ', style: GoogleFonts.baloo2(color: AppTheme.textMuted, fontSize: 13)),
-                      GestureDetector(
-                        onTap: () {
-                          nameController.text = suggestedName!;
-                          nameController.selection = TextSelection.fromPosition(TextPosition(offset: suggestedName!.length));
-                        },
-                        child: Text('"$suggestedName"', style: GoogleFonts.baloo2(color: AppTheme.goldPrimary, fontSize: 13, fontWeight: FontWeight.bold)),
-                      ),
-                    ],
-                  ),
-                ],
-                
-                const SizedBox(height: 32),
-                Row(
+                  );
+
+                  if (croppedFile != null) {
+                    final bytes = await croppedFile.readAsBytes();
+                    setLocalState(
+                        () => localAvatarPreview = base64Encode(bytes));
+                  }
+                },
+                child: Stack(
+                  alignment: Alignment.bottomRight,
                   children: [
-                    const Text('🎨', style: TextStyle(fontSize: 20)),
-                    const SizedBox(width: 12),
-                    Expanded(child: Text('Ghibli Art Style', style: GoogleFonts.baloo2(color: AppTheme.textPrimary, fontWeight: FontWeight.w600))),
-                    Switch.adaptive(
-                      value: isCartoon,
-                      activeThumbColor: AppTheme.goldPrimary,
-                      onChanged: (v) => setLocalState(() => isCartoon = v),
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: AppTheme.rainbowGradient),
+                      child: _UserAvatar(
+                          user: user.copyWith(localAvatar: localAvatarPreview),
+                          size: 100),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: const BoxDecoration(
+                          color: AppTheme.goldPrimary, shape: BoxShape.circle),
+                      child: const Icon(Icons.camera_alt_rounded,
+                          size: 20, color: Colors.black),
                     ),
                   ],
                 ),
-                
-                const SizedBox(height: 40),
-                SizedBox(
-                  width: double.infinity,
-                  height: 60,
-                  child: ElevatedButton(
-                    onPressed: (nameAvailable == false || checkingName) ? null : () {
-                      context.read<AuthBloc>().add(AuthUpdateProfileEvent(
-                        username: nameController.text,
-                        localAvatar: localAvatarPreview,
-                        isGhibli: isCartoon,
-                      ));
-                      Navigator.pop(ctx);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.goldPrimary,
-                      foregroundColor: Colors.black,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                      elevation: 8,
-                      shadowColor: AppTheme.goldPrimary.withValues(alpha: 0.4),
+              ),
+              const SizedBox(height: 32),
+              TextField(
+                controller: nameController,
+                style: GoogleFonts.fredoka(color: AppTheme.textPrimary),
+                onChanged: (val) async {
+                  if (val == user.username) {
+                    setLocalState(() {
+                      checkingName = false;
+                      nameAvailable = null;
+                      suggestedName = null;
+                    });
+                    return;
+                  }
+                  setLocalState(() {
+                    checkingName = true;
+                    suggestedName = null;
+                  });
+                  final available =
+                      await context.read<AuthRepository>().checkUsername(val);
+                  if (nameController.text == val) {
+                    setLocalState(() {
+                      checkingName = false;
+                      nameAvailable = available;
+                      if (!available) {
+                        suggestedName = buildUsernameSuggestion(val);
+                      }
+                    });
+                  }
+                },
+                decoration: InputDecoration(
+                  labelText: 'PLAYER NAME',
+                  labelStyle: GoogleFonts.fredoka(
+                      color: AppTheme.textSecondary, letterSpacing: 1),
+                  prefixIcon: const Icon(Icons.stars_rounded,
+                      color: AppTheme.goldPrimary),
+                  suffixIcon: checkingName
+                      ? const Padding(
+                          padding: EdgeInsets.all(12),
+                          child: SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: AppTheme.goldPrimary)))
+                      : (nameAvailable == null
+                          ? null
+                          : (nameAvailable!
+                              ? const Icon(Icons.check_circle,
+                                  color: Colors.green)
+                              : const Icon(Icons.error, color: Colors.red))),
+                  filled: true,
+                  fillColor: Colors.white.withValues(alpha: 0.03),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(20),
+                      borderSide: BorderSide.none),
+                  focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(20),
+                      borderSide: const BorderSide(
+                          color: AppTheme.goldPrimary, width: 1.5)),
+                ),
+              ),
+              if (suggestedName != null) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Icon(Icons.info_outline,
+                        color: AppTheme.textMuted, size: 14),
+                    const SizedBox(width: 6),
+                    Text('Taken. Try ',
+                        style: GoogleFonts.baloo2(
+                            color: AppTheme.textMuted, fontSize: 13)),
+                    GestureDetector(
+                      onTap: () {
+                        nameController.text = suggestedName!;
+                        nameController.selection = TextSelection.fromPosition(
+                            TextPosition(offset: suggestedName!.length));
+                      },
+                      child: Text('"$suggestedName"',
+                          style: GoogleFonts.baloo2(
+                              color: AppTheme.goldPrimary,
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold)),
                     ),
-                    child: Text('APPLY CHANGES', style: GoogleFonts.fredoka(fontSize: 18, fontWeight: FontWeight.w700, letterSpacing: 1.2)),
-                  ),
+                  ],
                 ),
               ],
-            ),
-          );
-        },
-      ),
+              const SizedBox(height: 32),
+              Row(
+                children: [
+                  const Text('🎨', style: TextStyle(fontSize: 20)),
+                  const SizedBox(width: 12),
+                  Expanded(
+                      child: Text('Ghibli Art Style',
+                          style: GoogleFonts.baloo2(
+                              color: AppTheme.textPrimary,
+                              fontWeight: FontWeight.w600))),
+                  Switch.adaptive(
+                    value: isCartoon,
+                    activeThumbColor: AppTheme.goldPrimary,
+                    onChanged: (v) => setLocalState(() => isCartoon = v),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 40),
+              SizedBox(
+                width: double.infinity,
+                height: 60,
+                child: ElevatedButton(
+                  onPressed: (nameAvailable == false || checkingName)
+                      ? null
+                      : () {
+                          context.read<AuthBloc>().add(AuthUpdateProfileEvent(
+                                username: nameController.text,
+                                localAvatar: localAvatarPreview,
+                                isGhibli: isCartoon,
+                              ));
+                          Navigator.pop(ctx);
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.goldPrimary,
+                    foregroundColor: Colors.black,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20)),
+                    elevation: 8,
+                    shadowColor: AppTheme.goldPrimary.withValues(alpha: 0.4),
+                  ),
+                  child: Text('APPLY CHANGES',
+                      style: GoogleFonts.fredoka(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.2)),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    ),
   );
 }
 
@@ -666,8 +798,10 @@ class _UserAvatar extends StatelessWidget {
                 ? CachedNetworkImage(
                     imageUrl: user.avatarUrl!,
                     fit: BoxFit.cover,
-                    placeholder: (context, url) => Container(color: Colors.white10),
-                    errorWidget: (context, url, error) => _FallbackAvatar(user: user, size: size),
+                    placeholder: (context, url) =>
+                        Container(color: Colors.white10),
+                    errorWidget: (context, url, error) =>
+                        _FallbackAvatar(user: user, size: size),
                   )
                 : _FallbackAvatar(user: user, size: size)),
       ),

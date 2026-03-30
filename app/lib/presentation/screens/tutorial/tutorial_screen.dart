@@ -26,7 +26,9 @@ class _TutorialScreenState extends State<TutorialScreen> {
 
   List<TutorialLesson> _getLessonsByDifficulty(TutorialDifficulty difficulty) {
     final prefix = difficulty.name;
-    return tutorialLessons.where((lesson) => lesson.id.startsWith(prefix)).toList();
+    return tutorialLessons
+        .where((lesson) => lesson.id.startsWith(prefix))
+        .toList();
   }
 
   Color _getDifficultyColor(TutorialDifficulty difficulty) {
@@ -48,10 +50,13 @@ class _TutorialScreenState extends State<TutorialScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: AppTheme.textPrimary),
+          icon:
+              const Icon(Icons.arrow_back_rounded, color: AppTheme.textPrimary),
           onPressed: () => context.pop(),
         ),
-        title: Text('Chess Academy', style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontWeight: FontWeight.w700)),
+        title: Text('Chess Academy',
+            style: GoogleFonts.fredoka(
+                color: AppTheme.textPrimary, fontWeight: FontWeight.w700)),
         centerTitle: true,
       ),
       body: Container(
@@ -66,11 +71,14 @@ class _TutorialScreenState extends State<TutorialScreen> {
                   scrollDirection: Axis.horizontal,
                   child: Row(
                     children: [
-                      _buildDifficultyTab(TutorialDifficulty.beginner, '🟢 Beginner'),
+                      _buildDifficultyTab(
+                          TutorialDifficulty.beginner, '🟢 Beginner'),
                       const SizedBox(width: 12),
-                      _buildDifficultyTab(TutorialDifficulty.intermediate, '🟡 Intermediate'),
+                      _buildDifficultyTab(
+                          TutorialDifficulty.intermediate, '🟡 Intermediate'),
                       const SizedBox(width: 12),
-                      _buildDifficultyTab(TutorialDifficulty.advanced, '🔴 Advanced'),
+                      _buildDifficultyTab(
+                          TutorialDifficulty.advanced, '🔴 Advanced'),
                     ],
                   ),
                 ),
@@ -78,10 +86,13 @@ class _TutorialScreenState extends State<TutorialScreen> {
               // Lessons List
               Expanded(
                 child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  itemCount: _getLessonsByDifficulty(_selectedDifficulty).length,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  itemCount:
+                      _getLessonsByDifficulty(_selectedDifficulty).length,
                   itemBuilder: (context, index) {
-                    final lesson = _getLessonsByDifficulty(_selectedDifficulty)[index];
+                    final lesson =
+                        _getLessonsByDifficulty(_selectedDifficulty)[index];
                     return _buildLessonCard(context, lesson, index);
                   },
                 ),
@@ -103,11 +114,17 @@ class _TutorialScreenState extends State<TutorialScreen> {
         duration: 200.ms,
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
         decoration: BoxDecoration(
-          gradient: isSelected ? LinearGradient(colors: [color.withValues(alpha: 0.2), color.withValues(alpha: 0.05)]) : null,
+          gradient: isSelected
+              ? LinearGradient(colors: [
+                  color.withValues(alpha: 0.2),
+                  color.withValues(alpha: 0.05)
+                ])
+              : null,
           color: !isSelected ? AppTheme.surface.withValues(alpha: 0.5) : null,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? color : AppTheme.textMuted.withValues(alpha: 0.2),
+            color:
+                isSelected ? color : AppTheme.textMuted.withValues(alpha: 0.2),
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -123,17 +140,19 @@ class _TutorialScreenState extends State<TutorialScreen> {
     ).animate().fadeIn();
   }
 
-  Widget _buildLessonCard(BuildContext context, TutorialLesson lesson, int index) {
+  Widget _buildLessonCard(
+      BuildContext context, TutorialLesson lesson, int index) {
     final difficulty = _selectedDifficulty;
     final difficultyColor = _getDifficultyColor(difficulty);
     final stepCount = lesson.steps.length;
 
     return GestureDetector(
       onTap: () {
-        context.push('/game/play', extra: GameRouteExtra(
-          config: const GameConfig(mode: GameMode.tutorial),
-          tutorial: lesson,
-        ));
+        context.push('/game/play',
+            extra: GameRouteExtra(
+              config: const GameConfig(mode: GameMode.tutorial),
+              tutorial: lesson,
+            ));
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
@@ -141,9 +160,13 @@ class _TutorialScreenState extends State<TutorialScreen> {
         decoration: BoxDecoration(
           gradient: AppTheme.cardGradient,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: difficultyColor.withValues(alpha: 0.15), width: 1.5),
+          border: Border.all(
+              color: difficultyColor.withValues(alpha: 0.15), width: 1.5),
           boxShadow: [
-            BoxShadow(color: difficultyColor.withValues(alpha: 0.08), blurRadius: 12, offset: const Offset(0, 4)),
+            BoxShadow(
+                color: difficultyColor.withValues(alpha: 0.08),
+                blurRadius: 12,
+                offset: const Offset(0, 4)),
           ],
         ),
         child: Column(
@@ -152,7 +175,8 @@ class _TutorialScreenState extends State<TutorialScreen> {
             Row(
               children: [
                 Container(
-                  width: 56, height: 56,
+                  width: 56,
+                  height: 56,
                   decoration: BoxDecoration(
                     color: difficultyColor.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(14),
@@ -172,13 +196,16 @@ class _TutorialScreenState extends State<TutorialScreen> {
                       Text(
                         lesson.title,
                         style: GoogleFonts.fredoka(
-                          color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w700,
+                          color: AppTheme.textPrimary,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         lesson.description,
-                        style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 12),
+                        style: GoogleFonts.baloo2(
+                            color: AppTheme.textSecondary, fontSize: 12),
                       ),
                     ],
                   ),
@@ -189,26 +216,31 @@ class _TutorialScreenState extends State<TutorialScreen> {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: difficultyColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.layers_rounded, size: 14, color: difficultyColor),
+                      Icon(Icons.layers_rounded,
+                          size: 14, color: difficultyColor),
                       const SizedBox(width: 6),
                       Text(
                         '$stepCount ${stepCount == 1 ? 'Step' : 'Steps'}',
                         style: GoogleFonts.fredoka(
-                          color: difficultyColor, fontSize: 12, fontWeight: FontWeight.w600,
+                          color: difficultyColor,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],
                   ),
                 ),
                 const Spacer(),
-                Icon(Icons.arrow_forward_rounded, color: AppTheme.textMuted, size: 20),
+                Icon(Icons.arrow_forward_rounded,
+                    color: AppTheme.textMuted, size: 20),
               ],
             ),
           ],

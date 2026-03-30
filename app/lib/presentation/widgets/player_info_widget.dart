@@ -32,12 +32,18 @@ class PlayerInfoWidget extends StatelessWidget {
             : AppTheme.navyCard.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isActive ? AppTheme.goldPrimary.withValues(alpha: 0.8) : Colors.transparent,
+          color: isActive
+              ? AppTheme.goldPrimary.withValues(alpha: 0.8)
+              : Colors.transparent,
           width: 1.5,
         ),
-        boxShadow: isActive ? [
-          BoxShadow(color: AppTheme.goldPrimary.withValues(alpha: 0.1), blurRadius: 8)
-        ] : null,
+        boxShadow: isActive
+            ? [
+                BoxShadow(
+                    color: AppTheme.goldPrimary.withValues(alpha: 0.1),
+                    blurRadius: 8)
+              ]
+            : null,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -48,17 +54,26 @@ class PlayerInfoWidget extends StatelessWidget {
             height: 36,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: color == PieceColor.white 
-                  ? const LinearGradient(colors: [Colors.white, Color(0xFFF5E6CA)])
-                  : const LinearGradient(colors: [Color(0xFF2D1B69), AppTheme.midnight]),
+              gradient: color == PieceColor.white
+                  ? const LinearGradient(
+                      colors: [Colors.white, Color(0xFFF5E6CA)])
+                  : const LinearGradient(
+                      colors: [Color(0xFF2D1B69), AppTheme.midnight]),
               border: Border.all(
-                color: isActive ? AppTheme.goldPrimary : (color == PieceColor.white ? AppTheme.goldDark : AppTheme.textMuted),
+                color: isActive
+                    ? AppTheme.goldPrimary
+                    : (color == PieceColor.white
+                        ? AppTheme.goldDark
+                        : AppTheme.textMuted),
                 width: 2,
               ),
             ),
             child: Icon(
-              isThinking ? Icons.psychology_rounded : (isAI ? Icons.smart_toy_rounded : Icons.person_rounded),
-              color: color == PieceColor.white ? AppTheme.midnight : Colors.white,
+              isThinking
+                  ? Icons.psychology_rounded
+                  : (isAI ? Icons.smart_toy_rounded : Icons.person_rounded),
+              color:
+                  color == PieceColor.white ? AppTheme.midnight : Colors.white,
               size: 20,
             ),
           ),
@@ -69,11 +84,14 @@ class PlayerInfoWidget extends StatelessWidget {
             children: [
               SizedBox(
                 width: 150,
-                child: Text(name,
+                child: Text(
+                  name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.fredoka(
-                    color: AppTheme.textPrimary, fontWeight: FontWeight.w700, fontSize: 15,
+                    color: AppTheme.textPrimary,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
                   ),
                 ),
               ),
@@ -82,24 +100,32 @@ class PlayerInfoWidget extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     const SizedBox(
-                      width: 12, height: 12,
+                      width: 12,
+                      height: 12,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
                         color: AppTheme.goldPrimary,
                       ),
                     ),
                     const SizedBox(width: 6),
-                    Text('Thinking...', style: GoogleFonts.baloo2(
-                      color: AppTheme.goldPrimary, fontSize: 12, fontWeight: FontWeight.w700,
-                    )),
+                    Text('Thinking...',
+                        style: GoogleFonts.baloo2(
+                          color: AppTheme.goldPrimary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        )),
                   ],
-                ).animate(onPlay: (c) => c.repeat(reverse: true)).fadeIn(duration: 500.ms)
+                )
+                    .animate(onPlay: (c) => c.repeat(reverse: true))
+                    .fadeIn(duration: 500.ms)
               else
                 Text(
                   color == PieceColor.white ? '⚪ White' : '⚫ Black',
                   style: GoogleFonts.baloo2(
-                    color: isActive ? AppTheme.textSecondary : AppTheme.textMuted, 
-                    fontSize: 12, fontWeight: FontWeight.w600,
+                    color:
+                        isActive ? AppTheme.textSecondary : AppTheme.textMuted,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
             ],

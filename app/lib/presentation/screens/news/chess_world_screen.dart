@@ -81,7 +81,10 @@ class _ChessWorldScreenState extends State<ChessWorldScreen> {
     } catch (_) {
       // Fall through to static content
     }
-    setState(() { _loading = false; _fromApi = false; });
+    setState(() {
+      _loading = false;
+      _fromApi = false;
+    });
   }
 
   @override
@@ -95,7 +98,8 @@ class _ChessWorldScreenState extends State<ChessWorldScreen> {
             onRefresh: _fetchDailyContent,
             color: AppTheme.goldPrimary,
             child: ListView(
-              physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+              physics: const BouncingScrollPhysics(
+                  parent: AlwaysScrollableScrollPhysics()),
               padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
               children: [
                 _buildHeader(),
@@ -104,12 +108,20 @@ class _ChessWorldScreenState extends State<ChessWorldScreen> {
                 if (_loading)
                   const Padding(
                     padding: EdgeInsets.only(top: 80),
-                    child: Center(child: CircularProgressIndicator(color: AppTheme.goldPrimary)),
+                    child: Center(
+                        child: CircularProgressIndicator(
+                            color: AppTheme.goldPrimary)),
                   )
                 else if (_fromApi && _dailyContent.isNotEmpty)
-                  ..._dailyContent.asMap().entries.map((e) => _buildApiCard(e.value, e.key))
+                  ..._dailyContent
+                      .asMap()
+                      .entries
+                      .map((e) => _buildApiCard(e.value, e.key))
                 else
-                  ..._fallbackCards.asMap().entries.map((e) => _buildFallbackCard(e.value, e.key)),
+                  ..._fallbackCards
+                      .asMap()
+                      .entries
+                      .map((e) => _buildFallbackCard(e.value, e.key)),
               ],
             ),
           ),
@@ -137,7 +149,8 @@ class _ChessWorldScreenState extends State<ChessWorldScreen> {
         children: [
           Row(
             children: [
-              const Icon(Icons.public_rounded, color: AppTheme.midnight, size: 34),
+              const Icon(Icons.public_rounded,
+                  color: AppTheme.midnight, size: 34),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
@@ -178,11 +191,15 @@ class _ChessWorldScreenState extends State<ChessWorldScreen> {
       ),
       child: Row(
         children: [
-          const Icon(Icons.cloud_done_rounded, color: AppTheme.accentGreen, size: 16),
+          const Icon(Icons.cloud_done_rounded,
+              color: AppTheme.accentGreen, size: 16),
           const SizedBox(width: 8),
-          Text('Updated from live feed · $_lastUpdated', style: GoogleFonts.baloo2(
-            color: AppTheme.accentGreen, fontSize: 12, fontWeight: FontWeight.w600,
-          )),
+          Text('Updated from live feed · $_lastUpdated',
+              style: GoogleFonts.baloo2(
+                color: AppTheme.accentGreen,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              )),
         ],
       ),
     );
@@ -199,7 +216,8 @@ class _ChessWorldScreenState extends State<ChessWorldScreen> {
       decoration: BoxDecoration(
         gradient: AppTheme.cardGradient,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08), width: 1.2),
+        border:
+            Border.all(color: Colors.white.withValues(alpha: 0.08), width: 1.2),
         boxShadow: AppTheme.cardShadow,
       ),
       child: Padding(
@@ -215,24 +233,35 @@ class _ChessWorldScreenState extends State<ChessWorldScreen> {
               ),
               child: Row(
                 children: [
-                  Text(_emojiForCategory(category), style: const TextStyle(fontSize: 26)),
+                  Text(_emojiForCategory(category),
+                      style: const TextStyle(fontSize: 26)),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: Text(title, style: GoogleFonts.fredoka(
-                      color: AppTheme.midnight, fontSize: 20, fontWeight: FontWeight.w700,
-                    )),
+                    child: Text(title,
+                        style: GoogleFonts.fredoka(
+                          color: AppTheme.midnight,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                        )),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 14),
-            Text(body, style: GoogleFonts.baloo2(
-              color: AppTheme.textSecondary, fontSize: 15, fontWeight: FontWeight.w500, height: 1.4,
-            )),
+            Text(body,
+                style: GoogleFonts.baloo2(
+                  color: AppTheme.textSecondary,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                  height: 1.4,
+                )),
           ],
         ),
       ),
-    ).animate().fadeIn(delay: (index * 120).ms, duration: 350.ms).slideY(begin: 0.08);
+    )
+        .animate()
+        .fadeIn(delay: (index * 120).ms, duration: 350.ms)
+        .slideY(begin: 0.08);
   }
 
   Widget _buildFallbackCard(Map<String, dynamic> card, int index) {
@@ -244,20 +273,26 @@ class _ChessWorldScreenState extends State<ChessWorldScreen> {
       subtitle: card['subtitle'] as String,
       gradient: LinearGradient(colors: colors),
       items: items,
-    ).animate().fadeIn(delay: (index * 120).ms, duration: 350.ms).slideY(begin: 0.08);
+    )
+        .animate()
+        .fadeIn(delay: (index * 120).ms, duration: 350.ms)
+        .slideY(begin: 0.08);
   }
 
   List<Color> _gradientForCategory(String category) => switch (category) {
-    'tournament' || 'events' => [const Color(0xFF6BCB77), const Color(0xFF4ECDC4)],
-    'career' => [const Color(0xFFFF6B9D), const Color(0xFFFF8A5C)],
-    _ => [const Color(0xFF74B9FF), const Color(0xFFA29BFE)],
-  };
+        'tournament' || 'events' => [
+            const Color(0xFF6BCB77),
+            const Color(0xFF4ECDC4)
+          ],
+        'career' => [const Color(0xFFFF6B9D), const Color(0xFFFF8A5C)],
+        _ => [const Color(0xFF74B9FF), const Color(0xFFA29BFE)],
+      };
 
   String _emojiForCategory(String category) => switch (category) {
-    'tournament' || 'events' => '📅',
-    'career' => '🚀',
-    _ => '🌍',
-  };
+        'tournament' || 'events' => '📅',
+        'career' => '🚀',
+        _ => '🌍',
+      };
 }
 
 class _WorldCard extends StatelessWidget {
@@ -282,7 +317,8 @@ class _WorldCard extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: AppTheme.cardGradient,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08), width: 1.2),
+        border:
+            Border.all(color: Colors.white.withValues(alpha: 0.08), width: 1.2),
         boxShadow: AppTheme.cardShadow,
       ),
       child: Padding(

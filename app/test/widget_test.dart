@@ -11,7 +11,7 @@ void main() {
   testWidgets('App initialization test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
     // await tester.pumpWidget(const ChessApp());
-    
+
     // For now, since ChessApp requires DI and Hive, a simple smoke test might fail
     // without proper setup. We'll skip complex widget tests for now.
     expect(true, isTrue);

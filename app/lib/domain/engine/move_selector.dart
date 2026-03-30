@@ -9,7 +9,9 @@ class MoveSelector {
 
   /// Select a move from candidates based on active personality and random variance.
   /// Each candidate has its Stockfish CP score.
-  MoveCandidate select(List<MoveCandidate> candidates, AIPersonality personality, {double errorChance = 0.05}) {
+  MoveCandidate select(
+      List<MoveCandidate> candidates, AIPersonality personality,
+      {double errorChance = 0.05}) {
     if (candidates.isEmpty) return MoveCandidate(uci: 'none', score: 0);
 
     // Apply "Human Error" system
@@ -22,12 +24,13 @@ class MoveSelector {
     // Advanced: Score each candidate according to personality
     final scoredCandidates = candidates.map((m) {
       double score = m.score.toDouble();
-      
+
       // Personality Bonuses
       if (personality == AIPersonality.aggressive) {
         // Simple heuristic: bonuses for checks or piece captures are best handled by engine cp.
         // But we can add extra "bias" for higher-score (more likely tactical) moves.
-        if (m.score > candidates.first.score - 50) score += 200; // Prefer best aggressive lines
+        if (m.score > candidates.first.score - 50)
+          score += 200; // Prefer best aggressive lines
       } else if (personality == AIPersonality.defensive) {
         // Defensive often picks very solid, lower-variance moves.
         // If it's a "blunder-less" move (within 80cp of best), it's good.

@@ -4,26 +4,102 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 abstract class SettingsEvent extends Equatable {
   const SettingsEvent();
-  @override List<Object?> get props => [];
+  @override
+  List<Object?> get props => [];
 }
+
 class SettingsLoadEvent extends SettingsEvent {}
-class SettingsSoundEvent extends SettingsEvent { final bool enabled; const SettingsSoundEvent(this.enabled); @override List<Object?> get props => [enabled]; }
-class SettingsVibrationEvent extends SettingsEvent { final bool enabled; const SettingsVibrationEvent(this.enabled); @override List<Object?> get props => [enabled]; }
-class SettingsNotificationsEvent extends SettingsEvent { final bool enabled; const SettingsNotificationsEvent(this.enabled); @override List<Object?> get props => [enabled]; }
-class SettingsShowCoordinatesEvent extends SettingsEvent { final bool enabled; const SettingsShowCoordinatesEvent(this.enabled); @override List<Object?> get props => [enabled]; }
-class SettingsShowSquareLabelsEvent extends SettingsEvent { final bool enabled; const SettingsShowSquareLabelsEvent(this.enabled); @override List<Object?> get props => [enabled]; }
-class SettingsShowLegalMovesEvent extends SettingsEvent { final bool enabled; const SettingsShowLegalMovesEvent(this.enabled); @override List<Object?> get props => [enabled]; }
-class SettingsAutoFlipBoardEvent extends SettingsEvent { final bool enabled; const SettingsAutoFlipBoardEvent(this.enabled); @override List<Object?> get props => [enabled]; }
+
+class SettingsSoundEvent extends SettingsEvent {
+  final bool enabled;
+  const SettingsSoundEvent(this.enabled);
+  @override
+  List<Object?> get props => [enabled];
+}
+
+class SettingsVibrationEvent extends SettingsEvent {
+  final bool enabled;
+  const SettingsVibrationEvent(this.enabled);
+  @override
+  List<Object?> get props => [enabled];
+}
+
+class SettingsNotificationsEvent extends SettingsEvent {
+  final bool enabled;
+  const SettingsNotificationsEvent(this.enabled);
+  @override
+  List<Object?> get props => [enabled];
+}
+
+class SettingsShowCoordinatesEvent extends SettingsEvent {
+  final bool enabled;
+  const SettingsShowCoordinatesEvent(this.enabled);
+  @override
+  List<Object?> get props => [enabled];
+}
+
+class SettingsShowSquareLabelsEvent extends SettingsEvent {
+  final bool enabled;
+  const SettingsShowSquareLabelsEvent(this.enabled);
+  @override
+  List<Object?> get props => [enabled];
+}
+
+class SettingsShowLegalMovesEvent extends SettingsEvent {
+  final bool enabled;
+  const SettingsShowLegalMovesEvent(this.enabled);
+  @override
+  List<Object?> get props => [enabled];
+}
+
+class SettingsAutoFlipBoardEvent extends SettingsEvent {
+  final bool enabled;
+  const SettingsAutoFlipBoardEvent(this.enabled);
+  @override
+  List<Object?> get props => [enabled];
+}
+
 class SettingsMoveAnimationSpeedEvent extends SettingsEvent {
   final String speed;
   const SettingsMoveAnimationSpeedEvent(this.speed);
-  @override List<Object?> get props => [speed];
+  @override
+  List<Object?> get props => [speed];
 }
-class SettingsConfirmResignEvent extends SettingsEvent { final bool enabled; const SettingsConfirmResignEvent(this.enabled); @override List<Object?> get props => [enabled]; }
-class SettingsConfirmDrawOfferEvent extends SettingsEvent { final bool enabled; const SettingsConfirmDrawOfferEvent(this.enabled); @override List<Object?> get props => [enabled]; }
-class SettingsConfirmMovesEvent extends SettingsEvent { final bool enabled; const SettingsConfirmMovesEvent(this.enabled); @override List<Object?> get props => [enabled]; }
-class SettingsAutoQueenEvent extends SettingsEvent { final bool enabled; const SettingsAutoQueenEvent(this.enabled); @override List<Object?> get props => [enabled]; }
-class SettingsBackgroundEvent extends SettingsEvent { final String theme; const SettingsBackgroundEvent(this.theme); @override List<Object?> get props => [theme]; }
+
+class SettingsConfirmResignEvent extends SettingsEvent {
+  final bool enabled;
+  const SettingsConfirmResignEvent(this.enabled);
+  @override
+  List<Object?> get props => [enabled];
+}
+
+class SettingsConfirmDrawOfferEvent extends SettingsEvent {
+  final bool enabled;
+  const SettingsConfirmDrawOfferEvent(this.enabled);
+  @override
+  List<Object?> get props => [enabled];
+}
+
+class SettingsConfirmMovesEvent extends SettingsEvent {
+  final bool enabled;
+  const SettingsConfirmMovesEvent(this.enabled);
+  @override
+  List<Object?> get props => [enabled];
+}
+
+class SettingsAutoQueenEvent extends SettingsEvent {
+  final bool enabled;
+  const SettingsAutoQueenEvent(this.enabled);
+  @override
+  List<Object?> get props => [enabled];
+}
+
+class SettingsBackgroundEvent extends SettingsEvent {
+  final String theme;
+  const SettingsBackgroundEvent(this.theme);
+  @override
+  List<Object?> get props => [theme];
+}
 
 class SettingsState extends Equatable {
   final bool soundEnabled;
@@ -91,22 +167,23 @@ class SettingsState extends Equatable {
         isLoaded: isLoaded ?? this.isLoaded,
       );
 
-  @override List<Object?> get props => [
-    soundEnabled,
-    vibrationEnabled,
-    notificationsEnabled,
-    showCoordinates,
-    showSquareLabels,
-    showLegalMoves,
-    autoFlipBoard,
-    moveAnimationSpeed,
-    confirmResign,
-    confirmDrawOffer,
-    confirmMoves,
-    autoQueen,
-    backgroundTheme,
-    isLoaded,
-  ];
+  @override
+  List<Object?> get props => [
+        soundEnabled,
+        vibrationEnabled,
+        notificationsEnabled,
+        showCoordinates,
+        showSquareLabels,
+        showLegalMoves,
+        autoFlipBoard,
+        moveAnimationSpeed,
+        confirmResign,
+        confirmDrawOffer,
+        confirmMoves,
+        autoQueen,
+        backgroundTheme,
+        isLoaded,
+      ];
 }
 
 class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
@@ -121,40 +198,50 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
       emit(state.copyWith(vibrationEnabled: e.enabled));
     });
     on<SettingsNotificationsEvent>((e, emit) async {
-      (await SharedPreferences.getInstance()).setBool('notifications', e.enabled);
+      (await SharedPreferences.getInstance())
+          .setBool('notifications', e.enabled);
       emit(state.copyWith(notificationsEnabled: e.enabled));
     });
     on<SettingsShowCoordinatesEvent>((e, emit) async {
-      (await SharedPreferences.getInstance()).setBool('show_coordinates', e.enabled);
+      (await SharedPreferences.getInstance())
+          .setBool('show_coordinates', e.enabled);
       emit(state.copyWith(showCoordinates: e.enabled));
     });
     on<SettingsShowSquareLabelsEvent>((e, emit) async {
-      (await SharedPreferences.getInstance()).setBool('show_square_labels', e.enabled);
+      (await SharedPreferences.getInstance())
+          .setBool('show_square_labels', e.enabled);
       emit(state.copyWith(showSquareLabels: e.enabled));
     });
     on<SettingsShowLegalMovesEvent>((e, emit) async {
-      (await SharedPreferences.getInstance()).setBool('show_legal_moves', e.enabled);
+      (await SharedPreferences.getInstance())
+          .setBool('show_legal_moves', e.enabled);
       emit(state.copyWith(showLegalMoves: e.enabled));
     });
     on<SettingsAutoFlipBoardEvent>((e, emit) async {
-      (await SharedPreferences.getInstance()).setBool('auto_flip_board', e.enabled);
+      (await SharedPreferences.getInstance())
+          .setBool('auto_flip_board', e.enabled);
       emit(state.copyWith(autoFlipBoard: e.enabled));
     });
     on<SettingsMoveAnimationSpeedEvent>((e, emit) async {
-      final normalized = (e.speed == 'off' || e.speed == 'fast') ? e.speed : 'normal';
-      (await SharedPreferences.getInstance()).setString('move_animation_speed', normalized);
+      final normalized =
+          (e.speed == 'off' || e.speed == 'fast') ? e.speed : 'normal';
+      (await SharedPreferences.getInstance())
+          .setString('move_animation_speed', normalized);
       emit(state.copyWith(moveAnimationSpeed: normalized));
     });
     on<SettingsConfirmResignEvent>((e, emit) async {
-      (await SharedPreferences.getInstance()).setBool('confirm_resign', e.enabled);
+      (await SharedPreferences.getInstance())
+          .setBool('confirm_resign', e.enabled);
       emit(state.copyWith(confirmResign: e.enabled));
     });
     on<SettingsConfirmDrawOfferEvent>((e, emit) async {
-      (await SharedPreferences.getInstance()).setBool('confirm_draw_offer', e.enabled);
+      (await SharedPreferences.getInstance())
+          .setBool('confirm_draw_offer', e.enabled);
       emit(state.copyWith(confirmDrawOffer: e.enabled));
     });
     on<SettingsConfirmMovesEvent>((e, emit) async {
-      (await SharedPreferences.getInstance()).setBool('confirm_moves', e.enabled);
+      (await SharedPreferences.getInstance())
+          .setBool('confirm_moves', e.enabled);
       emit(state.copyWith(confirmMoves: e.enabled));
     });
     on<SettingsAutoQueenEvent>((e, emit) async {
@@ -162,12 +249,14 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
       emit(state.copyWith(autoQueen: e.enabled));
     });
     on<SettingsBackgroundEvent>((e, emit) async {
-      (await SharedPreferences.getInstance()).setString('background_theme', e.theme);
+      (await SharedPreferences.getInstance())
+          .setString('background_theme', e.theme);
       emit(state.copyWith(backgroundTheme: e.theme));
     });
   }
 
-  Future<void> _onLoad(SettingsLoadEvent event, Emitter<SettingsState> emit) async {
+  Future<void> _onLoad(
+      SettingsLoadEvent event, Emitter<SettingsState> emit) async {
     final prefs = await SharedPreferences.getInstance();
     emit(SettingsState(
       soundEnabled: prefs.getBool('sound') ?? true,

@@ -54,16 +54,22 @@ class _SplashScreenState extends State<SplashScreen>
                   gradient: const LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [AppTheme.goldPrimary, AppTheme.accentPurple, AppTheme.skyBlue],
+                    colors: [
+                      AppTheme.goldPrimary,
+                      AppTheme.accentPurple,
+                      AppTheme.skyBlue
+                    ],
                   ),
                   boxShadow: [
                     BoxShadow(
                       color: AppTheme.goldPrimary.withValues(alpha: 0.5),
-                      blurRadius: 50, spreadRadius: 15,
+                      blurRadius: 50,
+                      spreadRadius: 15,
                     ),
                     BoxShadow(
                       color: AppTheme.accentPurple.withValues(alpha: 0.3),
-                      blurRadius: 30, spreadRadius: 5,
+                      blurRadius: 30,
+                      spreadRadius: 5,
                     ),
                   ],
                 ),
@@ -72,7 +78,10 @@ class _SplashScreenState extends State<SplashScreen>
                 ),
               )
                   .animate()
-                  .scale(begin: const Offset(0, 0), duration: 1000.ms, curve: Curves.elasticOut)
+                  .scale(
+                      begin: const Offset(0, 0),
+                      duration: 1000.ms,
+                      curve: Curves.elasticOut)
                   .fadeIn(duration: 600.ms)
                   .then()
                   .shimmer(duration: 1500.ms, color: Colors.white24),
@@ -81,7 +90,8 @@ class _SplashScreenState extends State<SplashScreen>
 
               // ── Rainbow gradient title ──
               ShaderMask(
-                shaderCallback: (bounds) => AppTheme.rainbowGradient.createShader(bounds),
+                shaderCallback: (bounds) =>
+                    AppTheme.rainbowGradient.createShader(bounds),
                 child: Text(
                   'CHESS MASTER',
                   style: GoogleFonts.fredoka(
@@ -96,7 +106,8 @@ class _SplashScreenState extends State<SplashScreen>
                   .fadeIn(delay: 500.ms, duration: 600.ms)
                   .slideY(begin: 0.5)
                   .then()
-                  .shimmer(delay: 500.ms, duration: 2000.ms, color: Colors.white30),
+                  .shimmer(
+                      delay: 500.ms, duration: 2000.ms, color: Colors.white30),
 
               const SizedBox(height: 12),
 

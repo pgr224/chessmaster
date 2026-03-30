@@ -2,7 +2,16 @@ import 'package:flutter/material.dart';
 
 import '../models/puzzle_model.dart';
 
-enum GameMode { tutorial, singlePlayer, twoPlayer, multiplayer, tournament, puzzle, practice }
+enum GameMode {
+  tutorial,
+  singlePlayer,
+  twoPlayer,
+  multiplayer,
+  tournament,
+  puzzle,
+  practice
+}
+
 enum AIDifficulty { basic, intermediate, advanced, impossible, aiMode }
 
 class GameConfig {
@@ -42,7 +51,8 @@ class GameConfig {
   static (int, int) parseTimeControl(String tc) {
     final parts = tc.split('+');
     final baseMinutes = int.tryParse(parts[0].trim()) ?? 10;
-    final increment = parts.length > 1 ? (int.tryParse(parts[1].trim()) ?? 0) : 0;
+    final increment =
+        parts.length > 1 ? (int.tryParse(parts[1].trim()) ?? 0) : 0;
     return (baseMinutes * 60, increment);
   }
 }

@@ -8,7 +8,8 @@ import '../../../data/models/user_model.dart';
 // ═══════════════════════════════════════════
 abstract class AuthEvent extends Equatable {
   const AuthEvent();
-  @override List<Object?> get props => [];
+  @override
+  List<Object?> get props => [];
 }
 
 class AuthInitializeEvent extends AuthEvent {}
@@ -17,7 +18,8 @@ class AuthRegisterEvent extends AuthEvent {
   final String username;
   final String? avatarPath;
   const AuthRegisterEvent({required this.username, this.avatarPath});
-  @override List<Object?> get props => [username, avatarPath];
+  @override
+  List<Object?> get props => [username, avatarPath];
 }
 
 class AuthUpdateProfileEvent extends AuthEvent {
@@ -25,8 +27,10 @@ class AuthUpdateProfileEvent extends AuthEvent {
   final String? avatarPath;
   final String? localAvatar;
   final bool? isGhibli;
-  const AuthUpdateProfileEvent({this.username, this.avatarPath, this.localAvatar, this.isGhibli});
-  @override List<Object?> get props => [username, avatarPath, localAvatar, isGhibli];
+  const AuthUpdateProfileEvent(
+      {this.username, this.avatarPath, this.localAvatar, this.isGhibli});
+  @override
+  List<Object?> get props => [username, avatarPath, localAvatar, isGhibli];
 }
 
 class AuthSignOutEvent extends AuthEvent {}
@@ -41,23 +45,28 @@ class AuthClearAllDataEvent extends AuthEvent {
 // ═══════════════════════════════════════════
 abstract class AuthState extends Equatable {
   const AuthState();
-  @override List<Object?> get props => [];
+  @override
+  List<Object?> get props => [];
 }
 
 class AuthInitialState extends AuthState {}
+
 class AuthLoadingState extends AuthState {}
+
 class AuthUnauthenticatedState extends AuthState {}
 
 class AuthAuthenticatedState extends AuthState {
   final UserModel user;
   const AuthAuthenticatedState(this.user);
-  @override List<Object?> get props => [user];
+  @override
+  List<Object?> get props => [user];
 }
 
 class AuthErrorState extends AuthState {
   final String message;
   const AuthErrorState(this.message);
-  @override List<Object?> get props => [message];
+  @override
+  List<Object?> get props => [message];
 }
 
 // ═══════════════════════════════════════════
@@ -74,7 +83,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthClearAllDataEvent>(_onClearAllData);
   }
 
-  Future<void> _onInitialize(AuthInitializeEvent event, Emitter<AuthState> emit) async {
+  Future<void> _onInitialize(
+      AuthInitializeEvent event, Emitter<AuthState> emit) async {
     emit(AuthLoadingState());
     try {
       final user = await _repository.getCurrentUser();
@@ -88,7 +98,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
   }
 
-  Future<void> _onRegister(AuthRegisterEvent event, Emitter<AuthState> emit) async {
+  Future<void> _onRegister(
+      AuthRegisterEvent event, Emitter<AuthState> emit) async {
     emit(AuthLoadingState());
     try {
       final user = await _repository.register(
@@ -101,7 +112,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
   }
 
-  Future<void> _onUpdateProfile(AuthUpdateProfileEvent event, Emitter<AuthState> emit) async {
+  Future<void> _onUpdateProfile(
+      AuthUpdateProfileEvent event, Emitter<AuthState> emit) async {
     final current = state;
     if (current is! AuthAuthenticatedState) return;
     try {
@@ -118,12 +130,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
   }
 
-  Future<void> _onSignOut(AuthSignOutEvent event, Emitter<AuthState> emit) async {
+  Future<void> _onSignOut(
+      AuthSignOutEvent event, Emitter<AuthState> emit) async {
     await _repository.signOut();
     emit(AuthUnauthenticatedState());
   }
 
-  Future<void> _onClearAllData(AuthClearAllDataEvent event, Emitter<AuthState> emit) async {
+  Future<void> _onClearAllData(
+      AuthClearAllDataEvent event, Emitter<AuthState> emit) async {
     /// Debug handler: clears all stored user session, device fingerprint, and auth token
     /// Forces app to show onboarding on next restart
     /// Useful for testing session persistence and cleanup flows

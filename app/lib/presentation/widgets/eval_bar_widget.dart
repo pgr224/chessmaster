@@ -27,9 +27,9 @@ class EvalBarWidget extends StatelessWidget {
     // 0 eval = 50%
     // +5 eval = ~95%
     // -5 eval = ~5%
-    
+
     double whitePercentage = 0.5;
-    
+
     if (isGameOver && result != null) {
       if (result == GameResult.whiteWins) {
         whitePercentage = 1.0;
@@ -41,21 +41,24 @@ class EvalBarWidget extends StatelessWidget {
       final mapped = (2.0 / math.pi) * math.atan(evalScore / 3.0);
       whitePercentage = 0.5 + 0.5 * mapped;
     }
-    
+
     // Clamp to ensure both sides are visible unless checkmate
     if (!isGameOver) {
-       whitePercentage = whitePercentage.clamp(0.05, 0.95);
+      whitePercentage = whitePercentage.clamp(0.05, 0.95);
     } else {
-       if (result == GameResult.whiteWins) whitePercentage = 1.0;
-       if (result == GameResult.blackWins) whitePercentage = 0.0;
+      if (result == GameResult.whiteWins) whitePercentage = 1.0;
+      if (result == GameResult.blackWins) whitePercentage = 0.0;
     }
 
     final topIsBlack = perspective == PieceColor.white;
-    final bottomColor = topIsBlack ? const Color(0xFFF3F3F3) : const Color(0xFF2B2B2B);
-    final topColor = topIsBlack ? const Color(0xFF2B2B2B) : const Color(0xFFF3F3F3);
-    
-    final bottomPercentage = topIsBlack ? whitePercentage : (1.0 - whitePercentage);
-    
+    final bottomColor =
+        topIsBlack ? const Color(0xFFF3F3F3) : const Color(0xFF2B2B2B);
+    final topColor =
+        topIsBlack ? const Color(0xFF2B2B2B) : const Color(0xFFF3F3F3);
+
+    final bottomPercentage =
+        topIsBlack ? whitePercentage : (1.0 - whitePercentage);
+
     return Container(
       width: width,
       height: height,
@@ -63,7 +66,8 @@ class EvalBarWidget extends StatelessWidget {
       decoration: BoxDecoration(
         color: topColor,
         borderRadius: BorderRadius.circular(width / 2),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1),
+        border:
+            Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1),
       ),
       child: Stack(
         alignment: Alignment.bottomCenter,
@@ -78,21 +82,25 @@ class EvalBarWidget extends StatelessWidget {
             ),
           ),
           if (!isGameOver && evalScore.abs() > 0.1)
-             Positioned(
-               bottom: bottomPercentage > 0.5 ? 4 : null,
-               top: bottomPercentage <= 0.5 ? 4 : null,
-               child: RotatedBox(
-                 quarterTurns: topIsBlack ? 0 : 2, // keep text readable depending on flip? Actually just 0
-                 child: Text(
-                   evalScore > 0 ? '+${evalScore.toStringAsFixed(1)}' : evalScore.toStringAsFixed(1),
-                   style: TextStyle(
-                     color: bottomPercentage > 0.5 ? topColor : bottomColor,
-                     fontSize: 9,
-                     fontWeight: FontWeight.w900,
-                   ),
-                 ),
-               ),
-             ),
+            Positioned(
+              bottom: bottomPercentage > 0.5 ? 4 : null,
+              top: bottomPercentage <= 0.5 ? 4 : null,
+              child: RotatedBox(
+                quarterTurns: topIsBlack
+                    ? 0
+                    : 2, // keep text readable depending on flip? Actually just 0
+                child: Text(
+                  evalScore > 0
+                      ? '+${evalScore.toStringAsFixed(1)}'
+                      : evalScore.toStringAsFixed(1),
+                  style: TextStyle(
+                    color: bottomPercentage > 0.5 ? topColor : bottomColor,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );

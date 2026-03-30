@@ -22,7 +22,7 @@ class AIEngineController {
   GameMode _mode = GameMode.singlePlayer;
   AIDifficulty _difficulty = AIDifficulty.basic;
   bool _initialized = false;
-  
+
   static final AIEngineController _instance = AIEngineController._internal();
   factory AIEngineController() => _instance;
   AIEngineController._internal();
@@ -33,7 +33,7 @@ class AIEngineController {
     AIDifficulty.intermediate: 4000,
     AIDifficulty.advanced: 5000,
     AIDifficulty.impossible: 5000, // Reduced from 17000 to keep it engaging
-    AIDifficulty.aiMode: 7000,     // Reduced from 25000
+    AIDifficulty.aiMode: 7000, // Reduced from 25000
   };
 
   static const int _fallbackBufferMs = 2000;
@@ -55,15 +55,20 @@ class AIEngineController {
   }
 
   /// Get the best move for the current position with robust timeout handling
-  Future<String?> getBestMove(String fen, {ChessEngine? engine, bool humanized = true, int moveNumber = 0}) async {
+  Future<String?> getBestMove(String fen,
+      {ChessEngine? engine, bool humanized = true, int moveNumber = 0}) async {
     if (!_initialized) return null;
-    if (_mode == GameMode.twoPlayer || _mode == GameMode.multiplayer) return null;
+    if (_mode == GameMode.twoPlayer || _mode == GameMode.multiplayer)
+      return null;
 
     final requestId = ++_activeRequestId;
 
     // ── SMART/HUMANOID AI PIPELINE (Advanced, Impossible, AI Mode) ──
-    if (_difficulty == AIDifficulty.aiMode || _difficulty == AIDifficulty.impossible || _difficulty == AIDifficulty.advanced) {
-      return _getSmartMove(fen, requestId, engine: engine, moveNumber: moveNumber);
+    if (_difficulty == AIDifficulty.aiMode ||
+        _difficulty == AIDifficulty.impossible ||
+        _difficulty == AIDifficulty.advanced) {
+      return _getSmartMove(fen, requestId,
+          engine: engine, moveNumber: moveNumber);
     }
 
     final maxTime = _maxTimeMs[_difficulty] ?? 2000;
@@ -75,7 +80,8 @@ class AIEngineController {
         AIDifficulty.intermediate => 1000,
         _ => 400,
       };
-      final randomDelay = (baseDelay * (0.8 + (math.Random().nextDouble() * 0.4))).toInt();
+      final randomDelay =
+          (baseDelay * (0.8 + (math.Random().nextDouble() * 0.4))).toInt();
       await Future.delayed(Duration(milliseconds: randomDelay));
       if (requestId != _activeRequestId) return null; // Cancelled
     }
@@ -84,10 +90,11 @@ class AIEngineController {
       String? resultMove;
 
       // Simple call for lower difficulties
-      final Map<String, dynamic>? res = (await js_bridge.jsEngineGetBestMove(fen).timeout(
-        Duration(milliseconds: maxTime),
-        onTimeout: () => null,
-      )) as Map<String, dynamic>?;
+      final Map<String, dynamic>? res =
+          (await js_bridge.jsEngineGetBestMove(fen).timeout(
+                Duration(milliseconds: maxTime),
+                onTimeout: () => null,
+              )) as Map<String, dynamic>?;
       resultMove = res?['move'] as String?;
 
       if (resultMove == null && engine != null) {
@@ -103,26 +110,48 @@ class AIEngineController {
   }
 
   /// SMART AI System: MultiPV candidates -> Opening randomness -> Quality filtering
-  Future<String?> _getSmartMove(String fen, int requestId, {ChessEngine? engine, int moveNumber = 0}) async {
+  Future<String?> _getSmartMove(String fen, int requestId,
+      {ChessEngine? engine, int moveNumber = 0}) async {
     try {
       List<MoveCandidate> candidates = [];
       String? bestFound;
 
-      if (!kIsWeb) {
-        int dynamicMoveTime = 1000;
-        if (engine != null) {
-          final complexity = engine.legalMoves.length;
-          final cap = _maxTimeMs[_difficulty] ?? 5000;
-          dynamicMoveTime = (1000 + (complexity * 80)).clamp(1000, cap);
+      int dynamicMoveTime = _maxTimeMs[_difficulty] ?? 3000;
+      if (engine != null) {
+        final legalMoves = engine.allLegalMoves();
+        final cap = _maxTimeMs[_difficulty] ?? 3000;
+
+        if (legalMoves.length <= 1) {
+          dynamicMoveTime = 300; // Forced move
+        } else if (engine.isInCheck && legalMoves.length <= 3) {
+          dynamicMoveTime = 500; // Simple check evasion
+        } else {
+          int pieceCount = 0;
+          for (int r = 0; r < 8; r++) {
+            for (int f = 0; f < 8; f++) {
+              if (engine.pieceAt(Square(f, r)) != null) pieceCount++;
+            }
+          }
+          final double complexity =
+              (legalMoves.length * 0.4) + (pieceCount * 1.5);
+          final double personalityMult =
+              PersonalityEngine().currentPersonality.timeMultiplier;
+          final int baseTime = (800 + (complexity * 50)).toInt();
+          dynamicMoveTime =
+              (baseTime * personalityMult).toInt().clamp(300, cap);
         }
-        
-        final rawCandidates = await js_bridge.jsEngineGetTopMoves(fen, 15, 3, movetime: dynamicMoveTime);
+      }
+
+      if (!kIsWeb) {
+        final rawCandidates = await js_bridge.jsEngineGetTopMoves(fen, 15, 3,
+            movetime: dynamicMoveTime);
         candidates = List<MoveCandidate>.from(rawCandidates);
         if (candidates.isNotEmpty) {
           bestFound = candidates.first.uci;
         }
       } else {
-        final res = await js_bridge.jsEngineGetBestMove(fen);
+        final res =
+            await js_bridge.jsEngineGetBestMove(fen, movetime: dynamicMoveTime);
         bestFound = res?['move'] as String?;
         if (res?['candidates'] != null) {
           candidates = List<MoveCandidate>.from(res!['candidates'] as List);
@@ -138,19 +167,12 @@ class AIEngineController {
       if (moveNumber < 10 && candidates.length > 1) {
         final rand = math.Random().nextDouble();
         if (rand > 0.6) {
-           return candidates[math.Random().nextInt(candidates.length)].uci;
+          return candidates[math.Random().nextInt(candidates.length)].uci;
         }
       }
 
       // ── 2. QUALITY FILTER (Reject repetitive edge pawn spam e.g., a6, h6) ──
       String move = _pickSmartMove(candidates);
-
-      // ── 3. Thinking Delay for Realism ──
-      if (_difficulty == AIDifficulty.aiMode) {
-        int baseDelay = candidates.length > 2 && (candidates[0].score - candidates[1].score).abs() < 40 ? 1500 : 500;
-        final delay = (baseDelay * (0.8 + (math.Random().nextDouble() * 0.5))).clamp(300, 2000).toInt();
-        await Future.delayed(Duration(milliseconds: delay));
-      }
 
       return move;
     } catch (e) {
@@ -162,20 +184,21 @@ class AIEngineController {
   /// Selects the best move while avoiding "bad" repetitive patterns
   String _pickSmartMove(List<MoveCandidate> candidates) {
     if (candidates.isEmpty) return 'none';
-    
+
     // Heuristic: Avoid moves that look like edge pawn spam (a, h pawns moving 1 square repetitively)
     // if best move is a bad/useless pawn push, try the second best if it's within a reasonable CP margin
     for (var i = 0; i < candidates.length; i++) {
       final m = candidates[i].uci;
       final isEdgePawn = m.startsWith('a') || m.startsWith('h');
-      
+
       if (!isEdgePawn) return m; // Prefer non-edge moves
-      
+
       // If it is edge pawn, but it's much better than the next move (> 80cp), we might have to take it
-      if (i < candidates.length - 1 && (candidates[i].score - candidates[i+1].score) > 80) {
+      if (i < candidates.length - 1 &&
+          (candidates[i].score - candidates[i + 1].score) > 80) {
         return m;
       }
-      
+
       // Otherwise, keep looking for a better "smart" move
     }
 
@@ -183,7 +206,8 @@ class AIEngineController {
   }
 
   /// Immediate fallback move generation using Sunfish (Dart side)
-  Future<String?> fallbackMove(String fen, {required ChessEngine engine}) async {
+  Future<String?> fallbackMove(String fen,
+      {required ChessEngine engine}) async {
     // Generate a quick move: Prefer captures or checks, otherwise first legal
     final moves = engine.allLegalMoves();
     if (moves.isEmpty) return null;
@@ -199,7 +223,8 @@ class AIEngineController {
   }
 
   /// Background analysis of user move (AI Mode)
-  Future<Map<String, dynamic>?> analyzeMoveBackground(String fen, {int nodes = 1000}) async {
+  Future<Map<String, dynamic>?> analyzeMoveBackground(String fen,
+      {int nodes = 1000}) async {
     if (!_initialized) return null;
     return js_bridge.jsEngineGetBestMove(fen);
   }

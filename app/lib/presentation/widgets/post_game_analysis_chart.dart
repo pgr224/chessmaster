@@ -6,7 +6,8 @@ import '../../../core/theme/app_theme.dart';
 /// Post-game analysis chart showing evaluation over time.
 /// Uses fl_chart LineChart to visualize engine eval swings through the game.
 class PostGameAnalysisChart extends StatelessWidget {
-  final List<double> evalHistory; // eval scores per move (positive = white advantage)
+  final List<double>
+      evalHistory; // eval scores per move (positive = white advantage)
   final int totalMoves;
   final double accuracy;
   final int mistakes;
@@ -52,7 +53,8 @@ class PostGameAnalysisChart extends StatelessWidget {
                   color: AppTheme.skyBlue.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.analytics_rounded, color: AppTheme.skyBlue, size: 20),
+                child: const Icon(Icons.analytics_rounded,
+                    color: AppTheme.skyBlue, size: 20),
               ),
               const SizedBox(width: 12),
               Text(
@@ -67,20 +69,21 @@ class PostGameAnalysisChart extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          
+
           // The chart
           SizedBox(
             height: 160,
             child: _buildChart(),
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // Stats row
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _miniStat('Accuracy', '${accuracy.toStringAsFixed(1)}%', AppTheme.accentCyan),
+              _miniStat('Accuracy', '${accuracy.toStringAsFixed(1)}%',
+                  AppTheme.accentCyan),
               _miniStat('Best', '$bestMoves', AppTheme.goldPrimary),
               _miniStat('Mistakes', '$mistakes', AppTheme.lavender),
               _miniStat('Blunders', '$blunders', AppTheme.accentRed),
@@ -93,9 +96,7 @@ class PostGameAnalysisChart extends StatelessWidget {
 
   Widget _buildChart() {
     // Clamp eval values for display
-    final clampedEvals = evalHistory
-        .map((e) => e.clamp(-5.0, 5.0))
-        .toList();
+    final clampedEvals = evalHistory.map((e) => e.clamp(-5.0, 5.0)).toList();
 
     // Find min and max for proper Y-axis scaling
     double minY = -3.0;
@@ -140,7 +141,8 @@ class PostGameAnalysisChart extends StatelessWidget {
               getTitlesWidget: (value, meta) {
                 return Text(
                   '${value.toInt() + 1}',
-                  style: GoogleFonts.jura(color: AppTheme.textMuted, fontSize: 10),
+                  style:
+                      GoogleFonts.jura(color: AppTheme.textMuted, fontSize: 10),
                 );
               },
             ),
@@ -161,13 +163,16 @@ class PostGameAnalysisChart extends StatelessWidget {
                 }
                 return Text(
                   label,
-                  style: GoogleFonts.jura(color: AppTheme.textMuted, fontSize: 9),
+                  style:
+                      GoogleFonts.jura(color: AppTheme.textMuted, fontSize: 9),
                 );
               },
             ),
           ),
-          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
         ),
         borderData: FlBorderData(show: false),
         minX: 0,
@@ -180,7 +185,9 @@ class PostGameAnalysisChart extends StatelessWidget {
               return touchedSpots.map((spot) {
                 final moveNum = spot.x.toInt() + 1;
                 final eval = spot.y;
-                final evalStr = eval >= 0 ? '+${eval.toStringAsFixed(1)}' : eval.toStringAsFixed(1);
+                final evalStr = eval >= 0
+                    ? '+${eval.toStringAsFixed(1)}'
+                    : eval.toStringAsFixed(1);
                 return LineTooltipItem(
                   'Move $moveNum\n$evalStr',
                   GoogleFonts.fredoka(
@@ -215,7 +222,8 @@ class PostGameAnalysisChart extends StatelessWidget {
                   final prevEval = clampedEvals[index - 1];
                   final diff = eval - prevEval;
                   if (diff.abs() > 1.5) {
-                    dotColor = diff < 0 ? AppTheme.accentRed : AppTheme.goldPrimary;
+                    dotColor =
+                        diff < 0 ? AppTheme.accentRed : AppTheme.goldPrimary;
                   } else {
                     dotColor = AppTheme.skyBlue;
                   }
@@ -304,7 +312,8 @@ class PostGameAnalysisChart extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.bar_chart_rounded, color: AppTheme.textMuted, size: 28),
+          const Icon(Icons.bar_chart_rounded,
+              color: AppTheme.textMuted, size: 28),
           const SizedBox(width: 12),
           Text(
             'Analysis data not available for this game.',
