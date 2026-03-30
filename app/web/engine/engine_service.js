@@ -121,7 +121,13 @@
       const resolve = pendingResolve;
       pendingResolve = null;
       pendingTimeout = null;
-      resolve(msg.move || null);
+      
+      // Return both move and candidates if available (for humanoid selection)
+      if (msg.candidates && msg.candidates.length > 0) {
+        resolve({ move: msg.move, candidates: msg.candidates });
+      } else {
+        resolve(msg.move || null);
+      }
     } else if (msg.type === 'error' && pendingResolve) {
       console.warn('[EngineService] Worker error:', msg.message);
       clearTimeout(pendingTimeout);
@@ -154,14 +160,11 @@
       lastFen = fen;
       const id = ++requestId;
 
-      // Dynamic depth adjustment: reduce if it was too slow recently or base it on difficulty
       let depth = DEPTH_CONFIG[currentDifficulty] || 3;
       const budget = TIMEOUT_CONFIG[currentDifficulty] || 1500;
-      const fallbackTrigger = budget - FALLBACK_BUFFER_MS;
 
       if (activeEngineType === ENGINE_VALIDATION) return null;
 
-      // Cancel any existing pending promise/timeout
       if (pendingResolve) {
         pendingResolve(null);
         clearTimeout(pendingTimeout);
@@ -177,7 +180,6 @@
             console.warn(`[EngineService] Timeout (${timeoutMs}ms) for ${engineType}`);
             if (pendingResolve === resolve) {
               if (engineType === ENGINE_STOCKFISH) {
-                // Stockfish stalled! KILL and FALLBACK to Sunfish.
                 terminateWorker(ENGINE_STOCKFISH);
                 executeSearch(ENGINE_SUNFISH, true);
               } else {
@@ -193,7 +195,9 @@
           } else if (engineType === ENGINE_STOCKFISH) {
             await waitForStockfishReady();
             if (pendingResolve === resolve) {
-              stockfishWorker.postMessage({ type: 'search', fen, depth, timeoutMs: timeoutMs - 200 });
+              // Enable MultiPV 3 for high difficulties
+              const multipv = (currentDifficulty === 'advanced' || currentDifficulty === 'impossible' || currentDifficulty === 'aiMode') ? 3 : 1;
+              stockfishWorker.postMessage({ type: 'search', fen, depth, timeoutMs: timeoutMs - 200, multipv });
             }
           }
         };

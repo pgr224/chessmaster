@@ -14,11 +14,15 @@ import '../../../data/models/game_config.dart';
 import '../../../data/models/coach_model.dart';
 import '../../../data/models/tutorial_model.dart';
 import '../../../data/models/puzzle_model.dart';
+import '../../../data/services/audio_service.dart';
+import '../../../data/services/elo_service.dart';
 import '../../../data/repositories/auth_repository.dart';
 import '../../../data/repositories/puzzle_repository.dart';
 import '../theme/theme_bloc.dart';
-import '../../../data/services/audio_service.dart';
-import '../../../data/services/elo_service.dart';
+import '../../../domain/engine/personality_engine.dart';
+import '../../../domain/engine/native_leela.dart';
+import '../../../domain/engine/move_selector.dart';
+import '../../../domain/engine/native_stockfish.dart';
 
 // ═══════════════════════════════════════════
 // EVENTS
@@ -71,6 +75,13 @@ class GameSetOpponentNameEvent extends GameEvent {
   final String name;
   const GameSetOpponentNameEvent(this.name);
   @override List<Object?> get props => [name];
+}
+
+class GameUpdatePersonalityEvent extends GameEvent {
+  final AIPersonality personality;
+  final String message;
+  const GameUpdatePersonalityEvent({required this.personality, required this.message});
+  @override List<Object?> get props => [personality, message];
 }
 
 class GamePromotionRequiredEvent extends GameEvent {
@@ -171,6 +182,8 @@ class GameState extends Equatable {
   final int mpUndosUsed;
   final DateTime? lastMoveTimestamp;
   final double evalScore;
+  final String? aiMessage;
+  final AIPersonality? activePersonality;
   
   // Analytics & Rewards
   final double accuracy;
@@ -228,6 +241,8 @@ class GameState extends Equatable {
     this.moveHistory = const [],
     this.status = GameStatus.active,
     this.result = GameResult.ongoing,
+    this.aiMessage,
+    this.activePersonality,
     this.drawReason,
     this.isAIThinking = false,
     this.hintMove,
@@ -394,6 +409,8 @@ class GameState extends Equatable {
     bool clearCoachMove = false,
     bool clearPreMove = false,
     bool clearEngineError = false,
+    String? aiMessage,
+    AIPersonality? activePersonality,
     Move? preMove,
     List<double>? evalHistory,
     int? eloChange,
@@ -406,6 +423,8 @@ class GameState extends Equatable {
       moveHistory: moveHistory ?? this.moveHistory,
       status: status ?? this.status,
       result: result ?? this.result,
+      aiMessage: aiMessage ?? this.aiMessage,
+      activePersonality: activePersonality ?? this.activePersonality,
       drawReason: drawReason ?? this.drawReason,
       isAIThinking: isAIThinking ?? this.isAIThinking,
       hintMove: clearHint ? null : (hintMove ?? this.hintMove),
@@ -475,7 +494,6 @@ class GameState extends Equatable {
 
   @override
   List<Object?> get props => [
-    board, currentTurn, selectedSquare, legalMoves, moveHistory,
     status, result, isAIThinking, hintMove, hintsUsed, currentFEN,
     showPromotionDialog, tutorial, tutorialStep, tutorialMessage, 
     pieceShape, pieceStyle,
@@ -488,7 +506,7 @@ class GameState extends Equatable {
     lastCorrectPuzzleMove, showPuzzleCelebration, puzzleExplanation, totalPuzzleXP,
     coachMove, hintedIndices,
     whiteTimeMs, blackTimeMs, incrementMs, clockRunning, preMove, evalScore,
-    evalHistory, eloChange,
+    aiMessage, activePersonality, evalHistory, eloChange,
   ];
 }
 
@@ -560,10 +578,18 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       ));
     });
     on<GameClockTickEvent>(_onClockTick);
+    on<GameUpdatePersonalityEvent>(_onUpdatePersonality);
     on<GameTimerSyncEvent>((e, emit) => emit(state.copyWith(
       whiteTimeMs: e.whiteTime,
       blackTimeMs: e.blackTime,
     )));
+  }
+
+  void _onUpdatePersonality(GameUpdatePersonalityEvent event, Emitter<GameState> emit) {
+    emit(state.copyWith(
+      activePersonality: event.personality,
+      aiMessage: event.message,
+    ));
   }
 
   Future<void> _onDiscard(GameDiscardEvent event, Emitter<GameState> emit) async {
@@ -708,10 +734,15 @@ class GameBloc extends Bloc<GameEvent, GameState> {
        final user = await _authRepository.getCurrentUser();
        if (user != null) {
           final d = user.stats.practiceDifficulty;
-          if (d < 1.0) difficulty = AIDifficulty.basic;
-          else if (d < 2.0) difficulty = AIDifficulty.intermediate;
-          else if (d < 3.0) difficulty = AIDifficulty.advanced;
-          else difficulty = AIDifficulty.impossible;
+          if (d < 1.0) {
+            difficulty = AIDifficulty.basic;
+          } else if (d < 2.0) {
+            difficulty = AIDifficulty.intermediate;
+          } else if (d < 3.0) {
+            difficulty = AIDifficulty.advanced;
+          } else {
+            difficulty = AIDifficulty.impossible;
+          }
        }
     }
     
@@ -1377,6 +1408,33 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       }
     }
 
+    // ── HUMANOID AI: BACKGROUND PLAYER ANALYSIS (AI MODE ONLY) ──
+    if (!state.isGameOver && state.mode == GameMode.singlePlayer && state.aiDifficulty == AIDifficulty.aiMode && _engine.currentTurn != state.playerColor) {
+       final fenBefore = fenBeforeMove; // Captured at start of _onMakeMove
+       final lastMove = move.toAlgebraic();
+       
+       // Asynchronous analysis using Leela
+       NativeLeela().getBestMove(fenBefore, 100).then((best) {
+          if (best == null) return;
+          
+          // Heuristic: if user played a quick tactical blow (capture/check), shift to Defensive
+          final isCheck = lastMove.contains('+') || lastMove.contains('#');
+          if (move.capturedPiece != null || isCheck) {
+             PersonalityEngine().forcePersonality(AIPersonality.defensive);
+          } else if (math.Random().nextDouble() > 0.6) {
+             // Random shift to keep it dynamic and human-like
+             PersonalityEngine().forcePersonality(AIPersonality.aggressive);
+          }
+
+          if (!isClosed) {
+            add(GameUpdatePersonalityEvent(
+              personality: PersonalityEngine().currentPersonality,
+              message: _engineController.aiMessage ?? "Calculating...",
+            ));
+          }
+       }).catchError((_) {});
+    }
+
     // After everything, check if we have a pending preMove and it's now our turn
     if (state.preMove != null && _engine.currentTurn == state.playerColor) {
       final pre = state.preMove!;
@@ -1744,11 +1802,18 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     if (isClosed || aiRequestEpoch != _aiRequestEpoch) return;
 
     try {
-      final moveStr = await _engineController.getBestMove(_engine.toFEN(), engine: _engine);
+      final moveStr = await _engineController.getBestMove(
+        _engine.toFEN(), 
+        engine: _engine, 
+        moveNumber: state.moveHistory.length,
+      );
       
       if (isClosed || aiRequestEpoch != _aiRequestEpoch) return;
 
       if (moveStr != null && !state.isGameOver && _engine.status == GameStatus.active) {
+        // Clear AI specific message after move is decided
+        emit(state.copyWith(clearTutorialMessage: true)); 
+        
         final aiMove = Move.fromAlgebraic(moveStr);
         add(GameMakeMoveEvent(aiMove.from, aiMove.to, promotion: aiMove.promotion));
       } else if (!state.isGameOver && _engine.status == GameStatus.active) {

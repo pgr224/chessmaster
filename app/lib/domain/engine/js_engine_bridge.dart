@@ -1,16 +1,11 @@
-/// JS Engine Bridge — Web-only interop with window.ChessEngineService
-/// This file uses dart:js_interop to call the JavaScript engine service
-/// that runs Sunfish/Stockfish/ChessLogic in Web Workers.
-library;
-
 import 'dart:js_interop';
 import 'dart:js_interop_unsafe';
+import 'native_stockfish.dart'; // For MoveCandidate
 
-/// JS interop bindings for window.ChessEngineService
 @JS('ChessEngineService')
 extension type _JSEngineService._(JSObject _) {
   external void initEngine(JSString mode, JSString difficulty);
-  external JSPromise<JSString?> getBestMove(JSString fen);
+  external JSPromise<JSAny?> getBestMove(JSString fen);
   external JSBoolean validateMove(JSString fen, JSString from, JSString to, JSString? promotion);
   external JSArray<JSString> getLegalMoves(JSString fen, JSString square);
   external JSObject getGameState(JSString fen);
@@ -39,18 +34,48 @@ void jsEngineInit(String mode, String difficulty) {
   svc.initEngine(mode.toJS, difficulty.toJS);
 }
 
-/// Get best move from the JS engine (async, runs in Web Worker)
-Future<String?> jsEngineGetBestMove(String fen) async {
+/// Get best move (or move+candidates) from JS
+Future<Map<String, dynamic>?> jsEngineGetBestMove(String fen) async {
   final svc = _getService();
   if (svc == null) return null;
   
   try {
     final result = await svc.getBestMove(fen.toJS).toDart;
-    return result?.toDart;
+    if (result == null) return null;
+
+    if (result.isA<JSString>()) {
+      return {'move': (result as JSString).toDart};
+    }
+
+    if (result.isA<JSObject>()) {
+      final obj = result as JSObject;
+      final move = (obj['move'] as JSString?)?.toDart;
+      final candidatesRaw = obj['candidates'] as JSArray<JSObject>?;
+      
+      final List<MoveCandidate> candidates = [];
+      if (candidatesRaw != null) {
+        final dartArray = candidatesRaw.toDart;
+        for (var i = 0; i < dartArray.length; i++) {
+          final c = dartArray[i];
+          final uci = (c['uci'] as JSString?)?.toDart;
+          final score = (c['score'] as JSNumber?)?.toDartInt;
+          if (uci != null && score != null) {
+            candidates.add(MoveCandidate(uci: uci, score: score));
+          }
+        }
+      }
+      return {'move': move, 'candidates': candidates};
+    }
   } catch (e) {
     print('[JSBridge] getBestMove error: $e');
-    return null;
   }
+/// Get top candidate moves from JS
+Future<List<MoveCandidate>> jsEngineGetTopMoves(String fen, int depth, int count, {int? movetime}) async {
+  final res = await jsEngineGetBestMove(fen);
+  if (res?['candidates'] != null) {
+    return List<MoveCandidate>.from(res!['candidates'] as List);
+  }
+  return [];
 }
 
 /// Validate a move using the JS engine (synchronous)
@@ -79,4 +104,5 @@ String jsEngineGetActiveEngine() {
 void jsEngineDispose() {
   final svc = _getService();
   svc?.dispose();
+}
 }

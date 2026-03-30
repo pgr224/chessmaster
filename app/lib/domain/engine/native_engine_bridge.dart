@@ -14,12 +14,10 @@ void jsEngineInit(String mode, String difficulty) {
   }
 }
 
-Future<String?> jsEngineGetBestMove(String fen) async {
+Future<Map<String, dynamic>?> jsEngineGetBestMove(String fen) async {
   if (_currentDifficulty == 'aiMode') {
-    // LC0 works best with nodes rather than depth directly in simplistic setups.
-    // 50000 nodes is rough equivalent of a decent time. We can just use go depth 15
-    // or pass the nodes value. We'll pass nodes = 50000.
-    return NativeLeela().getBestMove(fen, 1000); 
+    final best = await NativeLeela().getBestMove(fen, 1000); 
+    return best != null ? {'move': best} : null;
   }
 
   int depth = 10;
@@ -29,7 +27,14 @@ Future<String?> jsEngineGetBestMove(String fen) async {
     case 'advanced': depth = 20; break;
     case 'impossible': depth = 32; break;
   }
-  return NativeStockfish().getBestMove(fen, depth);
+  final bestMove = await NativeStockfish().getBestMove(fen, depth: depth);
+  return bestMove != null ? {'move': bestMove} : null;
+}
+
+Future<List<MoveCandidate>> jsEngineGetTopMoves(String fen, int depth, int count, {int? movetime}) async {
+  // This is only used for humanoid AI, which uses Stockfish for tactical candidates.
+  // We ignore aiMode check here as AIEngineController filters it.
+  return NativeStockfish().getTopMoves(fen, depth, count, movetime: movetime);
 }
 
 String jsEngineGetActiveEngine() => _currentDifficulty == 'aiMode' ? 'lc0_native' : 'stockfish_native';

@@ -13,6 +13,10 @@ import '../../data/models/game_config.dart';
 import 'native_engine_bridge.dart'
     if (dart.library.js_interop) 'js_engine_bridge.dart' as js_bridge;
 
+import 'personality_engine.dart';
+import 'move_selector.dart';
+import 'native_stockfish.dart'; // For MoveCandidate
+
 class AIEngineController {
   GameMode _mode = GameMode.singlePlayer;
   AIDifficulty _difficulty = AIDifficulty.basic;
@@ -36,6 +40,9 @@ class AIEngineController {
   /// Tracks active request to allow cancellation
   int _activeRequestId = 0;
 
+  /// Current AI Personality Message (for UI thinking bubble)
+  String? get aiMessage => PersonalityEngine().currentPersonality.message;
+
   /// Initialize engine for the current game session
   void init(GameMode mode, AIDifficulty? difficulty) {
     _mode = mode;
@@ -47,13 +54,18 @@ class AIEngineController {
   }
 
   /// Get the best move for the current position with robust timeout handling
-  Future<String?> getBestMove(String fen, {ChessEngine? engine, bool humanized = true}) async {
+  Future<String?> getBestMove(String fen, {ChessEngine? engine, bool humanized = true, int moveNumber = 0}) async {
     if (!_initialized) return null;
     if (_mode == GameMode.twoPlayer || _mode == GameMode.multiplayer) return null;
 
     final requestId = ++_activeRequestId;
+
+    // ── SMART/HUMANOID AI PIPELINE (Advanced, Impossible, AI Mode) ──
+    if (_difficulty == AIDifficulty.aiMode || _difficulty == AIDifficulty.impossible || _difficulty == AIDifficulty.advanced) {
+      return _getSmartMove(fen, requestId, engine: engine, moveNumber: moveNumber);
+    }
+
     final maxTime = _maxTimeMs[_difficulty] ?? 2000;
-    final fallbackTrigger = maxTime - _fallbackBufferMs;
 
     // 1. Simulate Human Thinking Delay (only for Single Player, not Practice)
     if (humanized && _mode != GameMode.practice) {
@@ -70,28 +82,95 @@ class AIEngineController {
     try {
       String? resultMove;
 
-      // Cross-platform context: both Web and Native now use the official Stockfish bridge
-      resultMove = await js_bridge.jsEngineGetBestMove(fen).timeout(
+      // Simple call for lower difficulties
+      final Map<String, dynamic>? res = (await js_bridge.jsEngineGetBestMove(fen).timeout(
         Duration(milliseconds: maxTime),
-        onTimeout: () {
-          print('[AIEngineController] Engine timed out, using local fallback');
-          return null;
-        },
-      );
+        onTimeout: () => null,
+      )) as Map<String, dynamic>?;
+      resultMove = res?['move'] as String?;
 
-      // 2. FALLBACK SYSTEM: If engine failed or timed out, use quick fallback
       if (resultMove == null && engine != null) {
         if (requestId != _activeRequestId) return null;
-        print('[AIEngineController] Using fallbackMove for $fen');
         resultMove = await fallbackMove(fen, engine: engine);
       }
 
       return resultMove;
     } catch (e) {
-      print('[AIEngineController] Error in getBestMove: $e');
       if (engine != null) return await fallbackMove(fen, engine: engine);
       return null;
     }
+  }
+
+  /// SMART AI System: MultiPV candidates -> Opening randomness -> Quality filtering
+  Future<String?> _getSmartMove(String fen, int requestId, {ChessEngine? engine, int moveNumber = 0}) async {
+    try {
+      List<MoveCandidate> candidates = [];
+      String? bestFound;
+
+      if (!kIsWeb) {
+        candidates = await js_bridge.jsEngineGetTopMoves(fen, 15, 3, movetime: 1000);
+        if (candidates.isNotEmpty) {
+          bestFound = candidates.first.uci;
+        }
+      } else {
+        final res = await js_bridge.jsEngineGetBestMove(fen);
+        bestFound = res?['move'] as String?;
+        if (res?['candidates'] != null) {
+          candidates = List<MoveCandidate>.from(res!['candidates'] as List);
+        } else if (bestFound != null) {
+          candidates = [MoveCandidate(uci: bestFound, score: 0)];
+        }
+      }
+
+      if (requestId != _activeRequestId) return null;
+      if (candidates.isEmpty) return bestFound;
+
+      // ── 1. OPENING RANDOMIZATION (First 10 moves) ──
+      if (moveNumber < 10 && candidates.length > 1) {
+        final rand = math.Random().nextDouble();
+        if (rand > 0.6) {
+           return candidates[math.Random().nextInt(candidates.length)].uci;
+        }
+      }
+
+      // ── 2. QUALITY FILTER (Reject repetitive edge pawn spam e.g., a6, h6) ──
+      String move = _pickSmartMove(candidates);
+
+      // ── 3. Thinking Delay for Realism ──
+      if (_difficulty == AIDifficulty.aiMode) {
+        int baseDelay = candidates.length > 2 && (candidates[0].score - candidates[1].score).abs() < 40 ? 1500 : 500;
+        final delay = (baseDelay * (0.8 + (math.Random().nextDouble() * 0.5))).clamp(300, 2000).toInt();
+        await Future.delayed(Duration(milliseconds: delay));
+      }
+
+      return move;
+    } catch (e) {
+      print('[SmartAI] Error: $e');
+      return engine != null ? await fallbackMove(fen, engine: engine) : null;
+    }
+  }
+
+  /// Selects the best move while avoiding "bad" repetitive patterns
+  String _pickSmartMove(List<MoveCandidate> candidates) {
+    if (candidates.isEmpty) return 'none';
+    
+    // Heuristic: Avoid moves that look like edge pawn spam (a, h pawns moving 1 square repetitively)
+    // if best move is a bad/useless pawn push, try the second best if it's within a reasonable CP margin
+    for (var i = 0; i < candidates.length; i++) {
+      final m = candidates[i].uci;
+      final isEdgePawn = m.startsWith('a') || m.startsWith('h');
+      
+      if (!isEdgePawn) return m; // Prefer non-edge moves
+      
+      // If it is edge pawn, but it's much better than the next move (> 80cp), we might have to take it
+      if (i < candidates.length - 1 && (candidates[i].score - candidates[i+1].score) > 80) {
+        return m;
+      }
+      
+      // Otherwise, keep looking for a better "smart" move
+    }
+
+    return candidates.first.uci;
   }
 
   /// Immediate fallback move generation using Sunfish (Dart side)

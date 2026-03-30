@@ -6,7 +6,8 @@ import '../../../core/theme/app_theme.dart';
 
 class ThinkingOverlayWidget extends StatefulWidget {
   final bool compact;
-  const ThinkingOverlayWidget({super.key, this.compact = false});
+  final String? message;
+  const ThinkingOverlayWidget({super.key, this.compact = false, this.message});
 
   @override
   State<ThinkingOverlayWidget> createState() => _ThinkingOverlayWidgetState();
@@ -92,8 +93,8 @@ class _ThinkingOverlayWidgetState extends State<ThinkingOverlayWidget> {
               ),
             ),
             child: Text(
-              _messages[_messageIndex],
-              key: ValueKey(_messageIndex),
+              widget.message ?? _messages[_messageIndex],
+              key: ValueKey(widget.message ?? _messageIndex.toString()),
               style: GoogleFonts.fredoka(
                 color: AppTheme.textPrimary,
                 fontSize: 14,
@@ -138,8 +139,8 @@ class _ThinkingOverlayWidgetState extends State<ThinkingOverlayWidget> {
               ),
             ),
             child: Text(
-              _messages[_messageIndex],
-              key: ValueKey(_messageIndex),
+              widget.message ?? _messages[_messageIndex],
+              key: ValueKey(widget.message ?? _messageIndex.toString()),
               style: GoogleFonts.fredoka(
                 color: AppTheme.goldPrimary,
                 fontSize: 11,

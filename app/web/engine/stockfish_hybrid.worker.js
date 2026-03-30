@@ -14,22 +14,47 @@ let stockfishEngine = null;
 let isReady = false;
 let pendingSearch = null;
 let isSearching = false;
+let candidates = [];
 
-// ════════════════════════════════════════
-// STOCKFISH WASM LOADER
-// ════════════════════════════════════════
+/**
+ * Parses info line for MultiPV candidates
+ * Format: info depth 10 seldepth 14 multipv 1 score cp 45 nodes 10795 nps 215900 hashfull 207 tbhits 0 time 50 pv e2e4 e7e5
+ */
+function parseInfoLine(line) {
+  if (!line.includes('multipv')) return;
+  
+  try {
+    const parts = line.split(' ');
+    let mp = -1, score = 0, move = '';
+    
+    for (let i = 0; i < parts.length; i++) {
+       if (parts[i] === 'multipv') mp = parseInt(parts[i+1]);
+       if (parts[i] === 'score') {
+         if (parts[i+1] === 'cp') score = parseInt(parts[i+2]);
+         else if (parts[i+1] === 'mate') score = 10000;
+       }
+       if (parts[i] === 'pv') move = parts[i+1];
+    }
+    
+    if (mp !== -1 && move) {
+      // Store or update candidate
+      const index = candidates.findIndex(c => c.multipv === mp);
+      if (index !== -1) {
+        candidates[index] = { multipv: mp, uci: move, score: score };
+      } else {
+        candidates.push({ multipv: mp, uci: move, score: score });
+      }
+    }
+  } catch (e) {}
+}
 
 async function loadStockfish() {
   if (stockfishEngine) return;
 
   try {
-    // Tell Emscripten where the main script is so pthreads can load sub-workers correctly
     self.mainScriptUrlOrBlob = 'stockfish.wasm.js';
-
-    // Load the local stockfish.wasm.js (which in turn fetches stockfish.wasm)
     importScripts('stockfish.wasm.js');
 
-    // The Stockfish() constructor returns a promise or the engine directly
     if (typeof Stockfish === 'function') {
       const result = Stockfish();
       stockfishEngine = result instanceof Promise ? await result : result;
@@ -37,20 +62,18 @@ async function loadStockfish() {
       throw new Error('Stockfish constructor not found after importScripts');
     }
 
-    // Set up UCI output listener
-    if (stockfishEngine && stockfishEngine.addMessageListener) {
-      stockfishEngine.addMessageListener((line) => {
-        handleUCIOutput(line);
-      });
-    } else if (stockfishEngine && typeof stockfishEngine.onmessage !== 'undefined') {
-      stockfishEngine.onmessage = (line) => {
-        handleUCIOutput(typeof line === 'string' ? line : line.data);
-      };
+    const listener = (line) => {
+      const lineStr = typeof line === 'string' ? line : line.data;
+      handleUCIOutput(lineStr);
+    };
+
+    if (stockfishEngine.addMessageListener) {
+      stockfishEngine.addMessageListener(listener);
+    } else {
+      stockfishEngine.onmessage = listener;
     }
 
-    // Initialize UCI protocol
     sendUCI('uci');
-    // Wait for 'uciok' implicitly, then configure
     sendUCI('setoption name Threads value 1');
     sendUCI('setoption name Hash value 64');
     sendUCI('ucinewgame');
@@ -61,10 +84,6 @@ async function loadStockfish() {
   }
 }
 
-// ════════════════════════════════════════
-// UCI COMMUNICATION
-// ════════════════════════════════════════
-
 function sendUCI(cmd) {
   if (stockfishEngine && stockfishEngine.postMessage) {
     stockfishEngine.postMessage(cmd);
@@ -74,20 +93,18 @@ function sendUCI(cmd) {
 function handleUCIOutput(line) {
   if (typeof line !== 'string') return;
 
-  // Log search progress for debugging
-  if (line.includes('info depth') && line.includes(' pv ')) {
-    console.log('[StockfishWorker]', line);
+  if (line.startsWith('info depth') && line.includes('multipv')) {
+    parseInfoLine(line);
   }
 
   if (line === 'readyok') {
     isReady = true;
     self.postMessage({ type: 'ready' });
 
-    // If there's a queued search, execute it now
     if (pendingSearch) {
-      const { fen, depth, timeoutMs } = pendingSearch;
+      const { fen, depth, timeoutMs, multipv } = pendingSearch;
       pendingSearch = null;
-      executeSearch(fen, depth, timeoutMs);
+      executeSearch(fen, depth, timeoutMs, multipv);
     }
   }
 
@@ -95,12 +112,20 @@ function handleUCIOutput(line) {
     isSearching = false;
     const parts = line.split(' ');
     const move = parts[1] || null;
-    self.postMessage({ type: 'bestmove', move });
+    
+    // Finalize candidates: sort by mp and remove duplicates if any
+    candidates.sort((a, b) => a.multipv - b.multipv);
+    const resultCandidates = candidates.map(c => ({ uci: c.uci, score: c.score }));
+    
+    self.postMessage({ type: 'bestmove', move, candidates: resultCandidates });
   }
 }
 
-function executeSearch(fen, depth, timeoutMs) {
+function executeSearch(fen, depth, timeoutMs, multipv = 1) {
   isSearching = true;
+  candidates = []; // Reset for new search
+  
+  sendUCI(`setoption name MultiPV value ${multipv}`);
   sendUCI(`position fen ${fen}`);
   if (timeoutMs) {
     sendUCI(`go depth ${depth} movetime ${timeoutMs}`);
@@ -109,9 +134,6 @@ function executeSearch(fen, depth, timeoutMs) {
   }
 }
 
-// ════════════════════════════════════════
-// MESSAGE HANDLER
-// ════════════════════════════════════════
 self.addEventListener('message', async (e) => {
   const msg = e.data;
 
@@ -121,22 +143,20 @@ self.addEventListener('message', async (e) => {
       break;
 
     case 'search': {
-      const { fen, depth = 12, timeoutMs = 14000 } = msg;
+      const { fen, depth = 12, timeoutMs = 14000, multipv = 1 } = msg;
 
       if (!stockfishEngine) {
         await loadStockfish();
       }
 
-      // If currently searching, stop previous search first
       if (isSearching) {
         sendUCI('stop');
       }
 
       if (isReady) {
-        executeSearch(fen, depth, timeoutMs);
+        executeSearch(fen, depth, timeoutMs, multipv);
       } else {
-        // Queue until engine is ready
-        pendingSearch = { fen, depth, timeoutMs };
+        pendingSearch = { fen, depth, timeoutMs, multipv };
         sendUCI('isready');
       }
       break;

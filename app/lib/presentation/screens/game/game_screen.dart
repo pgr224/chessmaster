@@ -728,10 +728,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   color: state.playerColor == PieceColor.white ? PieceColor.black : PieceColor.white,
                 ),
                 if (state.isAIThinking && isOpponentTurn)
-                  const Positioned(
+                  Positioned(
                     top: -32,
                     left: 8,
-                    child: ThinkingOverlayWidget(compact: true),
+                    child: ThinkingOverlayWidget(compact: true, message: state.aiMessage),
                   ),
               ],
             ),
@@ -766,10 +766,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   color: state.playerColor ?? PieceColor.white,
                 ),
                 if (state.isAIThinking && isPlayerTurn)
-                  const Positioned(
+                  Positioned(
                     top: -32,
                     left: 8,
-                    child: ThinkingOverlayWidget(compact: true),
+                    child: ThinkingOverlayWidget(compact: true, message: state.aiMessage),
                   ),
               ],
             ),
