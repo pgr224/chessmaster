@@ -1,0 +1,29 @@
+# Feature Implementation Plan
+
+## 1. 50+ Achievement Badges
+- Expand `achievement_model.dart` with 55 achievements across categories
+- Add achievement checking logic to game bloc post-game flow
+- Add achievement badge display in profile screen
+
+## 2. ELO Rating System
+- Add `eloRating` field to UserModel + UserStats
+- Implement ELO calculation in game bloc on game over
+- Display ELO in profile and home screen
+
+## 3. Post-Game Analysis Graph (fl_chart)
+- Add eval history tracking in GameState
+- Create `PostGameAnalysisChart` widget with fl_chart
+- Integrate chart into `GameOverOverlay`
+
+## 4. Rematch Button
+- Already exists in game over overlay ("Rematch 🔄")
+- Enhance with proper rematch logic for multiplayer
+
+## 5. Bundle Sound Assets Locally
+- Generate local .wav files for all sound events
+- Rewrite `AudioService` to use `AssetSource` instead of `UrlSource`
+
+## 6. Turn Indicator Fix
+- "Your Turn" → blinking animation
+- "Opponent Turn" → static display
+- Fix positioning to follow player correctly

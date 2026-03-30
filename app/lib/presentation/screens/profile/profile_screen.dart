@@ -352,7 +352,7 @@ class _ProfileContent extends StatelessWidget {
               _ruleItem('🏆 Base Win', '+100 XP', AppTheme.goldPrimary),
               _ruleItem('🔟 Every 10th Win', '+100 XP Bonus', AppTheme.goldPrimary),
               _ruleItem('⚡ Mate in 5 Moves', '+500 XP', AppTheme.accentCyan),
-              _ruleItem('💎 Perfect Game (No loss)', '+10,000 XP', AppTheme.accentCyan),
+              _ruleItem('💎 Perfect Game (No pieces lost)', '+10,000 XP', AppTheme.accentCyan),
               _ruleItem('🤝 Draw', '+0 XP', AppTheme.textMuted),
               _ruleItem('💀 Defeat', '-20 XP', AppTheme.accentRed),
               _ruleItem('💡 Hint Usage', '-10 XP', AppTheme.accentRed),

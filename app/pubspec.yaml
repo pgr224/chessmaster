@@ -124,4 +124,4 @@ flutter:
   fonts:
     - family: Merida
       fonts:
-        - asset: assets/chess_merida.ttf
+        - asset: assets/fonts/chess_merida.ttf

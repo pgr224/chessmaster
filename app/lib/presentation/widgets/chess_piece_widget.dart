@@ -176,10 +176,11 @@ class ChessPiecePainter extends CustomPainter {
     // 1. Get Path based on Shape
     final path = PiecePathProvider.getPath(type, shape);
     
-    // ignore: deprecated_member_use
     final matrix = Matrix4.identity()
-      ..translate(center.dx, center.dy)
-      ..scale(scale, scale);
+      ..storage[12] = center.dx
+      ..storage[13] = center.dy
+      ..storage[0] = scale
+      ..storage[5] = scale;
 
     final finalPath = path.transform(matrix.storage);
 

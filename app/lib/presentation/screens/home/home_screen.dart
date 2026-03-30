@@ -12,6 +12,7 @@ import '../../../data/models/game_model.dart';
 import '../../../data/models/user_model.dart';
 import '../../../data/repositories/game_repository.dart';
 import '../../../data/repositories/puzzle_repository.dart';
+import '../../../data/services/elo_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -130,6 +131,17 @@ class _HomeScreenState extends State<HomeScreen> {
                           onTap: () => context.push('/tutorial'),
                           delay: 320,
                         ),
+                        _buildModeCard(
+                          emoji: '🏆',
+                          title: 'Achievements',
+                          subtitle: '55 badges to collect!',
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFFFD93D), Color(0xFFF0C929)],
+                          ),
+                          shadowColor: const Color(0xFFFFD93D),
+                          onTap: () => context.push('/achievements'),
+                          delay: 400,
+                        ),
                       ]),
                     ),
                   ),
@@ -223,12 +235,11 @@ class _HomeScreenState extends State<HomeScreen> {
           _divider(),
           _statItem('${user?.stats.wins ?? 0}', '🏆 Wins', AppTheme.goldPrimary),
           _divider(),
-          _statItem(
-            '${user?.stats.winRate.toStringAsFixed(0) ?? 0}%',
+          _statItem('${user?.stats.winRate.toStringAsFixed(0) ?? 0}%',
             '📈 Rate', AppTheme.accentCyan,
           ),
           _divider(),
-          _statItem('${user?.xp ?? 0}', '🔥 XP', AppTheme.skyBlue),
+          _statItem('${user?.stats.eloRating ?? 1200}', '${EloService.getRankEmoji(user?.stats.eloRating ?? 1200)} ELO', AppTheme.lavender),
         ],
       ),
     ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.1);

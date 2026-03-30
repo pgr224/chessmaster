@@ -23,6 +23,7 @@ import '../../presentation/screens/tutorial/tutorial_screen.dart';
 import '../../presentation/screens/learn/learn_screen.dart';
 import '../../presentation/screens/learn/article_screen.dart';
 import '../../presentation/screens/learn/week_screen.dart';
+import '../../presentation/screens/achievements/achievements_screen.dart';
 import '../../data/models/game_config.dart';
 import '../../data/models/tutorial_model.dart';
 export '../../data/models/game_config.dart';
@@ -165,6 +166,11 @@ class AppRouter {
         path: '/chess_world',
         name: 'chess_world',
         builder: (context, state) => const ChessWorldScreen(),
+      ),
+      GoRoute(
+        path: '/achievements',
+        name: 'achievements',
+        builder: (context, state) => const AchievementsScreen(),
       ),
     ],
   );

@@ -74,6 +74,9 @@ class UserModel {
       'two_player_wins': stats.twoPlayerWins,
       'tournament_wins': stats.tournamentWins,
       'practice_difficulty': stats.practiceDifficulty,
+      'elo_rating': stats.eloRating,
+      'puzzles_solved': stats.puzzlesSolved,
+      'puzzle_rating': stats.puzzleRating,
     },
     'recent_games': recentGames.map((g) => g.toJson()).toList(),
   };
@@ -120,6 +123,9 @@ class UserStats {
   final int twoPlayerWins;
   final int tournamentWins;
   final double practiceDifficulty;
+  final int eloRating;
+  final int puzzlesSolved;
+  final int puzzleRating;
 
   const UserStats({
     this.gamesPlayed = 0,
@@ -136,6 +142,9 @@ class UserStats {
     this.twoPlayerWins = 0,
     this.tournamentWins = 0,
     this.practiceDifficulty = 1.0,
+    this.eloRating = 1200,
+    this.puzzlesSolved = 0,
+    this.puzzleRating = 1200,
   });
 
   double get winRate => gamesPlayed > 0 ? wins / gamesPlayed * 100 : 0;
@@ -159,6 +168,9 @@ class UserStats {
       twoPlayerWins: json['two_player_wins'] as int? ?? 0,
       tournamentWins: json['tournament_wins'] as int? ?? 0,
       practiceDifficulty: (json['practice_difficulty'] as num?)?.toDouble() ?? 1.0,
+      eloRating: json['elo_rating'] as int? ?? 1200,
+      puzzlesSolved: json['puzzles_solved'] as int? ?? 0,
+      puzzleRating: json['puzzle_rating'] as int? ?? 1200,
     );
   }
 }

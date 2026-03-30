@@ -18,6 +18,7 @@ import '../../../data/repositories/auth_repository.dart';
 import '../../../data/repositories/puzzle_repository.dart';
 import '../theme/theme_bloc.dart';
 import '../../../data/services/audio_service.dart';
+import '../../../data/services/elo_service.dart';
 
 // ═══════════════════════════════════════════
 // EVENTS
@@ -206,6 +207,12 @@ class GameState extends Equatable {
   // Premove
   final Move? preMove;
 
+  // Eval history for post-game analysis chart
+  final List<double> evalHistory;
+
+  // ELO rating change
+  final int eloChange;
+
   const GameState({
     required this.board,
     required this.currentTurn,
@@ -275,6 +282,8 @@ class GameState extends Equatable {
     this.incrementMs = 0,
     this.clockRunning = false,
     this.preMove,
+    this.evalHistory = const [],
+    this.eloChange = 0,
   });
 
   bool get isGameOver => status == GameStatus.checkmate ||
@@ -374,6 +383,8 @@ class GameState extends Equatable {
     bool clearCoachMove = false,
     bool clearPreMove = false,
     Move? preMove,
+    List<double>? evalHistory,
+    int? eloChange,
   }) {
     return GameState(
       board: board ?? this.board,
@@ -443,6 +454,8 @@ class GameState extends Equatable {
       incrementMs: incrementMs ?? this.incrementMs,
       clockRunning: clockRunning ?? this.clockRunning,
       preMove: clearPreMove ? null : (preMove ?? this.preMove),
+      evalHistory: evalHistory ?? this.evalHistory,
+      eloChange: eloChange ?? this.eloChange,
     );
   }
 
@@ -460,7 +473,8 @@ class GameState extends Equatable {
     puzzleStreak, puzzleRushStrikes, puzzleRushTime, isPuzzleRush, 
     lastCorrectPuzzleMove, showPuzzleCelebration, puzzleExplanation, totalPuzzleXP,
     coachMove, hintedIndices,
-    whiteTimeMs, blackTimeMs, incrementMs, clockRunning, preMove, evalScore
+    whiteTimeMs, blackTimeMs, incrementMs, clockRunning, preMove, evalScore,
+    evalHistory, eloChange,
   ];
 }
 
@@ -1190,16 +1204,11 @@ class GameBloc extends Bloc<GameEvent, GameState> {
               if (state.mode == GameMode.tournament) mapUpdates['tournament_wins'] = 1;
               
             } else if (isLoss) {
-              // Less penalty for tournaments to encourage playing
-              if (state.mode == GameMode.tournament) {
-                xp -= 10;
-              } else {
-                xp -= 20;
-              }
+              xp -= 20; // Defeat: -20 XP (per game rules)
 
               mapUpdates['losses'] = 1;
             } else if (isDraw) {
-              xp += 10; // Small reward for holding a draw
+              // Draw: +0 XP (per game rules)
               mapUpdates['draws'] = 1;
             }
 
@@ -1226,9 +1235,49 @@ class GameBloc extends Bloc<GameEvent, GameState> {
           msg = '💎 Good effort! Keep practicing to master the patterns.';
         }
 
+        // ── ELO CALCULATION ──
+        int eloChange = 0;
+        if (state.mode == GameMode.singlePlayer || state.mode == GameMode.multiplayer) {
+          final currentElo = user?.stats.eloRating ?? EloService.defaultRating;
+          final playerGames = user?.stats.gamesPlayed ?? 0;
+          double score = isDraw ? 0.5 : (isWin ? 1.0 : 0.0);
+
+          int newElo;
+          if (state.mode == GameMode.singlePlayer) {
+            final result = EloService.calculateVsAI(
+              playerRating: currentElo,
+              difficulty: state.aiDifficulty.name,
+              score: score,
+              playerGames: playerGames,
+            );
+            newElo = result.$1;
+          } else {
+            // Multiplayer: assume opponent is similar rating
+            final opponentElo = currentElo; // Server would provide actual opponent ELO
+            final result = EloService.calculateNewRatings(
+              player1Rating: currentElo,
+              player2Rating: opponentElo,
+              score: score,
+              player1Games: playerGames,
+            );
+            newElo = result.$1;
+          }
+          eloChange = newElo - currentElo;
+
+          // Persist ELO to local stats
+          if (user != null) {
+            await _authRepository.updateXPProgress(
+              userId: user.id,
+              xpDelta: 0,
+              statUpdates: {'elo_rating': newElo},
+            );
+          }
+        }
+
         emit(state.copyWith(
-          xpGained: xp + state.xpGained, // Show total gained in this game
+          xpGained: xp + state.xpGained,
           analysisMessage: msg,
+          eloChange: eloChange,
         ));
 
         final game = GameModel(
@@ -1515,6 +1564,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
   }
 
   void _onUpdateEval(GameUpdateEvalEvent event, Emitter<GameState> emit) {
-    emit(state.copyWith(evalScore: event.evalScore));
+    final updatedHistory = [...state.evalHistory, event.evalScore];
+    emit(state.copyWith(evalScore: event.evalScore, evalHistory: updatedHistory));
   }
 }

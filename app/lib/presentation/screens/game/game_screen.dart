@@ -199,8 +199,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               if (state.showPromotionDialog) _buildPromotionOverlay(context, state),
               if (state.isGameOver) _buildGameOverOverlay(context, state),
               _buildConfetti(),
-              if (state.status == GameStatus.check) IgnorePointer(child: _buildCheckAlert(state, minimalMotion)),
-              if (!state.isGameOver) IgnorePointer(child: _buildTurnOverlay(state, minimalMotion)),
+              if (state.status == GameStatus.check) _buildCheckAlert(state, minimalMotion),
+              if (!state.isGameOver) _buildTurnOverlay(state, minimalMotion),
               if (state.pendingMove != null) _buildConfirmMoveOverlay(state),
               if (_showMoves) _buildMoveHistoryOverlay(state),
               if (state.isPuzzleRush) _buildPuzzleRushOverlay(state),
@@ -232,8 +232,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     );
   },
 ),
-);
-}
+  );
+  }
 
   Widget _buildMoveHistoryOverlay(GameState state) {
     return Positioned.fill(
@@ -271,8 +271,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   Expanded(child: MoveHistoryWidget(moves: state.moveHistory)),
                 ],
               ),
-            ),
-          ).animate().slideX(begin: 1, duration: 300.ms, curve: Curves.easeOutCubic),
+            ).animate().slideX(begin: 1, duration: 300.ms, curve: Curves.easeOutCubic),
+          ),
         ],
       ),
     );
@@ -291,52 +291,91 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
   Widget _buildTurnOverlay(GameState state, bool minimalMotion) {
     final isMyTurn = state.isPlayerTurn;
-    final label = isMyTurn ? 'YOUR TURN!' : "OPPONENT'S TURN";
-    final gradient = isMyTurn ? AppTheme.goldGradient : const LinearGradient(colors: [Color(0xFF6B7DB3), Color(0xFF4A5580)]);
-    final icon = isMyTurn ? Icons.star_rounded : Icons.hourglass_top_rounded;
-    final textColor = isMyTurn ? AppTheme.midnight : Colors.white;
+    final label = isMyTurn ? '⚡ YOUR TURN!' : "⏳ OPPONENT'S TURN";
+    final gradient = isMyTurn 
+        ? AppTheme.goldGradient 
+        : const LinearGradient(colors: [Color(0xFF4A5580), Color(0xFF3A4570)]);
+    final textColor = isMyTurn ? AppTheme.midnight : Colors.white70;
+    final shadowColor = isMyTurn ? AppTheme.goldPrimary : AppTheme.textMuted;
 
-    final overlay = Positioned(
-      bottom: isMyTurn ? 140 : null,
-      top: isMyTurn ? null : 85,
-      left: 0, right: 0,
-      child: Center(
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-          decoration: BoxDecoration(
-            gradient: gradient,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(color: (isMyTurn ? AppTheme.goldPrimary : AppTheme.textMuted).withValues(alpha: 0.3), blurRadius: 15, offset: const Offset(0, 5)),
-            ],
+    Widget turnPill = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
+      decoration: BoxDecoration(
+        gradient: gradient,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: shadowColor.withValues(alpha: isMyTurn ? 0.5 : 0.2),
+            blurRadius: isMyTurn ? 20 : 10,
+            offset: const Offset(0, 4),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, color: textColor, size: 20),
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: GoogleFonts.fredoka(
-                  color: textColor, fontSize: 14, fontWeight: FontWeight.w800,
-                  letterSpacing: 1.0,
-                ),
-              ),
-            ],
+          if (isMyTurn)
+            BoxShadow(
+              color: AppTheme.goldPrimary.withValues(alpha: 0.3),
+              blurRadius: 30,
+              spreadRadius: 2,
+            ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.fredoka(
+              color: textColor,
+              fontSize: isMyTurn ? 15 : 13,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.2,
+            ),
           ),
-        ),
+        ],
       ),
     );
 
-    if (minimalMotion) return overlay;
-
-    if (isMyTurn) {
-      return overlay
+    // YOUR TURN — prominent blinking/pulsing animation
+    if (isMyTurn && !minimalMotion) {
+      return Positioned(
+        bottom: 140,
+        left: 0, right: 0,
+        child: IgnorePointer(
+          child: Center(
+            child: turnPill,
+          )
           .animate(onPlay: (c) => c.repeat(reverse: true))
-          .scale(begin: const Offset(1, 1), end: const Offset(1.05, 1.05), duration: 800.ms)
-          .shimmer(delay: 2.seconds, duration: 1200.ms);
+          .fadeIn(duration: 300.ms)
+          .then()
+          .fade(begin: 1.0, end: 0.4, duration: 700.ms, curve: Curves.easeInOut)
+          .scale(begin: const Offset(1.0, 1.0), end: const Offset(1.06, 1.06), duration: 700.ms, curve: Curves.easeInOut)
+          .shimmer(delay: 3.seconds, duration: 1200.ms, color: AppTheme.goldLight.withValues(alpha: 0.3)),
+        ),
+      );
     }
-    return overlay.animate().fadeIn(duration: 300.ms);
+
+    // OPPONENT'S TURN — fully static (no animation)  
+    if (!isMyTurn) {
+      return Positioned(
+        top: 85,
+        left: 0, right: 0,
+        child: IgnorePointer(
+          child: Center(
+            child: Opacity(
+              opacity: minimalMotion ? 1.0 : 0.85,
+              child: turnPill,
+            ),
+          ),
+        ),
+      );
+    }
+
+    // YOUR TURN — minimal motion mode (no animation, just static pill)
+    return Positioned(
+      bottom: 140,
+      left: 0, right: 0,
+      child: IgnorePointer(
+        child: Center(child: turnPill),
+      ),
+    );
   }
 
   Widget _buildConfirmMoveOverlay(GameState state) {
@@ -1400,6 +1439,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       blunders: state.blunders,
       xpGained: state.xpGained,
       analysisMessage: state.analysisMessage,
+      evalHistory: state.evalHistory,
+      eloChange: state.eloChange,
+      currentElo: 1200, // Will be updated from user model
+      bestMoves: state.bestMoves,
       onPlayAgain: () {
         context.read<GameBloc>().add(GameStartEvent(widget.config));
       },
@@ -1438,41 +1481,69 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildCheckAlert(GameState state, bool minimalMotion) {
-    final alert = Positioned(
+    if (minimalMotion) {
+      return Positioned(
+        top: 100,
+        left: 0, right: 0,
+        child: IgnorePointer(
+          child: Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+              decoration: BoxDecoration(
+                color: AppTheme.accentRed.withValues(alpha: 0.95),
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: [
+                  BoxShadow(color: AppTheme.accentRed.withValues(alpha: 0.5), blurRadius: 24, spreadRadius: 4),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.warning_rounded, color: Colors.white, size: 24),
+                  const SizedBox(width: 10),
+                  Text('⚠️ CHECK!', style: GoogleFonts.fredoka(
+                    color: Colors.white, fontWeight: FontWeight.w800, fontSize: 20,
+                  )),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Persistent blinking until check is resolved
+    return Positioned(
       top: 100,
       left: 0, right: 0,
-      child: Center(
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-          decoration: BoxDecoration(
-            color: AppTheme.accentRed.withValues(alpha: 0.95),
-            borderRadius: BorderRadius.circular(28),
-            boxShadow: [
-              BoxShadow(color: AppTheme.accentRed.withValues(alpha: 0.5), blurRadius: 24, spreadRadius: 4),
-            ],
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.warning_rounded, color: Colors.white, size: 24),
-              const SizedBox(width: 10),
-              Text('⚠️ CHECK!', style: GoogleFonts.fredoka(
-                color: Colors.white, fontWeight: FontWeight.w800, fontSize: 20,
-              )),
-            ],
-          ),
+      child: IgnorePointer(
+        child: Center(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+            decoration: BoxDecoration(
+              color: AppTheme.accentRed.withValues(alpha: 0.95),
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [
+                BoxShadow(color: AppTheme.accentRed.withValues(alpha: 0.5), blurRadius: 24, spreadRadius: 4),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.warning_rounded, color: Colors.white, size: 24),
+                const SizedBox(width: 10),
+                Text('⚠️ CHECK!', style: GoogleFonts.fredoka(
+                  color: Colors.white, fontWeight: FontWeight.w800, fontSize: 20,
+                )),
+              ],
+            ),
+          ).animate(onPlay: (c) => c.repeat(reverse: true))
+           .fadeIn(duration: 400.ms)
+           .then()
+           .fadeOut(duration: 400.ms),
         ),
       ),
     );
-
-    if (minimalMotion) return alert;
-
-    // Persistent blinking until check is resolved
-    return alert
-        .animate(onPlay: (c) => c.repeat(reverse: true))
-        .fadeIn(duration: 400.ms)
-        .then()
-        .fadeOut(duration: 400.ms);
   }
 
   String _modeName(GameMode mode) => switch (mode) {
