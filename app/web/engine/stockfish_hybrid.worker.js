@@ -52,7 +52,7 @@ async function loadStockfish() {
     sendUCI('uci');
     // Wait for 'uciok' implicitly, then configure
     sendUCI('setoption name Threads value 1');
-    sendUCI('setoption name Hash value 16');
+    sendUCI('setoption name Hash value 64');
     sendUCI('ucinewgame');
     sendUCI('isready');
 

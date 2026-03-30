@@ -123,6 +123,9 @@ class MpGameOverSyncEvent extends GameEvent {
   @override List<Object?> get props => [result, reason, xpGained];
 }
 
+class GameAIRequestEvent extends GameEvent {}
+class GameDismissErrorEvent extends GameEvent {}
+
 // ═══════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════
@@ -178,6 +181,7 @@ class GameState extends Equatable {
   final int xpGained;
   final String? coachMessage;
   final String? analysisMessage;
+  final String? engineError;
   final bool showMiniLesson;
 
   // AI Coach System
@@ -265,6 +269,7 @@ class GameState extends Equatable {
     this.xpGained = 0,
     this.analysisMessage,
     this.coachMessage,
+    this.engineError,
     this.showMiniLesson = false,
     this.coachFeedback,
     this.activeHint,
@@ -357,6 +362,7 @@ class GameState extends Equatable {
     int? xpGained,
     String? analysisMessage,
     String? coachMessage,
+    String? engineError,
     bool? showMiniLesson,
     CoachFeedback? coachFeedback,
     HintResult? activeHint,
@@ -387,6 +393,7 @@ class GameState extends Equatable {
     bool clearActiveHint = false,
     bool clearCoachMove = false,
     bool clearPreMove = false,
+    bool clearEngineError = false,
     Move? preMove,
     List<double>? evalHistory,
     int? eloChange,
@@ -439,6 +446,7 @@ class GameState extends Equatable {
       xpGained: xpGained ?? this.xpGained,
       analysisMessage: analysisMessage ?? this.analysisMessage,
       coachMessage: clearCoachMessage ? null : (coachMessage ?? this.coachMessage),
+      engineError: clearEngineError ? null : (engineError ?? this.engineError),
       showMiniLesson: showMiniLesson ?? this.showMiniLesson,
       coachFeedback: clearCoachFeedback ? null : (coachFeedback ?? this.coachFeedback),
       activeHint: clearActiveHint ? null : (activeHint ?? this.activeHint),
@@ -538,6 +546,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       _coachController.updateSettings(e.coachSettings);
       emit(state.copyWith(coachSettings: e.coachSettings));
     });
+    on<GameAIRequestEvent>(_onAIRequest);
+    on<GameDismissErrorEvent>((e, emit) => emit(state.copyWith(clearEngineError: true)));
     on<MpGameOverSyncEvent>((e, emit) {
       _stopClock();
       final status = e.result == GameResult.draw ? GameStatus.draw : GameStatus.checkmate;
@@ -659,7 +669,6 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       emit(state.copyWith(isPuzzleRush: true, puzzleRushTime: 180, puzzleRushStrikes: 0));
     }
 
-    // Auto-play the first opponent move in puzzles (setup move)
     if (config.mode == GameMode.puzzle && config.puzzle != null && config.puzzle!.moves.isNotEmpty) {
       final firstMove = config.puzzle!.moves[0];
       if (firstMove.isOpponentMove) {
@@ -668,6 +677,13 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         final setupMove = Move.fromAlgebraic(firstMove.uciMove);
         add(GameMakeMoveEvent(setupMove.from, setupMove.to, promotion: setupMove.promotion));
       }
+    }
+
+    // NEW: Trigger AI if it's AI's turn to start (e.g. user plays Black)
+    if (!state.isGameOver &&
+        (config.mode == GameMode.singlePlayer || config.mode == GameMode.practice) &&
+        initialState.currentTurn != initialState.playerColor) {
+      add(GameAIRequestEvent());
     }
   }
 
@@ -687,7 +703,19 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         // Usually we don't resume puzzle rush, but if we do, timer should restart
     }
 
-    _engineController.init(mode, AIDifficulty.intermediate);
+    AIDifficulty difficulty = AIDifficulty.intermediate;
+    if (mode == GameMode.practice) {
+       final user = await _authRepository.getCurrentUser();
+       if (user != null) {
+          final d = user.stats.practiceDifficulty;
+          if (d < 1.0) difficulty = AIDifficulty.basic;
+          else if (d < 2.0) difficulty = AIDifficulty.intermediate;
+          else if (d < 3.0) difficulty = AIDifficulty.advanced;
+          else difficulty = AIDifficulty.impossible;
+       }
+    }
+    
+    _engineController.init(mode, difficulty);
 
     final playerColorStr = (game.whiteUserId == 'me') ? PieceColor.white : PieceColor.black;
 
@@ -696,14 +724,17 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       currentTurn: _engine.currentTurn,
       playerColor: (mode == GameMode.singlePlayer || mode == GameMode.multiplayer || mode == GameMode.practice) ? playerColorStr : null,
       mode: mode,
+      aiDifficulty: difficulty,
       moveHistory: _engine.moveHistory,
       currentFEN: game.fen,
       // Restore other properties if needed, but these are essential for turn logic
     ));
 
-    // After resume, if it's AI turn, trigger it
-    if (mode == GameMode.singlePlayer && _engine.currentTurn != playerColorStr && !state.isGameOver) {
-      add(const GameMakeMoveEvent(Square(0, 0), Square(0, 0)));
+    // After resume, trigger AI if it's its turn
+    if (!state.isGameOver && 
+        (mode == GameMode.singlePlayer || mode == GameMode.practice) && 
+        _engine.currentTurn != playerColorStr) {
+      add(GameAIRequestEvent());
     }
   }
 
@@ -932,10 +963,14 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       capturedBlack: captured.$2,
       currentFEN: _engine.toFEN(),
       clearSelected: true,
-      clearHint: true,
       showPromotionDialog: false,
+      isAIThinking: false, // Disappear JUST as the move is made
       lastMoveTimestamp: DateTime.now(),
       pendingMove: null, // Clear any pending move UI
+      clearHint: true,
+      clearCoachMove: true,
+      clearCoachMessage: true,
+      clearCoachFeedback: true,
     ));
 
     // Update Evaluation asynchronously to not block the UI
@@ -981,8 +1016,12 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       }
     }
 
-    // 2. AI COACH MOVE ANALYSIS (async, non-blocking)
-    bool shouldAnalyze = state.mode == GameMode.practice || state.mode == GameMode.singlePlayer;
+    // 2. AI COACH MOVE ANALYSIS (only for Human Player moves)
+    // We determine this by checking if the turn just flipped to the computer
+    final wasHumanMove = (state.playerColor == null) || (state.currentTurn != state.playerColor);
+    
+    bool shouldAnalyze = wasHumanMove && (state.mode == GameMode.practice || state.mode == GameMode.singlePlayer);
+    
     if (shouldAnalyze && state.coachSettings.enableRealTimeCoaching) {
     int mistakes = state.mistakes;
     int blunders = state.blunders;
@@ -1175,20 +1214,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     if (!state.isGameOver &&
         (state.mode == GameMode.singlePlayer || state.mode == GameMode.practice) &&
         _engine.currentTurn != state.playerColor) {
-      final aiRequestEpoch = ++_aiRequestEpoch;
-      emit(state.copyWith(isAIThinking: true));
-      await Future.delayed(const Duration(milliseconds: 400));
-
-      // Use the hybrid EngineController instead of AIDirectly
-      final moveStr = await _engineController.getBestMove(_engine.toFEN());
-      
-      if (isClosed || aiRequestEpoch != _aiRequestEpoch) return;
-      emit(state.copyWith(isAIThinking: false));
-
-      if (moveStr != null && !state.isGameOver && _engine.status == GameStatus.active) {
-        final aiMove = Move.fromAlgebraic(moveStr);
-        add(GameMakeMoveEvent(aiMove.from, aiMove.to, promotion: aiMove.promotion));
-      }
+      add(GameAIRequestEvent());
     }
 
     // Auto-save & Post-Game Analysis
@@ -1704,5 +1730,47 @@ class GameBloc extends Bloc<GameEvent, GameState> {
   void _onUpdateEval(GameUpdateEvalEvent event, Emitter<GameState> emit) {
     final updatedHistory = [...state.evalHistory, event.evalScore];
     emit(state.copyWith(evalScore: event.evalScore, evalHistory: updatedHistory));
+  }
+
+  /// Centralized AI move generation logic now correctly handled as a Bloc event.
+  Future<void> _onAIRequest(GameAIRequestEvent event, Emitter<GameState> emit) async {
+    if (state.isGameOver) return;
+
+    final aiRequestEpoch = ++_aiRequestEpoch;
+    emit(state.copyWith(isAIThinking: true));
+    
+    // UI Delay for "human feel"
+    await Future.delayed(const Duration(milliseconds: 400));
+    if (isClosed || aiRequestEpoch != _aiRequestEpoch) return;
+
+    try {
+      final moveStr = await _engineController.getBestMove(_engine.toFEN(), engine: _engine);
+      
+      if (isClosed || aiRequestEpoch != _aiRequestEpoch) return;
+
+      if (moveStr != null && !state.isGameOver && _engine.status == GameStatus.active) {
+        final aiMove = Move.fromAlgebraic(moveStr);
+        add(GameMakeMoveEvent(aiMove.from, aiMove.to, promotion: aiMove.promotion));
+      } else if (!state.isGameOver && _engine.status == GameStatus.active) {
+        // FAILSAFE: Try fallback first
+        final fallback = await _engineController.fallbackMove(_engine.toFEN(), engine: _engine);
+        if (fallback != null) {
+          final fm = Move.fromAlgebraic(fallback);
+          add(GameMakeMoveEvent(fm.from, fm.to, promotion: fm.promotion));
+        } else {
+          // TOTAL FAILURE: Popup Error Message
+          emit(state.copyWith(
+            isAIThinking: false,
+            engineError: "Ooops! I'm having a little trouble thinking right now. 😵‍💫 My engine stalled, please reload the game!",
+          ));
+        }
+      }
+    } catch (e) {
+      debugPrint('[AI Execution Error] $e');
+      if (!isClosed) emit(state.copyWith(
+        isAIThinking: false,
+        engineError: "Sorry! Something went wrong behind the scenes. 🤯 I can't think anymore!",
+      ));
+    }
   }
 }

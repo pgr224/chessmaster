@@ -22,26 +22,26 @@
 
   // Depth config per difficulty
   const DEPTH_CONFIG = {
-    basic: 2,
-    intermediate: 4,
-    advanced: 12,
-    impossible: 18,
+    basic: 4,
+    intermediate: 10,
+    advanced: 20,
+    impossible: 32,
   };
 
   // Timeout budget per difficulty (ms)
   const TIMEOUT_CONFIG = {
-    basic: 500,
-    intermediate: 1000,
-    advanced: 2500,
-    impossible: 5000,
+    basic: 2250,
+    intermediate: 4000,
+    advanced: 7250,
+    impossible: 17000,
   };
 
-  const FALLBACK_BUFFER_MS = 500;
+  const FALLBACK_BUFFER_MS = 2000;
 
   // ═══════════════════════════════════════
   // STATE
   // ═══════════════════════════════════════
-  let activeEngineType = null; 
+  let activeEngineType = null;
   let sunfishWorker = null;
   let stockfishWorker = null;
   let chessLogic = null;
@@ -151,7 +151,7 @@
     async getBestMove(fen) {
       lastFen = fen;
       const id = ++requestId;
-      
+
       // Dynamic depth adjustment: reduce if it was too slow recently or base it on difficulty
       let depth = DEPTH_CONFIG[currentDifficulty] || 3;
       const budget = TIMEOUT_CONFIG[currentDifficulty] || 1500;
@@ -168,15 +168,15 @@
       return new Promise((resolve) => {
         const executeSearch = async (engineType, isFallback = false) => {
           pendingResolve = resolve;
-          
+
           const timeoutMs = isFallback ? 800 : budget;
-          
+
           pendingTimeout = setTimeout(() => {
             console.warn(`[EngineService] Timeout (${timeoutMs}ms) for ${engineType}`);
             if (pendingResolve === resolve) {
               if (engineType === ENGINE_STOCKFISH) {
                 // Stockfish stalled! KILL and FALLBACK to Sunfish.
-                terminateWorker(ENGINE_STOCKFISH); 
+                terminateWorker(ENGINE_STOCKFISH);
                 executeSearch(ENGINE_SUNFISH, true);
               } else {
                 pendingResolve(null);
@@ -187,11 +187,11 @@
 
           if (engineType === ENGINE_SUNFISH) {
             const worker = createWorker(ENGINE_SUNFISH);
-            worker.postMessage({ type: 'search', fen, depth: isFallback ? 3 : depth });
+            worker.postMessage({ type: 'search', fen, depth: isFallback ? 3 : depth, timeoutMs: timeoutMs - 200 });
           } else if (engineType === ENGINE_STOCKFISH) {
             await waitForStockfishReady();
             if (pendingResolve === resolve) {
-              stockfishWorker.postMessage({ type: 'search', fen, depth });
+              stockfishWorker.postMessage({ type: 'search', fen, depth, timeoutMs: timeoutMs - 200 });
             }
           }
         };
@@ -217,7 +217,7 @@
     },
 
     getGameState(fen) {
-       if (typeof ChessLogic !== 'undefined') {
+      if (typeof ChessLogic !== 'undefined') {
         const logic = new ChessLogic();
         return logic.getGameState(fen);
       }

@@ -24,13 +24,13 @@ class AIEngineController {
 
   /// Constants for time management
   static const Map<AIDifficulty, int> _maxTimeMs = {
-    AIDifficulty.basic: 500,
-    AIDifficulty.intermediate: 1000,
-    AIDifficulty.advanced: 2500,
-    AIDifficulty.impossible: 5000,
+    AIDifficulty.basic: 2250,
+    AIDifficulty.intermediate: 4000,
+    AIDifficulty.advanced: 7250,
+    AIDifficulty.impossible: 17000,
   };
 
-  static const int _fallbackBufferMs = 500;
+  static const int _fallbackBufferMs = 2000;
 
   /// Tracks active request to allow cancellation
   int _activeRequestId = 0;

@@ -22,7 +22,7 @@ import '../../widgets/move_history_widget.dart';
 import '../../widgets/promotion_dialog.dart';
 import '../../widgets/game_over_overlay.dart';
 import '../../widgets/player_info_widget.dart';
-import '../../widgets/hint_button_widget.dart';
+
 import '../../widgets/coach_overlay_widget.dart';
 import '../../widgets/timer_widget.dart';
 import '../../widgets/game_rules_dialog.dart';
@@ -225,7 +225,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               // Universal floating chat window (all layouts)
               if (state.mode == GameMode.multiplayer) _buildFloatingChat(context),
               if (state.puzzleExplanation != null) _buildPuzzleExplanation(state),
-
+              if (state.engineError != null) _buildEngineErrorOverlay(context, state),
             ],
           );
         },
@@ -377,6 +377,53 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         child: Center(child: turnPill),
       ),
     );
+  }
+
+  Widget _buildEngineErrorOverlay(BuildContext context, GameState state) {
+    return Positioned.fill(
+      child: Container(
+        color: Colors.black87,
+        padding: const EdgeInsets.all(32),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.error_outline_rounded, color: AppTheme.accentRed, size: 64),
+              const SizedBox(height: 24),
+              Text(
+                "ENGINE STALLED",
+                style: GoogleFonts.fredoka(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                state.engineError ?? "Oops! I can't think anymore.",
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(color: Colors.white70, fontSize: 16),
+              ),
+              const SizedBox(height: 32),
+              ElevatedButton.icon(
+                onPressed: () {
+                  context.read<GameBloc>().add(GameDismissErrorEvent());
+                  if (widget.config.activeGameId != null) {
+                    context.read<GameBloc>().add(GameResumeEvent(widget.config.activeGameId!));
+                  } else {
+                    context.read<GameBloc>().add(GameStartEvent(widget.config, tutorial: widget.tutorial));
+                  }
+                },
+                icon: const Icon(Icons.refresh_rounded),
+                label: Text('RELOAD GAME', style: GoogleFonts.fredoka(fontWeight: FontWeight.w600)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.goldPrimary,
+                  foregroundColor: AppTheme.midnight,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ).animate().fadeIn();
   }
 
   Widget _buildConfirmMoveOverlay(GameState state) {
@@ -1286,16 +1333,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     );
   }
 
-                  },
-                ),
-              ),
-              _buildChatInput(context),
-            ],
-          ),
-        );
-      },
-    );
-  }
+
 
   void _showCoachSettings(BuildContext context, GameState state) {
     showModalBottomSheet(
