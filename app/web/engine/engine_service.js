@@ -26,6 +26,7 @@
     intermediate: 10,
     advanced: 20,
     impossible: 32,
+    aiMode: 40,
   };
 
   // Timeout budget per difficulty (ms)
@@ -34,6 +35,7 @@
     intermediate: 4000,
     advanced: 7250,
     impossible: 17000,
+    aiMode: 25000,
   };
 
   const FALLBACK_BUFFER_MS = 2000;
@@ -139,7 +141,7 @@
       currentDifficulty = difficulty || 'basic';
       if (mode === 'twoPlayer' || mode === 'multiplayer') {
         activeEngineType = ENGINE_VALIDATION;
-      } else if (difficulty === 'advanced' || difficulty === 'impossible') {
+      } else if (difficulty === 'advanced' || difficulty === 'impossible' || difficulty === 'aiMode') {
         activeEngineType = ENGINE_STOCKFISH;
         createWorker(ENGINE_STOCKFISH);
       } else {

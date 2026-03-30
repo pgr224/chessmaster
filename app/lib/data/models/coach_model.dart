@@ -285,6 +285,7 @@ class CoachSettings {
       AIDifficulty.intermediate => CoachingLevel.intermediate,
       AIDifficulty.advanced => CoachingLevel.advanced,
       AIDifficulty.impossible => CoachingLevel.advanced,
+      AIDifficulty.aiMode => CoachingLevel.advanced,
       null => CoachingLevel.beginner,
     };
   }

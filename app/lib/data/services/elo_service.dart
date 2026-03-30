@@ -113,6 +113,7 @@ class EloService {
       'intermediate' => 1200,
       'advanced' => 1600,
       'impossible' => 2200,
+      'aiMode' => 2600,
       _ => 1200,
     };
 

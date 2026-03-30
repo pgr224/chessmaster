@@ -443,6 +443,7 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
     AIDifficulty.intermediate => {'emoji': '⚔️', 'name': 'Medium', 'desc': 'A good challenge!'},
     AIDifficulty.advanced     => {'emoji': '🔥', 'name': 'Hard', 'desc': 'Serious play!'},
     AIDifficulty.impossible   => {'emoji': '🤖', 'name': 'Impossible', 'desc': 'Can you beat the machine?'},
+    AIDifficulty.aiMode       => {'emoji': '🧠', 'name': 'AI Mode', 'desc': 'Adaptive neural network AI'},
   };
 
   String _colorEmoji(String color) => switch (color) {

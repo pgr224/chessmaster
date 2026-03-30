@@ -9,8 +9,8 @@ import 'chess_engine.dart';
 import 'ai_engine.dart';
 import '../../data/models/game_config.dart';
 
-// Conditional import: web gets the real JS bridge, mobile gets a stub
-import 'native_engine_bridge_stub.dart'
+// Conditional import: web gets the real JS bridge, mobile gets the real native bridge
+import 'native_engine_bridge.dart'
     if (dart.library.js_interop) 'js_engine_bridge.dart' as js_bridge;
 
 class AIEngineController {
@@ -28,6 +28,7 @@ class AIEngineController {
     AIDifficulty.intermediate: 4000,
     AIDifficulty.advanced: 7250,
     AIDifficulty.impossible: 17000,
+    AIDifficulty.aiMode: 25000, // Leela can use a bit more time if needed
   };
 
   static const int _fallbackBufferMs = 2000;
@@ -41,9 +42,8 @@ class AIEngineController {
     _difficulty = difficulty ?? AIDifficulty.basic;
     _initialized = true;
 
-    if (kIsWeb) {
-      js_bridge.jsEngineInit(mode.name, _difficulty.name);
-    }
+    // Both Web and Native use the unified js_bridge (aliased depending on platform)
+    js_bridge.jsEngineInit(mode.name, _difficulty.name);
   }
 
   /// Get the best move for the current position with robust timeout handling
@@ -70,28 +70,14 @@ class AIEngineController {
     try {
       String? resultMove;
 
-      if (kIsWeb) {
-        // Web context: Uses JS Engine Service (Stockfish WASM / Sunfish)
-        // engine_service.js already has internal timeout/fallback, 
-        // but we wrap it here for extra safety.
-        resultMove = await js_bridge.jsEngineGetBestMove(fen).timeout(
-          Duration(milliseconds: maxTime),
-          onTimeout: () {
-            print('[AIEngineController] JS Engine timed out, using local fallback');
-            return null;
-          },
-        );
-      } else if (engine != null) {
-        // Native/Mobile context: Uses Dart AIEngine on Isolates
-        resultMove = await AIEngine.getBestMove(
-          engine, 
-          _difficulty, 
-          timeout: Duration(milliseconds: fallbackTrigger)
-        ).then((m) => m?.toAlgebraic()).timeout(
-          Duration(milliseconds: maxTime),
-          onTimeout: () => null,
-        );
-      }
+      // Cross-platform context: both Web and Native now use the official Stockfish bridge
+      resultMove = await js_bridge.jsEngineGetBestMove(fen).timeout(
+        Duration(milliseconds: maxTime),
+        onTimeout: () {
+          print('[AIEngineController] Engine timed out, using local fallback');
+          return null;
+        },
+      );
 
       // 2. FALLBACK SYSTEM: If engine failed or timed out, use quick fallback
       if (resultMove == null && engine != null) {
@@ -136,15 +122,12 @@ class AIEngineController {
   /// Get the currently active engine name (for debugging/UI)
   String get activeEngineName {
     if (!_initialized) return 'none';
-    if (kIsWeb) return js_bridge.jsEngineGetActiveEngine();
-    return 'dart_ai';
+    return js_bridge.jsEngineGetActiveEngine();
   }
 
   /// Dispose all engine resources
   void dispose() {
-    if (kIsWeb) {
-      js_bridge.jsEngineDispose();
-    }
+    js_bridge.jsEngineDispose();
     _initialized = false;
   }
 }

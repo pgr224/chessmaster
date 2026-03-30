@@ -9,6 +9,7 @@ class AIEngine {
     AIDifficulty.intermediate: _AIConfig(depth: 4, randomness: 0.1),
     AIDifficulty.advanced:     _AIConfig(depth: 5, randomness: 0.0),
     AIDifficulty.impossible:   _AIConfig(depth: 6, randomness: 0.0),
+    AIDifficulty.aiMode:       _AIConfig(depth: 6, randomness: 0.0),
   };
 
   // Transposition Table for memoizing search results

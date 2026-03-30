@@ -1338,7 +1338,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         String msg = '';
         if (state.accuracy >= 80) {
           msg = '🚀 Incredible! Your precision was professional level.';
-          if (state.aiDifficulty != AIDifficulty.impossible) {
+          if (state.aiDifficulty != AIDifficulty.impossible && state.aiDifficulty != AIDifficulty.aiMode) {
             msg += '\nReady to try the next level?';
           }
         } else if (state.accuracy >= 60) {

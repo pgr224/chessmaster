@@ -800,6 +800,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.0.2"
+  leela_chess_zero:
+    dependency: "direct main"
+    description:
+      name: leela_chess_zero
+      sha256: a1466cd4d09a76f19079735e7959f4206e208aa3689cd17240b2eed090361f78
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.0"
   lints:
     dependency: transitive
     description:
