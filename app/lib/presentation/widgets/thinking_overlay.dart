@@ -5,7 +5,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/theme/app_theme.dart';
 
 class ThinkingOverlayWidget extends StatefulWidget {
-  const ThinkingOverlayWidget({super.key});
+  final bool compact;
+  const ThinkingOverlayWidget({super.key, this.compact = false});
 
   @override
   State<ThinkingOverlayWidget> createState() => _ThinkingOverlayWidgetState();
@@ -48,6 +49,10 @@ class _ThinkingOverlayWidgetState extends State<ThinkingOverlayWidget> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.compact) {
+      return _buildCompact(context);
+    }
+    
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       decoration: BoxDecoration(
@@ -100,11 +105,57 @@ class _ThinkingOverlayWidgetState extends State<ThinkingOverlayWidget> {
           _AnimatedDots(),
         ],
       ),
-    ).animate().fadeIn().scale(begin: const Offset(0.9, 0.9));
+  Widget _buildCompact(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppTheme.midnight.withValues(alpha: 0.8),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.2)),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.goldPrimary.withValues(alpha: 0.1),
+            blurRadius: 4,
+          )
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AnimatedSwitcher(
+            duration: 400.ms,
+            transitionBuilder: (child, anim) => FadeTransition(
+              opacity: anim,
+              child: SlideTransition(
+                position: anim.drive(Tween<Offset>(
+                  begin: const Offset(0, 0.4),
+                  end: Offset.zero,
+                )),
+                child: child,
+              ),
+            ),
+            child: Text(
+              _messages[_messageIndex],
+              key: ValueKey(_messageIndex),
+              style: GoogleFonts.fredoka(
+                color: AppTheme.goldPrimary,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+          _AnimatedDots(size: 10),
+        ],
+      ),
+    ).animate().fadeIn().slideY(begin: 0.2);
   }
 }
 
 class _AnimatedDots extends StatefulWidget {
+  final double size;
+  const _AnimatedDots({this.size = 16});
+  
   @override
   State<_AnimatedDots> createState() => _AnimatedDotsState();
 }
@@ -131,10 +182,10 @@ class _AnimatedDotsState extends State<_AnimatedDots> with SingleTickerProviderS
       builder: (context, _) {
         int dots = ((_controller.value * 4).floor()) % 4;
         return SizedBox(
-          width: 24,
+          width: widget.size * 1.5,
           child: Text(
             '.' * dots,
-            style: GoogleFonts.fredoka(color: AppTheme.accentCyan, fontSize: 16, fontWeight: FontWeight.bold),
+            style: GoogleFonts.fredoka(color: AppTheme.accentCyan, fontSize: widget.size, fontWeight: FontWeight.bold),
           ),
         );
       },

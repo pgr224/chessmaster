@@ -222,9 +222,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                 ),
               if (state.showMiniLesson && state.coachFeedback == null) _buildMiniLessonOverlay(context, state),
               // Only show floating chat on mobile/compact, wide layout has sidebar chat
-              if (state.mode == GameMode.multiplayer && constraints.maxWidth < 1080) _buildFloatingChat(context),
+              // Universal floating chat window (all layouts)
+              if (state.mode == GameMode.multiplayer) _buildFloatingChat(context),
               if (state.puzzleExplanation != null) _buildPuzzleExplanation(state),
-              if (state.isAIThinking) Center(child: const ThinkingOverlayWidget().animate().fadeIn().scale()),
+
             ],
           );
         },
@@ -669,12 +670,23 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       child: Row(
         children: [
           Expanded(
-            child: PlayerInfoWidget(
-              name: opponentLabel,
-              isActive: isOpponentTurn,
-              isAI: state.mode == GameMode.singlePlayer,
-              isThinking: state.isAIThinking,
-              color: state.playerColor == PieceColor.white ? PieceColor.black : PieceColor.white,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                PlayerInfoWidget(
+                  name: opponentLabel,
+                  isActive: isOpponentTurn,
+                  isAI: state.mode == GameMode.singlePlayer,
+                  isThinking: false, // Using overlay now
+                  color: state.playerColor == PieceColor.white ? PieceColor.black : PieceColor.white,
+                ),
+                if (state.isAIThinking && isOpponentTurn)
+                  const Positioned(
+                    top: -32,
+                    left: 8,
+                    child: ThinkingOverlayWidget(compact: true),
+                  ),
+              ],
             ),
           ),
           if (state.mode == GameMode.multiplayer) ...[
@@ -696,12 +708,23 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       child: Row(
         children: [
           Expanded(
-            child: PlayerInfoWidget(
-              name: '👑 You',
-              isActive: isPlayerTurn,
-              isAI: false,
-              isThinking: false,
-              color: state.playerColor ?? PieceColor.white,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                PlayerInfoWidget(
+                  name: '👑 You',
+                  isActive: isPlayerTurn,
+                  isAI: false,
+                  isThinking: false,
+                  color: state.playerColor ?? PieceColor.white,
+                ),
+                if (state.isAIThinking && isPlayerTurn)
+                  const Positioned(
+                    top: -32,
+                    left: 8,
+                    child: ThinkingOverlayWidget(compact: true),
+                  ),
+              ],
             ),
           ),
           if (state.mode == GameMode.multiplayer) ...[
@@ -762,53 +785,55 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildFloatingChat(BuildContext context) {
-    return BlocBuilder<MultiplayerBloc, MultiplayerState>(
-      builder: (context, mpState) {
-        final messages = mpState.chatMessages.where((msg) {
-          // Keep messages sent within the last 2 minutes
-          final age = DateTime.now().difference(msg.timestamp);
-          return age.inSeconds < 120;
-        }).toList();
+    return LayoutBuilder(builder: (context, constraints) {
+      return BlocBuilder<MultiplayerBloc, MultiplayerState>(
+        builder: (context, mpState) {
+          final messages = mpState.chatMessages.where((msg) {
+            // Keep messages sent within the last 2 minutes
+            final age = DateTime.now().difference(msg.timestamp);
+            return age.inSeconds < 120;
+          }).toList();
 
-        return Positioned(
-          left: 16, bottom: 220,
-          right: 80,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Messages area — IgnorePointer allows tapping board through recent bubbles
-              IgnorePointer(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxHeight: 180),
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: messages.length,
-                    itemBuilder: (context, index) {
-                      final msg = messages[index];
-                      return _chatBubble(msg.message, msg.isMe)
-                          .animate()
-                          .fadeIn(duration: 400.ms)
-                          .slideY(begin: 0.2, end: 0, duration: 400.ms)
-                          .fadeOut(delay: 6.seconds, duration: 1.seconds); // Fade out quickly to keep board clean
-                    },
+          return Positioned(
+            left: 16, bottom: 220,
+            width: constraints.maxWidth < 400 ? constraints.maxWidth - 32 : 350,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Messages area — IgnorePointer allows tapping board through recent bubbles
+                IgnorePointer(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 180),
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: messages.length,
+                      itemBuilder: (context, index) {
+                        final msg = messages[index];
+                        return _chatBubble(msg.message, msg.isMe)
+                            .animate()
+                            .fadeIn(duration: 400.ms)
+                            .slideY(begin: 0.2, end: 0, duration: 400.ms)
+                            .fadeOut(delay: 6.seconds, duration: 1.seconds); // Fade out quickly to keep board clean
+                      },
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              if (_showChat)
-                _buildChatInput(context)
-              else
-                _glassButton(
-                  icon: Icons.chat_bubble_outline_rounded,
-                  onTap: () => setState(() => _showChat = true),
-                ).animate().fadeIn(),
-            ],
-          ),
-        );
-      },
-    );
+                const SizedBox(height: 8),
+                if (_showChat)
+                  _buildChatInput(context)
+                else
+                  _glassButton(
+                    icon: Icons.chat_bubble_outline_rounded,
+                    onTap: () => setState(() => _showChat = true),
+                  ).animate().fadeIn(),
+              ],
+            ),
+          );
+        },
+      );
+    });
   }
 
   Widget _chatBubble(String text, bool isMe) {
@@ -830,38 +855,77 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildChatInput(BuildContext context) {
+    final quickEmojis = ['👏', '👍', '🔥', '🏆', '😂', '😮', 'GG', 'Luck!'];
+    
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: AppTheme.navyCard.withValues(alpha: 0.9),
+        color: AppTheme.navyCard.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppTheme.skyBlue.withValues(alpha: 0.3)),
+        border: Border.all(color: AppTheme.skyBlue.withValues(alpha: 0.4)),
+        boxShadow: [BoxShadow(color: Colors.black45, blurRadius: 10)],
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Expanded(
-            child: TextField(
-              controller: _chatController,
-              focusNode: _chatFocus,
-              autofocus: true,
-              style: GoogleFonts.baloo2(color: Colors.white, fontSize: 14),
-              decoration: const InputDecoration(
-                hintText: 'Press enter to send...',
-                hintStyle: TextStyle(color: Colors.white38, fontSize: 13),
-                border: InputBorder.none,
-              ),
-              onSubmitted: (val) {
-                if (val.trim().isNotEmpty) {
-                  context.read<MultiplayerBloc>().add(MpSendChatEvent(val.trim()));
-                  _chatController.clear();
+          // Quick Emoji Bar
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: quickEmojis.map((e) => GestureDetector(
+                onTap: () {
+                  context.read<MultiplayerBloc>().add(MpSendChatEvent(e));
                   setState(() => _showChat = false);
-                }
-              },
+                },
+                child: Container(
+                  margin: const EdgeInsets.only(right: 8, bottom: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(e, style: const TextStyle(fontSize: 16)),
+                ),
+              )).toList(),
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.close_rounded, color: AppTheme.textMuted, size: 20),
-            onPressed: () => setState(() => _showChat = false),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _chatController,
+                  focusNode: _chatFocus,
+                  autofocus: true,
+                  style: GoogleFonts.baloo2(color: Colors.white, fontSize: 14),
+                  decoration: const InputDecoration(
+                    hintText: 'Type a message...',
+                    hintStyle: TextStyle(color: Colors.white38, fontSize: 13),
+                    border: InputBorder.none,
+                  ),
+                  onSubmitted: (val) {
+                    if (val.trim().isNotEmpty) {
+                      context.read<MultiplayerBloc>().add(MpSendChatEvent(val.trim()));
+                      _chatController.clear();
+                      setState(() => _showChat = false);
+                    }
+                  },
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.send_rounded, color: AppTheme.goldPrimary, size: 20),
+                onPressed: () {
+                  if (_chatController.text.trim().isNotEmpty) {
+                    context.read<MultiplayerBloc>().add(MpSendChatEvent(_chatController.text.trim()));
+                    _chatController.clear();
+                    setState(() => _showChat = false);
+                  }
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.close_rounded, color: AppTheme.textMuted, size: 20),
+                onPressed: () => setState(() => _showChat = false),
+              ),
+            ],
           ),
         ],
       ),
@@ -1009,10 +1073,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   _buildPlayerInfo(state),
                   const SizedBox(height: 12),
                   _buildActionBar(context, state),
-                  if (state.mode == GameMode.multiplayer) ...[
-                    const SizedBox(height: 20),
-                    _buildSidebarChat(context),
-                  ],
+                  // Sidebar chat removed per user request - use floating chat instead
+                  const SizedBox(height: 12),
                 ],
               ),
             ),
@@ -1040,7 +1102,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          if (state.coachSettings.showEvalBar && state.mode != GameMode.puzzle) ...[
+          if (state.coachSettings.showEvalBar && 
+                (state.mode == GameMode.singlePlayer || state.mode == GameMode.practice)) ...[
             EvalBarWidget(
               evalScore: state.evalScore,
               perspective: perspective,
@@ -1223,52 +1286,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildSidebarChat(BuildContext context) {
-    return BlocBuilder<MultiplayerBloc, MultiplayerState>(
-      builder: (context, mpState) {
-        return Container(
-          height: 300,
-          decoration: BoxDecoration(
-            color: AppTheme.navyCard.withValues(alpha: 0.5),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: AppTheme.skyBlue.withValues(alpha: 0.2)),
-          ),
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(12),
-                child: Row(
-                  children: [
-                    const Icon(Icons.chat_bubble_rounded, color: AppTheme.skyBlue, size: 18),
-                    const SizedBox(width: 8),
-                    Text('GAME CHAT', style: GoogleFonts.fredoka(color: AppTheme.skyBlue, fontWeight: FontWeight.bold, fontSize: 13)),
-                  ],
-                ),
-              ),
-              const Divider(color: Colors.white10, height: 1),
-              Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.all(12),
-                  itemCount: mpState.chatMessages.length,
-                  itemBuilder: (context, index) {
-                    final msg = mpState.chatMessages[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: RichText(
-                        text: TextSpan(
-                          children: [
-                            TextSpan(
-                              text: msg.isMe ? 'You: ' : '${msg.username}: ',
-                              style: GoogleFonts.baloo2(color: AppTheme.goldPrimary, fontWeight: FontWeight.bold, fontSize: 13),
-                            ),
-                            TextSpan(
-                              text: msg.message,
-                              style: GoogleFonts.baloo2(color: Colors.white, fontSize: 13),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
                   },
                 ),
               ),

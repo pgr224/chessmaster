@@ -264,12 +264,28 @@ class AuthRepository {
         if (isGhibli != null) 'isGhibli': isGhibli,
         if (localAvatar != null) 'localAvatar': localAvatar,
       },
+      options: Options(validateStatus: (status) {
+        if (status == null) return false;
+        return status >= 200 && status < 500;
+      }),
     );
     
+    if (response.statusCode == 409) {
+      throw Exception('Username already taken');
+    } else if (response.statusCode != 200) {
+      throw Exception('Failed to update profile');
+    }
+
     final updatedData = response.data as Map<String, dynamic>;
+    final prefs = await SharedPreferences.getInstance();
+    
+    if (updatedData.containsKey('token') && updatedData['token'] != null) {
+      final token = _normalizeToken(updatedData['token'] as String);
+      await prefs.setString(_tokenKey, token);
+      _dio.options.headers['Authorization'] = 'Bearer $token';
+    }
     
     // Merge local data
-    final prefs = await SharedPreferences.getInstance();
     final userData = prefs.getString(_userKey);
     final current = userData != null ? jsonDecode(userData) : {};
 

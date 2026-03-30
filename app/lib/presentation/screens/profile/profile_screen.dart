@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -463,10 +464,22 @@ class _ProfileContent extends StatelessWidget {
 // Global helper for profile editing
 void showEditProfileModal(BuildContext context, UserModel user) {
   final nameController = TextEditingController(text: user.username);
-    String? localAvatarPreview = user.localAvatar;
-    bool isCartoon = user.isGhibli;
-    bool checkingName = false;
-    bool? nameAvailable;
+  String? localAvatarPreview = user.localAvatar;
+  bool isCartoon = user.isGhibli;
+  bool checkingName = false;
+  bool? nameAvailable;
+  String? suggestedName;
+
+  String buildUsernameSuggestion(String currentUsername) {
+    final cleaned = currentUsername
+        .trim()
+        .replaceAll(RegExp(r'\s+'), '_')
+        .replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '');
+    final base = cleaned.isEmpty ? 'ChessPlayer' : cleaned.replaceAll(RegExp(r'\d+$'), '');
+    final suffix = 100 + Random().nextInt(900);
+    final candidate = '$base$suffix';
+    return candidate.length > 30 ? candidate.substring(0, 30) : candidate;
+  }
 
     showModalBottomSheet(
       context: context,
@@ -536,15 +549,22 @@ void showEditProfileModal(BuildContext context, UserModel user) {
                       setLocalState(() {
                         checkingName = false;
                         nameAvailable = null;
+                        suggestedName = null;
                       });
                       return;
                     }
-                    setLocalState(() => checkingName = true);
+                    setLocalState(() {
+                       checkingName = true;
+                       suggestedName = null;
+                    });
                     final available = await context.read<AuthRepository>().checkUsername(val);
                     if (nameController.text == val) {
                       setLocalState(() {
                         checkingName = false;
                         nameAvailable = available;
+                        if (!available) {
+                          suggestedName = buildUsernameSuggestion(val);
+                        }
                       });
                     }
                   },
@@ -561,6 +581,23 @@ void showEditProfileModal(BuildContext context, UserModel user) {
                     focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: AppTheme.goldPrimary, width: 1.5)),
                   ),
                 ),
+                if (suggestedName != null) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Icon(Icons.info_outline, color: AppTheme.textMuted, size: 14),
+                      const SizedBox(width: 6),
+                      Text('Taken. Try ', style: GoogleFonts.baloo2(color: AppTheme.textMuted, fontSize: 13)),
+                      GestureDetector(
+                        onTap: () {
+                          nameController.text = suggestedName!;
+                          nameController.selection = TextSelection.fromPosition(TextPosition(offset: suggestedName!.length));
+                        },
+                        child: Text('"$suggestedName"', style: GoogleFonts.baloo2(color: AppTheme.goldPrimary, fontSize: 13, fontWeight: FontWeight.bold)),
+                      ),
+                    ],
+                  ),
+                ],
                 
                 const SizedBox(height: 32),
                 Row(

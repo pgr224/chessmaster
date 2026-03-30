@@ -1,0 +1,222 @@
+﻿
+ Γ¢à∩╕Å wrangler 3.114.17 (update available 4.78.0)
+-----------------------------------------------
+
+node.exe : [33mΓû▓ [43;33m
+[[43;30mWARNING[43;33m][0
+m [1mThe version of 
+Wrangler you are using is 
+now out-of-date.[0m
+At line:1 char:1
++ & "C:\Program 
+Files\nodejs/node.exe" "C:\U
+sers\pgr22\AppData\Roaming\ 
+...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~
+    + CategoryInfo          
+    : NotSpecified: ([33m  
+  Γû▓ [43;3...ut-of-date   
+ .[0m:String) [], Remot    
+eException
+    + FullyQualifiedErrorId 
+    : NativeCommandError
+ 
+
+  Please update to the 
+latest version to prevent 
+critical errors.
+  Run `npm install 
+--save-dev wrangler@4` to 
+update to the latest 
+version.
+  After installation, run 
+Wrangler with `npx 
+wrangler`.
+
+
+[33mΓû▓ [43;33m[[43;30mWA
+RNING[43;33m][0m 
+[1mProcessing 
+wrangler.toml 
+configuration:[0m
+
+    - [1mDeprecation[0m: 
+"build.upload.format":
+      The format is 
+inferred automatically from 
+the code.
+
+
+≡ƒîÇ Executing on remote database chessmaster-real4 (0104f57f-e5e0-4f93-b7da-9473da2846c1):
+≡ƒîÇ To execute on your local development database, remove the --remote flag from your wrangler command.
+≡ƒÜú Executed 1 command in 0.37ms
+[
+  {
+    "results": [
+      {
+        "cid": 0,
+        "name": "user_id",
+        "type": "TEXT",
+        "notnull": 0,
+        "dflt_value": null,
+        "pk": 1
+      },
+      {
+        "cid": 1,
+        "name": "games_played",
+        "type": "INTEGER",
+        "notnull": 1,
+        "dflt_value": "0",
+        "pk": 0
+      },
+      {
+        "cid": 2,
+        "name": "wins",
+        "type": "INTEGER",
+        "notnull": 1,
+        "dflt_value": "0",
+        "pk": 0
+      },
+      {
+        "cid": 3,
+        "name": "losses",
+        "type": "INTEGER",
+        "notnull": 1,
+        "dflt_value": "0",
+        "pk": 0
+      },
+      {
+        "cid": 4,
+        "name": "draws",
+        "type": "INTEGER",
+        "notnull": 1,
+        "dflt_value": "0",
+        "pk": 0
+      },
+      {
+        "cid": 5,
+        "name": "ai_games",
+        "type": "INTEGER",
+        "notnull": 1,
+        "dflt_value": "0",
+        "pk": 0
+      },
+      {
+        "cid": 6,
+        "name": "ai_wins",
+        "type": "INTEGER",
+        "notnull": 1,
+        "dflt_value": "0",
+        "pk": 0
+      },
+      {
+        "cid": 7,
+        "name": "multiplayer_games",
+        "type": "INTEGER",
+        "notnull": 1,
+        "dflt_value": "0",
+        "pk": 0
+      },
+      {
+        "cid": 8,
+        "name": "multiplayer_wins",
+        "type": "INTEGER",
+        "notnull": 1,
+        "dflt_value": "0",
+        "pk": 0
+      },
+      {
+        "cid": 9,
+        "name": "tournament_games",
+        "type": "INTEGER",
+        "notnull": 1,
+        "dflt_value": "0",
+        "pk": 0
+      },
+      {
+        "cid": 10,
+        "name": "tournament_wins",
+        "type": "INTEGER",
+        "notnull": 1,
+        "dflt_value": "0",
+        "pk": 0
+      },
+      {
+        "cid": 11,
+        "name": "longest_streak",
+        "type": "INTEGER",
+        "notnull": 1,
+        "dflt_value": "0",
+        "pk": 0
+      },
+      {
+        "cid": 12,
+        "name": "current_streak",
+        "type": "INTEGER",
+        "notnull": 1,
+        "dflt_value": "0",
+        "pk": 0
+      },
+      {
+        "cid": 13,
+        "name": "hints_used",
+        "type": "INTEGER",
+        "notnull": 1,
+        "dflt_value": "0",
+        "pk": 0
+      },
+      {
+        "cid": 14,
+        "name": "total_moves",
+        "type": "INTEGER",
+        "notnull": 1,
+        "dflt_value": "0",
+        "pk": 0
+      },
+      {
+        "cid": 15,
+        "name": "updated_at",
+        "type": "TEXT",
+        "notnull": 1,
+        "dflt_value": "datetime('now')",
+        "pk": 0
+      },
+      {
+        "cid": 16,
+        "name": "two_player_games",
+        "type": "INTEGER",
+        "notnull": 1,
+        "dflt_value": "0",
+        "pk": 0
+      },
+      {
+        "cid": 17,
+        "name": "two_player_wins",
+        "type": "INTEGER",
+        "notnull": 1,
+        "dflt_value": "0",
+        "pk": 0
+      }
+    ],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "APAC",
+      "served_by_colo": "SIN",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 0.3708
+      },
+      "duration": 0.3708,
+      "changes": 0,
+      "last_row_id": 0,
+      "changed_db": false,
+      "size_after": 274432,
+      "rows_read": 0,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  }
+]

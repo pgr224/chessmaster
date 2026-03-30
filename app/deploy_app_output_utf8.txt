@@ -1,0 +1,39 @@
+﻿
+ Γ¢à∩╕Å wrangler 4.78.0
+ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+node.exe : [33mΓû▓ [43;33m
+[[43;30mWARNING[43;33m][0
+m [1mWarning: Your working 
+directory is a git repo and 
+has uncommitted changes[0m
+At line:1 char:1
++ & "C:\Program 
+Files\nodejs/node.exe" "C:\U
+sers\pgr22\AppData\Roaming\ 
+...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~
+    + CategoryInfo          
+    : NotSpecified: ([33m  
+  Γû▓ [43;3...ted change   
+ s[0m:String) [], Remot    
+eException
+    + FullyQualifiedErrorId 
+    : NativeCommandError
+ 
+
+  To silence this warning, 
+pass in --commit-dirty=true
+
+
+Uploading... (674/690)
+Uploading... (679/690)
+Uploading... (684/690)
+Uploading... (690/690)
+Γ£¿ Success! Uploaded 16 files (674 already uploaded) (3.73 sec)
+
+Γ£¿ Uploading _headers
+Γ£¿ Uploading _redirects
+≡ƒîÄ Deploying...
+Γ£¿ Deployment complete! Take a peek over at https://afab5dc3.chessmaster-app.pages.dev

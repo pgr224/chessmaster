@@ -41,7 +41,20 @@ profileRoutes.put('/:id', async (c) => {
       .bind(...values, userId)
       .run()
 
-    return getFullProfile(c, userId)
+    let token: string | undefined = undefined;
+    if (body.username) {
+      const jwtPayload = c.get('user')
+      const { sign } = await import('hono/jwt')
+      token = await sign(
+        { sub: userId, username: body.username, deviceId: jwtPayload.deviceId, exp: Math.floor(Date.now() / 1000) + 86400 * 30 },
+        c.env.JWT_SECRET
+      )
+    }
+
+    const res = await getFullProfile(c, userId)
+    const data = await res.json()
+    if (token) data.token = token
+    return c.json(data)
   } catch (err: any) {
     if (err.message.includes('UNIQUE constraint failed: users.username')) {
       return c.json({ error: 'Username already taken' }, 409)

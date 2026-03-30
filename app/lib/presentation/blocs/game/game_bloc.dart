@@ -939,7 +939,11 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     ));
 
     // Update Evaluation asynchronously to not block the UI
-    if (!state.isGameOver) {
+    final isAIAssistantMode = state.mode == GameMode.singlePlayer || 
+                             state.mode == GameMode.practice || 
+                             state.mode == GameMode.puzzle;
+                             
+    if (!state.isGameOver && isAIAssistantMode) {
       final fenSnapshot = _engine.toFEN();
       final currTurn = _engine.currentTurn;
       AIEngine.evaluatePosition(ChessEngine.fromFEN(fenSnapshot)).then((score) {
@@ -1211,6 +1215,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
 
         // Calculate XP Rewards & Update Stats
         int xp = 0;
+        int eloChange = 0;
         final mapUpdates = <String, dynamic>{
           'games_played': 1,
         };
@@ -1264,6 +1269,42 @@ class GameBloc extends Bloc<GameEvent, GameState> {
               statUpdates: mapUpdates,
               isOnlineMatch: state.mode == GameMode.multiplayer,
             );
+
+            // ── ELO CALCULATION ──
+            if (state.mode == GameMode.singlePlayer || state.mode == GameMode.multiplayer) {
+              final currentElo = user.stats.eloRating;
+              final playerGames = user.stats.gamesPlayed;
+              double score = isDraw ? 0.5 : (isWin ? 1.0 : 0.0);
+
+              int newElo;
+              if (state.mode == GameMode.singlePlayer) {
+                final result = EloService.calculateVsAI(
+                  playerRating: currentElo,
+                  difficulty: state.aiDifficulty?.name ?? 'normal',
+                  score: score,
+                  playerGames: playerGames,
+                );
+                newElo = result.$1;
+              } else {
+                // Multiplayer: assume opponent is similar rating
+                final opponentElo = currentElo; // Server would provide actual opponent ELO
+                final result = EloService.calculateNewRatings(
+                  player1Rating: currentElo,
+                  player2Rating: opponentElo,
+                  score: score,
+                  player1Games: playerGames,
+                );
+                newElo = result.$1;
+              }
+              eloChange = (newElo - currentElo).toInt();
+
+              // Persist ELO to local stats
+              await _authRepository.updateXPProgress(
+                userId: user.id,
+                xpDelta: 0,
+                statUpdates: {'elo_rating': newElo},
+              );
+            }
           }
         }
 
@@ -1278,45 +1319,6 @@ class GameBloc extends Bloc<GameEvent, GameState> {
           msg = '🔥 Solid game! You had some great highlights.';
         } else {
           msg = '💎 Good effort! Keep practicing to master the patterns.';
-        }
-
-        // ── ELO CALCULATION ──
-        int eloChange = 0;
-        if (state.mode == GameMode.singlePlayer || state.mode == GameMode.multiplayer) {
-          final currentElo = user?.stats.eloRating ?? EloService.defaultRating;
-          final playerGames = user?.stats.gamesPlayed ?? 0;
-          double score = isDraw ? 0.5 : (isWin ? 1.0 : 0.0);
-
-          int newElo;
-          if (state.mode == GameMode.singlePlayer) {
-            final result = EloService.calculateVsAI(
-              playerRating: currentElo,
-              difficulty: state.aiDifficulty.name,
-              score: score,
-              playerGames: playerGames,
-            );
-            newElo = result.$1;
-          } else {
-            // Multiplayer: assume opponent is similar rating
-            final opponentElo = currentElo; // Server would provide actual opponent ELO
-            final result = EloService.calculateNewRatings(
-              player1Rating: currentElo,
-              player2Rating: opponentElo,
-              score: score,
-              player1Games: playerGames,
-            );
-            newElo = result.$1;
-          }
-          eloChange = newElo - currentElo;
-
-          // Persist ELO to local stats
-          if (user != null) {
-            await _authRepository.updateXPProgress(
-              userId: user.id,
-              xpDelta: 0,
-              statUpdates: {'elo_rating': newElo},
-            );
-          }
         }
 
         emit(state.copyWith(
