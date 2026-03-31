@@ -493,7 +493,7 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
         final data = msg['data'] as Map;
         add(MpGameFoundEvent(
           data['gameId']?.toString() ?? '',
-          data['color']?.toString() ?? 'white',
+          (data['color']?.toString() == 'black') ? PieceColor.black : PieceColor.white,
           data['opponentName']?.toString() ?? 'Unknown',
           mode: data['mode']?.toString(),
           timeControl: data['timeControl']?.toString(),
@@ -541,7 +541,7 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
 
   Future<void> _onGameFound(
       MpGameFoundEvent event, Emitter<MultiplayerState> emit) async {
-    await _service.joinRoom(event.gameId, event.color);
+    await _service.joinRoom(event.gameId, event.color.name);
     _gameSub?.cancel();
     _gameSub = _service.gameUpdates.listen((msg) {
       final msgType = msg['type']?.toString();
@@ -612,7 +612,7 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
     emit(state.copyWith(
       status: MultiplayerStatus.inGame,
       gameId: event.gameId,
-      playerColor: event.color == 'white' ? PieceColor.white : PieceColor.black,
+      playerColor: event.color,
       opponentName: event.opponentName,
       opponentAvatarUrl: event.opponentAvatarUrl,
       opponentLocalAvatar: event.opponentLocalAvatar,
