@@ -4,6 +4,7 @@
 library;
 
 import 'dart:async';
+import 'dart:math' as math;
 import '../../domain/engine/chess_engine.dart';
 import '../../domain/engine/ai_engine.dart';
 import '../../data/models/game_config.dart';
@@ -11,6 +12,7 @@ import '../../data/models/coach_model.dart';
 import 'package:flutter/foundation.dart';
 
 class CoachController {
+  final math.Random _random = math.Random();
   // ═══════════════════════════════════════════
   // CONFIGURATION
   // ═══════════════════════════════════════════
@@ -353,11 +355,11 @@ class CoachController {
     } else {
       final fallbacks = switch(_settings.personality) {
         CoachPersonality.friendly => [
-          'There was a much sharper continuation available. Do you see it?',
+          'There was a much sharper continuation available. Do you see it? 🤔',
           'The engine suggests a more direct approach here.',
           'This move slightly loosens your grip on the position.',
           'Maybe consider a more active way to challenge the opponent?',
-          'Look for a way to create more pressure next time!'
+          'Look for a way to create more pressure next time! ✨'
         ],
         CoachPersonality.strict => [
           'Sub-optimal precision. The engine prefers a direct line.',
@@ -366,10 +368,10 @@ class CoachController {
           'Strict performance requires the most direct tactical choice.'
         ],
         CoachPersonality.motivational => [
-          'Keep pushing for the sharpest lines! You can do it!',
+          'Keep pushing for the sharpest lines! You can do it! 💪',
           'There was a faster way to victory! Reach for it!',
-          'Don\'t hold back! Search for the most aggressive move!',
-          'Believe in your calculation! A killer move was possible!'
+          'Don\'t hold back! Search for the most aggressive move! 🔥',
+          'Believe in your calculation! A killer move was possible! 🚀'
         ],
       };
       parts.add(fallbacks[_random.nextInt(fallbacks.length)]);

@@ -602,9 +602,35 @@ void showEditProfileModal(BuildContext context, UserModel user) {
               Text('👤 IDENTITY STUDIO',
                   style: GoogleFonts.fredoka(
                       color: AppTheme.textPrimary,
-                      fontSize: 24,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 1.5)),
+              const SizedBox(height: 8),
+              if (user.usernameChanges >= 2)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.accentRed.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.lock_rounded, color: AppTheme.accentRed, size: 14),
+                      const SizedBox(width: 8),
+                      Text('RENAME LIMIT REACHED (2/2)',
+                          style: GoogleFonts.fredoka(
+                              color: AppTheme.accentRed,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700)),
+                    ],
+                  ),
+                )
+              else
+                Text('CHANGES ALLOWED: ${2 - user.usernameChanges} REMAINING',
+                    style: GoogleFonts.fredoka(
+                        color: AppTheme.goldPrimary.withValues(alpha: 0.7),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600)),
               const SizedBox(height: 32),
               GestureDetector(
                 onTap: () async {
@@ -659,7 +685,11 @@ void showEditProfileModal(BuildContext context, UserModel user) {
               const SizedBox(height: 32),
               TextField(
                 controller: nameController,
-                style: GoogleFonts.fredoka(color: AppTheme.textPrimary),
+                enabled: user.usernameChanges < 2,
+                style: GoogleFonts.fredoka(
+                    color: user.usernameChanges < 2 
+                        ? AppTheme.textPrimary 
+                        : AppTheme.textMuted),
                 onChanged: (val) async {
                   if (val == user.username) {
                     setLocalState(() {
@@ -686,9 +716,12 @@ void showEditProfileModal(BuildContext context, UserModel user) {
                   }
                 },
                 decoration: InputDecoration(
-                  labelText: 'PLAYER NAME',
+                  labelText: user.usernameChanges < 2 ? 'PLAYER NAME' : 'NAME LOCKED',
                   labelStyle: GoogleFonts.fredoka(
-                      color: AppTheme.textSecondary, letterSpacing: 1),
+                      color: user.usernameChanges < 2 
+                          ? AppTheme.textSecondary 
+                          : AppTheme.accentRed.withValues(alpha: 0.5), 
+                      letterSpacing: 1),
                   prefixIcon: const Icon(Icons.stars_rounded,
                       color: AppTheme.goldPrimary),
                   suffixIcon: checkingName

@@ -212,8 +212,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                     _buildConfetti(),
                     if (state.status == GameStatus.check)
                       _buildCheckAlert(state, minimalMotion),
-                    if (!state.isGameOver)
-                      _buildTurnOverlay(state, minimalMotion),
                     if (state.pendingMove != null)
                       _buildConfirmMoveOverlay(state),
                     if (_showMoves) _buildMoveHistoryOverlay(state),
@@ -345,7 +343,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             label,
             style: GoogleFonts.fredoka(
               color: textColor,
-              fontSize: isMyTurn ? 15 : 13,
+              fontSize: isMyTurn ? 14 : 12,
               fontWeight: FontWeight.w800,
               letterSpacing: 1.2,
             ),
@@ -354,62 +352,35 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       ),
     );
 
-    // YOUR TURN — prominent blinking/pulsing animation
-    if (isMyTurn && !minimalMotion) {
-      return Positioned(
-        bottom: 140,
-        left: 0,
-        right: 0,
-        child: IgnorePointer(
-          child: Center(
-            child: turnPill,
-          )
-              .animate(onPlay: (c) => c.repeat(reverse: true))
-              .fadeIn(duration: 300.ms)
-              .then()
-              .fade(
-                  begin: 1.0,
-                  end: 0.4,
-                  duration: 700.ms,
-                  curve: Curves.easeInOut)
-              .scale(
-                  begin: const Offset(1.0, 1.0),
-                  end: const Offset(1.06, 1.06),
-                  duration: 700.ms,
-                  curve: Curves.easeInOut)
-              .shimmer(
-                  delay: 3.seconds,
-                  duration: 1200.ms,
-                  color: AppTheme.goldLight.withValues(alpha: 0.3)),
-        ),
+    if (minimalMotion) return turnPill;
+
+    if (isMyTurn) {
+      return IgnorePointer(
+        child: turnPill
+            .animate(onPlay: (c) => c.repeat(reverse: true))
+            .fadeIn(duration: 300.ms)
+            .then()
+            .fade(
+                begin: 1.0,
+                end: 0.4,
+                duration: 700.ms,
+                curve: Curves.easeInOut)
+            .scale(
+                begin: const Offset(1.0, 1.0),
+                end: const Offset(1.06, 1.06),
+                duration: 700.ms,
+                curve: Curves.easeInOut)
+            .shimmer(
+                delay: 3.seconds,
+                duration: 1200.ms,
+                color: AppTheme.goldLight.withValues(alpha: 0.3)),
       );
     }
 
-    // OPPONENT'S TURN — fully static (no animation)
-    if (!isMyTurn) {
-      return Positioned(
-        top: 85,
-        left: 0,
-        right: 0,
-        child: IgnorePointer(
-          child: Center(
-            child: Opacity(
-              opacity: minimalMotion ? 1.0 : 0.85,
-              child: turnPill,
-            ),
-          ),
-        ),
-      );
-    }
-
-    // YOUR TURN — minimal motion mode (no animation, just static pill)
-    return Positioned(
-      bottom: 140,
-      left: 0,
-      right: 0,
-      child: IgnorePointer(
-        child: Center(child: turnPill),
-      ),
+    return IgnorePointer(
+      child: Opacity(
+        opacity: 0.85,
+        child: turnPill,
     );
   }
 
@@ -823,13 +794,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   avatarUrl: state.mode == GameMode.multiplayer ? mpState.opponentAvatarUrl : null,
                   localAvatar: state.mode == GameMode.multiplayer ? mpState.opponentLocalAvatar : null,
                 ),
-                if ((state.isAIThinking || state.coachFeedback != null || state.activeHint != null) && isOpponentTurn)
-                  Positioned(
-                    top: 55,
-                    left: 0,
-                    right: 0,
-                    child: CoachInteractionWidget(state: state),
-                  ),
               ],
             ),
           ),
@@ -875,13 +839,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   avatarUrl: user?.avatarUrl,
                   localAvatar: user?.localAvatar,
                 ),
-                if ((state.isAIThinking || state.coachFeedback != null || state.activeHint != null) && isPlayerTurn)
-                  Positioned(
-                    bottom: 55,
-                    left: 0,
-                    right: 0,
-                    child: CoachInteractionWidget(state: state),
-                  ),
               ],
             ),
           ),
@@ -1302,6 +1259,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       perspective = state.playerColor ?? PieceColor.white;
     }
 
+    final minimalMotion = settings.moveAnimationSpeed == 'off';
+
     return ConstrainedBox(
       constraints:
           BoxConstraints.tightFor(width: dimension + 30, height: dimension),
@@ -1320,37 +1279,71 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             ),
             const SizedBox(width: 8),
           ],
-          SizedBox(
-            width: dimension,
-            height: dimension,
-            child: ChessBoardWidget(
-              board: state.board,
-              perspective: perspective,
-              selectedSquare: state.selectedSquare,
-              legalMoves: settings.showLegalMoves ? state.legalMoves : const [],
-              lastMove:
-                  state.moveHistory.isNotEmpty ? state.moveHistory.last : null,
-              hintMove: state.hintMove,
-              status: state.status,
-              boardTheme: state.boardTheme ?? 'classic',
-              pieceShape: state.pieceShape,
-              pieceStyle: state.pieceStyle,
-              moveAnimationSpeed: settings.moveAnimationSpeed,
-              showCoordinates: settings.showCoordinates,
-              showSquareLabels: settings.showSquareLabels,
-              whitePieceColor: state.whitePieceColor,
-              blackPieceColor: state.blackPieceColor,
-              currentTurn: state.currentTurn,
-              lastUndoPenaltySquare: state.lastUndoPenaltySquare,
-              onSquareTap: state.isGameOver
-                  ? null
-                  : (sq) {
-                      context.read<GameBloc>().add(GameSelectPieceEvent(sq));
-                    },
-              isInteractive: !state.isAIThinking,
-              lastCorrectMove: state.coachMove,
-              preMove: state.preMove,
-            ),
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              // THE BOARD
+              SizedBox(
+                width: dimension,
+                height: dimension,
+                child: ChessBoardWidget(
+                  board: state.board,
+                  perspective: perspective,
+                  selectedSquare: state.selectedSquare,
+                  legalMoves:
+                      settings.showLegalMoves ? state.legalMoves : const [],
+                  lastMove: state.moveHistory.isNotEmpty
+                      ? state.moveHistory.last
+                      : null,
+                  hintMove: state.hintMove,
+                  status: state.status,
+                  boardTheme: state.boardTheme ?? 'classic',
+                  pieceShape: state.pieceShape,
+                  pieceStyle: state.pieceStyle,
+                  moveAnimationSpeed: settings.moveAnimationSpeed,
+                  showCoordinates: settings.showCoordinates,
+                  showSquareLabels: settings.showSquareLabels,
+                  whitePieceColor: state.whitePieceColor,
+                  blackPieceColor: state.blackPieceColor,
+                  currentTurn: state.currentTurn,
+                  lastUndoPenaltySquare: state.lastUndoPenaltySquare,
+                  onSquareTap: state.isGameOver
+                      ? null
+                      : (sq) {
+                          context
+                              .read<GameBloc>()
+                              .add(GameSelectPieceEvent(sq));
+                        },
+                  isInteractive: !state.isAIThinking,
+                  lastCorrectMove: state.coachMove,
+                  preMove: state.preMove,
+                ),
+              ),
+
+              // TURN INDICATORS - Centered & Stick to borders
+              if (!state.isGameOver)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  top: state.currentTurn == perspective ? null : -45,
+                  bottom: state.currentTurn == perspective ? -45 : null,
+                  child: Center(
+                    child: _buildTurnOverlay(state, minimalMotion),
+                  ),
+                ),
+
+              // AI COACH TALKING WINDOW - Elegantly floating near active side
+              if (state.isAIThinking ||
+                  state.coachFeedback != null ||
+                  state.activeHint != null)
+                Positioned(
+                  left: -20,
+                  right: -20,
+                  top: state.currentTurn == perspective ? null : -130,
+                  bottom: state.currentTurn == perspective ? -130 : null,
+                  child: CoachInteractionWidget(state: state),
+                ),
+            ],
           ),
         ],
       ),

@@ -10,14 +10,16 @@ leaderboard.use('*', authMiddleware)
 // ────────────────────────────────────────
 leaderboard.get('/', async (c) => {
   const limit = Math.min(parseInt(c.req.query('limit') ?? '50'), 100)
-  const type = c.req.query('type') ?? 'xp' // xp, wins, streak
+  const type = c.req.query('type') ?? 'xp' // xp, wins, streak, elo
 
-  const orderCol = type === 'wins' ? 's.wins' : type === 'streak' ? 's.longest_streak' : 'u.xp'
+  const orderCol = type === 'wins' ? 's.wins' : 
+                   type === 'streak' ? 's.longest_streak' : 
+                   type === 'elo' ? 's.elo_rating' : 'u.xp'
 
   const rows = await c.env.DB.prepare(`
     SELECT u.id, u.username, u.avatar_url, u.xp, u.is_online,
            s.wins, s.losses, s.draws, s.games_played, s.longest_streak,
-           s.win_rate,
+           s.elo_rating, s.win_rate,
            RANK() OVER (ORDER BY ${orderCol} DESC) as rank
     FROM users u
     LEFT JOIN (

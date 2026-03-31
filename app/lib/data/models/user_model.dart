@@ -12,6 +12,7 @@ class UserModel {
   final String deviceId;
   final List<GameRecord> recentGames;
   final bool isGhibli;
+  final int usernameChanges;
 
   const UserModel({
     required this.id,
@@ -24,6 +25,7 @@ class UserModel {
     required this.deviceId,
     this.recentGames = const [],
     this.isGhibli = false,
+    this.usernameChanges = 0,
   });
   
   int get level => UserStats.calculateLevel(xp);
@@ -48,6 +50,7 @@ class UserModel {
       stats: UserStats.fromJson(json['stats'] as Map<String, dynamic>? ?? {}),
       deviceId: (json['device_id'] ?? '').toString(),
       isGhibli: parseBool(json['is_ghibli'], false),
+      usernameChanges: json['username_changes'] as int? ?? 0,
       recentGames: (json['recent_games'] as List? ?? [])
           .map((g) => GameRecord.fromJson(g as Map<String, dynamic>))
           .toList(),
@@ -63,6 +66,7 @@ class UserModel {
         'is_online': isOnline ? 1 : 0,
         'device_id': deviceId,
         'is_ghibli': isGhibli,
+        'username_changes': usernameChanges,
         'stats': {
           'games_played': stats.gamesPlayed,
           'wins': stats.wins,
@@ -96,6 +100,7 @@ class UserModel {
     String? deviceId,
     List<GameRecord>? recentGames,
     bool? isGhibli,
+    int? usernameChanges,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -108,6 +113,7 @@ class UserModel {
       deviceId: deviceId ?? this.deviceId,
       recentGames: recentGames ?? this.recentGames,
       isGhibli: isGhibli ?? this.isGhibli,
+      usernameChanges: usernameChanges ?? this.usernameChanges,
     );
   }
 }

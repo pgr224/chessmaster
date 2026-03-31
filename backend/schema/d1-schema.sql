@@ -13,7 +13,10 @@ CREATE TABLE IF NOT EXISTS users (
   device_id     TEXT NOT NULL UNIQUE,       -- device fingerprint (offline auth)
   device_model  TEXT,
   avatar_url    TEXT,
-  xp            INTEGER NOT NULL DEFAULT 0,
+  is_ghibli     INTEGER NOT NULL DEFAULT 0, -- Toggles Ghibli filter
+  local_avatar      TEXT,                       -- Path to local asset avatar
+  username_changes  INTEGER NOT NULL DEFAULT 0, -- Track rename count (limit 2)
+  xp                INTEGER NOT NULL DEFAULT 0,
   is_online     INTEGER NOT NULL DEFAULT 0, -- 0=offline, 1=online
   last_seen     TEXT,                       -- ISO8601
   created_at    TEXT NOT NULL DEFAULT (datetime('now')),
@@ -42,6 +45,11 @@ CREATE TABLE IF NOT EXISTS user_stats (
   current_streak    INTEGER NOT NULL DEFAULT 0,
   hints_used        INTEGER NOT NULL DEFAULT 0,
   total_moves       INTEGER NOT NULL DEFAULT 0,
+  puzzles_solved    INTEGER NOT NULL DEFAULT 0,
+  puzzle_rating     INTEGER NOT NULL DEFAULT 1200,
+  elo_rating        INTEGER NOT NULL DEFAULT 1200,
+  two_player_games  INTEGER NOT NULL DEFAULT 0,
+  two_player_wins   INTEGER NOT NULL DEFAULT 0,
   updated_at        TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -52,7 +60,7 @@ CREATE TABLE IF NOT EXISTS games (
   id              TEXT PRIMARY KEY,
   white_user_id   TEXT REFERENCES users(id),
   black_user_id   TEXT REFERENCES users(id),
-  mode            TEXT NOT NULL CHECK(mode IN ('singlePlayer','twoPlayer','multiplayer','tournament')),
+  mode            TEXT NOT NULL CHECK(mode IN ('singlePlayer','twoPlayer','multiplayer','tournament','tutorial','puzzle','practice')),
   status          TEXT NOT NULL DEFAULT 'active'
                     CHECK(status IN ('active','completed','abandoned','draw')),
   result          TEXT CHECK(result IN ('white','black','draw')),
@@ -243,6 +251,25 @@ CREATE TABLE IF NOT EXISTS saved_games (
 );
 
 -- ────────────────────────────────────────
+-- XP TRANSFERS AND REQUESTS
+-- ────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS xp_transfers (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  donor_id     TEXT NOT NULL REFERENCES users(id),
+  recipient_id TEXT NOT NULL REFERENCES users(id),
+  amount       INTEGER NOT NULL,
+  created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS xp_requests (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  requester_id TEXT NOT NULL REFERENCES users(id),
+  amount       INTEGER NOT NULL,
+  status       TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open', 'fulfilled', 'cancelled')),
+  created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- ────────────────────────────────────────
 -- PLAYER XP HISTORY
 -- ────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS xp_history (
@@ -268,4 +295,5 @@ INSERT OR IGNORE INTO achievements (id, name, description, icon, category, point
   ('comeback', 'The Comeback', 'Win after being down material', '🔄', 'dramatic', 40, '{"type":"comeback"}'),
   ('streak5', 'On Fire', '5 game winning streak', '🔥', 'streak', 50, '{"streak":5}'),
   ('streak10', 'Unstoppable', '10 game winning streak', '💥', 'streak', 100, '{"streak":10}'),
-  ('tournament_win', 'Champion', 'Win a tournament', '👑', 'tournament', 200, '{"type":"tournament_win"}');
+  ('tournament_win', 'Champion', 'Win a tournament', '👑', 'tournament', 200, '{"type":"tournament_win"}'),
+  ('generous_donor', 'Kind Soul', 'Donate 500 XP to others in need', '🎁', 'social', 50, '{"type":"donation","amount":500}');

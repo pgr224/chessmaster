@@ -24,7 +24,21 @@ profileRoutes.put('/:id', async (c) => {
 
   const body = await c.req.json()
   const allowedUpdates: Record<string, any> = {}
-  if (body.username) allowedUpdates.username = body.username
+  
+  if (body.username) {
+    // 1. Check current username_changes limit
+    const { results: userRes } = await c.env.DB.prepare('SELECT username, username_changes FROM users WHERE id = ?').bind(userId).all()
+    if (userRes.length && (userRes[0].username_changes as number) >= 2) {
+      return c.json({ error: 'You have reached the maximum number of name changes (2)' }, 403)
+    }
+    
+    // 2. Only update if name is different
+    if (userRes.length && userRes[0].username !== body.username) {
+       allowedUpdates.username = body.username
+       allowedUpdates.username_changes = (userRes[0].username_changes as number) + 1
+    }
+  }
+
   if (body.avatarUrl) allowedUpdates.avatar_url = body.avatarUrl
   if (body.isGhibli !== undefined) allowedUpdates.is_ghibli = body.isGhibli ? 1 : 0
   if (body.localAvatar !== undefined) allowedUpdates.local_avatar = body.localAvatar
@@ -190,7 +204,7 @@ profileRoutes.get('/:id', async (c) => {
 
 async function getFullProfile(c: any, userId: string) {
   const { results: userRes } = await c.env.DB.prepare(
-    'SELECT id, username, avatar_url, is_ghibli, local_avatar, xp, created_at FROM users WHERE id = ?'
+    'SELECT id, username, avatar_url, is_ghibli, local_avatar, username_changes, xp, created_at FROM users WHERE id = ?'
   ).bind(userId).all()
 
   if (!userRes.length) {
