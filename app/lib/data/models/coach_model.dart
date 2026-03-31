@@ -65,6 +65,7 @@ enum TacticalPattern {
   trappedPiece,
   hangingPiece,
   backRankWeakness,
+  defensiveMove,
   none,
 }
 
@@ -87,6 +88,7 @@ extension TacticalPatternInfo on TacticalPattern {
         TacticalPattern.trappedPiece => 'a piece has no safe squares',
         TacticalPattern.hangingPiece => 'a piece is left undefended',
         TacticalPattern.backRankWeakness => 'the back rank is weak',
+        TacticalPattern.defensiveMove => 'a strong defensive response',
         TacticalPattern.none => '',
       };
 
@@ -106,6 +108,7 @@ extension TacticalPatternInfo on TacticalPattern {
         TacticalPattern.trappedPiece => '🪤',
         TacticalPattern.hangingPiece => '⚠️',
         TacticalPattern.backRankWeakness => '🚪',
+        TacticalPattern.defensiveMove => '🛡️',
         TacticalPattern.none => '',
       };
 
@@ -125,6 +128,7 @@ extension TacticalPatternInfo on TacticalPattern {
         TacticalPattern.trappedPiece => 'Trapped Piece',
         TacticalPattern.hangingPiece => 'Hanging Piece',
         TacticalPattern.backRankWeakness => 'Back Rank Weakness',
+        TacticalPattern.defensiveMove => 'Defensive Move',
         TacticalPattern.none => '',
       };
 }

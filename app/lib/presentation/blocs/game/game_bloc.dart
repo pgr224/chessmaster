@@ -81,7 +81,9 @@ class GameDrawDeclineEvent extends GameEvent {}
 
 class GameSaveEvent extends GameEvent {}
 
-class GameRequestHintEvent extends GameEvent {}
+class GameRequestHintEvent extends GameEvent {
+  const GameRequestHintEvent();
+}
 
 class GameSetOpponentNameEvent extends GameEvent {
   final String name;
@@ -145,7 +147,9 @@ class GamePuzzleNextEvent extends GameEvent {
 
 class GameDismissCoachFeedbackEvent extends GameEvent {}
 
-class GameDismissHintEvent extends GameEvent {}
+class GameDismissHintEvent extends GameEvent {
+  const GameDismissHintEvent();
+}
 
 class GameClockTickEvent extends GameEvent {}
 
@@ -1312,8 +1316,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         Future.delayed(const Duration(seconds: 8)).then((_) {
           if (!isClosed && state.coachFeedback == feedback) {
             add(GameUpdatePersonalityEvent(
-              personality: state.activePersonality ?? AIPersonality.friendly,
-              message: null, 
+              personality: state.activePersonality ?? AIPersonality.aggressive,
+              message: '', 
             ));
             emit(state.copyWith(clearCoachFeedback: true));
           }

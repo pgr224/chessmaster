@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../../blocs/game/game_bloc.dart';
-import '../../blocs/game/game_state.dart';
+import '../blocs/game/game_bloc.dart';
 import './animated_robot_coach.dart';
 
 class CoachInteractionWidget extends StatelessWidget {
@@ -29,13 +29,15 @@ class CoachInteractionWidget extends StatelessWidget {
       show = true;
     } else if (hint != null) {
       title = 'Hint Analysis 🔍';
-      subtext = hint.currentText;
+      subtext = hint.currentHintText;
       accentColor = Colors.amberAccent;
       show = true;
     } else if (feedback != null) {
       title = feedback.message;
       subtext = feedback.explanation;
-      accentColor = feedback.isNegative ? Colors.orangeAccent : (feedback.classification.index <= 1 ? Colors.purpleAccent : Colors.greenAccent);
+      accentColor = feedback.isNegative 
+          ? Colors.orangeAccent 
+          : (feedback.classification.index <= 1 ? Colors.purpleAccent : Colors.greenAccent);
       show = true;
     }
 
@@ -50,7 +52,9 @@ class CoachInteractionWidget extends StatelessWidget {
           isThinking: isThinking,
           isHint: hint != null,
           classification: feedback?.classification,
-        ).animate().slideX(begin: -0.5, end: 0, duration: 400.ms, curve: Curves.easeOutBack).fadeIn(),
+        ).animate()
+         .slideX(begin: -0.5, end: 0, duration: 400.ms, curve: Curves.easeOutBack)
+         .fadeIn(),
         
         const SizedBox(width: 4),
 
@@ -92,7 +96,7 @@ class CoachInteractionWidget extends StatelessWidget {
                   ),
                 ),
                 if (subtext != null) ...[
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
                   Text(
                     subtext,
                     style: GoogleFonts.outfit(
@@ -121,7 +125,11 @@ class CoachInteractionWidget extends StatelessWidget {
                           const SizedBox(width: 8),
                           Text(
                             'UPGRADE HINT',
-                            style: GoogleFonts.outfit(color: Colors.amberAccent, fontSize: 11, fontWeight: FontWeight.w900),
+                            style: GoogleFonts.outfit(
+                              color: Colors.amberAccent, 
+                              fontSize: 11, 
+                              fontWeight: FontWeight.w900,
+                            ),
                           ),
                         ],
                       ),
@@ -130,7 +138,9 @@ class CoachInteractionWidget extends StatelessWidget {
                 ],
               ],
             ),
-          ).animate().slideX(begin: 0.2, end: 0, duration: 300.ms, curve: Curves.easeOut).fadeIn(),
+          ).animate()
+           .slideX(begin: 0.2, end: 0, duration: 300.ms, curve: Curves.easeOut)
+           .fadeIn(),
         ),
       ],
     );

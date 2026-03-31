@@ -110,6 +110,8 @@ class PlayerInfoWidget extends StatelessWidget {
         ],
       ),
     );
+  }
+
   Widget _buildAvatarImage() {
     if (avatarUrl != null && avatarUrl!.isNotEmpty) {
       return Image.network(

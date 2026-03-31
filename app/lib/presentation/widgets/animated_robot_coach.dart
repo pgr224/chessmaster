@@ -131,30 +131,25 @@ class AnimatedRobotCoach extends StatelessWidget {
     final offset = isLeft ? -22.0 : 22.0;
     
     // Default: Breathing/Floating motion
-    var animation = (Animate c) => c.repeat(reverse: true).rotate(begin: 0, end: 0.15 * (isLeft ? 1 : -1), duration: 1.2.seconds);
+    void Function(AnimationController) animation = (AnimationController c) => c.repeat(reverse: true);
     
     bool isSuccess = classification == MoveClassification.brilliant || classification == MoveClassification.best;
     bool isWarning = classification == MoveClassification.mistake || classification == MoveClassification.blunder;
 
     if (isThinking) {
-       // "Calculating" - rapid mechanical rotation
-       animation = (Animate c) => c.repeat().rotate(begin: 0, end: 6.28 * (isLeft ? 1 : -1), duration: 0.8.seconds).scale(begin: const Offset(1,1), end: const Offset(1.1, 1.1), duration: 0.4.seconds);
+       animation = (AnimationController c) => c.repeat();
     } else if (isSuccess) {
-       // "Celebrating" - high energy waving
-       animation = (Animate c) => c.repeat(reverse: true).moveY(begin: 0, end: -20, duration: 300.ms).rotate(begin: 0, end: 0.5 * (isLeft ? 1 : -1), duration: 200.ms).shake(hz: 5, curve: Curves.easeInOut);
+       animation = (AnimationController c) => c.repeat(reverse: true);
     } else if (isWarning) {
-       // "Disappointed" - slow shrugging/shaking
-       animation = (Animate c) => c.repeat(reverse: true).moveY(begin: 0, end: 5, duration: 1.seconds).rotate(begin: 0, end: -0.2 * (isLeft ? 1 : -1), duration: 500.ms);
+       animation = (AnimationController c) => c.repeat(reverse: true);
     } else if (isHint) {
-       // "Helping" - pointing/ready motion
-       animation = (Animate c) => c.repeat(reverse: true).moveX(begin: 0, end: 5 * (isLeft ? 1 : -1), duration: 600.ms).rotate(begin: 0, end: 0.3 * (isLeft ? 1 : -1), duration: 600.ms);
+       animation = (AnimationController c) => c.repeat(reverse: true);
     }
 
-    return Positioned(
-      left: isLeft ? 1 : null,
-      right: isLeft ? null : 1,
-      top: 28,
-      child: Container(
+    // Since onPlay only handles the controller, we apply the visual effects via the chain.
+    // The animation parameter is just to control the execution (repeat/reverse).
+    
+    var anim = Container(
         width: 14,
         height: 6,
         decoration: BoxDecoration(
@@ -162,7 +157,30 @@ class AnimatedRobotCoach extends StatelessWidget {
           borderRadius: BorderRadius.circular(4),
           boxShadow: [BoxShadow(color: color.withOpacity(0.4), blurRadius: 4)],
         ),
-      ).animate(onPlay: animation),
+      ).animate(onPlay: animation);
+
+    if (isThinking) {
+      anim = anim.rotate(begin: 0, end: 6.28 * (isLeft ? 1 : -1), duration: 0.8.seconds)
+                 .scale(begin: const Offset(1,1), end: const Offset(1.2, 1.2), duration: 0.4.seconds);
+    } else if (isSuccess) {
+      anim = anim.moveY(begin: 0, end: -15, duration: 300.ms)
+                 .rotate(begin: 0, end: 0.5 * (isLeft ? 1 : -1), duration: 200.ms)
+                 .shake(hz: 8);
+    } else if (isWarning) {
+      anim = anim.moveY(begin: 0, end: 5, duration: 1.seconds)
+                 .rotate(begin: 0, end: -0.3 * (isLeft ? 1 : -1), duration: 500.ms);
+    } else if (isHint) {
+      anim = anim.moveX(begin: 0, end: 8 * (isLeft ? 1 : -1), duration: 600.ms)
+                 .rotate(begin: 0, end: 0.4 * (isLeft ? 1 : -1), duration: 600.ms);
+    } else {
+      anim = anim.rotate(begin: 0, end: 0.2 * (isLeft ? 1 : -1), duration: 1.2.seconds);
+    }
+
+    return Positioned(
+      left: isLeft ? 1 : null,
+      right: isLeft ? null : 1,
+      top: 28,
+      child: anim,
     );
   }
 }

@@ -29,10 +29,23 @@ class MpStartMatchmakingEvent extends MultiplayerEvent {}
 class MpCancelMatchmakingEvent extends MultiplayerEvent {}
 
 class MpGameFoundEvent extends MultiplayerEvent {
+  final String gameId;
+  final PieceColor color;
+  final String opponentName;
+  final String? mode;
+  final String? timeControl;
   final String? opponentAvatarUrl;
   final String? opponentLocalAvatar;
-  const MpGameFoundEvent(this.gameId, this.color, this.opponentName,
-      {this.mode, this.timeControl, this.opponentAvatarUrl, this.opponentLocalAvatar});
+
+  const MpGameFoundEvent(
+    this.gameId,
+    this.color,
+    this.opponentName, {
+    this.mode,
+    this.timeControl,
+    this.opponentAvatarUrl,
+    this.opponentLocalAvatar,
+  });
 }
 
 class MpMakeMoveEvent extends MultiplayerEvent {
@@ -173,6 +186,9 @@ class MultiplayerState extends Equatable {
   final int xpGained;
   final int opponentUndoCount;
   final List<Map<String, dynamic>> xpBroadcastRequests;
+  final String? lobbyNotice;
+  final String? challengerId;
+  final String? challengerMode;
 
   const MultiplayerState({
     this.status = MultiplayerStatus.disconnected,
