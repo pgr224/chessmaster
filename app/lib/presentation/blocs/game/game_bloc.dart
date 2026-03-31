@@ -1461,26 +1461,62 @@ class GameBloc extends Bloc<GameEvent, GameState> {
                     state.playerColor == PieceColor.black);
             final isDraw = state.result == GameResult.draw;
 
+            // ── XP & REWARDS CALCULATION (Robust Engine) ──
+            int xpDelta = 0;
+
             if (isWin) {
-              xp += 100; // Base win XP
-
-              // Bonus for every 10th win
-              if ((user.stats.wins + 1) % 10 == 0) {
-                xp += 100;
+              // 1. AI Difficulty based XP
+              if (state.mode == GameMode.singlePlayer) {
+                switch (state.aiDifficulty) {
+                  case AIDifficulty.basic:
+                    xpDelta += 100;
+                    break;
+                  case AIDifficulty.intermediate:
+                    xpDelta += 250;
+                    break;
+                  case AIDifficulty.advanced:
+                    xpDelta += 400;
+                    break;
+                  case AIDifficulty.impossible:
+                    xpDelta += 700;
+                    break;
+                  case AIDifficulty.aiMode:
+                    xpDelta += 1000;
+                    break;
+                  default:
+                    xpDelta += 100;
+                }
+              } else if (state.mode == GameMode.multiplayer) {
+                // Online multiplayer win
+                xpDelta += 100;
               }
 
-              // Checkmate in 5 moves (10 half-moves)
-              if (state.status == GameStatus.checkmate &&
-                  state.moveHistory.length <= 10) {
-                xp += 500;
+              // 2. Global Bonuses: Practice, Vs AI, Online
+              if (state.mode == GameMode.singlePlayer ||
+                  state.mode == GameMode.multiplayer ||
+                  state.mode == GameMode.practice) {
+                // Mate in 5 moves (10 half-moves)
+                if (state.status == GameStatus.checkmate &&
+                    state.moveHistory.length <= 10) {
+                  xpDelta += 500;
+                }
+
+                // Perfect Game (No pieces lost)
+                final myCaptured = state.playerColor == PieceColor.black
+                    ? state.capturedBlack
+                    : state.capturedWhite;
+                if (myCaptured.isEmpty) {
+                  xpDelta += 10000;
+                }
               }
 
-              // Win without losing piece
-              final myCaptured = state.playerColor == PieceColor.black
-                  ? state.capturedBlack
-                  : state.capturedWhite;
-              if (myCaptured.isEmpty) {
-                xp += 10000;
+              // 3. Every 100th Win Bonus (Vs AI & Online only)
+              if (state.mode == GameMode.singlePlayer ||
+                  state.mode == GameMode.multiplayer) {
+                final totalWins = user.stats.wins + 1;
+                if (totalWins % 100 == 0) {
+                  xpDelta += 1000; // Bonus for milestone
+                }
               }
 
               mapUpdates['wins'] = 1;
@@ -1488,22 +1524,42 @@ class GameBloc extends Bloc<GameEvent, GameState> {
                 mapUpdates['ai_wins'] = 1;
               if (state.mode == GameMode.multiplayer)
                 mapUpdates['multiplayer_wins'] = 1;
-              if (state.mode == GameMode.tournament)
-                mapUpdates['tournament_wins'] = 1;
             } else if (isLoss) {
-              xp -= 20; // Defeat: -20 XP (per game rules)
-
+              // Defeat costs
+              if (state.mode == GameMode.singlePlayer) {
+                switch (state.aiDifficulty) {
+                  case AIDifficulty.basic:
+                    xpDelta -= 50;
+                    break;
+                  case AIDifficulty.intermediate:
+                    xpDelta -= 50;
+                    break;
+                  case AIDifficulty.advanced:
+                    xpDelta -= 25;
+                    break;
+                  case AIDifficulty.impossible:
+                    xpDelta -= 25;
+                    break;
+                  case AIDifficulty.aiMode:
+                    xpDelta -= 20;
+                    break;
+                  default:
+                    xpDelta -= 20;
+                }
+              } else if (state.mode == GameMode.multiplayer) {
+                xpDelta -= 20;
+              }
               mapUpdates['losses'] = 1;
             } else if (isDraw) {
-              // Draw: +0 XP (per game rules)
               mapUpdates['draws'] = 1;
             }
 
-            // Sync with Repo
+            // Sync XP (Add initial state penalties from hints/undo)
+            final totalDelta = xpDelta + state.xpGained;
+
             await _authRepository.updateXPProgress(
               userId: user.id,
-              xpDelta: xp +
-                  state.xpGained, // include hint penalties already in state
+              xpDelta: totalDelta,
               statUpdates: mapUpdates,
               isOnlineMatch: state.mode == GameMode.multiplayer,
             );
@@ -1642,17 +1698,28 @@ class GameBloc extends Bloc<GameEvent, GameState> {
   }
 
   void _onUndo(GameUndoEvent event, Emitter<GameState> emit) {
-    if (state.mode == GameMode.multiplayer) {
-      if (state.mpUndosUsed >= 2) return;
+    if (state.mode == GameMode.multiplayer ||
+        state.mode == GameMode.twoPlayer ||
+        state.mode == GameMode.practice) {
+      if (state.mode == GameMode.multiplayer && state.mpUndosUsed >= 2) return;
       if (state.lastMoveTimestamp == null) return;
 
-      // In multiplayer, the move turned the board to the OPPONENT.
-      // We can only undo if it's currently NOT our turn (meaning we just moved).
-      if (state.isPlayerTurn) return;
-
+      // Implied 5s rule for all interactive modes
       final elapsed = DateTime.now().difference(state.lastMoveTimestamp!);
-      if (elapsed.inSeconds >= 5) return;
+      if (elapsed.inSeconds >= 5) {
+        if (state.mode == GameMode.multiplayer) return;
+        // Practice/TwoPlayer keep it for UX consistency but don't strictly block?
+        // User asked to "imply 5 sec rule that are present in online multiplayer for online mode"
+        // and "Two players & Practise mode ... No cost in back move. But imply 5 sec rule"
+        return;
+      }
+
       if (_engine.moveHistory.isEmpty) return;
+
+      // Warning prompt via UI would be better, for now we log/emit warning message
+      if (state.mode == GameMode.singlePlayer) {
+        // This is handled below with XP cost
+      }
 
       _engine.undoMove();
       final captured = _collectCaptured();
@@ -1670,17 +1737,40 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       ));
       return;
     }
-    // Undo 2 moves if vs AI (take back player's move + AI's response)
-    final isVsAI =
-        state.mode == GameMode.singlePlayer || state.mode == GameMode.practice;
 
-    // In practice/single player, we usually undo 2.
-    // But if it was hinted, the user might only get 1 undo?
-    // Actually, "Undo stays" but "only undo ONCE for that move if hint given"
-    // I will interpret as: you can undo it, but we can prevent further undos?
-    // Let's just do the undo and clear the suggested move.
+    // Undo 2 moves if vs AI (Take back player's move + AI's response)
+    final isVsAI = state.mode == GameMode.singlePlayer;
+    if (!isVsAI) return;
 
-    final undoCount = isVsAI ? 2 : 1;
+    // Check 5s rule for AI too
+    if (state.lastMoveTimestamp != null) {
+      final elapsed = DateTime.now().difference(state.lastMoveTimestamp!);
+      if (elapsed.inSeconds >= 5) {
+        emit(state.copyWith(
+            tutorialMessage:
+                "⚠️ Thinking time passed! Cannot take back moves after 5 seconds."));
+        return;
+      }
+    }
+
+    // Cost 25 XP
+    final newXpDelta = state.xpGained - 25;
+    emit(state.copyWith(
+      xpGained: newXpDelta,
+      tutorialMessage: "⏪ Take back applied! (-25 XP)",
+    ));
+
+    // Sync XP reduction
+    final user = await _authRepository.getCurrentUser();
+    if (user != null) {
+      await _authRepository.updateXPProgress(
+        userId: user.id,
+        xpDelta: -25,
+        statUpdates: {},
+      );
+    }
+
+    final undoCount = 2; // Always 2 vs AI
     for (int i = 0; i < undoCount; i++) {
       if (_engine.moveHistory.isNotEmpty) _engine.undoMove();
     }
@@ -1785,11 +1875,22 @@ class GameBloc extends Bloc<GameEvent, GameState> {
 
     if (hintResult != null) {
       final hintMove = Move.fromAlgebraic(hintResult.bestMoveAlgebraic);
+
+      // Sync -10 XP to server
+      final user = await _authRepository.getCurrentUser();
+      if (user != null) {
+        await _authRepository.updateXPProgress(
+          userId: user.id,
+          xpDelta: -10,
+          statUpdates: {},
+        );
+      }
+
       emit(state.copyWith(
         hintMove: hintMove,
         activeHint: hintResult,
         hintsUsed: state.hintsUsed + 1,
-        xpGained: state.xpGained - hintResult.xpCost, // -10 XP per hint
+        xpGained: state.xpGained - 10,
       ));
     }
   }

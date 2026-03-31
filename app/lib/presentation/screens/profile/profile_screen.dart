@@ -383,40 +383,60 @@ class _ProfileContent extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  const Text('📜', style: TextStyle(fontSize: 24)),
-                  const SizedBox(width: 12),
-                  Text('Game Rules & XP',
-                      style: GoogleFonts.fredoka(
-                          color: AppTheme.textPrimary,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700)),
-                ],
-              ),
-              const SizedBox(height: 20),
-              _ruleItem('🏆 Base Win', '+100 XP', AppTheme.goldPrimary),
+              _ruleSectionTitle('🎮 VS Computer', Icons.computer_rounded),
+              _ruleItem('Easy Win', '+100 XP', AppTheme.goldPrimary),
+              _ruleItem('Medium Win', '+250 XP', AppTheme.goldPrimary),
+              _ruleItem('Hard Win', '+400 XP', AppTheme.goldPrimary),
+              _ruleItem('Impossible Win', '+700 XP', AppTheme.goldPrimary),
+              _ruleItem('AI Mode Win', '+1000 XP', AppTheme.goldPrimary),
+              _ruleSectionTitle('⚔️ Multiplayer', Icons.language_rounded),
+              _ruleItem('Victory', '+100 XP', AppTheme.goldPrimary),
+              _ruleItem('Defeat', '-20 XP', AppTheme.accentRed),
+              _ruleSectionTitle(
+                  '✨ Milestones & Skills', Icons.auto_awesome_rounded),
+              _ruleItem('Mate in 5 (Global)', '+500 XP', AppTheme.accentCyan),
               _ruleItem(
-                  '🔟 Every 10th Win', '+100 XP Bonus', AppTheme.goldPrimary),
-              _ruleItem('⚡ Mate in 5 Moves', '+500 XP', AppTheme.accentCyan),
-              _ruleItem('💎 Perfect Game (No pieces lost)', '+10,000 XP',
-                  AppTheme.accentCyan),
-              _ruleItem('🤝 Draw', '+0 XP', AppTheme.textMuted),
-              _ruleItem('💀 Defeat', '-20 XP', AppTheme.accentRed),
-              _ruleItem('💡 Hint Usage', '-10 XP', AppTheme.accentRed),
-              _ruleItem('🧩 Solving Puzzle', '+50 XP', AppTheme.accentCyan),
+                  'Perfect Game (Global)', '+10,000 XP', AppTheme.accentCyan),
+              _ruleItem('Every 100th Win', '+1,000 XP', AppTheme.goldPrimary),
+              _ruleSectionTitle('🛠️ Penalties', Icons.warning_amber_rounded),
+              _ruleItem('Take Back (Vs AI)', '-25 XP', AppTheme.accentRed),
+              _ruleItem('Hint Usage', '-10 XP', AppTheme.accentRed),
               const Padding(
-                padding: EdgeInsets.only(top: 16),
+                padding: EdgeInsets.only(top: 20),
                 child: Text(
-                    'Note: Practice mode awards 0 XP. Puzzles award +50 XP and adjust your adaptive puzzle rating. Online matches influence your global leaderboard standing.',
-                    style: TextStyle(
-                        color: AppTheme.textMuted,
-                        fontSize: 12,
-                        fontStyle: FontStyle.italic)),
+                  '💡 Rules of the Arena:\n'
+                  '• 5-Second Rule: Take backs are only allowed within 5s of a move.\n'
+                  '• Practice & 2-Player modes award 0 XP but follow the 5s rule.\n'
+                  '• Be fair, have fun, and master the board!',
+                  style: TextStyle(
+                      color: AppTheme.textMuted,
+                      fontSize: 12,
+                      height: 1.5,
+                      fontStyle: FontStyle.italic),
+                ),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _ruleSectionTitle(String title, IconData icon) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 16, bottom: 8),
+      child: Row(
+        children: [
+          Icon(icon,
+              size: 14, color: AppTheme.textSecondary.withValues(alpha: 0.5)),
+          const SizedBox(width: 8),
+          Text(title.toUpperCase(),
+              style: GoogleFonts.fredoka(
+                  color: AppTheme.textSecondary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 1.2)),
+        ],
       ),
     );
   }
