@@ -16,6 +16,7 @@ import '../../../presentation/blocs/game/game_bloc.dart';
 import '../../../presentation/blocs/settings/settings_bloc.dart';
 import '../../../presentation/blocs/multiplayer/multiplayer_bloc.dart';
 import '../../../presentation/blocs/auth/auth_bloc.dart';
+import '../../../presentation/blocs/theme/theme_bloc.dart';
 import '../../../data/models/user_model.dart';
 import '../../../domain/engine/chess_engine.dart';
 import '../../widgets/chess_board_widget.dart';

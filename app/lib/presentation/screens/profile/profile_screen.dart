@@ -24,7 +24,18 @@ class ProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.midnight,
-      body: BlocBuilder<AuthBloc, AuthState>(
+      body: BlocConsumer<AuthBloc, AuthState>(
+        listener: (context, state) {
+          if (state is AuthErrorState) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: AppTheme.accentRed,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        },
         builder: (context, state) {
           if (state is AuthLoadingState || state is AuthInitialState) {
             return const Center(
@@ -36,22 +47,22 @@ class ProfileScreen extends StatelessWidget {
             return _ProfileContent(user: state.user);
           }
 
+          // fallback for unauthenticated or persistent error
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Text('👤', style: TextStyle(fontSize: 64)),
                 const SizedBox(height: 16),
-                Text('User session expired',
+                Text('Join the Chess Arena',
                     style: GoogleFonts.fredoka(
                         color: AppTheme.textPrimary, fontSize: 18)),
                 const SizedBox(height: 24),
                 ElevatedButton(
-                  onPressed: () =>
-                      context.read<AuthBloc>().add(AuthInitializeEvent()),
+                  onPressed: () => context.go('/onboarding'),
                   style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.goldPrimary),
-                  child: const Text('Try Again',
+                  child: const Text('Get Started',
                       style: TextStyle(color: Colors.black)),
                 ),
               ],

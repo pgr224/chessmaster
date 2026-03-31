@@ -6,7 +6,6 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
 import 'package:chess_master/presentation/blocs/auth/auth_bloc.dart' as auth;
 import 'package:chess_master/presentation/blocs/multiplayer/multiplayer_bloc.dart';
-import 'package:chess_master/data/models/multiplayer_models.dart';
 
 class LobbyScreen extends StatefulWidget {
   const LobbyScreen({super.key});

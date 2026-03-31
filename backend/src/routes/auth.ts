@@ -2,6 +2,8 @@ import { Hono } from 'hono'
 import { sign, verify } from 'hono/jwt'
 import { z } from 'zod'
 import { v4 as uuidv4 } from 'uuid'
+import { authMiddleware } from '../middleware/auth'
+import { getFullProfile } from './profile'
 import type { Env } from '../index'
 
 const auth = new Hono<{ Bindings: Env }>()
@@ -58,7 +60,9 @@ auth.post('/register', async (c) => {
       { sub: existing.id, username: existing.username, deviceId, exp: Math.floor(Date.now() / 1000) + 86400 * 30 },
       c.env.JWT_SECRET
     )
-    return c.json({ token, userId: existing.id, username: existing.username })
+    const profileRes = await getFullProfile(c, existing.id)
+    const profile = await profileRes.json()
+    return c.json({ token, userId: existing.id, username: existing.username, user: profile })
   }
 
   // Check username uniqueness
@@ -88,7 +92,9 @@ auth.post('/register', async (c) => {
     c.env.JWT_SECRET
   )
 
-  return c.json({ token, userId, username }, 201)
+  const profileRes = await getFullProfile(c, userId)
+  const profile = await profileRes.json()
+  return c.json({ token, userId, username, user: profile }, 201)
 })
 
 // ────────────────────────────────────────
@@ -120,7 +126,9 @@ auth.post('/login', async (c) => {
     'UPDATE users SET is_online = 1, last_seen = ? WHERE id = ?'
   ).bind(new Date().toISOString(), user.id).run()
 
-  return c.json({ token, userId: user.id, username: user.username })
+  const profileRes = await getFullProfile(c, user.id)
+  const profile = await profileRes.json()
+  return c.json({ token, userId: user.id, username: user.username, user: profile })
 })
 
 // ────────────────────────────────────────
