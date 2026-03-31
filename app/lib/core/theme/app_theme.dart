@@ -69,6 +69,22 @@ class AppTheme {
         light: Color(0xFF85B39F),
         dark: Color(0xFF517970),
         notation: Color(0xFFD0F0E0)),
+    'stellar': _BoardThemeData(
+        light: Color(0xFFE2E8F0),
+        dark: Color(0xFF475569),
+        notation: Color(0xFF475569)),
+    'green': _BoardThemeData(
+        light: Color(0xFFEBECD0),
+        dark: Color(0xFF779556),
+        notation: Color(0xFF779556)),
+    'royal': _BoardThemeData(
+        light: Color(0xFFD1B28C),
+        dark: Color(0xFF8D6E63),
+        notation: Color(0xFF8D6E63)),
+    'electric': _BoardThemeData(
+        light: Color(0xFFD1D1FF),
+        dark: Color(0xFF5353EC),
+        notation: Color(0xFF5353EC)),
   };
 
   static const Color selectedSq = Color(0xFF7BC67B);

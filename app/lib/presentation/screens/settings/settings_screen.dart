@@ -259,7 +259,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       'cherry',
       'sage',
       'tan',
-      'jade'
+      'jade',
+      'stellar',
+      'green',
+      'royal',
+      'electric'
     ];
     final emoji = {
       'classic': '🟫',
@@ -270,7 +274,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       'cherry': '🍒',
       'sage': '🌿',
       'tan': '🏜️',
-      'jade': '🐉'
+      'jade': '🐉',
+      'stellar': '✨',
+      'green': '🟩',
+      'royal': '📜',
+      'electric': '⚡'
     };
     return Wrap(
       spacing: 8,
@@ -298,57 +306,65 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildPieceShapeChips() {
-    final shapes = [
-      {'id': 'classic', 'name': 'Classic'},
-      {'id': 'modern', 'name': 'Modern'},
-      {'id': 'angular', 'name': 'Angular'},
-      {'id': 'neo', 'name': 'Neo'},
-      {'id': 'wood', 'name': 'Wood'},
-      {'id': 'fantasy', 'name': 'Fantasy'},
-      {'id': 'iconic', 'name': 'Iconic SVG'},
-      {'id': 'artwork', 'name': 'Artwork SVG'},
-      {'id': 'shuffled', 'name': '🔀 SHUFFLE'},
-    ];
+    final isShuffled = _pieceShape == 'shuffled';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: shapes.map((s) {
-            final id = s['id']!;
-            final selected = _pieceShape == id;
-            return ChoiceChip(
-              selected: selected,
-              avatar: _getPieceAvatar(id),
-              onSelected: (_) {
-                setState(() => _pieceShape = id);
-                context.read<ThemeBloc>().add(ThemeChangeEvent(
-                    boardTheme: _boardTheme,
-                    pieceShape: _pieceShape,
-                    pieceStyle: _pieceStyle));
-              },
-              label: Text(s['name']!, style: GoogleFonts.fredoka(fontSize: 12)),
-              labelStyle: TextStyle(
-                color: selected ? AppTheme.midnight : AppTheme.textPrimary,
-                fontWeight:
-                    id == 'shuffled' ? FontWeight.w800 : FontWeight.w500,
-              ),
-              selectedColor:
-                  id == 'shuffled' ? AppTheme.accentCyan : AppTheme.goldPrimary,
-            );
-          }).toList(),
+        Row(
+           children: [
+             Expanded(
+               child: Container(
+                 padding: const EdgeInsets.all(12),
+                 decoration: BoxDecoration(
+                   color: AppTheme.surface.withValues(alpha: 0.3),
+                   borderRadius: BorderRadius.circular(12),
+                   border: Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.3)),
+                 ),
+                 child: Row(
+                   children: [
+                     _getPieceAvatar(_pieceShape),
+                     const SizedBox(width: 12),
+                     Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('CURRENT SHAPE', style: GoogleFonts.fredoka(color: AppTheme.textSecondary, fontSize: 10, fontWeight: FontWeight.bold)),
+                          Text(_cap(_pieceShape.replaceAll('_', ' ')), style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
+                        ],
+                     ),
+                     const Spacer(),
+                     if (!isShuffled) ...[
+                       IconButton(
+                         icon: const Icon(Icons.shuffle_rounded, color: AppTheme.accentCyan, size: 20),
+                         onPressed: () {
+                           setState(() => _pieceShape = 'shuffled');
+                           _updateTheme();
+                         },
+                         tooltip: 'Toggle Shuffle Mode',
+                       ),
+                     ],
+                   ],
+                 ),
+               ),
+             ),
+           ],
         ),
-        const SizedBox(height: 16),
-        _buildCurrentThemeKeyPiecesPreview(),
         const SizedBox(height: 12),
         _glassButton(
           icon: Icons.grid_view_rounded,
-          label: 'Browse 49+ PyChess Shapes',
-          onTap: () => _showPychessSelector(context),
+          label: 'Change Shapes (55+ Styles)',
+          onTap: () => _showPieceSelector(context),
         ),
+        const SizedBox(height: 16),
+        _buildCurrentThemeKeyPiecesPreview(),
       ],
     );
+  }
+
+  void _updateTheme() {
+    context.read<ThemeBloc>().add(ThemeChangeEvent(
+      boardTheme: _boardTheme,
+      pieceShape: _pieceShape,
+      pieceStyle: _pieceStyle));
   }
 
   Widget _buildCurrentThemeKeyPiecesPreview() {
@@ -456,43 +472,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _showPychessSelector(BuildContext context) {
-    final List<String> pychessShapes = PiecePathProvider.pychessShapes;
+  void _showPieceSelector(BuildContext context) {
+    // Merge basic and vector shapes
+    const basicShapes = ['classic', 'modern', 'angular', 'neo', 'wood', 'fantasy', 'iconic', 'artwork'];
+    final List<String> allShapes = {...basicShapes, ...PiecePathProvider.pychessShapes}.toList();
 
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.75,
+        height: MediaQuery.of(context).size.height * 0.85,
         decoration: BoxDecoration(
           color: AppTheme.midnight,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-          border: Border.all(color: AppTheme.skyBlue.withValues(alpha: 0.2)),
+          border: Border.all(color: AppTheme.skyBlue.withValues(alpha: 0.1)),
         ),
         child: Column(
           children: [
             const SizedBox(height: 12),
-            Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                    color: Colors.white24,
-                    borderRadius: BorderRadius.circular(2))),
+            Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
             Padding(
               padding: const EdgeInsets.all(24),
               child: Row(
                 children: [
-                  Text('PyChess Shapes',
-                      style: GoogleFonts.fredoka(
-                          color: AppTheme.textPrimary,
-                          fontSize: 22,
-                          fontWeight: FontWeight.w700)),
+                  Text('Piece Shapes',
+                      style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 22, fontWeight: FontWeight.bold)),
                   const Spacer(),
-                  _glassAction(
-                      icon: Icons.close_rounded,
-                      size: 32,
-                      onTap: () => Navigator.pop(context)),
+                  _glassAction(icon: Icons.close_rounded, size: 32, onTap: () => Navigator.pop(context)),
                 ],
               ),
             ),
@@ -503,45 +510,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   crossAxisCount: 2,
                   crossAxisSpacing: 16,
                   mainAxisSpacing: 16,
-                  childAspectRatio: 1.1,
+                  childAspectRatio: 1.2,
                 ),
-                itemCount: pychessShapes.length,
+                itemCount: allShapes.length,
                 itemBuilder: (context, index) {
-                  final s = pychessShapes[index];
+                  final s = allShapes[index];
                   final isSelected = _pieceShape == s;
+                  final displayName = s.replaceAll('_', ' ').replaceAll(' SVG', '');
+                  
                   return GestureDetector(
                     onTap: () {
                       setState(() => _pieceShape = s);
-                      context.read<ThemeBloc>().add(ThemeChangeEvent(
-                          boardTheme: _boardTheme,
-                          pieceShape: _pieceShape,
-                          pieceStyle: _pieceStyle));
+                      _updateTheme();
                       Navigator.pop(context);
                     },
                     child: Container(
                       decoration: BoxDecoration(
-                        color: isSelected
-                            ? AppTheme.goldPrimary.withValues(alpha: 0.1)
-                            : AppTheme.surface.withValues(alpha: 0.4),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                            color: isSelected
-                                ? AppTheme.goldPrimary
-                                : Colors.white12,
-                            width: 2),
+                        color: isSelected ? AppTheme.goldPrimary.withValues(alpha: 0.1) : Colors.white.withValues(alpha: 0.03),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: isSelected ? AppTheme.goldPrimary : Colors.white10, width: 2),
                       ),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           _pychessPreview(s),
-                          const SizedBox(height: 8),
-                          Text(_cap(s),
-                              style: GoogleFonts.fredoka(
-                                  color: isSelected
-                                      ? AppTheme.goldPrimary
-                                      : AppTheme.textSecondary,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 10),
+                          Text(_cap(displayName),
+                              style: GoogleFonts.fredoka(color: isSelected ? AppTheme.goldPrimary : AppTheme.textSecondary, fontSize: 11, fontWeight: FontWeight.bold),
+                              textAlign: TextAlign.center,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis),
                         ],
                       ),
                     ),
@@ -587,10 +585,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _getPieceAvatar(String id) {
-    if (id == 'shuffled')
+    if (id == 'shuffled') {
       return Icon(Icons.shuffle,
           size: 16,
           color: _pieceShape == 'shuffled' ? AppTheme.midnight : Colors.white);
+    }
 
     // Use Knight as the most distinctive piece for the avatar
     return Padding(

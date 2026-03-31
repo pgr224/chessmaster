@@ -15,6 +15,8 @@ import '../../../data/models/tutorial_model.dart';
 import '../../../presentation/blocs/game/game_bloc.dart';
 import '../../../presentation/blocs/settings/settings_bloc.dart';
 import '../../../presentation/blocs/multiplayer/multiplayer_bloc.dart';
+import '../../../presentation/blocs/auth/auth_bloc.dart';
+import '../../../data/models/user_model.dart';
 import '../../../domain/engine/chess_engine.dart';
 import '../../widgets/chess_board_widget.dart';
 import '../../widgets/captured_pieces_widget.dart';
@@ -27,6 +29,7 @@ import '../../widgets/coach_interaction_widget.dart';
 import '../../widgets/timer_widget.dart';
 import '../../widgets/game_rules_dialog.dart';
 import '../../widgets/eval_bar_widget.dart';
+import '../../widgets/chat_widget.dart';
 import '../../../data/models/coach_model.dart';
 
 class GameScreen extends StatefulWidget {
@@ -41,10 +44,9 @@ class GameScreen extends StatefulWidget {
 class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   late ConfettiController _confettiController;
   late AnimationController _checkAnimController;
-  final TextEditingController _chatController = TextEditingController();
-  final FocusNode _chatFocus = FocusNode();
-  bool _showChat = false;
   final AudioPlayer _audioPlayer = AudioPlayer();
+  Offset _chatPosition = const Offset(16, 450); // Initial floating chat position
+  bool _isChatDragging = false;
 
   @override
   void initState() {
@@ -85,8 +87,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     context.read<GameBloc>().add(GameExitEvent());
     _confettiController.dispose();
     _checkAnimController.dispose();
-    _chatController.dispose();
-    _chatFocus.dispose();
     _audioPlayer.dispose();
     super.dispose();
   }
@@ -381,6 +381,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       child: Opacity(
         opacity: 0.85,
         child: turnPill,
+      ),
     );
   }
 
@@ -765,7 +766,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   Widget _buildOpponentInfo(GameState state) {
     final mpState = context.read<MultiplayerBloc>().state;
     final opponentLabel = state.mode == GameMode.singlePlayer
-        ? '🤖 Chess Robot (${state.aiDifficulty?.name.capitalize() ?? ""})'
+        ? 'Chess Robot (${state.aiDifficulty?.name.capitalize() ?? ""})'
         : state.mode == GameMode.multiplayer && state.opponentName != null
             ? '🌍 ${state.opponentName}'
             : '👤 Opponent';
@@ -778,27 +779,21 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Expanded(
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                PlayerInfoWidget(
-                  name: opponentLabel,
-                  isActive: isOpponentTurn,
-                  isAI: state.mode == GameMode.singlePlayer,
-                  isThinking: false, // Using overlay now
-                  color: state.playerColor == PieceColor.white
-                      ? PieceColor.black
-                      : PieceColor.white,
-                  avatarUrl: state.mode == GameMode.multiplayer ? mpState.opponentAvatarUrl : null,
-                  localAvatar: state.mode == GameMode.multiplayer ? mpState.opponentLocalAvatar : null,
-                ),
-              ],
-            ),
+          PlayerInfoWidget(
+            name: opponentLabel,
+            isActive: isOpponentTurn,
+            isAI: state.mode == GameMode.singlePlayer,
+            isThinking: false, // Using overlay now
+            color: state.playerColor == PieceColor.white
+                ? PieceColor.black
+                : PieceColor.white,
+            avatarUrl: state.mode == GameMode.multiplayer ? mpState.opponentAvatarUrl : null,
+            localAvatar: state.mode == GameMode.multiplayer ? mpState.opponentLocalAvatar : null,
           ),
           if (state.mode == GameMode.multiplayer) ...[
-            const SizedBox(width: 8),
+            const SizedBox(width: 12),
             TimerWidget(
                 timeInSeconds: opponentTime,
                 isActive: isOpponentTurn,
@@ -825,25 +820,19 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Expanded(
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                PlayerInfoWidget(
-                  name: user?.username ?? '👑 You',
-                  isActive: isPlayerTurn,
-                  isAI: false,
-                  isThinking: false,
-                  color: state.playerColor ?? PieceColor.white,
-                  avatarUrl: user?.avatarUrl,
-                  localAvatar: user?.localAvatar,
-                ),
-              ],
-            ),
+          PlayerInfoWidget(
+            name: user?.username ?? '👑 You',
+            isActive: isPlayerTurn,
+            isAI: false,
+            isThinking: false,
+            color: state.playerColor ?? PieceColor.white,
+            avatarUrl: user?.avatarUrl,
+            localAvatar: user?.localAvatar,
           ),
           if (state.mode == GameMode.multiplayer) ...[
-            const SizedBox(width: 8),
+            const SizedBox(width: 12),
             TimerWidget(
                 timeInSeconds: playerTime,
                 isActive: isPlayerTurn,
@@ -911,55 +900,119 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       return BlocBuilder<MultiplayerBloc, MultiplayerState>(
         builder: (context, mpState) {
           final messages = mpState.chatMessages.where((msg) {
-            // Keep messages sent within the last 2 minutes
+            // Keep messages sent within the last 2 minutes for bubble previews
             final age = DateTime.now().difference(msg.timestamp);
             return age.inSeconds < 120;
           }).toList();
 
           return Positioned(
-            left: 16,
-            bottom: 220,
-            width: constraints.maxWidth < 400 ? constraints.maxWidth - 32 : 350,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Messages area — IgnorePointer allows tapping board through recent bubbles
-                IgnorePointer(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxHeight: 180),
-                    child: ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: messages.length,
-                      itemBuilder: (context, index) {
-                        final msg = messages[index];
-                        return _chatBubble(msg.message, msg.isMe)
-                            .animate()
-                            .fadeIn(duration: 400.ms)
-                            .slideY(begin: 0.2, end: 0, duration: 400.ms)
-                            .fadeOut(
-                                delay: 6.seconds,
-                                duration: 1
-                                    .seconds); // Fade out quickly to keep board clean
-                      },
+            left: _chatPosition.dx,
+            top: _chatPosition.dy,
+            child: GestureDetector(
+              onPanUpdate: (details) {
+                setState(() {
+                  _isChatDragging = true;
+                  // Clamp to screen boundaries
+                  double newX = _chatPosition.dx + details.delta.dx;
+                  double newY = _chatPosition.dy + details.delta.dy;
+                  newX = newX.clamp(0.0, constraints.maxWidth - 60);
+                  newY = newY.clamp(80.0, constraints.maxHeight - 200);
+                  _chatPosition = Offset(newX, newY);
+                });
+              },
+              onPanEnd: (_) => setState(() => _isChatDragging = false),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Recent message bubbles (Fade out preview)
+                  if (!_isChatDragging)
+                    IgnorePointer(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 250, maxHeight: 150),
+                        child: ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: messages.length > 3 ? 3 : messages.length,
+                          itemBuilder: (context, index) {
+                            final msg = messages[messages.length - 1 - index];
+                            return _chatBubble(msg.message, msg.isMe)
+                                .animate()
+                                .fadeIn(duration: 400.ms)
+                                .slideY(begin: 0.2, end: 0)
+                                .fadeOut(delay: 5.seconds, duration: 1.seconds);
+                          },
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                if (_showChat)
-                  _buildChatInput(context)
-                else
-                  _glassButton(
-                    icon: Icons.chat_bubble_outline_rounded,
-                    onTap: () => setState(() => _showChat = true),
-                  ).animate().fadeIn(),
-              ],
+                  const SizedBox(height: 8),
+                  // The main drabbable bubble/handle
+                  GestureDetector(
+                    onTap: () => _showChatHistory(context, mpState.chatMessages),
+                    child: Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        gradient: AppTheme.rainbowGradient,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.4),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          const Icon(Icons.forum_rounded, color: AppTheme.midnight, size: 28),
+                          if (mpState.chatMessages.isNotEmpty)
+                             Positioned(
+                              top: 0,
+                              right: 0,
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: const BoxDecoration(
+                                  color: AppTheme.accentRed,
+                                  shape: BoxShape.circle,
+                                ),
+                                constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                                child: Text(
+                                  '${mpState.chatMessages.length}',
+                                  style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ).animate(onPlay: (c) => c.repeat(reverse: true))
+                   .scale(begin: const Offset(1, 1), end: const Offset(1.05, 1.05), duration: 2.seconds, curve: Curves.easeInOut),
+                ],
+              ),
             ),
           );
         },
       );
     });
+  }
+
+  void _showChatHistory(BuildContext context, List<ChatMessage> messages) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => FractionallySizedBox(
+        heightFactor: 0.7,
+        child: ChatWidget(
+          messages: messages,
+          onSendMessage: (msg) {
+            context.read<MultiplayerBloc>().add(MpSendChatEvent(msg));
+          },
+        ),
+      ),
+    );
   }
 
   Widget _chatBubble(String text, bool isMe) {
@@ -984,94 +1037,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildChatInput(BuildContext context) {
-    final quickEmojis = ['👏', '👍', '🔥', '🏆', '😂', '😮', 'GG', 'Luck!'];
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: AppTheme.navyCard.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppTheme.skyBlue.withValues(alpha: 0.4)),
-        boxShadow: [BoxShadow(color: Colors.black45, blurRadius: 10)],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Quick Emoji Bar
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: quickEmojis
-                  .map((e) => GestureDetector(
-                        onTap: () {
-                          context
-                              .read<MultiplayerBloc>()
-                              .add(MpSendChatEvent(e));
-                          setState(() => _showChat = false);
-                        },
-                        child: Container(
-                          margin: const EdgeInsets.only(right: 8, bottom: 8),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.05),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(e, style: const TextStyle(fontSize: 16)),
-                        ),
-                      ))
-                  .toList(),
-            ),
-          ),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _chatController,
-                  focusNode: _chatFocus,
-                  autofocus: true,
-                  style: GoogleFonts.baloo2(color: Colors.white, fontSize: 14),
-                  decoration: const InputDecoration(
-                    hintText: 'Type a message...',
-                    hintStyle: TextStyle(color: Colors.white38, fontSize: 13),
-                    border: InputBorder.none,
-                  ),
-                  onSubmitted: (val) {
-                    if (val.trim().isNotEmpty) {
-                      context
-                          .read<MultiplayerBloc>()
-                          .add(MpSendChatEvent(val.trim()));
-                      _chatController.clear();
-                      setState(() => _showChat = false);
-                    }
-                  },
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.send_rounded,
-                    color: AppTheme.goldPrimary, size: 20),
-                onPressed: () {
-                  if (_chatController.text.trim().isNotEmpty) {
-                    context
-                        .read<MultiplayerBloc>()
-                        .add(MpSendChatEvent(_chatController.text.trim()));
-                    _chatController.clear();
-                    setState(() => _showChat = false);
-                  }
-                },
-              ),
-              IconButton(
-                icon: const Icon(Icons.close_rounded,
-                    color: AppTheme.textMuted, size: 20),
-                onPressed: () => setState(() => _showChat = false),
-              ),
-            ],
-          ),
-        ],
-      ),
-    ).animate().slideY(begin: 0.1, duration: 200.ms).fadeIn();
-  }
 
   Widget _buildPuzzleRushOverlay(GameState state) {
     return Positioned(
@@ -1249,6 +1214,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       {required double maxDimension}) {
     final dimension = math.max(300.0, math.min(maxDimension, 860.0));
     final settings = context.watch<SettingsBloc>().state;
+    final themeState = context.watch<ThemeBloc>().state;
+
     // In multiplayer, always use playerColor for perspective (never auto-flip)
     final PieceColor perspective;
     if (state.mode == GameMode.multiplayer && state.playerColor != null) {
@@ -1297,9 +1264,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                       : null,
                   hintMove: state.hintMove,
                   status: state.status,
-                  boardTheme: state.boardTheme ?? 'classic',
-                  pieceShape: state.pieceShape,
-                  pieceStyle: state.pieceStyle,
+                  boardTheme: themeState.boardTheme,
+                  pieceShape: themeState.pieceShape,
+                  pieceStyle: themeState.pieceStyle,
                   moveAnimationSpeed: settings.moveAnimationSpeed,
                   showCoordinates: settings.showCoordinates,
                   showSquareLabels: settings.showSquareLabels,

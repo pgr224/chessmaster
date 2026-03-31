@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../domain/engine/chess_engine.dart';
+import './animated_robot_coach.dart';
 
 class PlayerInfoWidget extends StatelessWidget {
   final String name;
@@ -53,14 +54,16 @@ class PlayerInfoWidget extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           // Avatar / piece color indicator
-          Container(
+          isAI 
+          ? AnimatedRobotCoach(isThinking: isThinking) 
+          : Container(
             width: 38,
             height: 38,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               boxShadow: isActive ? [
                 BoxShadow(
-                  color: (avatarUrl != null ? AppTheme.goldPrimary : (color == PieceColor.white ? Colors.white70 : Colors.black54)).withOpacity(0.3),
+                  color: (avatarUrl != null ? AppTheme.goldPrimary : (color == PieceColor.white ? Colors.white70 : Colors.black54)).withValues(alpha: 0.3),
                   blurRadius: 8,
                   spreadRadius: 1,
                 )

@@ -8,7 +8,7 @@ import './animated_robot_coach.dart';
 class CoachInteractionWidget extends StatelessWidget {
   final GameState state;
 
-  const CoachInteractionWidget({Key? key, required this.state}) : super(key: key);
+  const CoachInteractionWidget({super.key, required this.state});
 
   @override
   Widget build(BuildContext context) {
@@ -63,7 +63,7 @@ class CoachInteractionWidget extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFF1A1A2E).withOpacity(0.95),
+              color: const Color(0xFF1A1A2E).withValues(alpha: 0.95),
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(24),
                 topRight: Radius.circular(24),
@@ -71,12 +71,12 @@ class CoachInteractionWidget extends StatelessWidget {
                 bottomRight: Radius.circular(24),
               ),
               border: Border.all(
-                color: accentColor.withOpacity(0.6),
+                color: accentColor.withValues(alpha: 0.6),
                 width: 2,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: accentColor.withOpacity(0.15),
+                  color: accentColor.withValues(alpha: 0.15),
                   blurRadius: 20,
                   spreadRadius: 2,
                 ),
@@ -100,7 +100,7 @@ class CoachInteractionWidget extends StatelessWidget {
                   Text(
                     subtext,
                     style: GoogleFonts.outfit(
-                      color: Colors.white.withOpacity(0.85),
+                      color: Colors.white.withValues(alpha: 0.85),
                       fontSize: 13,
                       height: 1.4,
                       fontWeight: FontWeight.w500,
@@ -114,9 +114,9 @@ class CoachInteractionWidget extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.amberAccent.withOpacity(0.15),
+                        color: Colors.amberAccent.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.amberAccent.withOpacity(0.5)),
+                        border: Border.all(color: Colors.amberAccent.withValues(alpha: 0.5)),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,

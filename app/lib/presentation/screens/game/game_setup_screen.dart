@@ -418,12 +418,13 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
   }
 
   Widget _buildThemeSelector() {
-    final themes = ['classic', 'wood', 'neon', 'minimal'];
+    final themes = ['classic', 'stellar', 'green', 'royal', 'electric'];
     final themeEmoji = {
-      'classic': '♜',
-      'wood': '🪵',
-      'neon': '💜',
-      'minimal': '⬜'
+      'classic': '🟫',
+      'stellar': '✨',
+      'green': '🟩',
+      'royal': '📜',
+      'electric': '⚡'
     };
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,

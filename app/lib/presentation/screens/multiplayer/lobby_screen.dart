@@ -4,9 +4,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
-import 'package:chess_master/presentation/blocs/auth/auth_bloc.dart';
+import 'package:chess_master/presentation/blocs/auth/auth_bloc.dart' as auth;
 import 'package:chess_master/presentation/blocs/multiplayer/multiplayer_bloc.dart';
-import 'package:chess_master/data/models/user_model.dart';
 import 'package:chess_master/data/models/multiplayer_models.dart';
 
 class LobbyScreen extends StatefulWidget {
@@ -22,8 +21,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
   @override
   void initState() {
     super.initState();
-    final authState = context.read<AuthBloc>().state;
-    if (authState is AuthAuthenticatedState) {
+    final authState = context.read<auth.AuthBloc>().state;
+    if (authState is auth.AuthAuthenticatedState) {
       context.read<MultiplayerBloc>().add(MpConnectLobbyEvent(
             authState.user.id,
             authState.user.username,
@@ -182,12 +181,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
           if (hasError)
             TextButton(
               onPressed: () {
-                final auth = context.read<AuthBloc>().state;
-                if (auth is AuthAuthenticatedState) {
+                final authState = context.read<auth.AuthBloc>().state;
+                if (authState is auth.AuthAuthenticatedState) {
                   context.read<MultiplayerBloc>().add(MpConnectLobbyEvent(
-                        auth.user.id,
-                        auth.user.username,
-                        rating: auth.user.xp,
+                        authState.user.id,
+                        authState.user.username,
+                        rating: authState.user.xp,
                       ));
                 }
               },
@@ -210,6 +209,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _buildConnectionStatus(state),
+        const SizedBox(height: 12),
+        _buildXpBroadcasts(state),
         const SizedBox(height: 24),
         _buildHeroCard(state),
         const SizedBox(height: 26),
@@ -272,9 +273,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
   }
 
   Widget _buildXpBroadcasts(MultiplayerState state) {
-    final authState = context.watch<AuthBloc>().state;
+    final authState = context.watch<auth.AuthBloc>().state;
     final bool needsXp =
-        authState is AuthAuthenticatedState && authState.user.xp < 0;
+        authState is auth.AuthAuthenticatedState && authState.user.xp < 0;
 
     if (!needsXp) return const SizedBox.shrink();
 
@@ -355,7 +356,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
               Navigator.pop(ctx);
               try {
                 final success = await context
-                    .read<AuthBloc>()
+                    .read<auth.AuthBloc>()
                     .authRepository
                     .donateXP(recipientId: userId, amount: amount);
                 if (success) {
@@ -363,8 +364,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       content: Text('Donated $amount XP to $username!')));
                   // ignore: use_build_context_synchronously
                   context
-                      .read<AuthBloc>()
-                      .add(AuthCheckStatusEvent()); // Refresh local user XP
+                      .read<auth.AuthBloc>()
+                      .add(auth.AuthCheckStatusEvent()); // Refresh local user XP
                 }
               } catch (e) {
                 // ignore: use_build_context_synchronously

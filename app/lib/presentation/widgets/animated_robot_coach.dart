@@ -8,11 +8,11 @@ class AnimatedRobotCoach extends StatelessWidget {
   final bool isHint;
 
   const AnimatedRobotCoach({
-    Key? key,
+    super.key,
     required this.isThinking,
     this.classification,
     this.isHint = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -46,9 +46,9 @@ class AnimatedRobotCoach extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.grey[900],
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: mainColor.withOpacity(0.5), width: 2),
+              border: Border.all(color: mainColor.withValues(alpha: 0.5), width: 2),
               boxShadow: [
-                BoxShadow(color: mainColor.withOpacity(0.3), blurRadius: 10, spreadRadius: 1),
+                BoxShadow(color: mainColor.withValues(alpha: 0.3), blurRadius: 10, spreadRadius: 1),
               ],
             ),
           ),
@@ -85,7 +85,7 @@ class AnimatedRobotCoach extends StatelessWidget {
                     child: Container(
                       height: 2,
                       decoration: BoxDecoration(
-                        color: mainColor.withOpacity(0.5),
+                        color: mainColor.withValues(alpha: 0.5),
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -128,8 +128,6 @@ class AnimatedRobotCoach extends StatelessWidget {
   }
 
   Widget _buildArm(bool isLeft, Color color) {
-    final offset = isLeft ? -22.0 : 22.0;
-    
     // Default: Breathing/Floating motion
     void Function(AnimationController) animation = (AnimationController c) => c.repeat(reverse: true);
     
@@ -153,9 +151,9 @@ class AnimatedRobotCoach extends StatelessWidget {
         width: 14,
         height: 6,
         decoration: BoxDecoration(
-          color: color.withOpacity(0.9),
+          color: color.withValues(alpha: 0.9),
           borderRadius: BorderRadius.circular(4),
-          boxShadow: [BoxShadow(color: color.withOpacity(0.4), blurRadius: 4)],
+          boxShadow: [BoxShadow(color: color.withValues(alpha: 0.4), blurRadius: 4)],
         ),
       ).animate(onPlay: animation);
 
