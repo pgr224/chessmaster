@@ -23,8 +23,12 @@ challengeRoutes.get('/', async (c) => {
 })
 
 // Create a new challenge
+import { PushService } from '../services/push_service'
+
 challengeRoutes.post('/', async (c) => {
-  const userId = c.get('user').sub
+  const user = c.get('user')
+  const userId = user.sub
+  const username = user.username || 'Someone'
   const body = await c.req.json()
   const { challenged_id, time_control = '10+0', color_preference = 'random', message = '' } = body
 
@@ -40,8 +44,24 @@ challengeRoutes.post('/', async (c) => {
        VALUES (?, ?, ?, ?, ?, ?)`
     ).bind(id, userId, challenged_id, time_control, color_preference, message).run()
 
+    // ✨ Trigger Push Notification for the recipient
+    // Background task (don't wait for it to complete)
+    c.executionCtx.waitUntil(
+      PushService.notifyUser(challenged_id, {
+        title: '♟️ New Match Invite!',
+        body: `${username} challenged you to a ${time_control} game!`,
+        icon: '/icons/Icon-192.png',
+        data: {
+          type: 'CHALLENGE_RECEIVED',
+          challengeId: id,
+          challengerName: username
+        }
+      }, c.env)
+    )
+
     return c.json({ success: true, id }, 201)
   } catch (err: any) {
+    console.error('[Challenge Create Error]', err)
     return c.json({ error: 'Failed to create challenge' }, 500)
   }
 })

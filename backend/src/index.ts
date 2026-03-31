@@ -8,6 +8,7 @@ import { tournamentRoutes } from './routes/tournament'
 import { leaderboardRoutes } from './routes/leaderboard'
 import { contentRoutes } from './routes/content'
 import { challengeRoutes } from './routes/challenge'
+import { pushRoutes } from './routes/push'
 
 // Durable Objects
 export { Lobby } from './lobby'
@@ -20,6 +21,8 @@ export interface Env {
   GAME_ROOM: DurableObjectNamespace
   JWT_SECRET: string
   ENVIRONMENT: string
+  VAPID_PUBLIC_KEY: string
+  VAPID_PRIVATE_KEY: string
 }
 
 const app = new Hono<{ Bindings: Env }>()
@@ -54,6 +57,7 @@ app.route('/api/tournament', tournamentRoutes)
 app.route('/api/leaderboard', leaderboardRoutes)
 app.route('/api/content', contentRoutes)
 app.route('/api/challenge', challengeRoutes)
+app.route('/api/push', pushRoutes)
 
 // ════════════════════════════════════════
 // WEBSOCKET ROUTING

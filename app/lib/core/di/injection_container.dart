@@ -92,5 +92,5 @@ Future<void> init() async {
   sl.registerLazySingleton<MultiplayerBloc>(
       () => MultiplayerBloc(sl<MultiplayerService>()));
   sl.registerLazySingleton<ThemeBloc>(() => ThemeBloc());
-  sl.registerLazySingleton<SettingsBloc>(() => SettingsBloc());
+  sl.registerLazySingleton<SettingsBloc>(() => SettingsBloc(dio: sl<Dio>()));
 }

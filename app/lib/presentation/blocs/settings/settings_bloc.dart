@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:dio/dio.dart';
 
 abstract class SettingsEvent extends Equatable {
   const SettingsEvent();
@@ -187,7 +188,9 @@ class SettingsState extends Equatable {
 }
 
 class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
-  SettingsBloc() : super(const SettingsState()) {
+  final Dio? dio;
+
+  SettingsBloc({this.dio}) : super(const SettingsState()) {
     on<SettingsLoadEvent>(_onLoad);
     on<SettingsSoundEvent>((e, emit) async {
       (await SharedPreferences.getInstance()).setBool('sound', e.enabled);
@@ -198,9 +201,22 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
       emit(state.copyWith(vibrationEnabled: e.enabled));
     });
     on<SettingsNotificationsEvent>((e, emit) async {
-      (await SharedPreferences.getInstance())
-          .setBool('notifications', e.enabled);
+      final prefs = await SharedPreferences.getInstance();
+      prefs.setBool('notifications', e.enabled);
       emit(state.copyWith(notificationsEnabled: e.enabled));
+
+      // Sync with backend if logged in
+      final userId = prefs.getString('user_id');
+      if (userId != null && dio != null) {
+        try {
+          await dio!.put('/api/push/settings', data: {
+            'userId': userId,
+            'enabled': e.enabled,
+          });
+        } catch (e) {
+          print('Failed to sync notification settings: $e');
+        }
+      }
     });
     on<SettingsShowCoordinatesEvent>((e, emit) async {
       (await SharedPreferences.getInstance())

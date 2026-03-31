@@ -148,7 +148,10 @@ class AppRouter {
       GoRoute(
         path: '/lobby',
         name: 'lobby',
-        builder: (context, state) => const LobbyScreen(),
+        builder: (context, state) => LobbyScreen(
+          initialChallengeId: state.uri.queryParameters['accept_challenge'],
+          autoAccept: state.uri.queryParameters['auto_accept'] == 'true',
+        ),
       ),
       GoRoute(
         path: '/matchmaking',

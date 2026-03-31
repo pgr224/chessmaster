@@ -17,11 +17,27 @@ CREATE TABLE IF NOT EXISTS users (
   local_avatar      TEXT,                       -- Path to local asset avatar
   username_changes  INTEGER NOT NULL DEFAULT 0, -- Track rename count (limit 2)
   xp                INTEGER NOT NULL DEFAULT 0,
+  push_enabled      INTEGER NOT NULL DEFAULT 1, -- 0=disabled, 1=enabled
   is_online     INTEGER NOT NULL DEFAULT 0, -- 0=offline, 1=online
   last_seen     TEXT,                       -- ISO8601
   created_at    TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+-- ────────────────────────────────────────
+-- PUSH SUBSCRIPTIONS (W3C Web Push / VAPID)
+-- ────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS user_subscriptions (
+  id            TEXT PRIMARY KEY,           -- UUID
+  user_id       TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  endpoint      TEXT NOT NULL,
+  p256dh        TEXT NOT NULL,              -- public key part
+  auth          TEXT NOT NULL,              -- auth secret part
+  device_id     TEXT,                       -- link to specific device
+  created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX idx_sub_user ON user_subscriptions(user_id);
 
 CREATE INDEX idx_users_device ON users(device_id);
 CREATE INDEX idx_users_xp     ON users(xp DESC);

@@ -8,7 +8,14 @@ import 'package:chess_master/presentation/blocs/auth/auth_bloc.dart' as auth;
 import 'package:chess_master/presentation/blocs/multiplayer/multiplayer_bloc.dart';
 
 class LobbyScreen extends StatefulWidget {
-  const LobbyScreen({super.key});
+  final String? initialChallengeId;
+  final bool autoAccept;
+
+  const LobbyScreen({
+    super.key,
+    this.initialChallengeId,
+    this.autoAccept = false,
+  });
 
   @override
   State<LobbyScreen> createState() => _LobbyScreenState();
@@ -27,6 +34,19 @@ class _LobbyScreenState extends State<LobbyScreen> {
             authState.user.username,
             rating: authState.user.xp,
           ));
+
+      // 📲 Handle Deep-linked Invitation
+      if (widget.initialChallengeId != null) {
+        if (widget.autoAccept) {
+          context
+              .read<MultiplayerBloc>()
+              .add(MpAcceptChallengeEvent(widget.initialChallengeId!));
+        } else {
+           // We can't show the dialog yet because the lobby isn't connected
+           // The Bloc will receive the updated state soon, but we ensure 
+           // the deep-link is prioritized.
+        }
+      }
     }
   }
 
