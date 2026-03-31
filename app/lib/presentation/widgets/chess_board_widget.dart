@@ -28,6 +28,7 @@ class ChessBoardWidget extends StatefulWidget {
   final bool isInteractive;
   final PieceColor currentTurn;
   final Move? lastCorrectMove;
+  final Square? lastUndoPenaltySquare;
 
   const ChessBoardWidget({
     super.key,
@@ -52,6 +53,7 @@ class ChessBoardWidget extends StatefulWidget {
     this.isInteractive = true,
     this.currentTurn = PieceColor.white,
     this.lastCorrectMove,
+    this.lastUndoPenaltySquare,
   });
 
   @override
@@ -93,6 +95,8 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
                       _buildPieces(sqSize),
                       if (widget.showCoordinates) _buildCoordinates(sqSize),
                       if (widget.isInteractive) _buildTapOverlay(sqSize),
+                      if (widget.lastUndoPenaltySquare != null)
+                        _buildUndoPenalty(widget.lastUndoPenaltySquare!, sqSize),
                     ],
                   ),
                 ),
@@ -249,6 +253,44 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
       }
     }
     return const SizedBox.shrink();
+  }
+
+  Widget _buildUndoPenalty(Square sq, double sqSize) {
+    final (x, y) = _squareToPixel(sq, sqSize);
+    return Positioned(
+      left: x,
+      top: y - (sqSize * 0.5), // Float above the square
+      width: sqSize,
+      height: sqSize,
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.redAccent.withValues(alpha: 0.9),
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Text(
+            '-25 XP',
+            style: GoogleFonts.outfit(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: sqSize * 0.25,
+            ),
+          ),
+        ),
+      )
+          .animate()
+          .fadeIn(duration: 200.ms)
+          .slideY(begin: 0.5, end: -0.5, duration: 800.ms, curve: Curves.easeOut)
+          .fadeOut(delay: 1000.ms, duration: 400.ms),
+    );
   }
 
   Widget _buildPulsingCheck(Square sq, double sqSize) {

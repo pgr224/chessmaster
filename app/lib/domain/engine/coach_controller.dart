@@ -8,6 +8,7 @@ import '../../domain/engine/chess_engine.dart';
 import '../../domain/engine/ai_engine.dart';
 import '../../data/models/game_config.dart';
 import '../../data/models/coach_model.dart';
+import 'package:flutter/foundation.dart';
 
 class CoachController {
   // ═══════════════════════════════════════════
@@ -137,6 +138,13 @@ class CoachController {
   // ═══════════════════════════════════════════
   // PATTERN DETECTION
   // ═══════════════════════════════════════════
+  Future<TacticalPattern> detectTacticalPattern(
+      ChessEngine engine, Move move) async {
+    final after = ChessEngine.fromFEN(engine.toFEN());
+    after.applyMoveInternal(move);
+    return _detectPattern(engine, after, move);
+  }
+
   TacticalPattern _detectPattern(
     ChessEngine before,
     ChessEngine after,
@@ -235,57 +243,39 @@ class CoachController {
     CoachPersonality personality,
     TacticalPattern pattern,
   ) {
-    return switch (personality) {
-      CoachPersonality.friendly => _friendlyMessage(classification, pattern),
-      CoachPersonality.strict => _strictMessage(classification, pattern),
-      CoachPersonality.motivational =>
-        _motivationalMessage(classification, pattern),
+    final rand = _evalCache.length % 5; // Use something stable for variety within a session
+    
+    // VARIETY POOLS
+    final brilliantPool = switch(personality) {
+      CoachPersonality.friendly => ['WOW! Brilliant move! 💎✨', 'Incredible vision! That is brilliant. 🧠', 'That is a masterpiece! 🎨'],
+      CoachPersonality.strict => ['Excellent. A highly precise find.', 'Precisely as calculated.', 'The engine confirms your brilliance.'],
+      CoachPersonality.motivational => ['INCREDIBLE! Grandmaster level play! 🔥', 'You are on fire today! 🎯', 'What a move! Absolutely stunning! 🚀'],
     };
-  }
 
-  String _friendlyMessage(MoveClassification c, TacticalPattern p) {
-    return switch (c) {
-      MoveClassification.brilliant => 'WOW! Brilliant move! 💎✨',
-      MoveClassification.best => 'Nice move! That was the best one! ⭐',
+    final bestPool = switch(personality) {
+      CoachPersonality.friendly => ['Nice move! That was the best one! ⭐', 'Spot on! You found the top move.', 'Perfect choice!'],
+      CoachPersonality.strict => ['Correct. That was the strongest move.', 'Optimum move executed.', 'Accurate play.'],
+      CoachPersonality.motivational => ['Perfect! Keep up this amazing play! 🚀', 'Exactly! You are dominating the board!', 'Fantastic! Top tier move! 💪'],
+    };
+
+    final blunderPool = switch(personality) {
+      CoachPersonality.friendly => ['Oh no! That was a big mistake! 😱', 'Oops! I think you missed something huge.', 'That move hurts a bit... 💔'],
+      CoachPersonality.strict => ['Critical error. Significant advantage lost.', 'That was a blunder. Re-evaluate your process.', 'Unacceptable oversight.'],
+      CoachPersonality.motivational => ['Don\'t worry! We learn the most from these! 💝', 'Shake it off! Get back in the fight!', 'A temporary setback. Keep focusing! 🧗'],
+    };
+
+    return switch (classification) {
+      MoveClassification.brilliant => brilliantPool[rand % brilliantPool.length],
+      MoveClassification.best => bestPool[rand % bestPool.length],
       MoveClassification.good => 'Good move! 👍',
-      MoveClassification.needsImprovement =>
-        'Not bad, but there was a stronger option 🤔',
+      MoveClassification.needsImprovement => 'Not bad, but there was a stronger option 🤔',
       MoveClassification.mistake => 'Oops! You missed something better ⚠️',
-      MoveClassification.blunder => 'Oh no! That was a big mistake! 😱',
-    };
-  }
-
-  String _strictMessage(MoveClassification c, TacticalPattern p) {
-    return switch (c) {
-      MoveClassification.brilliant => 'Excellent. A precise move.',
-      MoveClassification.best => 'Correct. That was the strongest move.',
-      MoveClassification.good => 'Acceptable move.',
-      MoveClassification.needsImprovement =>
-        'That was inaccurate. Think deeper.',
-      MoveClassification.mistake =>
-        'That was a mistake. Analyze before moving.',
-      MoveClassification.blunder =>
-        'Critical error. You lost significant advantage.',
-    };
-  }
-
-  String _motivationalMessage(MoveClassification c, TacticalPattern p) {
-    return switch (c) {
-      MoveClassification.brilliant =>
-        'INCREDIBLE! You played like a grandmaster! 🔥',
-      MoveClassification.best => 'Perfect! Keep up this amazing play! 🚀',
-      MoveClassification.good => 'Great job! You\'re getting stronger! 💪',
-      MoveClassification.needsImprovement =>
-        'So close! You\'re improving every move! 📈',
-      MoveClassification.mistake =>
-        'That\'s OK! Champions learn from mistakes! 🌟',
-      MoveClassification.blunder =>
-        'Don\'t worry! Every master was once a beginner! 💝',
+      MoveClassification.blunder => blunderPool[rand % blunderPool.length],
     };
   }
 
   // ═══════════════════════════════════════════
-  // EXPLANATION BUILDER — Skill-Adaptive
+  // EXPLANATION BUILDER — Natural Language Hybrid
   // ═══════════════════════════════════════════
   String? _getExplanation(
     MoveClassification classification,
@@ -294,31 +284,56 @@ class CoachController {
     String? bestMove,
     TacticalPattern pattern,
   ) {
-    if (classification == MoveClassification.best ||
-        classification == MoveClassification.brilliant) {
-      if (pattern != TacticalPattern.none) {
-        return '${pattern.emoji} This ${pattern.explanation}';
-      }
-      return null;
+    if (classification == MoveClassification.best || classification == MoveClassification.brilliant) {
+      if (pattern == TacticalPattern.none) return 'You improved your position and controlled the flow.';
+      
+      final connectors = [' because', ' as', ', and furthermore', ' since'];
+      final start = 'You found this move';
+      final reason = switch(pattern) {
+        TacticalPattern.centerControl => ' it dominates the center of the board',
+        TacticalPattern.materialGain => ' it wins material and shifts the balance',
+        TacticalPattern.development => ' it activates your pieces for the attack',
+        TacticalPattern.checkmate => ' it secures the victory immediately',
+        TacticalPattern.kingSafety => ' it fortifies your king against threats',
+        TacticalPattern.fork => ' it creates a powerful fork',
+        _ => ' it was the most precise option available'
+      };
+      
+      final randIdx = cpLoss % connectors.length; // use cpLoss as entropy
+      return '$start${connectors[randIdx]}$reason! ♟️';
     }
 
     final parts = <String>[];
 
-    // Pattern explanation
-    if (pattern != TacticalPattern.none) {
-      parts.add('${pattern.emoji} ${pattern.explanation}');
+    // Detection for "Missed Opportunity"
+    if (cpLoss > 150 && classification == MoveClassification.mistake) {
+      parts.add('You missed a big opportunity here.');
     }
 
-    // Best move suggestion (don't reveal full solution instantly)
-    if (bestMove != null &&
-        classification.index >= MoveClassification.needsImprovement.index) {
+    // Pattern explanation
+    if (pattern != TacticalPattern.none) {
+      final patternAction = switch(pattern) {
+          TacticalPattern.materialLoss => 'You unfortunately lost material here',
+          TacticalPattern.hangingPiece => 'This leaves a piece undefended',
+          TacticalPattern.trappedPiece => 'Your piece is now trapped with no escape',
+          TacticalPattern.backRankWeakness => 'Your back rank is looking vulnerable',
+          _ => 'It seems you overlooked the ${pattern.explanation}'
+      };
+      parts.add(patternAction);
+    } else if (classification == MoveClassification.blunder) {
+      parts.add('This move allows the opponent to gain a massive advantage.');
+    } else {
+      parts.add('There was a much sharper continuation.');
+    }
+
+    // Best move suggestion (Connective logic)
+    if (bestMove != null && classification.index >= MoveClassification.needsImprovement.index) {
+      final transition = parts.isNotEmpty ? ' Instead, ' : 'A better idea was ';
       if (level == CoachingLevel.beginner) {
-        // Beginner: hint at the square without full move
         final toSquare = bestMove.substring(2, 4);
-        parts.add('💡 Look at square $toSquare');
+        parts.add('${transition}looking at square $toSquare would have been better.');
       } else {
-        // Intermediate/Advanced: show the best move
-        parts.add('💡 Better was $bestMove');
+        parts.add('${transition}playing $bestMove was the winning line.');
       }
     }
 
@@ -329,125 +344,75 @@ class CoachController {
   // HINT SYSTEM — On Demand
   // ═══════════════════════════════════════════
 
-  /// Returns a hint for the current position.
-  /// Each hint costs 10 XP.
+  /// Returns a hint for the current position with 4 levels of detail.
+  /// Level 1: General direction
+  /// Level 2: Piece suggestion
+  /// Level 3: Square highlight
+  /// Level 4: Full move
   Future<HintResult?> getHint(ChessEngine engine) async {
     try {
       final topMoves = await AIEngine.getTopMoves(
         engine,
         _difficulty,
-        count: 2,
+        count: 3,
       );
 
       if (topMoves.isEmpty) return null;
 
-      final bestMove = topMoves[0];
-      final bestMoveStr = bestMove.$1.toAlgebraic();
+      final bestMoveScored = topMoves.first;
+      final altMoveScored = topMoves.length > 1 ? topMoves[1] : null;
 
-      // Build explanation
-      final pattern = _detectPatternForHint(engine, bestMove.$1);
-      String explanation;
+      final bestMove = bestMoveScored.$1;
+      final altMove = altMoveScored?.$1;
 
-      if (pattern != TacticalPattern.none) {
-        explanation = _buildHintExplanation(bestMove.$1, pattern, engine);
-      } else {
-        explanation = _buildGenericHintExplanation(bestMove.$1, engine);
-      }
+      final pattern = await detectTacticalPattern(engine, bestMove);
+      final piece = engine.pieceAt(bestMove.from);
+      final targetSq = bestMove.toAlgebraic().substring(2, 4);
 
-      String? altMoveStr;
-      if (topMoves.length >= 2) {
-        altMoveStr = topMoves[1].$1.toAlgebraic();
-      }
+      // Level 1: General Category
+      String level1 = switch (pattern) {
+        TacticalPattern.checkmate => "There is a way to end the game now!",
+        TacticalPattern.materialGain => "Look for a way to win some material.",
+        TacticalPattern.fork => "One of your pieces can attack two targets.",
+        TacticalPattern.pin => "You can restrict one of their pieces.",
+        TacticalPattern.pawnPromotion => "Your pawn is very close to glory.",
+        TacticalPattern.discoveredAttack => "Moving one piece reveals a hidden threat.",
+        TacticalPattern.centerControl => "Try to exert more control over the center.",
+        TacticalPattern.development => "It's time to bring more pieces into the action.",
+        TacticalPattern.kingSafety => "Your king needs a bit more protection.",
+        _ => "Look for a forced sequence or a positional improvement.",
+      };
+
+      // Level 2: Piece Suggestion
+      String level2 = piece != null
+          ? "Consider moving your ${piece.type.coachName}."
+          : "Try to find the best square for one of your pieces.";
+
+      // Level 3: Square Highlight
+      String level3 = "Look closely at the square $targetSq.";
+
+      // Level 4: Full Move Reveal
+      String level4 = pattern != TacticalPattern.none
+          ? "You should play ${bestMove.toAlgebraic()} to execute a ${pattern.label}!"
+          : "The engine suggests ${bestMove.toAlgebraic()} as the strongest continuation.";
 
       return HintResult(
-        bestMoveAlgebraic: bestMoveStr,
-        shortExplanation: explanation,
-        alternativeMoveAlgebraic: altMoveStr,
+        bestMoveAlgebraic: bestMove.toAlgebraic(),
+        level1: level1,
+        level2: level2,
+        level3: level3,
+        level4: level4,
+        alternativeMoveAlgebraic: altMove?.toAlgebraic(),
         pattern: pattern,
         xpCost: 10,
+        currentLevel: 1,
       );
     } catch (e) {
+      debugPrint('[Coach Hint Error] $e');
       return null;
     }
   }
 
-  TacticalPattern _detectPatternForHint(ChessEngine engine, Move move) {
-    final piece = engine.pieceAt(move.from);
-    if (piece == null) return TacticalPattern.none;
-
-    // Check for capture
-    final target = engine.pieceAt(move.to);
-    if (target != null) return TacticalPattern.materialGain;
-
-    // Check for castling
-    if (move.isCastle) return TacticalPattern.kingSafety;
-
-    // Check pawn promotion
-    if (piece.type == PieceType.pawn && move.promotion != null) {
-      return TacticalPattern.pawnPromotion;
-    }
-
-    // Center control
-    final centerSquares = [
-      const Square(3, 3),
-      const Square(4, 3),
-      const Square(3, 4),
-      const Square(4, 4),
-    ];
-    if (centerSquares.any((s) => s == move.to)) {
-      return TacticalPattern.centerControl;
-    }
-
-    // Development
-    final homeRank = piece.color == PieceColor.white ? 0 : 7;
-    if (piece.type != PieceType.pawn &&
-        move.from.rank == homeRank &&
-        move.to.rank != homeRank) {
-      return TacticalPattern.development;
-    }
-
-    return TacticalPattern.none;
-  }
-
-  String _buildHintExplanation(
-      Move move, TacticalPattern pattern, ChessEngine engine) {
-    final piece = engine.pieceAt(move.from);
-    if (piece == null) return 'Try this move!';
-
-    final pieceName = _pieceName(piece.type);
-
-    return switch (pattern) {
-      TacticalPattern.fork =>
-        'Try moving your $pieceName to attack two pieces at once! 🔱',
-      TacticalPattern.pin => 'Pin the opponent\'s piece so it can\'t move! 📌',
-      TacticalPattern.materialGain => 'There\'s a piece you can capture! 💰',
-      TacticalPattern.kingSafety => 'Castle to protect your king! 🏰',
-      TacticalPattern.centerControl =>
-        'Control the center with your $pieceName! 🎯',
-      TacticalPattern.development =>
-        'Develop your $pieceName to a better square! 🚀',
-      TacticalPattern.pawnPromotion => 'Push your pawn to become a queen! 👑',
-      TacticalPattern.checkmate => 'There\'s a checkmate available! 🏆',
-      _ => 'Try moving your $pieceName for a strong position! ♟️',
-    };
-  }
-
-  String _buildGenericHintExplanation(Move move, ChessEngine engine) {
-    final piece = engine.pieceAt(move.from);
-    if (piece == null) return 'Try this move!';
-    final pieceName = _pieceName(piece.type);
-    final toSquare = move.to.toAlgebraic();
-    return 'Move your $pieceName to $toSquare for a stronger position ♟️';
-  }
-
-  String _pieceName(PieceType type) => switch (type) {
-        PieceType.pawn => 'pawn',
-        PieceType.knight => 'knight',
-        PieceType.bishop => 'bishop',
-        PieceType.rook => 'rook',
-        PieceType.queen => 'queen',
-        PieceType.king => 'king',
-      };
 
   // ═══════════════════════════════════════════
   // POST-GAME ANALYSIS
@@ -455,14 +420,14 @@ class CoachController {
   PostGameAnalysis buildPostGameAnalysis({
     required double accuracy,
     required int totalMoves,
-    required int brilliantMoves,
-    required int bestMoves,
-    required int goodMoves,
-    required int needsImprovementMoves,
-    required int mistakes,
-    required int blunders,
-    required int missedWins,
-    required List<CoachFeedback> moveAnalysis,
+    int brilliantMoves = 0,
+    int bestMoves = 0,
+    int goodMoves = 0,
+    int needsImprovementMoves = 0,
+    int mistakes = 0,
+    int blunders = 0,
+    int missedWins = 0,
+    List<CoachFeedback> moveAnalysis = const [],
   }) {
     String overallMessage;
     String improvementTip;
@@ -503,14 +468,13 @@ class CoachController {
     );
   }
 
-  // ═══════════════════════════════════════════
-  // CLEANUP
-  // ═══════════════════════════════════════════
-  void clearCache() {
-    _evalCache.clear();
-  }
-
   void dispose() {
     _evalCache.clear();
   }
+}
+
+// Utility extension for Move classification
+extension MoveClassificationValue on MoveClassification {
+  bool get isNegative =>
+      this == MoveClassification.mistake || this == MoveClassification.blunder;
 }

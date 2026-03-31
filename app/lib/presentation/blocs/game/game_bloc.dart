@@ -18,9 +18,10 @@ import '../../../data/services/audio_service.dart';
 import '../../../data/services/elo_service.dart';
 import '../../../data/repositories/auth_repository.dart';
 import '../../../data/repositories/puzzle_repository.dart';
+import '../../../data/services/achievement_service.dart';
+import '../../../data/services/mission_service.dart';
 import '../theme/theme_bloc.dart';
 import '../../../domain/engine/personality_engine.dart';
-import '../../../domain/engine/candidate_model.dart';
 
 // ═══════════════════════════════════════════
 // EVENTS
@@ -279,6 +280,9 @@ class GameState extends Equatable {
   // ELO rating change
   final int eloChange;
 
+  // Undo penalty source square for bubble animation
+  final Square? lastUndoPenaltySquare;
+
   const GameState({
     required this.board,
     required this.currentTurn,
@@ -354,6 +358,7 @@ class GameState extends Equatable {
     this.preMove,
     this.evalHistory = const [],
     this.eloChange = 0,
+    this.lastUndoPenaltySquare,
   });
 
   bool get isGameOver =>
@@ -461,6 +466,8 @@ class GameState extends Equatable {
     Move? preMove,
     List<double>? evalHistory,
     int? eloChange,
+    Square? lastUndoPenaltySquare,
+    bool clearUndoPenalty = false,
   }) {
     return GameState(
       board: board ?? this.board,
@@ -544,6 +551,9 @@ class GameState extends Equatable {
       preMove: clearPreMove ? null : (preMove ?? this.preMove),
       evalHistory: evalHistory ?? this.evalHistory,
       eloChange: eloChange ?? this.eloChange,
+      lastUndoPenaltySquare: clearUndoPenalty
+          ? null
+          : (lastUndoPenaltySquare ?? this.lastUndoPenaltySquare),
     );
   }
 
@@ -603,6 +613,7 @@ class GameState extends Equatable {
         activePersonality,
         evalHistory,
         eloChange,
+        lastUndoPenaltySquare,
       ];
 }
 
@@ -617,6 +628,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
   final AuthRepository _authRepository;
   final PuzzleRepository _puzzleRepository;
   final ThemeBloc _themeBloc;
+  final AchievementService _achievementService;
+  final MissionService _missionService;
   String? _gameId;
   int _aiRequestEpoch = 0;
   Timer? _rushTimer;
@@ -628,7 +641,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
   CoachController get coachController => _coachController;
 
   GameBloc(this._gameRepository, this._authRepository, this._puzzleRepository,
-      this._themeBloc)
+      this._themeBloc, this._achievementService, this._missionService)
       : super(GameState(
           board: List.generate(8, (_) => List.filled(8, null)),
           currentTurn: PieceColor.white,
@@ -1206,14 +1219,23 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       }
     }
 
-    // 2. AI COACH MOVE ANALYSIS (only for Human Player moves)
-    // We determine this by checking if the turn just flipped to the computer
-    final wasHumanMove =
-        (state.playerColor == null) || (state.currentTurn != state.playerColor);
+    // 2. AI COACH MOVE ANALYSIS
+    // Only analyze if:
+    // a) It's a User Move (not Computer move)
+    // b) Mode is Practice/SinglePlayer
+    // c) Mode is Multiplayer/2-Player AND enabled in settings
+    
+    final justMovedColor = state.currentTurn == PieceColor.white ? PieceColor.black : PieceColor.white;
+    final isHumanMove = (state.playerColor == null) || (justMovedColor == state.playerColor);
 
-    bool shouldAnalyze = wasHumanMove &&
-        (state.mode == GameMode.practice ||
-            state.mode == GameMode.singlePlayer);
+    bool shouldAnalyze = isHumanMove;
+    if (state.mode == GameMode.multiplayer || state.mode == GameMode.twoPlayer) {
+      shouldAnalyze = isHumanMove && state.coachSettings.enableMultiplayerCoaching;
+    } else if (state.mode == GameMode.singlePlayer || state.mode == GameMode.practice) {
+      shouldAnalyze = isHumanMove;
+    } else {
+      shouldAnalyze = false;
+    }
 
     if (shouldAnalyze && state.coachSettings.enableRealTimeCoaching) {
       int mistakes = state.mistakes;
@@ -1314,6 +1336,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
               '🎓 Lesson Complete! ${currentStep.successMessage ?? "Well done!"}',
           status: GameStatus.draw, // Mark as finished
         ));
+        _achievementService.evaluateSpecialActions('tutorial');
       } else {
         final nextStep = state.tutorial!.steps[nextIdx];
         if (nextStep.isCompletion) {
@@ -1323,6 +1346,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
             tutorialMessage: nextStep.text,
             status: GameStatus.draw, // Mark as finished
           ));
+          _achievementService.evaluateSpecialActions('tutorial');
         } else {
           // Advance to the next interactive step
           emit(state.copyWith(
@@ -1369,8 +1393,9 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         // In Puzzle Rush, automatically go to the next puzzle
         if (state.isPuzzleRush) {
           await Future.delayed(const Duration(milliseconds: 1500));
-          if (isClosed || state.puzzleRushTime <= 0 || !state.isPuzzleRush)
+          if (isClosed || state.puzzleRushTime <= 0 || !state.isPuzzleRush) {
             return;
+          }
 
           final userForRating = await _authRepository.getCurrentUser();
           final rating = userForRating?.stats.puzzleRating ?? 1200;
@@ -1465,96 +1490,96 @@ class GameBloc extends Bloc<GameEvent, GameState> {
             int xpDelta = 0;
 
             if (isWin) {
-              // 1. AI Difficulty based XP
+              // 1. Mode/Difficulty based XP
               if (state.mode == GameMode.singlePlayer) {
-                switch (state.aiDifficulty) {
-                  case AIDifficulty.basic:
-                    xpDelta += 100;
-                    break;
-                  case AIDifficulty.intermediate:
-                    xpDelta += 250;
-                    break;
-                  case AIDifficulty.advanced:
-                    xpDelta += 400;
-                    break;
-                  case AIDifficulty.impossible:
-                    xpDelta += 700;
-                    break;
-                  case AIDifficulty.aiMode:
-                    xpDelta += 1000;
-                    break;
-                  default:
-                    xpDelta += 100;
-                }
+                xpDelta += switch (state.aiDifficulty) {
+                  AIDifficulty.basic => 100,
+                  AIDifficulty.intermediate => 250,
+                  AIDifficulty.advanced => 400,
+                  AIDifficulty.impossible => 700,
+                  AIDifficulty.aiMode => 1000,
+                  _ => 100,
+                };
               } else if (state.mode == GameMode.multiplayer) {
-                // Online multiplayer win
-                xpDelta += 100;
+                xpDelta += 150; // Higher base for multiplayer
+              } else if (state.mode == GameMode.practice) {
+                xpDelta += 50;
               }
 
-              // 2. Global Bonuses: Practice, Vs AI, Online
-              if (state.mode == GameMode.singlePlayer ||
-                  state.mode == GameMode.multiplayer ||
-                  state.mode == GameMode.practice) {
-                // Mate in 5 moves (10 half-moves)
-                if (state.status == GameStatus.checkmate &&
-                    state.moveHistory.length <= 10) {
+              // 2. Global Bonuses
+              // Mate in 5 moves (10 half-moves)
+              if (state.status == GameStatus.checkmate &&
+                  state.moveHistory.length <= 10) {
+                xpDelta += 500;
+              }
+
+              // Perfect Game (No pieces lost)
+              final myCaptured = state.playerColor == PieceColor.black
+                  ? state.capturedBlack
+                  : state.capturedWhite;
+              if (myCaptured.isEmpty && state.moveHistory.length > 10) {
+                xpDelta += 1000;
+              }
+
+              // Underdog Bonus (Tiered)
+              final playerElo = user.stats.eloRating;
+              int? opponentElo;
+              if (state.mode == GameMode.singlePlayer) {
+                opponentElo = switch (state.aiDifficulty) {
+                  AIDifficulty.basic => 600,
+                  AIDifficulty.intermediate => 1200,
+                  AIDifficulty.advanced => 1800,
+                  AIDifficulty.impossible => 2400,
+                  AIDifficulty.aiMode => 2800,
+                  _ => 600,
+                };
+              } else if (state.mode == GameMode.multiplayer) {
+                opponentElo = playerElo; // Simplified for now, or fetch from state if available
+              }
+
+              if (opponentElo != null) {
+                final diff = opponentElo - playerElo;
+                if (diff >= 1000) {
+                  xpDelta += 1000;
+                } else if (diff >= 500) {
                   xpDelta += 500;
-                }
-
-                // Perfect Game (No pieces lost)
-                final myCaptured = state.playerColor == PieceColor.black
-                    ? state.capturedBlack
-                    : state.capturedWhite;
-                if (myCaptured.isEmpty) {
-                  xpDelta += 10000;
+                } else if (diff >= 200) {
+                  xpDelta += 200;
                 }
               }
 
-              // 3. Every 100th Win Bonus (Vs AI & Online only)
-              if (state.mode == GameMode.singlePlayer ||
-                  state.mode == GameMode.multiplayer) {
-                final totalWins = user.stats.wins + 1;
-                if (totalWins % 100 == 0) {
-                  xpDelta += 1000; // Bonus for milestone
-                }
+              // 4. Bounty Bonus (50% Extra XP)
+              if (state.mode == GameMode.multiplayer &&
+                  state.opponentName == _missionService.bountyUserId) {
+                // Assuming opponentName is the ID for ID matching, or fetching opponent info
+                // We'll treat opponentId as a separate field if needed, but for now we'll match on bountyUserId
+                xpDelta = (xpDelta * 1.5).round();
+                mapUpdates['bounty_claimed'] = true; 
               }
+
+              // 5. Streak Multiplier (10% per streak point, max 2.0x)
+              double streakMultiplier =
+                  1.0 + (user.stats.currentStreak * 0.1).clamp(0.0, 1.0);
+
+              // Enhanced AI Streak Multiplier (+10% per streak point in AI mode, max 10 wins total 2.0x)
+              // Since the base already covers 10% per point, we just ensure it stays consistent
+              // Or if the base was different, we'd adjust here. 
+              // The user specified +10% per win, which matches the base (1.0 + streak * 0.1).
+              
+              xpDelta = (xpDelta * streakMultiplier).round();
 
               mapUpdates['wins'] = 1;
-              if (state.mode == GameMode.singlePlayer)
-                mapUpdates['ai_wins'] = 1;
-              if (state.mode == GameMode.multiplayer)
-                mapUpdates['multiplayer_wins'] = 1;
+              if (state.mode == GameMode.singlePlayer) mapUpdates['ai_wins'] = 1;
+              if (state.mode == GameMode.multiplayer) mapUpdates['multiplayer_wins'] = 1;
             } else if (isLoss) {
-              // Defeat costs
-              if (state.mode == GameMode.singlePlayer) {
-                switch (state.aiDifficulty) {
-                  case AIDifficulty.basic:
-                    xpDelta -= 50;
-                    break;
-                  case AIDifficulty.intermediate:
-                    xpDelta -= 50;
-                    break;
-                  case AIDifficulty.advanced:
-                    xpDelta -= 25;
-                    break;
-                  case AIDifficulty.impossible:
-                    xpDelta -= 25;
-                    break;
-                  case AIDifficulty.aiMode:
-                    xpDelta -= 20;
-                    break;
-                  default:
-                    xpDelta -= 20;
-                }
-              } else if (state.mode == GameMode.multiplayer) {
-                xpDelta -= 20;
-              }
+              xpDelta = -20;
               mapUpdates['losses'] = 1;
             } else if (isDraw) {
+              xpDelta = 10;
               mapUpdates['draws'] = 1;
             }
 
-            // Sync XP (Add initial state penalties from hints/undo)
+            // Sync XP
             final totalDelta = xpDelta + state.xpGained;
 
             await _authRepository.updateXPProgress(
@@ -1564,43 +1589,55 @@ class GameBloc extends Bloc<GameEvent, GameState> {
               isOnlineMatch: state.mode == GameMode.multiplayer,
             );
 
-            // ── ELO CALCULATION ──
-            if (state.mode == GameMode.singlePlayer ||
-                state.mode == GameMode.multiplayer) {
+            // ── RATING (ELO) CALCULATION ──
+            // ONLY for online matches (Multiplayer)
+            if (state.mode == GameMode.multiplayer) {
               final currentElo = user.stats.eloRating;
-              final playerGames = user.stats.gamesPlayed;
+              final playerGames = user.stats.multiplayerGames;
               double score = isDraw ? 0.5 : (isWin ? 1.0 : 0.0);
 
-              int newElo;
-              if (state.mode == GameMode.singlePlayer) {
-                final result = EloService.calculateVsAI(
-                  playerRating: currentElo,
-                  difficulty: state.aiDifficulty?.name ?? 'normal',
-                  score: score,
-                  playerGames: playerGames,
-                );
-                newElo = result.$1;
-              } else {
-                // Multiplayer: assume opponent is similar rating
-                final opponentElo =
-                    currentElo; // Server would provide actual opponent ELO
-                final result = EloService.calculateNewRatings(
-                  player1Rating: currentElo,
-                  player2Rating: opponentElo,
-                  score: score,
-                  player1Games: playerGames,
-                );
-                newElo = result.$1;
-              }
+              // Multiplayer: assume opponent exists in state or similar rating
+              final opponentElo = currentElo; // Default fallback
+              
+              final result = EloService.calculateNewRatings(
+                player1Rating: currentElo,
+                player2Rating: opponentElo,
+                score: score,
+                player1Games: playerGames,
+                player2Games: 30, // Opponent assumed established
+              );
+              
+              final newElo = result.$1;
               eloChange = (newElo - currentElo).toInt();
 
-              // Persist ELO to local stats
+              // Persist ELO
               await _authRepository.updateXPProgress(
                 userId: user.id,
                 xpDelta: 0,
                 statUpdates: {'elo_rating': newElo},
+                isOnlineMatch: true,
               );
             }
+          }
+        }
+
+        final updatedUser = await _authRepository.getCurrentUser();
+        if (updatedUser != null) {
+          final isWin = (state.result == GameResult.whiteWins &&
+                  state.playerColor == PieceColor.white) ||
+              (state.result == GameResult.blackWins &&
+                  state.playerColor == PieceColor.black);
+
+          _achievementService.evaluatePostGame(state, updatedUser.stats);
+          
+          // Trigger Mission updates
+          _missionService.updateProgress('daily_games');
+          if (state.mode == GameMode.multiplayer && isWin) {
+            _missionService.updateProgress('online_win');
+          }
+          if (isWin) {
+            _missionService.updateProgress('streak_hunter', 
+              delta: updatedUser.stats.currentStreak >= 3 ? 3 : 0); // Simplified for now
           }
         }
 
@@ -1697,29 +1734,23 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     }
   }
 
-  void _onUndo(GameUndoEvent event, Emitter<GameState> emit) {
+  Future<void> _onUndo(GameUndoEvent event, Emitter<GameState> emit) async {
+    // 5-Second Rule Enforcement for ALL interactive modes
+    if (state.lastMoveTimestamp != null) {
+      final elapsed = DateTime.now().difference(state.lastMoveTimestamp!);
+      if (elapsed.inSeconds >= 5) {
+        emit(state.copyWith(
+          tutorialMessage: "⚠️ Thinking time passed! Cannot take back moves after 5 seconds.",
+        ));
+        return;
+      }
+    }
+
     if (state.mode == GameMode.multiplayer ||
         state.mode == GameMode.twoPlayer ||
         state.mode == GameMode.practice) {
       if (state.mode == GameMode.multiplayer && state.mpUndosUsed >= 2) return;
-      if (state.lastMoveTimestamp == null) return;
-
-      // Implied 5s rule for all interactive modes
-      final elapsed = DateTime.now().difference(state.lastMoveTimestamp!);
-      if (elapsed.inSeconds >= 5) {
-        if (state.mode == GameMode.multiplayer) return;
-        // Practice/TwoPlayer keep it for UX consistency but don't strictly block?
-        // User asked to "imply 5 sec rule that are present in online multiplayer for online mode"
-        // and "Two players & Practise mode ... No cost in back move. But imply 5 sec rule"
-        return;
-      }
-
       if (_engine.moveHistory.isEmpty) return;
-
-      // Warning prompt via UI would be better, for now we log/emit warning message
-      if (state.mode == GameMode.singlePlayer) {
-        // This is handled below with XP cost
-      }
 
       _engine.undoMove();
       final captured = _collectCaptured();
@@ -1735,6 +1766,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         clearSelected: true,
         mpUndosUsed: state.mpUndosUsed + 1,
       ));
+      _achievementService.evaluateSpecialActions('undo');
       return;
     }
 
@@ -1742,22 +1774,18 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     final isVsAI = state.mode == GameMode.singlePlayer;
     if (!isVsAI) return;
 
-    // Check 5s rule for AI too
-    if (state.lastMoveTimestamp != null) {
-      final elapsed = DateTime.now().difference(state.lastMoveTimestamp!);
-      if (elapsed.inSeconds >= 5) {
-        emit(state.copyWith(
-            tutorialMessage:
-                "⚠️ Thinking time passed! Cannot take back moves after 5 seconds."));
-        return;
-      }
-    }
+    if (_engine.moveHistory.isEmpty) return;
 
-    // Cost 25 XP
+    // Get the square of the last move to show the penalty bubble there
+    final lastMove = _engine.moveHistory.last;
+    final penaltySquare = lastMove.to;
+
+    // Cost 25 XP for all 5 difficulty modes
     final newXpDelta = state.xpGained - 25;
     emit(state.copyWith(
       xpGained: newXpDelta,
       tutorialMessage: "⏪ Take back applied! (-25 XP)",
+      lastUndoPenaltySquare: penaltySquare,
     ));
 
     // Sync XP reduction
@@ -1774,6 +1802,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     for (int i = 0; i < undoCount; i++) {
       if (_engine.moveHistory.isNotEmpty) _engine.undoMove();
     }
+    
     emit(state.copyWith(
       board: _engine.board,
       currentTurn: _engine.currentTurn,
@@ -1784,6 +1813,14 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       clearSelected: true,
       clearCoachMove: true,
     ));
+
+    // Reset the penalty square after a brief delay so the bubble can animate
+    await Future.delayed(const Duration(seconds: 2));
+    if (!isClosed) {
+      emit(state.copyWith(clearUndoPenalty: true));
+    }
+
+    _achievementService.evaluateSpecialActions('undo');
   }
 
   void _onResign(GameResignEvent event, Emitter<GameState> emit) {
@@ -1860,9 +1897,28 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     }
 
     if (state.hintsRemaining <= 0) return;
-    if (state.mode != GameMode.singlePlayer && state.mode != GameMode.practice)
-      return;
+    // Reminder: Hints removed from Two Player. Only Single, Practice, Multiplayer.
+    if (state.mode == GameMode.twoPlayer) return;
     if (!state.isPlayerTurn) return;
+
+    // IF we already have an active hint, just increment the level
+    if (state.activeHint != null) {
+      if (state.activeHint!.currentLevel < 4) {
+        final upgradedHint = state.activeHint!
+            .copyWith(currentLevel: state.activeHint!.currentLevel + 1);
+
+        Move? hintMove;
+        if (upgradedHint.currentLevel >= 3) {
+          hintMove = Move.fromAlgebraic(upgradedHint.bestMoveAlgebraic);
+        }
+
+        emit(state.copyWith(
+          activeHint: upgradedHint,
+          hintMove: hintMove,
+        ));
+      }
+      return;
+    }
 
     final aiRequestEpoch = ++_aiRequestEpoch;
     emit(state.copyWith(isAIThinking: true));
@@ -1874,23 +1930,26 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     emit(state.copyWith(isAIThinking: false));
 
     if (hintResult != null) {
-      final hintMove = Move.fromAlgebraic(hintResult.bestMoveAlgebraic);
+      // Practice mode hints are FREE
+      final isPractice = state.mode == GameMode.practice;
+      final xpCost = isPractice ? 0 : 10;
 
-      // Sync -10 XP to server
-      final user = await _authRepository.getCurrentUser();
-      if (user != null) {
-        await _authRepository.updateXPProgress(
-          userId: user.id,
-          xpDelta: -10,
-          statUpdates: {},
-        );
+      // Sync XP to server if not practice
+      if (!isPractice) {
+        final user = await _authRepository.getCurrentUser();
+        if (user != null) {
+          await _authRepository.updateXPProgress(
+            userId: user.id,
+            xpDelta: -xpCost,
+            statUpdates: {},
+          );
+        }
       }
 
       emit(state.copyWith(
-        hintMove: hintMove,
         activeHint: hintResult,
         hintsUsed: state.hintsUsed + 1,
-        xpGained: state.xpGained - 10,
+        xpGained: state.xpGained - xpCost,
       ));
     }
   }
@@ -2149,12 +2208,13 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       }
     } catch (e) {
       debugPrint('[AI Execution Error] $e');
-      if (!isClosed)
+      if (!isClosed) {
         emit(state.copyWith(
           isAIThinking: false,
           engineError:
               "Sorry! Something went wrong behind the scenes. 🤯 I can't think anymore!",
         ));
+      }
     }
   }
 }

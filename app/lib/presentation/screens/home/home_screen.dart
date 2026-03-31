@@ -61,6 +61,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 physics: const BouncingScrollPhysics(),
                 slivers: [
                   SliverToBoxAdapter(child: _buildHeader(user)),
+                  SliverToBoxAdapter(child: _buildLevelProgress(user)),
                   SliverToBoxAdapter(child: _buildQuickStats(user)),
                   if (user != null && user.xp < 0)
                     SliverToBoxAdapter(child: _buildLowXPWarning(user)),
@@ -237,6 +238,100 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildLevelProgress(UserModel? user) {
+    if (user == null) return const SizedBox.shrink();
+    
+    final level = user.level;
+    final progress = user.levelProgress;
+    
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: AppTheme.navyCard.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      gradient: AppTheme.rainbowGradient,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      'LVL $level',
+                      style: GoogleFonts.fredoka(
+                        color: AppTheme.midnight,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    'PROGESSION',
+                    style: GoogleFonts.fredoka(
+                      color: AppTheme.textSecondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                ],
+              ),
+              Text(
+                '${(progress * 100).toInt()}%',
+                style: GoogleFonts.fredoka(
+                  color: AppTheme.goldPrimary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Progress Bar
+          Stack(
+            children: [
+              Container(
+                height: 8,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              AnimatedContainer(
+                duration: 1.seconds,
+                curve: Curves.easeOutCubic,
+                height: 8,
+                width: MediaQuery.of(context).size.width * (progress.clamp(0.0, 1.0) * 0.85),
+                decoration: BoxDecoration(
+                  gradient: AppTheme.rainbowGradient,
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.goldPrimary.withValues(alpha: 0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    ).animate().fadeIn(delay: 50.ms).slideY(begin: 0.05);
+  }
+
   Widget _buildQuickStats(UserModel? user) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -250,10 +345,7 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _statItem('${user?.stats.gamesPlayed ?? 0}', '🎮 Games', null),
-          _divider(),
-          _statItem(
-              '${user?.stats.wins ?? 0}', '🏆 Wins', AppTheme.goldPrimary),
+          _statItem('${user?.stats.wins ?? 0}', '🏆 Wins', AppTheme.goldPrimary),
           _divider(),
           _statItem(
             '${user?.stats.winRate.toStringAsFixed(0) ?? 0}%',
@@ -263,11 +355,16 @@ class _HomeScreenState extends State<HomeScreen> {
           _divider(),
           _statItem(
               '${user?.stats.eloRating ?? 1200}',
-              '${EloService.getRankEmoji(user?.stats.eloRating ?? 1200)} ELO',
+              '${EloService.getRankEmoji(user?.stats.eloRating ?? 1200)} Rating',
               AppTheme.lavender),
+          _divider(),
+          _statItem(
+              '${user?.xp ?? 0}',
+              '✨ XP',
+              AppTheme.goldPrimary),
         ],
       ),
-    ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.1);
+    ).animate().fadeIn(delay: 150.ms).slideY(begin: 0.1);
   }
 
   Widget _buildLowXPWarning(UserModel user) {

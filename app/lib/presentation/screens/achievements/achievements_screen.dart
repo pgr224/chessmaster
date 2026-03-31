@@ -1,9 +1,9 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../../../core/di/injection_container.dart' as di;
+import '../../../data/services/achievement_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/achievement_model.dart';
 
@@ -15,44 +15,15 @@ class AchievementsScreen extends StatefulWidget {
 }
 
 class _AchievementsScreenState extends State<AchievementsScreen> {
-  List<Achievement> _achievements = [];
+  late List<Achievement> _achievements;
   AchievementCategory? _selectedCategory;
   bool _loading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadAchievements();
-  }
-
-  Future<void> _loadAchievements() async {
-    final prefs = await SharedPreferences.getInstance();
-    final savedData = prefs.getString('achievements');
-
-    if (savedData != null) {
-      try {
-        final List<dynamic> saved = jsonDecode(savedData) as List<dynamic>;
-        final savedMap = <String, Map<String, dynamic>>{};
-        for (final item in saved) {
-          if (item is Map<String, dynamic>) {
-            savedMap[item['id'] as String] = item;
-          }
-        }
-        _achievements = allAchievements.map((template) {
-          final saved = savedMap[template.id];
-          if (saved != null) {
-            return Achievement.fromSavedJson(saved, template);
-          }
-          return template;
-        }).toList();
-      } catch (_) {
-        _achievements = List.from(allAchievements);
-      }
-    } else {
-      _achievements = List.from(allAchievements);
-    }
-
-    if (mounted) setState(() => _loading = false);
+    _achievements = di.sl<AchievementService>().achievements;
+    _loading = false;
   }
 
   @override

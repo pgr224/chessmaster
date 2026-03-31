@@ -240,6 +240,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                         onDismiss: () => context
                             .read<GameBloc>()
                             .add(GameDismissHintEvent()),
+                        onNextLevel: () => context
+                            .read<GameBloc>()
+                            .add(GameRequestHintEvent()),
                       ),
                     if (state.showMiniLesson && state.coachFeedback == null)
                       _buildMiniLessonOverlay(context, state),
@@ -1354,6 +1357,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               whitePieceColor: state.whitePieceColor,
               blackPieceColor: state.blackPieceColor,
               currentTurn: state.currentTurn,
+              lastUndoPenaltySquare: state.lastUndoPenaltySquare,
               onSquareTap: state.isGameOver
                   ? null
                   : (sq) {
@@ -1413,8 +1417,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               width: 90,
             ),
 
-          // Hint button (single player, practice, or puzzle)
-          if (isPracticeOrSingle || isPuzzle)
+          // Hint button (single player, practice, puzzle, or online multiplayer)
+          if (isPracticeOrSingle || isPuzzle || isMultiplayer)
             _actionBtn(
               icon: Icons.lightbulb_rounded,
               label: isPuzzle ? 'Hint (10XP)' : 'Hint',
@@ -1592,13 +1596,29 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               title: Text('Real-time Feedback',
                   style: GoogleFonts.fredoka(
                       color: AppTheme.textPrimary, fontSize: 18)),
-              subtitle: Text('Get help and lessons while playing',
+              subtitle: Text('Context-aware help while playing',
                   style: GoogleFonts.baloo2(color: AppTheme.textSecondary)),
               value: state.coachSettings.enableRealTimeCoaching,
               activeThumbColor: AppTheme.accentPurple,
               onChanged: (val) {
                 context.read<GameBloc>().add(GameUpdateCoachSettingsEvent(
                       state.coachSettings.copyWith(enableRealTimeCoaching: val),
+                    ));
+              },
+            ),
+
+            // Toggle Multiplayer Feedback
+            SwitchListTile(
+              title: Text('Coaching in Online/2P',
+                  style: GoogleFonts.fredoka(
+                      color: AppTheme.textPrimary, fontSize: 18)),
+              subtitle: Text('Enable analysis in competitive matches (Off by default)',
+                  style: GoogleFonts.baloo2(color: AppTheme.textSecondary)),
+              value: state.coachSettings.enableMultiplayerCoaching,
+              activeThumbColor: AppTheme.accentCyan,
+              onChanged: (val) {
+                context.read<GameBloc>().add(GameUpdateCoachSettingsEvent(
+                      state.coachSettings.copyWith(enableMultiplayerCoaching: val),
                     ));
               },
             ),

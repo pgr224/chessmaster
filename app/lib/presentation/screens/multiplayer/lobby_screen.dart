@@ -263,6 +263,112 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
+  Widget _buildXpBroadcasts(MultiplayerState state) {
+    final authState = context.watch<AuthBloc>().state;
+    final bool needsXp =
+        authState is AuthAuthenticatedState && authState.user.xp < 0;
+
+    if (!needsXp) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.redAccent.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: Colors.redAccent.withValues(alpha: 0.4)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded,
+                color: Colors.redAccent, size: 28),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Negative XP Balance!',
+                    style: GoogleFonts.fredoka(
+                        color: Colors.redAccent,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    'You need at least 0 XP to play. Request the community for help!',
+                    style: GoogleFonts.baloo2(
+                        color: AppTheme.textSecondary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            ),
+            _buildBroadcastButton(),
+          ],
+        ),
+      ),
+    ).animate().shake(duration: 500.ms);
+  }
+
+  Widget _buildBroadcastButton() {
+    return FilledButton(
+      style: FilledButton.styleFrom(
+        backgroundColor: AppTheme.accentGreen,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      onPressed: () {
+        context.read<MultiplayerBloc>().add(const MpSendXpBroadcastEvent(500));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('XP Broadcast Request Sent!')),
+        );
+      },
+      child: Text('BROADCAST',
+          style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
+    );
+  }
+
+  void _handleDonateXP(String userId, String username, int amount) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.navyCard,
+        title: Text('Donate XP to $username',
+            style: GoogleFonts.fredoka(color: AppTheme.textPrimary)),
+        content: Text(
+            'Are you sure you want to donate $amount XP? This will be deducted from your total balance.',
+            style: GoogleFonts.baloo2(color: AppTheme.textSecondary)),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('CANCEL')),
+          FilledButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              try {
+                final success = await context
+                    .read<AuthBloc>()
+                    .authRepository
+                    .donateXP(recipientId: userId, amount: amount);
+                if (success) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Donated $amount XP to $username!')));
+                  // ignore: use_build_context_synchronously
+                  context.read<AuthBloc>().add(AuthCheckStatusEvent()); // Refresh local user XP
+                }
+              } catch (e) {
+                // ignore: use_build_context_synchronously
+                ScaffoldMessenger.of(context)
+                    .showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+              }
+            },
+            child: const Text('DONATE'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildHeroCard(MultiplayerState state) {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -540,7 +646,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
           Align(
             alignment: Alignment.centerRight,
             child: TextButton(
-              onPressed: () => _showPlayersWindow(state),
+              onPressed: () => _showSocialWindow(state),
               child: Text(
                 'Open full player window',
                 style: GoogleFonts.fredoka(
@@ -611,29 +717,29 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
-  Future<void> _showPlayersWindow(MultiplayerState state) async {
+  Future<void> _showSocialWindow(MultiplayerState state) async {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (sheetContext) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.82,
-          minChildSize: 0.55,
-          maxChildSize: 0.96,
-          builder: (context, scrollController) {
-            return Container(
-              decoration: const BoxDecoration(
-                gradient: AppTheme.backgroundGradient,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-              ),
-              child: SafeArea(
-                top: false,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+        return DefaultTabController(
+          length: 2,
+          child: DraggableScrollableSheet(
+            initialChildSize: 0.82,
+            minChildSize: 0.55,
+            maxChildSize: 0.96,
+            builder: (context, scrollController) {
+              return Container(
+                decoration: const BoxDecoration(
+                  gradient: AppTheme.backgroundGradient,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                ),
+                child: SafeArea(
+                  top: false,
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      const SizedBox(height: 14),
                       Center(
                         child: Container(
                           width: 56,
@@ -644,39 +750,174 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 14),
-                      Text(
-                        'Available Online Players',
-                        style: GoogleFonts.fredoka(
-                            color: AppTheme.textPrimary,
-                            fontSize: 26,
-                            fontWeight: FontWeight.w700),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Choose a player and send either a 1v1 challenge or a tournament invite.',
-                        style: GoogleFonts.baloo2(
-                            color: AppTheme.textSecondary,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600),
-                      ),
                       const SizedBox(height: 16),
+                      TabBar(
+                        dividerColor: Colors.transparent,
+                        indicatorColor: AppTheme.accentCyan,
+                        labelColor: AppTheme.accentCyan,
+                        unselectedLabelColor: AppTheme.textMuted,
+                        labelStyle: GoogleFonts.fredoka(
+                            fontWeight: FontWeight.bold, fontSize: 18),
+                        tabs: const [
+                          Tab(text: 'Players', icon: Icon(Icons.people_rounded)),
+                          Tab(
+                              text: 'XP Requests',
+                              icon: Icon(Icons.volunteer_activism_rounded)),
+                        ],
+                      ),
                       Expanded(
-                        child: ListView.builder(
-                          controller: scrollController,
-                          itemCount: state.availablePlayers.length,
-                          itemBuilder: (context, index) => _buildChallengeCard(
-                              state.availablePlayers[index]),
+                        child: TabBarView(
+                          children: [
+                            // PLAYERS TAB
+                            _buildPlayersTab(state, scrollController),
+                            // REQUESTS TAB
+                            _buildRequestsTab(state, scrollController),
+                          ],
                         ),
                       ),
                     ],
                   ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         );
       },
+    );
+  }
+
+  Widget _buildPlayersTab(
+      MultiplayerState state, ScrollController scrollController) {
+    return Padding(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Available Online Players',
+            style: GoogleFonts.fredoka(
+                color: AppTheme.textPrimary,
+                fontSize: 26,
+                fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Choose a player and send either a 1v1 challenge or a tournament invite.',
+            style: GoogleFonts.baloo2(
+                color: AppTheme.textSecondary,
+                fontSize: 16,
+                fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: ListView.builder(
+              controller: scrollController,
+              itemCount: state.availablePlayers.length,
+              itemBuilder: (context, index) =>
+                  _buildChallengeCard(state.availablePlayers[index]),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRequestsTab(
+      MultiplayerState state, ScrollController scrollController) {
+    return Padding(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'XP Broadcast Requests',
+            style: GoogleFonts.fredoka(
+                color: AppTheme.goldPrimary,
+                fontSize: 26,
+                fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Help fellow players get back in the game! Requests last for 24 hours.',
+            style: GoogleFonts.baloo2(
+                color: AppTheme.textSecondary,
+                fontSize: 16,
+                fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 16),
+          if (state.xpBroadcastRequests.isEmpty)
+            Expanded(
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.hourglass_empty_rounded,
+                        color: AppTheme.textMuted, size: 48),
+                    const SizedBox(height: 12),
+                    Text('No active requests',
+                        style: GoogleFonts.baloo2(color: AppTheme.textMuted)),
+                  ],
+                ),
+              ),
+            )
+          else
+            Expanded(
+              child: ListView.builder(
+                controller: scrollController,
+                itemCount: state.xpBroadcastRequests.length,
+                itemBuilder: (context, index) {
+                  final req = state.xpBroadcastRequests[index];
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppTheme.navyCard,
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                          color: AppTheme.accentOrange.withValues(alpha: 0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        const CircleAvatar(
+                          backgroundColor: AppTheme.accentOrange,
+                          child: Icon(Icons.person, color: Colors.white),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                req['username'] ?? 'Anonymous',
+                                style: GoogleFonts.fredoka(
+                                    color: AppTheme.textPrimary,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold),
+                              ),
+                              Text(
+                                'Asking for ${req['amount']} XP',
+                                style: GoogleFonts.baloo2(
+                                    color: AppTheme.accentOrange,
+                                    fontWeight: FontWeight.w600),
+                              ),
+                            ],
+                          ),
+                        ),
+                        FilledButton(
+                          style: FilledButton.styleFrom(
+                              backgroundColor: AppTheme.accentOrange),
+                          onPressed: () => _handleDonateXP(
+                              req['userId'], req['username'], req['amount']),
+                          child: const Text('DONATE'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+        ],
+      ),
     );
   }
 

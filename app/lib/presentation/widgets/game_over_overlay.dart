@@ -366,38 +366,49 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                     Container(
                       margin: const EdgeInsets.only(bottom: 12),
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 10),
+                          horizontal: 24, vertical: 12),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                             colors: widget.xpGained > 0
                                 ? [
-                                    AppTheme.goldPrimary.withValues(alpha: 0.3),
+                                    AppTheme.goldPrimary.withValues(alpha: 0.4),
                                     AppTheme.goldPrimary.withValues(alpha: 0.1)
                                   ]
                                 : [
-                                    AppTheme.accentRed.withValues(alpha: 0.3),
+                                    AppTheme.accentRed.withValues(alpha: 0.4),
                                     AppTheme.accentRed.withValues(alpha: 0.1)
                                   ]),
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(20),
                         border: Border.all(
                             color: (widget.xpGained > 0
                                     ? AppTheme.goldPrimary
                                     : AppTheme.accentRed)
-                                .withValues(alpha: 0.4)),
+                                .withValues(alpha: 0.5),
+                            width: 2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: (widget.xpGained > 0
+                                    ? AppTheme.goldPrimary
+                                    : AppTheme.accentRed)
+                                .withValues(alpha: 0.2),
+                            blurRadius: 20,
+                            spreadRadius: 2,
+                          ),
+                        ],
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
                             widget.xpGained > 0
-                                ? Icons.star_rounded
+                                ? Icons.stars_rounded
                                 : Icons.trending_down_rounded,
                             color: widget.xpGained > 0
                                 ? AppTheme.goldPrimary
                                 : AppTheme.accentRed,
-                            size: 22,
+                            size: 26,
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 12),
                           Text(
                             widget.xpGained > 0
                                 ? '+${widget.xpGained} XP GAINED!'
@@ -406,16 +417,30 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                               color: widget.xpGained > 0
                                   ? AppTheme.goldPrimary
                                   : AppTheme.accentRed,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w800,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0.5,
                             ),
                           ),
                         ],
                       ),
-                    ).animate().scale(
-                        delay: 700.ms,
-                        duration: 400.ms,
-                        curve: Curves.easeOutBack),
+                    )
+                        .animate(onPlay: (c) => c.repeat(reverse: true))
+                        .shimmer(
+                            delay: 1.seconds,
+                            duration: 1500.ms,
+                            color: Colors.white.withValues(alpha: 0.2))
+                        .scale(
+                            begin: const Offset(1, 1),
+                            end: const Offset(1.03, 1.03),
+                            duration: 1000.ms,
+                            curve: Curves.easeInOut)
+                        .animate()
+                        .scale(
+                            delay: 700.ms,
+                            duration: 500.ms,
+                            curve: Curves.easeOutBack)
+                        .fadeIn(delay: 700.ms),
 
                   // ── ACTION BUTTONS ──
                   Row(

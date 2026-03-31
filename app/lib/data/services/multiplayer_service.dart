@@ -159,6 +159,14 @@ class MultiplayerService {
     }));
   }
 
+  /// Send XP broadcast to all online players
+  void sendXpBroadcast(int amount) {
+    _lobbyChannel?.sink.add(jsonEncode({
+      'type': 'XP_BROADCAST',
+      'amount': amount,
+    }));
+  }
+
   /// Resign game
   void resign() {
     _gameChannel?.sink.add(jsonEncode({'type': 'RESIGN'}));

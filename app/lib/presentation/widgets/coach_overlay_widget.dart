@@ -47,11 +47,14 @@ class _CoachOverlayWidgetState extends State<CoachOverlayWidget> {
   void _startAutoDismiss() {
     _autoDismissTimer?.cancel();
     if (widget.compact && widget.feedback != null) {
-      final duration = widget.feedback!.isNegative
-          ? const Duration(seconds: 6) // Longer for mistakes
-          : const Duration(seconds: 3);
+      // Base: 4s. Add 1s for every 10 words in explanation for psychological comfort.
+      int wordCount = widget.feedback!.explanation?.split(' ').length ?? 0;
+      int extraSeconds = (wordCount / 10).floor();
+      
+      final duration = Duration(seconds: (4 + extraSeconds).clamp(4, 10));
+      
       _autoDismissTimer = Timer(duration, () {
-        widget.onDismiss?.call();
+        if (mounted) widget.onDismiss?.call();
       });
     }
   }
@@ -68,7 +71,8 @@ class _CoachOverlayWidgetState extends State<CoachOverlayWidget> {
     if (feedback == null) return const SizedBox.shrink();
 
     return Positioned(
-      top: 100,
+      // Positioning adapted to avoid obstructing central gameboard area
+      top: MediaQuery.of(context).size.height * 0.12, 
       left: 16,
       right: 16,
       child: Center(
@@ -276,11 +280,13 @@ class _CoachOverlayWidgetState extends State<CoachOverlayWidget> {
 class HintOverlayWidget extends StatelessWidget {
   final HintResult hint;
   final VoidCallback? onDismiss;
+  final VoidCallback? onNextLevel;
 
   const HintOverlayWidget({
     super.key,
     required this.hint,
     this.onDismiss,
+    this.onNextLevel,
   });
 
   @override
@@ -290,144 +296,188 @@ class HintOverlayWidget extends StatelessWidget {
       left: 20,
       right: 20,
       child: Center(
-        child: GestureDetector(
-          onTap: onDismiss,
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 380),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppTheme.navyCard.withValues(alpha: 0.97),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: AppTheme.skyBlue.withValues(alpha: 0.6),
-                width: 2,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: AppTheme.skyBlue.withValues(alpha: 0.2),
-                  blurRadius: 20,
-                  spreadRadius: 2,
-                ),
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.3),
-                  blurRadius: 12,
-                  offset: const Offset(0, 6),
-                ),
-              ],
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 380),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppTheme.navyCard.withValues(alpha: 0.98),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: AppTheme.skyBlue.withValues(alpha: 0.6),
+              width: 2,
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppTheme.skyBlue.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.lightbulb_rounded,
-                        color: AppTheme.skyBlue,
-                        size: 22,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'COACH HINT',
-                            style: GoogleFonts.fredoka(
-                              color: AppTheme.skyBlue,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 1.2,
-                            ),
-                          ),
-                          Text(
-                            '-${hint.xpCost} XP',
-                            style: GoogleFonts.fredoka(
-                              color: AppTheme.accentRed.withValues(alpha: 0.8),
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: onDismiss,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.close_rounded,
-                          color: AppTheme.textMuted,
-                          size: 18,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                // Explanation
-                Text(
-                  hint.shortExplanation,
-                  style: GoogleFonts.baloo2(
-                    color: AppTheme.textPrimary,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                    height: 1.4,
-                  ),
-                ),
-                // Pattern badge
-                if (hint.pattern != TacticalPattern.none) ...[
-                  const SizedBox(height: 8),
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.skyBlue.withValues(alpha: 0.2),
+                blurRadius: 20,
+                spreadRadius: 2,
+              ),
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.4),
+                blurRadius: 15,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header with Progress
+              Row(
+                children: [
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: AppTheme.goldPrimary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: AppTheme.goldPrimary.withValues(alpha: 0.3),
-                      ),
+                      color: AppTheme.skyBlue.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Text(
-                      '${hint.pattern.emoji} ${hint.pattern.explanation}',
-                      style: GoogleFonts.baloo2(
-                        color: AppTheme.goldPrimary,
-                        fontSize: 12,
+                    child: const Icon(
+                      Icons.lightbulb_rounded,
+                      color: AppTheme.skyBlue,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'AI COACH HINT',
+                          style: GoogleFonts.fredoka(
+                            color: AppTheme.skyBlue,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        // Level Indicator
+                        Row(
+                          children: List.generate(4, (index) {
+                            final isActive = index < hint.currentLevel;
+                            return Container(
+                              width: 30,
+                              height: 4,
+                              margin: const EdgeInsets.only(right: 4),
+                              decoration: BoxDecoration(
+                                color: isActive
+                                    ? AppTheme.skyBlue
+                                    : Colors.white.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            );
+                          }),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (hint.xpCost > 0)
+                    Text(
+                      '-${hint.xpCost} XP',
+                      style: GoogleFonts.fredoka(
+                        color: AppTheme.accentRed.withValues(alpha: 0.8),
+                        fontSize: 10,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                  ),
-                ],
-                // Alternative move
-                if (hint.alternativeMoveAlgebraic != null) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    '🔄 Alternative: ${hint.alternativeMoveAlgebraic}',
-                    style: GoogleFonts.baloo2(
-                      color: AppTheme.textMuted,
-                      fontSize: 12,
+                  const SizedBox(width: 10),
+                  GestureDetector(
+                    onTap: onDismiss,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.close_rounded,
+                        color: AppTheme.textMuted,
+                        size: 18,
+                      ),
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 18),
+              // Hint Content
+              Text(
+                hint.currentHintText,
+                style: GoogleFonts.baloo2(
+                  color: AppTheme.textPrimary,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  height: 1.4,
+                ),
+              ).animate(key: ValueKey(hint.currentLevel)).fadeIn().slideX(begin: 0.1),
+              
+              const SizedBox(height: 16),
+              
+              // Actions
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  if (hint.currentLevel < 4)
+                    TextButton.icon(
+                      onPressed: onNextLevel,
+                      icon: const Icon(Icons.add_circle_outline_rounded, size: 18),
+                      label: Text(
+                        'NEED MORE?',
+                        style: GoogleFonts.fredoka(fontWeight: FontWeight.w700),
+                      ),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppTheme.skyBlue,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                      ),
+                    ),
+                  if (hint.currentLevel == 4)
+                    Text(
+                      'Full Move Revealed!',
+                      style: GoogleFonts.baloo2(
+                        color: AppTheme.goldPrimary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ).animate().shimmer(),
+                ],
+              ),
+              
+              // Pattern badge (only for levels 1 & 4)
+              if (hint.pattern != TacticalPattern.none && (hint.currentLevel == 1 || hint.currentLevel == 4)) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppTheme.goldPrimary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: AppTheme.goldPrimary.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(hint.pattern.emoji, style: const TextStyle(fontSize: 14)),
+                      const SizedBox(width: 8),
+                      Text(
+                        hint.pattern.label,
+                        style: GoogleFonts.baloo2(
+                          color: AppTheme.goldPrimary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
-            ),
-          )
-              .animate()
-              .slideY(begin: 0.2, duration: 350.ms, curve: Curves.easeOutCubic)
-              .fadeIn(duration: 250.ms),
-        ),
+            ],
+          ),
+        )
+            .animate()
+            .scale(begin: const Offset(0.95, 0.95), duration: 250.ms, curve: Curves.easeOutBack)
+            .fadeIn(duration: 200.ms),
       ),
     );
   }

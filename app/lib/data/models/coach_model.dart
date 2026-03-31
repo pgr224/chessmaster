@@ -3,6 +3,7 @@
 library;
 
 import '../models/game_config.dart';
+import '../../domain/engine/chess_engine.dart'; // Needed for PieceType
 
 // ═══════════════════════════════════════════
 // MOVE CLASSIFICATION
@@ -107,6 +108,25 @@ extension TacticalPatternInfo on TacticalPattern {
         TacticalPattern.backRankWeakness => '🚪',
         TacticalPattern.none => '',
       };
+
+  String get label => switch (this) {
+        TacticalPattern.fork => 'Fork',
+        TacticalPattern.pin => 'Pin',
+        TacticalPattern.skewer => 'Skewer',
+        TacticalPattern.discoveredAttack => 'Discovered Attack',
+        TacticalPattern.doubleCheck => 'Double Check',
+        TacticalPattern.checkmate => 'Checkmate',
+        TacticalPattern.materialGain => 'Material Gain',
+        TacticalPattern.materialLoss => 'Material Loss',
+        TacticalPattern.centerControl => 'Center Control',
+        TacticalPattern.development => 'Development',
+        TacticalPattern.kingSafety => 'King Safety',
+        TacticalPattern.pawnPromotion => 'Pawn Promotion',
+        TacticalPattern.trappedPiece => 'Trapped Piece',
+        TacticalPattern.hangingPiece => 'Hanging Piece',
+        TacticalPattern.backRankWeakness => 'Back Rank Weakness',
+        TacticalPattern.none => '',
+      };
 }
 
 // ═══════════════════════════════════════════
@@ -201,18 +221,45 @@ class CoachFeedback {
 // ═══════════════════════════════════════════
 class HintResult {
   final String bestMoveAlgebraic;
-  final String shortExplanation;
+  final String level1; // General direction
+  final String level2; // Piece suggestion
+  final String level3; // Square highlight
+  final String level4; // Full move explanation
   final String? alternativeMoveAlgebraic;
   final TacticalPattern pattern;
   final int xpCost;
+  final int currentLevel;
 
   const HintResult({
     required this.bestMoveAlgebraic,
-    required this.shortExplanation,
+    required this.level1,
+    required this.level2,
+    required this.level3,
+    required this.level4,
     this.alternativeMoveAlgebraic,
     this.pattern = TacticalPattern.none,
     this.xpCost = 10,
+    this.currentLevel = 1,
   });
+
+  HintResult copyWith({int? currentLevel}) => HintResult(
+        bestMoveAlgebraic: bestMoveAlgebraic,
+        level1: level1,
+        level2: level2,
+        level3: level3,
+        level4: level4,
+        alternativeMoveAlgebraic: alternativeMoveAlgebraic,
+        pattern: pattern,
+        xpCost: xpCost,
+        currentLevel: currentLevel ?? this.currentLevel,
+      );
+
+  String get currentHintText => switch (currentLevel) {
+        1 => level1,
+        2 => level2,
+        3 => level3,
+        _ => level4,
+      };
 }
 
 // ═══════════════════════════════════════════
@@ -256,6 +303,7 @@ class CoachSettings {
   final CoachingLevel level;
   final bool enableRealTimeCoaching;
   final bool enablePostGameAnalysis;
+  final bool enableMultiplayerCoaching;
   final bool showEvalBar;
 
   const CoachSettings({
@@ -263,6 +311,7 @@ class CoachSettings {
     this.level = CoachingLevel.beginner,
     this.enableRealTimeCoaching = true,
     this.enablePostGameAnalysis = true,
+    this.enableMultiplayerCoaching = false,
     this.showEvalBar = false,
   });
 
@@ -271,6 +320,7 @@ class CoachSettings {
     CoachingLevel? level,
     bool? enableRealTimeCoaching,
     bool? enablePostGameAnalysis,
+    bool? enableMultiplayerCoaching,
     bool? showEvalBar,
   }) =>
       CoachSettings(
@@ -280,6 +330,8 @@ class CoachSettings {
             enableRealTimeCoaching ?? this.enableRealTimeCoaching,
         enablePostGameAnalysis:
             enablePostGameAnalysis ?? this.enablePostGameAnalysis,
+        enableMultiplayerCoaching:
+            enableMultiplayerCoaching ?? this.enableMultiplayerCoaching,
         showEvalBar: showEvalBar ?? this.showEvalBar,
       );
 
@@ -294,4 +346,18 @@ class CoachSettings {
       null => CoachingLevel.beginner,
     };
   }
+}
+
+// ═══════════════════════════════════════════
+// PIECE TYPE NAMES
+// ═══════════════════════════════════════════
+extension PieceTypeExtension on PieceType {
+  String get coachName => switch (this) {
+        PieceType.pawn => 'pawn',
+        PieceType.rook => 'rook',
+        PieceType.knight => 'knight',
+        PieceType.bishop => 'bishop',
+        PieceType.queen => 'queen',
+        PieceType.king => 'king',
+      };
 }

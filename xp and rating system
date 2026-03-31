@@ -1,0 +1,80 @@
+# XP & Rating System Redesign
+
+We will overhaul the progression and competitive systems to create a more engaging experience. This involves decoupling XP (for levels) from Rating (for leaderboards), data resets, and improved UI feedback.
+
+## User Review Required
+
+> [!IMPORTANT]
+> **Data Reset**: This plan includes clearing all existing user stats, XP, and Elo ratings to ensure a clean transition to the new system. This will be done by setting values to 0/initial states in the next sync.
+
+> [!IMPORTANT]
+> **Level Formula**: We will use `Level = sqrt(totalXP / 100)`. For example, Level 10 requires 10,000 XP.
+
+## Proposed Changes
+
+### [Phase 1] Data Reset & Model Updates
+We will start by clearing existing data and updating our models to handle the new separation.
+
+#### [MODIFY] [user_model.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/data/models/user_model.dart)
+- Add a getter for `level` calculated from `xp`.
+- Add a getter for `progressToNextLevel` (0.0 to 1.0).
+
+#### [MODIFY] [auth_repository.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/data/repositories/auth_repository.dart)
+- Update `updateXPProgress` to handle the new separation.
+- Add a one-time reset flag to clear old data if it hasn't been reset yet.
+
+---
+
+### [Phase 2] XP & Rating Separation
+Decouple XP gains from Rating updates across all game modes.
+
+#### [MODIFY] [game_bloc.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/presentation/blocs/game/game_bloc.dart)
+- Refactor the post-game logic to:
+  - Calculate **XP** for *all* game modes (Single Player, Multiplayer, Puzzles).
+  - Apply **Streak Multipliers** to XP earnings.
+  - Calculate **Rating (Elo)** *only* for Multiplayer matches.
+- Ensure XP popups are triggered at the correct time.
+
+#### [MODIFY] [elo_service.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/data/services/elo_service.dart)
+- Implement a more robust Elo logic (FIDE-style K-factors and expected scores).
+- Ensure it's used strictly for online play.
+
+---
+
+### [Phase 3] Missions System
+Introduce daily and weekly goals to incentivize regular play.
+
+#### [NEW] `mission_model.dart`
+- Define `Mission` structure (id, title, description, rewardXP, targetCount, currentCount).
+
+#### [NEW] `mission_service.dart`
+- Manage mission state, daily resets, and completion checks.
+
+---
+
+### [Phase 4] UI & Feedback
+Enhance the visual experience of progression.
+
+#### [MODIFY] [home_screen.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/presentation/screens/home/home_screen.dart)
+- Add a premium Level Bar showing current Level and XP progress.
+
+#### [MODIFY] [leaderboard_screen.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/presentation/screens/leaderboard/leaderboard_screen.dart)
+- Change logic to rank users by **Rating (Elo)** instead of XP.
+
+#### [NEW] `reward_animation.dart`
+- A reusable widget for XP popups and level-up celebrations.
+
+## Open Questions
+
+1. **Mission Variety**: Should we start with simple missions (e.g., "Win X games", "Solve Y puzzles")?
+2. **Offline Mode**: Should XP gained while offline sync on the next launch? (We'll reinforce current reliable sync).
+
+## Verification Plan
+
+### Automated Tests
+- Integration test for XP gain vs Rating update: Win an AI game (XP should increase, Rating should NOT).
+- Integration test for Multiplayer win: Both XP and Rating should increase.
+
+### Manual Verification
+- Verify the XP bar updates in real-time on the Home screen.
+- Verify that the Leaderboard ranks players correctly by Elo rating.

@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'game_record_model.dart';
 
 class UserModel {
@@ -24,6 +25,9 @@ class UserModel {
     this.recentGames = const [],
     this.isGhibli = false,
   });
+  
+  int get level => UserStats.calculateLevel(xp);
+  double get levelProgress => UserStats.progressToNextLevel(xp);
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     bool parseBool(dynamic val, bool fallback) {
@@ -115,6 +119,7 @@ class UserStats {
   final int draws;
   final int longestStreak;
   final int currentStreak;
+  final int totalPlaytimeMins;
   final int aiGames;
   final int aiWins;
   final int multiplayerGames;
@@ -126,6 +131,9 @@ class UserStats {
   final int eloRating;
   final int puzzlesSolved;
   final int puzzleRating;
+  final int dailyDonatedXP;
+  final int totalDonatedXP;
+  final String? lastDonationDate; // ISO string
 
   const UserStats({
     this.gamesPlayed = 0,
@@ -134,6 +142,7 @@ class UserStats {
     this.draws = 0,
     this.longestStreak = 0,
     this.currentStreak = 0,
+    this.totalPlaytimeMins = 0,
     this.aiGames = 0,
     this.aiWins = 0,
     this.multiplayerGames = 0,
@@ -145,6 +154,9 @@ class UserStats {
     this.eloRating = 1200,
     this.puzzlesSolved = 0,
     this.puzzleRating = 1200,
+    this.dailyDonatedXP = 0,
+    this.totalDonatedXP = 0,
+    this.lastDonationDate,
   });
 
   double get winRate => gamesPlayed > 0 ? wins / gamesPlayed * 100 : 0;
@@ -162,6 +174,7 @@ class UserStats {
       draws: json['draws'] as int? ?? 0,
       longestStreak: json['longest_streak'] as int? ?? 0,
       currentStreak: json['current_streak'] as int? ?? 0,
+      totalPlaytimeMins: json['total_playtime_mins'] as int? ?? 0,
       aiGames: json['ai_games'] as int? ?? 0,
       aiWins: json['ai_wins'] as int? ?? 0,
       multiplayerGames: json['multiplayer_games'] as int? ?? 0,
@@ -174,6 +187,48 @@ class UserStats {
       eloRating: json['elo_rating'] as int? ?? 1200,
       puzzlesSolved: json['puzzles_solved'] as int? ?? 0,
       puzzleRating: json['puzzle_rating'] as int? ?? 1200,
+      dailyDonatedXP: json['daily_donated_xp'] as int? ?? 0,
+      totalDonatedXP: json['total_donated_xp'] as int? ?? 0,
+      lastDonationDate: json['last_donation_date'] as String?,
     );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'games_played': gamesPlayed,
+        'wins': wins,
+        'losses': losses,
+        'draws': draws,
+        'win_rate': winRate,
+        'longest_streak': longestStreak,
+        'current_streak': currentStreak,
+        'total_playtime_mins': totalPlaytimeMins,
+        'ai_games': aiGames,
+        'ai_wins': aiWins,
+        'multiplayer_games': multiplayerGames,
+        'multiplayer_wins': multiplayerWins,
+        'two_player_games': twoPlayerGames,
+        'two_player_wins': twoPlayerWins,
+        'tournament_wins': tournamentWins,
+        'practice_difficulty': practiceDifficulty,
+        'elo_rating': eloRating,
+        'puzzles_solved': puzzlesSolved,
+        'puzzle_rating': puzzleRating,
+        'daily_donated_xp': dailyDonatedXP,
+        'total_donated_xp': totalDonatedXP,
+        'last_donation_date': lastDonationDate,
+      };
+
+  // Level Logic
+  static int xpToLevel(int xp) => (xp <= 0) ? 1 : (xp / 100).toInt() + 1; // Basic for now, user requested sqrt(totalXP / 100)
+  // Re-reading user request: level = sqrt(totalXP / 100)
+  static int calculateLevel(int totalXP) =>
+      (totalXP <= 0) ? 1 : (math.sqrt(totalXP / 100)).floor() + 1;
+
+  static double progressToNextLevel(int totalXP) {
+    if (totalXP <= 0) return 0.0;
+    final currentLevel = calculateLevel(totalXP);
+    final currentLevelXP = math.pow(currentLevel - 1, 2) * 100;
+    final nextLevelXP = math.pow(currentLevel, 2) * 100;
+    return (totalXP - currentLevelXP) / (nextLevelXP - currentLevelXP);
   }
 }

@@ -5,14 +5,17 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:dio/dio.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/di/injection_container.dart' as di;
+import '../../../data/services/achievement_service.dart';
 import '../../blocs/auth/auth_bloc.dart';
 import '../../../data/repositories/auth_repository.dart';
+import '../../../data/services/mission_service.dart';
 
 class _LeaderboardEntry {
   final String id;
   final String username;
   final String? avatarUrl;
   final int xp;
+  final int eloRating;
   final int wins;
   final int gamesPlayed;
   final double winRate;
@@ -25,6 +28,7 @@ class _LeaderboardEntry {
     required this.username,
     this.avatarUrl,
     required this.xp,
+    required this.eloRating,
     required this.wins,
     required this.gamesPlayed,
     required this.winRate,
@@ -39,6 +43,7 @@ class _LeaderboardEntry {
       username: json['username'] as String? ?? 'Player',
       avatarUrl: json['avatar_url'] as String?,
       xp: (json['xp'] as num?)?.toInt() ?? 0,
+      eloRating: (json['elo_rating'] as num?)?.toInt() ?? 1200,
       wins: (json['wins'] as num?)?.toInt() ?? 0,
       gamesPlayed: (json['games_played'] as num?)?.toInt() ?? 0,
       winRate: (json['win_rate'] as num?)?.toDouble() ?? 0,
@@ -60,8 +65,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   List<_LeaderboardEntry> _entries = [];
   bool _loading = true;
   String _error = '';
-  String _sortType = 'xp';
+  String _sortType = 'elo';
   int _myRank = 0;
+  String? _bountyUserId;
 
   @override
   void initState() {
@@ -87,12 +93,17 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
         _loading = false;
       });
       _fetchMyRank();
-    } catch (e) {
-      setState(() {
-        _loading = false;
-        _error = 'Could not load leaderboard. Check your connection.';
       });
     }
+
+    _fetchBountyTarget();
+  }
+
+  void _fetchBountyTarget() {
+    final missionService = di.sl<MissionService>();
+    setState(() {
+      _bountyUserId = missionService.bountyUserId;
+    });
   }
 
   Future<void> _fetchMyRank() async {
@@ -138,9 +149,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 
   Widget _buildSortTabs() {
     final tabs = [
+      {'id': 'elo', 'label': '⭐ Rating', 'color': AppTheme.lavender},
       {'id': 'xp', 'label': '🔥 XP', 'color': AppTheme.goldPrimary},
       {'id': 'wins', 'label': '🏆 Wins', 'color': AppTheme.accentCyan},
-      {'id': 'streak', 'label': '⚡ Streak', 'color': AppTheme.accentPurple},
     ];
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -344,10 +355,10 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
       rankIcon = '#${entry.rank}';
     }
 
-    final statValue = _sortType == 'wins'
-        ? '${entry.wins} W'
-        : _sortType == 'streak'
-            ? '${entry.longestStreak} 🔥'
+    final statValue = _sortType == 'elo'
+        ? '${entry.eloRating} 🔥'
+        : _sortType == 'wins'
+            ? '${entry.wins} W'
             : '${entry.xp} XP';
 
     return GestureDetector(
@@ -466,19 +477,38 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                 ],
               ),
             ),
+            ),
             // Primary stat
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: AppTheme.goldPrimary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(statValue,
-                  style: GoogleFonts.fredoka(
-                    color: AppTheme.goldPrimary,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                  )),
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (entry.id == _bountyUserId)
+                  const Padding(
+                    padding: EdgeInsets.only(bottom: 4),
+                    child: Icon(Icons.stars_rounded, color: AppTheme.goldPrimary, size: 20),
+                  ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppTheme.goldPrimary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: entry.id == _bountyUserId 
+                        ? Border.all(color: AppTheme.goldPrimary, width: 1.5)
+                        : null,
+                  ),
+                  child: Text(statValue,
+                      style: GoogleFonts.fredoka(
+                        color: AppTheme.goldPrimary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      )),
+                ),
+                if (entry.id == _bountyUserId)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text('BOUNTY', style: GoogleFonts.fredoka(color: AppTheme.goldPrimary, fontSize: 8, fontWeight: FontWeight.bold)),
+                  ),
+              ],
             ),
           ],
         ),
@@ -516,6 +546,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
               if (success) {
                 ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Donation successful! 💖')));
+                di.sl<AchievementService>().evaluateSpecialActions('donate_xp');
                 _fetchLeaderboard(); // Refresh to see updated XP
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(

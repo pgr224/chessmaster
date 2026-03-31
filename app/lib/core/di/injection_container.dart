@@ -12,6 +12,8 @@ import '../../presentation/blocs/game/game_bloc.dart';
 import '../../presentation/blocs/multiplayer/multiplayer_bloc.dart';
 import '../../presentation/blocs/theme/theme_bloc.dart';
 import '../../presentation/blocs/settings/settings_bloc.dart';
+import '../../data/services/achievement_service.dart';
+import '../../data/services/mission_service.dart';
 
 final sl = GetIt.instance;
 
@@ -19,6 +21,8 @@ Future<void> init() async {
   // ── SharedPreferences ──
   final prefs = await SharedPreferences.getInstance();
   sl.registerSingleton<SharedPreferences>(prefs);
+
+  sl.registerSingleton<AchievementService>(AchievementService(sl<SharedPreferences>()));
 
   // ── External services ──
   sl.registerLazySingleton<Dio>(() {
@@ -73,14 +77,17 @@ Future<void> init() async {
   sl.registerLazySingleton<GameRepository>(() => GameRepository(sl<Dio>()));
   sl.registerLazySingleton<PuzzleRepository>(() => PuzzleRepository());
   sl.registerSingleton<MultiplayerService>(MultiplayerService());
+  sl.registerSingleton<MissionService>(MissionService(sl<SharedPreferences>(), sl<AuthRepository>()));
 
   // ── BLoCs ──
   sl.registerLazySingleton<AuthBloc>(() => AuthBloc(sl<AuthRepository>()));
-  sl.registerFactory<GameBloc>(() => GameBloc(
+        sl.registerFactory<GameBloc>(() => GameBloc(
         sl<GameRepository>(),
         sl<AuthRepository>(),
         sl<PuzzleRepository>(),
         sl<ThemeBloc>(),
+        sl<AchievementService>(),
+        sl<MissionService>(),
       ));
   sl.registerLazySingleton<MultiplayerBloc>(
       () => MultiplayerBloc(sl<MultiplayerService>()));

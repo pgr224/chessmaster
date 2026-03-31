@@ -133,37 +133,24 @@ class MpChangeSelectedTimeEvent extends MultiplayerEvent {
   const MpChangeSelectedTimeEvent(this.timeControl);
 }
 
+class MpXpBroadcastRequestEvent extends MultiplayerEvent {
+  final String userId;
+  final String username;
+  final int amount;
+  const MpXpBroadcastRequestEvent(this.userId, this.username, this.amount);
+}
+
+class MpSendXpBroadcastEvent extends MultiplayerEvent {
+  final int amount;
+  const MpSendXpBroadcastEvent(this.amount);
+}
+
 // STATE
 enum MultiplayerStatus { disconnected, inLobby, matchmaking, inGame, gameOver }
 
-class MultiplayerState extends Equatable {
-  final MultiplayerStatus status;
-  final int onlineCount;
-  final int searchingCount;
-  final List<OnlineLobbyUser> availablePlayers;
-  final String? gameId;
-  final PieceColor? playerColor;
-  final String? opponentName;
-  final String? mode;
-  final String? timeControl;
-  final List<ChatMessage> chatMessages;
-  final String? lastMoveFrom;
-  final String? lastMoveTo;
-  final String? lastMovePromotion;
-  final String? gameResult;
-  final String? gameReason;
-  final String? lobbyNotice;
-  final String? challengerId;
-  final String? challengerMode;
-  final String? challengerTimeControl;
-  final String selectedTimeControl;
-  final bool drawOfferPending;
-  final bool saveOfferPending;
-  final String? connectionError;
-  final double whiteTime;
-  final double blackTime;
   final int xpGained;
   final int opponentUndoCount;
+  final List<dynamic> xpBroadcastRequests;
 
   const MultiplayerState({
     this.status = MultiplayerStatus.disconnected,
@@ -193,36 +180,12 @@ class MultiplayerState extends Equatable {
     this.blackTime = 0,
     this.xpGained = 0,
     this.opponentUndoCount = 0,
+    this.xpBroadcastRequests = const [],
   });
 
-  MultiplayerState copyWith({
-    MultiplayerStatus? status,
-    int? onlineCount,
-    int? searchingCount,
-    List<OnlineLobbyUser>? availablePlayers,
-    String? gameId,
-    PieceColor? playerColor,
-    String? opponentName,
-    String? mode,
-    String? timeControl,
-    List<ChatMessage>? chatMessages,
-    String? lastMoveFrom,
-    String? lastMoveTo,
-    String? lastMovePromotion,
-    String? gameResult,
-    String? gameReason,
-    String? lobbyNotice,
-    String? challengerId,
-    String? challengerMode,
-    String? challengerTimeControl,
-    String? selectedTimeControl,
-    bool? drawOfferPending,
-    bool? saveOfferPending,
-    String? connectionError,
-    double? whiteTime,
-    double? blackTime,
     int? xpGained,
     int? opponentUndoCount,
+    List<dynamic>? xpBroadcastRequests,
   }) {
     return MultiplayerState(
       status: status ?? this.status,
@@ -257,6 +220,7 @@ class MultiplayerState extends Equatable {
       blackTime: blackTime ?? this.blackTime,
       xpGained: xpGained ?? this.xpGained,
       opponentUndoCount: opponentUndoCount ?? this.opponentUndoCount,
+      xpBroadcastRequests: xpBroadcastRequests ?? this.xpBroadcastRequests,
     );
   }
 
@@ -404,6 +368,21 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
         emit(state.copyWith(selectedTimeControl: event.timeControl)));
     on<MpClearNoticeEvent>((event, emit) =>
         emit(state.copyWith(lobbyNotice: null, challengerId: null)));
+
+    on<MpXpBroadcastRequestEvent>((event, emit) {
+      final requests = List<dynamic>.from(state.xpBroadcastRequests);
+      requests.add({
+        'userId': event.userId,
+        'username': event.username,
+        'amount': event.amount,
+        'ts': DateTime.now().millisecondsSinceEpoch,
+      });
+      emit(state.copyWith(xpBroadcastRequests: requests));
+    });
+
+    on<MpSendXpBroadcastEvent>((event, emit) {
+      _service.sendXpBroadcast(event.amount);
+    });
     // MpTimerSyncEvent already registered above at line ~287
   }
 
@@ -454,6 +433,13 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
           challengerId: d['challengerId']?.toString(),
           mode: d['mode']?.toString(),
           timeControl: d['timeControl']?.toString(),
+        ));
+      } else if (msg['type'] == 'XP_BROADCAST') {
+        final d = msg['data'] as Map;
+        add(MpXpBroadcastRequestEvent(
+          d['userId']?.toString() ?? '',
+          d['username']?.toString() ?? 'Someone',
+          (d['amount'] as num?)?.toInt() ?? 0,
         ));
       } else if (msg['type'] == 'CONNECTION_LOST') {
         add(MpLobbyNoticeEvent('Connection lost. Please check your internet.'));

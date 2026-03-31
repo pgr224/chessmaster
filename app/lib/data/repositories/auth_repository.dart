@@ -382,26 +382,94 @@ class AuthRepository {
   Future<bool> donateXP(
       {required String recipientId, required int amount}) async {
     try {
+      final user = await getCurrentUser();
+      if (user == null) return false;
+
+      // Enforce caps: 2000 per day, 10000 max
+      final now = DateTime.now();
+      final todayStr = "${now.year}-${now.month}-${now.day}";
+      
+      int currentDaily = user.stats.dailyDonatedXP;
+      if (user.stats.lastDonationDate != todayStr) {
+        currentDaily = 0; // New day, reset daily cap
+      }
+
+      if (currentDaily + amount > 2000) {
+        throw Exception('Daily donation limit (2000 XP) reached.');
+      }
+      if (user.stats.totalDonatedXP + amount > 10000) {
+        throw Exception('Total donation limit (10000 XP) reached.');
+      }
+
       final response = await _dio.post(
         '/api/profile/xp/transfer',
         data: {'recipientId': recipientId, 'amount': amount},
       );
 
       if (response.statusCode == 200 && response.data['success'] == true) {
-        // Update local XP
+        // Update local stats
         final prefs = await SharedPreferences.getInstance();
         final userData = prefs.getString(_userKey);
         if (userData != null) {
-          final current = jsonDecode(userData) as Map<String, dynamic>;
-          current['xp'] = (current['xp'] as int? ?? 0) - amount;
-          await prefs.setString(_userKey, jsonEncode(current));
+          final Map<String, dynamic> data = jsonDecode(userData);
+          final userJson = data['user'] as Map<String, dynamic>;
+          final statsJson = userJson['stats'] as Map<String, dynamic>;
+          
+          userJson['xp'] = (userJson['xp'] as int? ?? 0) - amount;
+          statsJson['daily_donated_xp'] = currentDaily + amount;
+          statsJson['total_donated_xp'] = (statsJson['total_donated_xp'] as int? ?? 0) + amount;
+          statsJson['last_donation_date'] = todayStr;
+          
+          await prefs.setString(_userKey, jsonEncode(data));
         }
         return true;
       }
     } catch (e) {
       print('Failed to donate XP: $e');
+      rethrow;
     }
     return false;
+  }
+
+  Future<bool> broadcastXPRequest({required int amount}) async {
+    try {
+      final response = await _dio.post(
+        '/api/profile/xp/broadcast-request',
+        data: {'amount': amount},
+      );
+      return response.statusCode == 200 && response.data['success'] == true;
+    } catch (e) {
+      print('Failed to broadcast XP request: $e');
+    }
+    return false;
+  }
+
+  Future<List<dynamic>> getActiveBroadcastRequests() async {
+    try {
+      final response = await _dio.get('/api/profile/xp/broadcast-requests');
+      if (response.statusCode == 200) {
+        return response.data['requests'] as List<dynamic>;
+      }
+    } catch (e) {
+      print('Failed to fetch broadcast requests: $e');
+    }
+    return [];
+  }
+
+  Future<List<UserModel>> getLeaderboard({int limit = 100}) async {
+    try {
+      final response = await _dio.get(
+        '/api/leaderboard',
+        queryParameters: {'limit': limit},
+      );
+      if (response.statusCode == 200) {
+        final List data = response.data['leaderboard'] as List;
+        return data.map((json) => UserModel.fromJson(json)).toList();
+      }
+    } catch (e) {
+      print('Failed to fetch leaderboard: $e');
+    }
+    return [];
   }
 
   Future<bool> requestXP({required int amount}) async {
@@ -464,6 +532,43 @@ class AuthRepository {
         .trim();
   }
 
+  /// Reset all numerical stats, XP, and Elos for the current user.
+  Future<UserModel?> resetUserStats() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userData = prefs.getString(_userKey);
+    if (userData == null) return null;
+
+    try {
+      final Map<String, dynamic> current = jsonDecode(userData);
+      final String userId = current['id'] as String;
+
+      // Reset locally
+      current['xp'] = 0;
+      current['stats'] = const UserStats().toJson();
+      await prefs.setString(_userKey, jsonEncode(current));
+
+      // Reset on server
+      await _dio.post('/api/profile/$userId/reset-stats');
+      
+      // Mark as reset for the new system
+      await prefs.setBool('system_reset_v2', true);
+
+      return UserModel.fromJson(current);
+    } catch (e) {
+      print('Reset stats error: $e');
+      return null;
+    }
+  }
+
+  /// Check and perform one-time systemic reset if needed
+  Future<void> checkSystemicReset() async {
+    final prefs = await SharedPreferences.getInstance();
+    final alreadyReset = prefs.getBool('system_reset_v2') ?? false;
+    if (!alreadyReset) {
+      await resetUserStats();
+    }
+  }
+
   /// Debug/cleanup method: Remove ALL user session & device data
   /// WARNING: This clears auth token, user profile, and device fingerprint
   /// User will need to enter new username/re-authenticate on next launch
@@ -473,6 +578,7 @@ class AuthRepository {
     await prefs.remove(_tokenKey); // Clear auth token
     await prefs.remove(_userKey); // Clear user profile
     await prefs.remove(_deviceIdKey); // Clear device fingerprint
+    await prefs.remove('system_reset_v2'); // Clear reset flag
     _dio.options.headers.remove('Authorization');
   }
 }

@@ -1,8 +1,8 @@
 /// ELO Rating calculation service for ranked play.
 class EloService {
-  static const int defaultRating = 1200;
-  static const int kFactorNew = 40; // For players with < 30 games
-  static const int kFactorEstablished = 20; // For players with 30+ games
+  static const int kFactorNewbie = 40;     // Under 30 games
+  static const int kFactorRegular = 20;    // 30+ games, under 2400 rating
+  static const int kFactorMaster = 10;     // 2400+ rating
 
   /// Calculate new ELO ratings for both players after a game.
   /// [score] is 1.0 for a win, 0.5 for a draw, 0.0 for a loss (from player1's perspective).
@@ -13,8 +13,8 @@ class EloService {
     int player1Games = 0,
     int player2Games = 0,
   }) {
-    final k1 = player1Games < 30 ? kFactorNew : kFactorEstablished;
-    final k2 = player2Games < 30 ? kFactorNew : kFactorEstablished;
+    final k1 = _getKFactor(player1Rating, player1Games);
+    final k2 = _getKFactor(player2Rating, player2Games);
 
     final expected1 = _expectedScore(player1Rating, player2Rating);
     final expected2 = 1.0 - expected1;
@@ -24,6 +24,12 @@ class EloService {
         (player2Rating + k2 * ((1.0 - score) - expected2)).round();
 
     return (newRating1.clamp(100, 3500), newRating2.clamp(100, 3500));
+  }
+
+  static int _getKFactor(int rating, int games) {
+    if (games < 30) return kFactorNewbie;
+    if (rating >= 2400) return kFactorMaster;
+    return kFactorRegular;
   }
 
   /// Calculate expected score based on rating difference.

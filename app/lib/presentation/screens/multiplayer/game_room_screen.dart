@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/di/injection_container.dart' as di;
+import '../../../data/services/achievement_service.dart';
 
 import '../../blocs/game/game_bloc.dart';
 import '../../blocs/multiplayer/multiplayer_bloc.dart';
@@ -168,8 +170,10 @@ class GameRoomScreen extends StatelessWidget {
           builder: (context, state) {
             return ChatWidget(
               messages: state.chatMessages,
-              onSendMessage: (msg) =>
-                  context.read<MultiplayerBloc>().add(MpSendChatEvent(msg)),
+              onSendMessage: (msg) {
+                context.read<MultiplayerBloc>().add(MpSendChatEvent(msg));
+                di.sl<AchievementService>().evaluateSpecialActions('chat');
+              },
             );
           },
         ),
