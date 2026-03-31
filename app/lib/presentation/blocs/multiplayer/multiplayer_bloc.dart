@@ -29,13 +29,10 @@ class MpStartMatchmakingEvent extends MultiplayerEvent {}
 class MpCancelMatchmakingEvent extends MultiplayerEvent {}
 
 class MpGameFoundEvent extends MultiplayerEvent {
-  final String gameId;
-  final String color;
-  final String opponentName;
-  final String? mode;
-  final String? timeControl;
+  final String? opponentAvatarUrl;
+  final String? opponentLocalAvatar;
   const MpGameFoundEvent(this.gameId, this.color, this.opponentName,
-      {this.mode, this.timeControl});
+      {this.mode, this.timeControl, this.opponentAvatarUrl, this.opponentLocalAvatar});
 }
 
 class MpMakeMoveEvent extends MultiplayerEvent {
@@ -148,9 +145,34 @@ class MpSendXpBroadcastEvent extends MultiplayerEvent {
 // STATE
 enum MultiplayerStatus { disconnected, inLobby, matchmaking, inGame, gameOver }
 
+class MultiplayerState extends Equatable {
+  final MultiplayerStatus status;
+  final int onlineCount;
+  final int searchingCount;
+  final List<OnlineLobbyUser> availablePlayers;
+  final String? gameId;
+  final PieceColor? playerColor;
+  final String? opponentName;
+  final String? mode;
+  final String? timeControl;
+  final List<ChatMessage> chatMessages;
+  final String? lastMoveFrom;
+  final String? lastMoveTo;
+  final String? lastMovePromotion;
+  final String? gameResult;
+  final String? gameReason;
+  final String? challengerTimeControl;
+  final String? opponentAvatarUrl;
+  final String? opponentLocalAvatar;
+  final String selectedTimeControl;
+  final bool drawOfferPending;
+  final bool saveOfferPending;
+  final String? connectionError;
+  final double whiteTime;
+  final double blackTime;
   final int xpGained;
   final int opponentUndoCount;
-  final List<dynamic> xpBroadcastRequests;
+  final List<Map<String, dynamic>> xpBroadcastRequests;
 
   const MultiplayerState({
     this.status = MultiplayerStatus.disconnected,
@@ -181,11 +203,41 @@ enum MultiplayerStatus { disconnected, inLobby, matchmaking, inGame, gameOver }
     this.xpGained = 0,
     this.opponentUndoCount = 0,
     this.xpBroadcastRequests = const [],
+    this.opponentAvatarUrl,
+    this.opponentLocalAvatar,
   });
 
+  MultiplayerState copyWith({
+    MultiplayerStatus? status,
+    int? onlineCount,
+    int? searchingCount,
+    List<OnlineLobbyUser>? availablePlayers,
+    String? gameId,
+    PieceColor? playerColor,
+    String? opponentName,
+    String? mode,
+    String? timeControl,
+    List<ChatMessage>? chatMessages,
+    String? lastMoveFrom,
+    String? lastMoveTo,
+    String? lastMovePromotion,
+    String? gameResult,
+    String? gameReason,
+    String? lobbyNotice,
+    String? challengerId,
+    String? challengerMode,
+    String? challengerTimeControl,
+    String? selectedTimeControl,
+    bool? drawOfferPending,
+    bool? saveOfferPending,
+    String? connectionError,
+    double? whiteTime,
+    double? blackTime,
     int? xpGained,
     int? opponentUndoCount,
-    List<dynamic>? xpBroadcastRequests,
+    List<Map<String, dynamic>>? xpBroadcastRequests,
+    String? opponentAvatarUrl,
+    String? opponentLocalAvatar,
   }) {
     return MultiplayerState(
       status: status ?? this.status,
@@ -221,6 +273,8 @@ enum MultiplayerStatus { disconnected, inLobby, matchmaking, inGame, gameOver }
       xpGained: xpGained ?? this.xpGained,
       opponentUndoCount: opponentUndoCount ?? this.opponentUndoCount,
       xpBroadcastRequests: xpBroadcastRequests ?? this.xpBroadcastRequests,
+      opponentAvatarUrl: opponentAvatarUrl ?? this.opponentAvatarUrl,
+      opponentLocalAvatar: opponentLocalAvatar ?? this.opponentLocalAvatar,
     );
   }
 
@@ -245,7 +299,9 @@ enum MultiplayerStatus { disconnected, inLobby, matchmaking, inGame, gameOver }
         whiteTime,
         blackTime,
         xpGained,
-        opponentUndoCount
+        opponentUndoCount,
+        opponentAvatarUrl,
+        opponentLocalAvatar
       ];
 }
 
@@ -370,7 +426,7 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
         emit(state.copyWith(lobbyNotice: null, challengerId: null)));
 
     on<MpXpBroadcastRequestEvent>((event, emit) {
-      final requests = List<dynamic>.from(state.xpBroadcastRequests);
+      final requests = List<Map<String, dynamic>>.from(state.xpBroadcastRequests);
       requests.add({
         'userId': event.userId,
         'username': event.username,
@@ -425,6 +481,8 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
           data['opponentName']?.toString() ?? 'Unknown',
           mode: data['mode']?.toString(),
           timeControl: data['timeControl']?.toString(),
+          opponentAvatarUrl: data['opponentAvatarUrl']?.toString(),
+          opponentLocalAvatar: data['opponentLocalAvatar']?.toString(),
         ));
       } else if (msg['type'] == 'CHALLENGE_RECEIVED') {
         final d = msg['data'] as Map;
@@ -540,6 +598,8 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
       gameId: event.gameId,
       playerColor: event.color == 'white' ? PieceColor.white : PieceColor.black,
       opponentName: event.opponentName,
+      opponentAvatarUrl: event.opponentAvatarUrl,
+      opponentLocalAvatar: event.opponentLocalAvatar,
       mode: event.mode,
       timeControl: event.timeControl,
     ));

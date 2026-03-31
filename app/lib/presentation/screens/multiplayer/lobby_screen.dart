@@ -581,7 +581,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
         backgroundColor: AppTheme.accentPurple,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
-      onPressed: () => _showPlayersWindow(state),
+      onPressed: () => _showSocialWindow(state),
       icon: const Icon(Icons.groups_2_rounded, color: Colors.white),
       label: Text(
         'View Online Players',

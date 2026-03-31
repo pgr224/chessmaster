@@ -93,10 +93,13 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
         _loading = false;
       });
       _fetchMyRank();
+      _fetchBountyTarget();
+    } catch (_) {
+      setState(() {
+        _loading = false;
+        _error = 'Failed to load leaderboard';
       });
     }
-
-    _fetchBountyTarget();
   }
 
   void _fetchBountyTarget() {
@@ -476,7 +479,6 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                   ),
                 ],
               ),
-            ),
             ),
             // Primary stat
             Column(

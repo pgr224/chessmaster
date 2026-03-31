@@ -23,12 +23,11 @@ import '../../widgets/promotion_dialog.dart';
 import '../../widgets/game_over_overlay.dart';
 import '../../widgets/player_info_widget.dart';
 
-import '../../widgets/coach_overlay_widget.dart';
+import '../../widgets/coach_interaction_widget.dart';
 import '../../widgets/timer_widget.dart';
 import '../../widgets/game_rules_dialog.dart';
 import '../../widgets/eval_bar_widget.dart';
 import '../../../data/models/coach_model.dart';
-import '../../widgets/thinking_overlay.dart';
 
 class GameScreen extends StatefulWidget {
   final GameConfig config;
@@ -219,31 +218,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                       _buildConfirmMoveOverlay(state),
                     if (_showMoves) _buildMoveHistoryOverlay(state),
                     if (state.isPuzzleRush) _buildPuzzleRushOverlay(state),
-                    // AI Coach Overlays
-                    if (state.coachFeedback != null && !state.isGameOver)
-                      CoachOverlayWidget(
-                        feedback: state.coachFeedback,
-                        personality: state.coachSettings.personality,
-                        onDismiss: () => context
-                            .read<GameBloc>()
-                            .add(GameDismissCoachFeedbackEvent()),
-                        onUndo: () {
-                          context
-                              .read<GameBloc>()
-                              .add(GameDismissCoachFeedbackEvent());
-                          context.read<GameBloc>().add(GameUndoEvent());
-                        },
-                      ),
-                    if (state.activeHint != null && !state.isGameOver)
-                      HintOverlayWidget(
-                        hint: state.activeHint!,
-                        onDismiss: () => context
-                            .read<GameBloc>()
-                            .add(GameDismissHintEvent()),
-                        onNextLevel: () => context
-                            .read<GameBloc>()
-                            .add(GameRequestHintEvent()),
-                      ),
                     if (state.showMiniLesson && state.coachFeedback == null)
                       _buildMiniLessonOverlay(context, state),
                     // Only show floating chat on mobile/compact, wide layout has sidebar chat
@@ -846,13 +820,15 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   color: state.playerColor == PieceColor.white
                       ? PieceColor.black
                       : PieceColor.white,
+                  avatarUrl: state.mode == GameMode.multiplayer ? mpState.opponentAvatarUrl : null,
+                  localAvatar: state.mode == GameMode.multiplayer ? mpState.opponentLocalAvatar : null,
                 ),
-                if (state.isAIThinking && isOpponentTurn)
+                if ((state.isAIThinking || state.coachFeedback != null || state.activeHint != null) && isOpponentTurn)
                   Positioned(
-                    top: -32,
-                    left: 8,
-                    child: ThinkingOverlayWidget(
-                        compact: true, message: state.aiMessage),
+                    top: 55,
+                    left: 0,
+                    right: 0,
+                    child: CoachInteractionWidget(state: state),
                   ),
               ],
             ),
@@ -871,6 +847,12 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
   Widget _buildPlayerInfo(GameState state) {
     final mpState = context.read<MultiplayerBloc>().state;
+    final authState = context.read<AuthBloc>().state;
+    UserModel? user;
+    if (authState is AuthAuthenticatedState) {
+      user = authState.user;
+    }
+
     final isPlayerTurn = state.currentTurn == state.playerColor;
     final playerTime = state.playerColor == PieceColor.white
         ? mpState.whiteTime
@@ -885,18 +867,20 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               clipBehavior: Clip.none,
               children: [
                 PlayerInfoWidget(
-                  name: '👑 You',
+                  name: user?.username ?? '👑 You',
                   isActive: isPlayerTurn,
                   isAI: false,
                   isThinking: false,
                   color: state.playerColor ?? PieceColor.white,
+                  avatarUrl: user?.avatarUrl,
+                  localAvatar: user?.localAvatar,
                 ),
-                if (state.isAIThinking && isPlayerTurn)
+                if ((state.isAIThinking || state.coachFeedback != null || state.activeHint != null) && isPlayerTurn)
                   Positioned(
-                    top: -32,
-                    left: 8,
-                    child: ThinkingOverlayWidget(
-                        compact: true, message: state.aiMessage),
+                    bottom: 55,
+                    left: 0,
+                    right: 0,
+                    child: CoachInteractionWidget(state: state),
                   ),
               ],
             ),

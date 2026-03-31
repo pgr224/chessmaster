@@ -3,7 +3,9 @@
 library;
 
 void jsEngineInit(String mode, String difficulty) {}
-Future<Map<String, dynamic>?> jsEngineGetBestMove(String fen) async => null;
+Future<Map<String, dynamic>?> jsEngineGetBestMove(String fen,
+        {int? movetime}) async =>
+    null;
 Future<List<dynamic>> jsEngineGetTopMoves(String fen, int depth, int count,
         {int? movetime}) async =>
     [];

@@ -1300,13 +1300,24 @@ class GameBloc extends Bloc<GameEvent, GameState> {
           bestMoves: bestMoves,
           missedWins: missedWins,
           coachFeedback: feedback,
-          coachMessage: feedback.isNegative ? feedback.message : null,
+          aiMessage: feedback.message, // SYNC feedback message to AI talk bubble
           showMiniLesson: feedback.classification == MoveClassification.blunder,
           gameCoachHistory: updatedHistory,
           coachMove: coachMove,
           hintedIndices: newHintedIndices,
           clearActiveHint: true,
         ));
+
+        // AUTO-CLEAR COACH FEEDBACK after 8 seconds
+        Future.delayed(const Duration(seconds: 8)).then((_) {
+          if (!isClosed && state.coachFeedback == feedback) {
+            add(GameUpdatePersonalityEvent(
+              personality: state.activePersonality ?? AIPersonality.friendly,
+              message: null, 
+            ));
+            emit(state.copyWith(clearCoachFeedback: true));
+          }
+        });
       } catch (e) {
         debugPrint('[Coach Analysis Error] $e');
       }

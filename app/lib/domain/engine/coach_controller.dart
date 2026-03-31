@@ -243,34 +243,52 @@ class CoachController {
     CoachPersonality personality,
     TacticalPattern pattern,
   ) {
-    final rand = _evalCache.length % 5; // Use something stable for variety within a session
+    final rand = DateTime.now().millisecond;
     
-    // VARIETY POOLS
+    // VARIETY POOLS BY PERSONALITY
     final brilliantPool = switch(personality) {
-      CoachPersonality.friendly => ['WOW! Brilliant move! 💎✨', 'Incredible vision! That is brilliant. 🧠', 'That is a masterpiece! 🎨'],
-      CoachPersonality.strict => ['Excellent. A highly precise find.', 'Precisely as calculated.', 'The engine confirms your brilliance.'],
-      CoachPersonality.motivational => ['INCREDIBLE! Grandmaster level play! 🔥', 'You are on fire today! 🎯', 'What a move! Absolutely stunning! 🚀'],
+      CoachPersonality.friendly => ['WOW! Brilliant move! 💎✨', 'Incredible vision! That is brilliant. 🧠', 'That is a masterpiece! 🎨', 'I am speechless! What a find! 🌟'],
+      CoachPersonality.strict => ['Excellent. A highly precise find.', 'Precisely as calculated.', 'The engine confirms your brilliance.', 'Mathematically superior move.'],
+      CoachPersonality.motivational => ['INCREDIBLE! Grandmaster level play! 🔥', 'You are on fire today! 🎯', 'What a move! Absolutely stunning! 🚀', 'Believe in yourself! That was pure genius! 💪'],
     };
 
     final bestPool = switch(personality) {
-      CoachPersonality.friendly => ['Nice move! That was the best one! ⭐', 'Spot on! You found the top move.', 'Perfect choice!'],
-      CoachPersonality.strict => ['Correct. That was the strongest move.', 'Optimum move executed.', 'Accurate play.'],
-      CoachPersonality.motivational => ['Perfect! Keep up this amazing play! 🚀', 'Exactly! You are dominating the board!', 'Fantastic! Top tier move! 💪'],
+      CoachPersonality.friendly => ['Nice move! That was the best one! ⭐', 'Spot on! You found the top move.', 'Perfect choice!', 'Exactly what I would have done! 😊'],
+      CoachPersonality.strict => ['Correct. That was the strongest move.', 'Optimum move executed.', 'Accurate play.', 'Positional advantage maintained.'],
+      CoachPersonality.motivational => ['Perfect! Keep up this amazing play! 🚀', 'Exactly! You are dominating the board!', 'Fantastic! Top tier move! 💪', 'Target locked and neutralized! 🎯'],
+    };
+
+    final goodPool = switch(personality) {
+      CoachPersonality.friendly => ['Good move! 👍', 'I like that idea!', 'Solid choice.', 'Keep it going!'],
+      CoachPersonality.strict => ['Acceptable.', 'A reasonable continuation.', 'Standard development.', 'Consistent play.'],
+      CoachPersonality.motivational => ['Nice! You are building pressure! ⚡', 'Stay focused, good move!', 'Yes! Keep pushing forward! 🏃', 'Strong initiative!'],
+    };
+
+    final improvementPool = switch(personality) {
+      CoachPersonality.friendly => ['Not bad, but maybe there was a sharper way? 🤔', 'I see your idea, but look at this...', 'Keep exploring other options too!'],
+      CoachPersonality.strict => ['Suboptimal. A better line was available.', 'Inaccurate. You missed a stronger continuation.', 'Technique could be improved.'],
+      CoachPersonality.motivational => ['Good effort, but you can do even better! 🚀', 'Push yourself! There was a hidden gem here.', 'Don\'t settle for "good" when you can find "best"!'],
     };
 
     final blunderPool = switch(personality) {
-      CoachPersonality.friendly => ['Oh no! That was a big mistake! 😱', 'Oops! I think you missed something huge.', 'That move hurts a bit... 💔'],
-      CoachPersonality.strict => ['Critical error. Significant advantage lost.', 'That was a blunder. Re-evaluate your process.', 'Unacceptable oversight.'],
-      CoachPersonality.motivational => ['Don\'t worry! We learn the most from these! 💝', 'Shake it off! Get back in the fight!', 'A temporary setback. Keep focusing! 🧗'],
+      CoachPersonality.friendly => ['Oh no! That was a big mistake! 😱', 'Oops! I think you missed something huge.', 'That move hurts a bit... 💔', 'Be careful! That was risky!'],
+      CoachPersonality.strict => ['Critical error. Significant advantage lost.', 'That was a blunder. Re-evaluate your process.', 'Unacceptable oversight.', 'Position collapsing due to that error.'],
+      CoachPersonality.motivational => ['Don\'t worry! We learn the most from these! 💝', 'Shake it off! Get back in the fight!', 'A temporary setback. Keep focusing! 🧗', 'Failure is the mother of success! Let\'s go!'],
+    };
+
+    final mistakePool = switch(personality) {
+      CoachPersonality.friendly => ['Oops! You missed something better ⚠️', 'I think we can do better! Look again. 🤔', 'Not quite there, keep looking!', 'Hmm, I see an even better way!'],
+      CoachPersonality.strict => ['Inaccurate. A superior line was neglected.', 'Deficient move choice.', 'Technique error detected.', 'Miscalculation identified.'],
+      CoachPersonality.motivational => ['Don\'t settle! You missed a golden one! 🚀', 'Push hard! There was a masterpiece here!', 'Keep aiming higher! Use your vision!', 'Stay sharp! A big win was nearby! ⚡'],
     };
 
     return switch (classification) {
-      MoveClassification.brilliant => brilliantPool[rand % brilliantPool.length],
-      MoveClassification.best => bestPool[rand % bestPool.length],
-      MoveClassification.good => 'Good move! 👍',
-      MoveClassification.needsImprovement => 'Not bad, but there was a stronger option 🤔',
-      MoveClassification.mistake => 'Oops! You missed something better ⚠️',
-      MoveClassification.blunder => blunderPool[rand % blunderPool.length],
+      MoveClassification.brilliant => brilliantPool[_random.nextInt(brilliantPool.length)],
+      MoveClassification.best => bestPool[_random.nextInt(bestPool.length)],
+      MoveClassification.good => goodPool[_random.nextInt(goodPool.length)],
+      MoveClassification.needsImprovement => improvementPool[_random.nextInt(improvementPool.length)],
+      MoveClassification.mistake => mistakePool[_random.nextInt(mistakePool.length)],
+      MoveClassification.blunder => blunderPool[_random.nextInt(blunderPool.length)],
     };
   }
 
@@ -285,9 +303,18 @@ class CoachController {
     TacticalPattern pattern,
   ) {
     if (classification == MoveClassification.best || classification == MoveClassification.brilliant) {
-      if (pattern == TacticalPattern.none) return 'You improved your position and controlled the flow.';
+      if (pattern == TacticalPattern.none) {
+        final generalGood = [
+          'You improved your position and controlled the flow.',
+          'Your piece activity is increasing beautifully.',
+          'You are exerting great pressure on the opponent.',
+          'Solid positional understanding displayed here.',
+          'You are navigating this position with great care and precision.'
+        ];
+        return generalGood[_random.nextInt(generalGood.length)];
+      }
       
-      final connectors = [' because', ' as', ', and furthermore', ' since'];
+      final connectors = [' because', ' as', ', and furthermore', ' since', ', specifically because'];
       final start = 'You found this move';
       final reason = switch(pattern) {
         TacticalPattern.centerControl => ' it dominates the center of the board',
@@ -296,11 +323,12 @@ class CoachController {
         TacticalPattern.checkmate => ' it secures the victory immediately',
         TacticalPattern.kingSafety => ' it fortifies your king against threats',
         TacticalPattern.fork => ' it creates a powerful fork',
+        TacticalPattern.discoveredAttack => ' it reveals a dangerous discovered attack',
+        TacticalPattern.defensiveMove => ' it stabilizes a critical defensive rank',
         _ => ' it was the most precise option available'
       };
       
-      final randIdx = cpLoss % connectors.length; // use cpLoss as entropy
-      return '$start${connectors[randIdx]}$reason! ♟️';
+      return '$start${connectors[_random.nextInt(connectors.length)]}$reason! ♟️';
     }
 
     final parts = <String>[];
@@ -323,14 +351,35 @@ class CoachController {
     } else if (classification == MoveClassification.blunder) {
       parts.add('This move allows the opponent to gain a massive advantage.');
     } else {
-      parts.add('There was a much sharper continuation.');
+      final fallbacks = switch(_settings.personality) {
+        CoachPersonality.friendly => [
+          'There was a much sharper continuation available. Do you see it?',
+          'The engine suggests a more direct approach here.',
+          'This move slightly loosens your grip on the position.',
+          'Maybe consider a more active way to challenge the opponent?',
+          'Look for a way to create more pressure next time!'
+        ],
+        CoachPersonality.strict => [
+          'Sub-optimal precision. The engine prefers a direct line.',
+          'Inefficient path selection. Advantage diluted.',
+          'Lacks the critical edge required here.',
+          'Strict performance requires the most direct tactical choice.'
+        ],
+        CoachPersonality.motivational => [
+          'Keep pushing for the sharpest lines! You can do it!',
+          'There was a faster way to victory! Reach for it!',
+          'Don\'t hold back! Search for the most aggressive move!',
+          'Believe in your calculation! A killer move was possible!'
+        ],
+      };
+      parts.add(fallbacks[_random.nextInt(fallbacks.length)]);
     }
 
     // Best move suggestion (Connective logic)
     if (bestMove != null && classification.index >= MoveClassification.needsImprovement.index) {
       final transition = parts.isNotEmpty ? ' Instead, ' : 'A better idea was ';
       if (level == CoachingLevel.beginner) {
-        final toSquare = bestMove.substring(2, 4);
+        final toSquare = bestMove.length >= 4 ? bestMove.substring(2, 4) : 'the target square';
         parts.add('${transition}looking at square $toSquare would have been better.');
       } else {
         parts.add('${transition}playing $bestMove was the winning line.');

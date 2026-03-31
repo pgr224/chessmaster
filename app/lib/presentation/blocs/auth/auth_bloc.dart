@@ -40,6 +40,8 @@ class AuthClearAllDataEvent extends AuthEvent {
   const AuthClearAllDataEvent();
 }
 
+class AuthCheckStatusEvent extends AuthEvent {}
+
 // ═══════════════════════════════════════════
 // STATES
 // ═══════════════════════════════════════════
@@ -75,12 +77,29 @@ class AuthErrorState extends AuthState {
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final AuthRepository _repository;
 
+  AuthRepository get authRepository => _repository;
+
   AuthBloc(this._repository) : super(AuthInitialState()) {
     on<AuthInitializeEvent>(_onInitialize);
     on<AuthRegisterEvent>(_onRegister);
     on<AuthUpdateProfileEvent>(_onUpdateProfile);
     on<AuthSignOutEvent>(_onSignOut);
     on<AuthClearAllDataEvent>(_onClearAllData);
+    on<AuthCheckStatusEvent>(_onCheckStatus);
+  }
+
+  Future<void> _onCheckStatus(
+      AuthCheckStatusEvent event, Emitter<AuthState> emit) async {
+    final currentState = state;
+    if (currentState is! AuthAuthenticatedState) return;
+    try {
+      final user = await _repository.getCurrentUser();
+      if (user != null) {
+        emit(AuthAuthenticatedState(user));
+      }
+    } catch (e) {
+      emit(AuthErrorState(e.toString()));
+    }
   }
 
   Future<void> _onInitialize(
