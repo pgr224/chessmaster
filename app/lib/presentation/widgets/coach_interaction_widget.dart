@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../blocs/game/game_bloc.dart';
+import 'package:chess_master/presentation/blocs/game/game_bloc.dart';
 import './animated_robot_coach.dart';
 
 class CoachInteractionWidget extends StatelessWidget {

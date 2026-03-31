@@ -4,8 +4,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../blocs/auth/auth_bloc.dart';
-import '../../blocs/multiplayer/multiplayer_bloc.dart';
+import 'package:chess_master/presentation/blocs/auth/auth_bloc.dart';
+import 'package:chess_master/presentation/blocs/multiplayer/multiplayer_bloc.dart';
+import 'package:chess_master/data/models/user_model.dart';
+import 'package:chess_master/data/models/multiplayer_models.dart';
 
 class LobbyScreen extends StatefulWidget {
   const LobbyScreen({super.key});
@@ -183,13 +185,19 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 final auth = context.read<AuthBloc>().state;
                 if (auth is AuthAuthenticatedState) {
                   context.read<MultiplayerBloc>().add(MpConnectLobbyEvent(
-                      auth.user.id, auth.user.username,
-                      rating: auth.user.xp));
+                        auth.user.id,
+                        auth.user.username,
+                        rating: auth.user.xp,
+                      ));
                 }
               },
-              child: Text('TRY AGAIN',
-                  style: GoogleFonts.fredoka(
-                      color: Colors.white, fontWeight: FontWeight.bold)),
+              child: Text(
+                'TRY AGAIN',
+                style: GoogleFonts.fredoka(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
         ],
       ),
@@ -351,15 +359,17 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     .authRepository
                     .donateXP(recipientId: userId, amount: amount);
                 if (success) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Donated $amount XP to $username!')));
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text('Donated $amount XP to $username!')));
                   // ignore: use_build_context_synchronously
-                  context.read<AuthBloc>().add(AuthCheckStatusEvent()); // Refresh local user XP
+                  context
+                      .read<AuthBloc>()
+                      .add(AuthCheckStatusEvent()); // Refresh local user XP
                 }
               } catch (e) {
                 // ignore: use_build_context_synchronously
-                ScaffoldMessenger.of(context)
-                    .showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+                ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: ${e.toString()}')));
               }
             },
             child: const Text('DONATE'),
@@ -759,7 +769,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         labelStyle: GoogleFonts.fredoka(
                             fontWeight: FontWeight.bold, fontSize: 18),
                         tabs: const [
-                          Tab(text: 'Players', icon: Icon(Icons.people_rounded)),
+                          Tab(
+                              text: 'Players',
+                              icon: Icon(Icons.people_rounded)),
                           Tab(
                               text: 'XP Requests',
                               icon: Icon(Icons.volunteer_activism_rounded)),

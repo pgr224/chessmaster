@@ -12,7 +12,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:image_cropper/image_cropper.dart';
 
 import '../../../core/theme/app_theme.dart';
-import '../../blocs/auth/auth_bloc.dart';
+import 'package:chess_master/presentation/blocs/auth/auth_bloc.dart';
 import '../../../data/models/user_model.dart';
 import '../../../data/models/game_record_model.dart';
 import '../../../data/repositories/auth_repository.dart';
