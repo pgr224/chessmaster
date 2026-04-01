@@ -23,10 +23,9 @@
   // Depth config per difficulty
   const DEPTH_CONFIG = {
     basic: 4,
-    intermediate: 10,
     advanced: 20,
-    impossible: 32,
-    aiMode: 40,
+    impossible: 40,
+    aiMode: 64,
   };
 
   // Timeout budget per difficulty (ms)
@@ -35,11 +34,13 @@
     basic: 2250,
     intermediate: 4000,
     advanced: 5000,
-    impossible: 5000, // Capped to 5s to keep gameplay engaging
-    aiMode: 7000,     // Capped to 7s
+    impossible: 10000, // Grandmaster level (10s)
+    aiMode: 15000,     // Max deep analysis (15s)
   };
 
-  const FALLBACK_BUFFER_MS = 2000;
+  const FALLBACK_BUFFER_MS = 500; // Stockfish buffer before sunfish fallback
+  const HEARTBEAT_TIMEOUT_MS = 12000; // Hard limit for any search
+  const STOCKFISH_INIT_TIMEOUT_MS = 4000; // Max time to wait for WASM load
 
   // ═══════════════════════════════════════
   // STATE
@@ -55,6 +56,8 @@
   let pendingTimeout = null;
   let stockfishReady = false;
   let stockfishReadyCallbacks = [];
+  let stockfishInitTimer = null;
+  let globalHeartbeatTimer = null;
 
   // ═══════════════════════════════════════
   // WORKER MANAGEMENT
@@ -80,6 +83,15 @@
       stockfishWorker.addEventListener('message', handleStockfishMessage);
       stockfishWorker.postMessage({ type: 'init' });
       console.log('[EngineService] Stockfish worker created');
+      
+      // Init Timeout: If not ready in 4s, fallback to Sunfish for this session
+      stockfishInitTimer = setTimeout(() => {
+        if (!stockfishReady) {
+          console.warn('[EngineService] Stockfish Init Timeout - Routing to Sunfish');
+          activeEngineType = ENGINE_SUNFISH;
+        }
+      }, STOCKFISH_INIT_TIMEOUT_MS);
+
       return stockfishWorker;
     }
     return null;
@@ -102,6 +114,7 @@
       if (!stockfishReady) {
         stockfishReady = true;
         console.log('[EngineService] Stockfish WASM READY');
+        if (stockfishInitTimer) clearTimeout(stockfishInitTimer);
         stockfishReadyCallbacks.forEach(cb => cb());
         stockfishReadyCallbacks = [];
       }
@@ -126,7 +139,7 @@
       const resolve = pendingResolve;
       pendingResolve = null;
       pendingTimeout = null;
-      
+
       // Return both move and candidates if available (for humanoid selection)
       if (msg.candidates && msg.candidates.length > 0) {
         resolve({ move: msg.move, candidates: msg.candidates });
@@ -136,6 +149,7 @@
     } else if (msg.type === 'error' && pendingResolve) {
       console.warn('[EngineService] Worker error:', msg.message);
       clearTimeout(pendingTimeout);
+      if (globalHeartbeatTimer) clearTimeout(globalHeartbeatTimer);
       const resolve = pendingResolve;
       pendingResolve = null;
       pendingTimeout = null;
@@ -174,7 +188,20 @@
       if (pendingResolve) {
         pendingResolve(null);
         clearTimeout(pendingTimeout);
+        if (globalHeartbeatTimer) clearTimeout(globalHeartbeatTimer);
       }
+
+      // Hard Heartbeat: Total Search Limit 12s
+      globalHeartbeatTimer = setTimeout(() => {
+        if (pendingResolve) {
+          console.error(`[EngineService] Global 12s Heartbeat Timeout - Killing Workers`);
+          terminateWorker(ENGINE_STOCKFISH);
+          terminateWorker(ENGINE_SUNFISH);
+          const res = pendingResolve;
+          pendingResolve = null;
+          res(null);
+        }
+      }, HEARTBEAT_TIMEOUT_MS);
 
       return new Promise((resolve) => {
         const executeSearch = async (engineType, isFallback = false) => {
@@ -188,22 +215,33 @@
               if (engineType === ENGINE_STOCKFISH) {
                 terminateWorker(ENGINE_STOCKFISH);
                 executeSearch(ENGINE_SUNFISH, true);
-              } else {
-                pendingResolve(null);
+              } else if (engineType === ENGINE_SUNFISH) {
+                // FAILSAFE: If Sunfish stalls, restart it immediately to prevent future hangs
+                console.error('[EngineService] Sunfish Stalled - Restarting Worker');
+                terminateWorker(ENGINE_SUNFISH);
+                createWorker(ENGINE_SUNFISH); 
+                
+                const res = pendingResolve;
                 pendingResolve = null;
+                res(null);
+              } else {
+                const res = pendingResolve;
+                pendingResolve = null;
+                res(null);
               }
             }
           }, timeoutMs);
 
           if (engineType === ENGINE_SUNFISH) {
             const worker = createWorker(ENGINE_SUNFISH);
-            worker.postMessage({ type: 'search', fen, depth: isFallback ? 3 : depth, timeoutMs: timeoutMs - 200, id });
+            worker.postMessage({ type: 'search', fen, depth: isFallback ? 3 : depth, timeout: timeoutMs - 200, id });
           } else if (engineType === ENGINE_STOCKFISH) {
             await waitForStockfishReady();
             if (pendingResolve === resolve) {
               // Enable MultiPV 3 for high difficulties
               const multipv = (currentDifficulty === 'advanced' || currentDifficulty === 'impossible' || currentDifficulty === 'aiMode') ? 3 : 1;
-              stockfishWorker.postMessage({ type: 'search', fen, depth, timeoutMs: timeoutMs - 200, multipv, id });
+              const stockfishTime = Math.max(500, timeoutMs - FALLBACK_BUFFER_MS);
+              stockfishWorker.postMessage({ type: 'search', fen, depth, timeoutMs: stockfishTime, multipv, id });
             }
           }
         };

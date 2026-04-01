@@ -1713,22 +1713,52 @@ class GameBloc extends Bloc<GameEvent, GameState> {
           .analyzeMoveBackground(fenBefore, nodes: 1000)
           .then((res) {
         if (res == null) return;
-        final best = res['move'] as String?;
-        if (best == null) return;
+        final bestUci = res['move'] as String?;
+        final bestScore = res['score'] as int? ?? 0;
+        if (bestUci == null) return;
 
-        // Heuristic: if user played a quick tactical blow (capture/check), shift to Defensive
-        final isCheck = lastMove.contains('+') || lastMove.contains('#');
-        if (move.capturedPiece != null || isCheck) {
-          PersonalityEngine().forcePersonality(AIPersonality.defensive);
-        } else if (math.Random().nextDouble() > 0.6) {
-          // Random shift to keep it dynamic and human-like
-          PersonalityEngine().forcePersonality(AIPersonality.aggressive);
+        // BLUNDER DETECTION LOGIC
+        // We compare what the user played vs what the engine thinks was best.
+        // A "Blunder" is roughly a 300 centipawn drop in the player's favor.
+        
+        String response = "Nice move! But check this out... ⚡";
+        
+        // Find if user move was among candidates to get its score
+        final candidates = res['candidates'] as List<dynamic>? ?? [];
+        final userMoveObj = candidates.firstWhere(
+          (c) => c['uci'] == lastMove,
+          orElse: () => null,
+        );
+
+        if (userMoveObj != null) {
+          final userScore = userMoveObj['score'] as int? ?? 0;
+          final delta = bestScore - userScore; // Loss of advantage
+
+          if (delta > 300) {
+            response = "Oh no! That was a big blunder! 😲💨";
+            PersonalityEngine().forcePersonality(AIPersonality.tricky);
+          } else if (delta > 100) {
+            response = "Hmm, I think you missed something better. 🤔";
+          } else if (delta < -50) {
+            response = "Wow! You're playing like a grandmaster! 🌟";
+            PersonalityEngine().forcePersonality(AIPersonality.defensive);
+          } else {
+             // Standard response or personality switch
+             if (math.Random().nextDouble() > 0.7) {
+                response = PersonalityEngine().currentPersonality.getRandomMessage(null);
+             }
+          }
+        } else {
+          // If move not in candidates, it's likely suboptimal or a blunder
+          if (bestScore > 400) {
+            response = "I'm coming for your King! That was a gamble! 😈🔥";
+          }
         }
 
         if (!isClosed) {
           add(GameUpdatePersonalityEvent(
             personality: PersonalityEngine().currentPersonality,
-            message: _engineController.aiMessage ?? "Calculating...",
+            message: response,
           ));
         }
       }).catchError((_) {});
@@ -2181,7 +2211,10 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     if (state.isGameOver) return;
 
     final aiRequestEpoch = ++_aiRequestEpoch;
-    emit(state.copyWith(isAIThinking: true));
+    emit(state.copyWith(
+        isAIThinking: true,
+        aiMessage: _engineController.aiMessage, // Set initial thinking message
+    ));
 
     // UI Delay for "human feel"
     await Future.delayed(const Duration(milliseconds: 400));
@@ -2200,6 +2233,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
           _engine.status == GameStatus.check;
       if (moveStr != null && !state.isGameOver && isPlayable) {
         // Clear AI specific message after move is decided
+        _engineController.clearThinkingMessage();
         emit(state.copyWith(clearTutorialMessage: true));
 
         final aiMove = Move.fromAlgebraic(moveStr);

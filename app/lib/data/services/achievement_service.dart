@@ -194,7 +194,10 @@ class AchievementService {
     if (stats.currentStreak >= 10) unlockAchievement('win_streak_10');
 
     // Beating AIs
-    if (state.status == GameStatus.checkmate && state.mode == GameMode.singlePlayer) {
+    final isPlayerWin = (state.result == GameResult.whiteWins && state.playerColor == PieceColor.white) ||
+                         (state.result == GameResult.blackWins && state.playerColor == PieceColor.black);
+
+    if (isPlayerWin && state.mode == GameMode.singlePlayer) {
       // Player won!
       if (state.aiDifficulty == AIDifficulty.basic) unlockAchievement('beat_ai_basic');
       if (state.aiDifficulty == AIDifficulty.intermediate) unlockAchievement('beat_ai_intermediate');
@@ -202,21 +205,17 @@ class AchievementService {
       if (state.aiDifficulty == AIDifficulty.impossible) unlockAchievement('beat_ai_impossible');
 
       // Strategy
-      if (state.capturedWhite.isEmpty && state.capturedBlack.isEmpty) {
-        // Technically check if the player didn't lose pieces
-        // If player is white, check if black captured none of white's pieces.
-        if (state.playerColor == PieceColor.white && state.capturedWhite.isEmpty) {
-          unlockAchievement('no_pieces_lost');
-        } else if (state.playerColor == PieceColor.black && state.capturedBlack.isEmpty) {
-          unlockAchievement('no_pieces_lost');
-        }
+      if (state.playerColor == PieceColor.white && state.capturedWhite.isEmpty) {
+        unlockAchievement('no_pieces_lost');
+      } else if (state.playerColor == PieceColor.black && state.capturedBlack.isEmpty) {
+        unlockAchievement('no_pieces_lost');
       }
     }
 
     // Accuracy
     if (state.accuracy >= 90.0) unlockAchievement('accuracy_90');
     if (state.accuracy >= 95.0) unlockAchievement('accuracy_95');
-    if (state.blunders == 0 && state.status == GameStatus.checkmate) {
+    if (state.blunders == 0 && isPlayerWin) {
       unlockAchievement('zero_blunders');
     }
 

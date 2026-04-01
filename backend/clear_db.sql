@@ -1,0 +1,17 @@
+PRAGMA foreign_keys = OFF;
+DELETE FROM xp_history;
+DELETE FROM xp_requests;
+DELETE FROM xp_transfers;
+DELETE FROM saved_games;
+DELETE FROM user_achievements;
+DELETE FROM chat_messages;
+DELETE FROM challenges;
+DELETE FROM tournament_rounds;
+DELETE FROM tournament_participants;
+DELETE FROM tournaments;
+DELETE FROM moves;
+DELETE FROM games;
+DELETE FROM user_stats;
+DELETE FROM user_subscriptions;
+DELETE FROM users;
+PRAGMA foreign_keys = ON;

@@ -164,7 +164,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: _buildSectionTitle('🧩 Daily Puzzle')),
                   SliverToBoxAdapter(child: _buildDailyPuzzle()),
                   SliverToBoxAdapter(
-                      child: _buildSectionTitle('🕹️ Recent Games')),
+                      child: _buildSectionTitle(
+                    '🕹️ Recent Games',
+                    showShare: true,
+                  )),
                   SliverToBoxAdapter(child: _buildRecentGames(user)),
                   const SliverToBoxAdapter(child: SizedBox(height: 32)),
                 ],
@@ -443,7 +446,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       );
 
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionTitle(String title, {bool showShare = false}) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 14),
       child: Row(
@@ -457,12 +460,133 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const SizedBox(width: 12),
-          Text(title,
+          Expanded(
+            child: Text(title,
+                style: GoogleFonts.fredoka(
+                  color: AppTheme.textPrimary,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w600,
+                )),
+          ),
+          if (showShare)
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () {
+                  final url = Uri.base.toString();
+                  // Basic platform share or copy
+                  _showShareOptions(context, url);
+                },
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.goldPrimary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppTheme.goldPrimary.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.share_rounded,
+                          color: AppTheme.goldPrimary, size: 18),
+                      SizedBox(width: 6),
+                      Text(
+                        'Share',
+                        style: TextStyle(
+                          color: AppTheme.goldPrimary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _showShareOptions(BuildContext context, String url) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.midnight,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Share Chess Master',
               style: GoogleFonts.fredoka(
-                color: AppTheme.textPrimary,
-                fontSize: 22,
-                fontWeight: FontWeight.w600,
-              )),
+                color: Colors.white,
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Invite your friends to battle! ♟️',
+              style: GoogleFonts.baloo2(color: AppTheme.textSecondary),
+            ),
+            const SizedBox(height: 32),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _shareAction(
+                  icon: Icons.copy_rounded,
+                  label: 'Copy Link',
+                  onTap: () {
+                    Clipboard.setData(ClipboardData(text: url));
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Link copied to clipboard!')),
+                    );
+                  },
+                ),
+                _shareAction(
+                  icon: Icons.qr_code_rounded,
+                  label: 'QR Code',
+                  onTap: () {
+                    // Placeholder for QR
+                    Navigator.pop(ctx);
+                  },
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _shareAction({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppTheme.surface,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white10),
+            ),
+            child: Icon(icon, color: AppTheme.goldPrimary, size: 30),
+          ),
+          const SizedBox(height: 8),
+          Text(label, style: GoogleFonts.baloo2(color: Colors.white)),
         ],
       ),
     );

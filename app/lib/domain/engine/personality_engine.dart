@@ -5,17 +5,64 @@ enum AIPersonality {
   defensive, // Avoids threats, prioritizes king safety
   tricky, // Plays slightly suboptimal moves to set traps
   lazy, // Makes occasional random moves
-  random // Purely random (used as fallback or for extreme blunders)
+  random, // Purely random (used as fallback or for extreme blunders)
+  coach // Balanced, gives advice on moves
 }
 
 extension AIPersonalityInfo on AIPersonality {
-  String get message => switch (this) {
-        AIPersonality.aggressive => "I'm coming for your King! 😈🔥",
-        AIPersonality.defensive => "My defense is unbreakable! 🏰🛡️",
-        AIPersonality.tricky => "Hehe, can you spot my trap? 🃏✨",
-        AIPersonality.lazy => "Ho hum, just an ordinary move... 🥱☕",
-        AIPersonality.random => "Wait, what's a chess? 🤪🌀",
-      };
+  String getRandomMessage(String? lastMessage) {
+    final messages = switch (this) {
+      AIPersonality.aggressive => [
+          "I'm coming for your King! 😈🔥",
+          "Rawr! Watch out for my attack! 🦁⚔️",
+          "Prepare for some fireworks! 🎆💥",
+          "I see a weakness! En garde! 🤺🛡️",
+          "No mercy for that King! 😤🔥",
+        ],
+      AIPersonality.defensive => [
+          "My defense is unbreakable! 🏰🛡️",
+          "Safe and sound in my castle! 🏠🔑",
+          "You shall not pass! 🧙‍♂️🛡️",
+          "Solid as a rock! 💎🧱",
+          "Priority one: Keep the King safe! 👑🛡️",
+        ],
+      AIPersonality.tricky => [
+          "Hehe, can you spot my trap? 🃏✨",
+          "Now you see it, now you don't! 🎩🐇",
+          "I have a secret plan... 🤫✨",
+          "A sneaky move for a sneaky AI!  foxes🎈",
+          "Oops! Did you fall for that? 🍬🕸️",
+        ],
+      AIPersonality.lazy => [
+          "Ho hum, just an ordinary move... 🥱☕",
+          "Is it nap time yet? 😴☁️",
+          "Maybe I'll just move this one... 🐢♟️",
+          "Too much thinking for today... 💤☕",
+          "Let's just keep it simple. 🥱🥛",
+        ],
+      AIPersonality.random => [
+          "Wait, what's a chess? 🤪🌀",
+          "Boop! Moving a piece! 🤖🍭",
+          "Does this piece go here? 🧩❓",
+          "Wobble wobble! 🍮🌀",
+          "I like the shiny ones! ✨💎",
+        ],
+      AIPersonality.coach => [
+          "Let's look at that move... 🎓",
+          "A steady hand wins the race! 🐎",
+          "Interesting choice, but consider the center! 🏗️",
+          "You're improving with every turn! 📈",
+          "Let's find the best path together. 🗺️",
+        ],
+    };
+
+    final filtered = messages.where((m) => m != lastMessage).toList();
+    if (filtered.isEmpty) return "Let's have some coffee break! ☕🍪";
+    
+    // Choose one randomly
+    final next = filtered[math.Random().nextInt(filtered.length)];
+    return next;
+  }
 
   String get label => name[0].toUpperCase() + name.substring(1);
 
@@ -25,6 +72,7 @@ extension AIPersonalityInfo on AIPersonality {
         AIPersonality.tricky => 0.85,
         AIPersonality.lazy => 0.6,
         AIPersonality.random => 0.5,
+        AIPersonality.coach => 0.9,
       };
 }
 
@@ -63,6 +111,15 @@ class PersonalityEngine {
         _currentPersonality = AIPersonality.tricky;
       }
     }
+  }
+
+  String? _lastMessage;
+  String get lastMessage => _lastMessage ?? '';
+
+  String generateNewMessage() {
+    final msg = _currentPersonality.getRandomMessage(_lastMessage);
+    _lastMessage = msg;
+    return msg;
   }
 
   void forcePersonality(AIPersonality p) {

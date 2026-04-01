@@ -572,9 +572,23 @@ function searchBestMove(fen, maxDepth = 3, timeoutMs = 3000) {
   }
 
   const m = bestResult.move;
+  
+  // Generate candidates (top 3) for humanoid selection
+  const candidates = [];
+  const moves = board.legalMoves();
+  for (const move of moves) {
+    const clone = board.clone();
+    clone.makeMove(move);
+    // Quick evaluate at lower depth for speed
+    const score = alphaBeta(clone, Math.max(1, Math.min(2, maxDepth - 1)), -999999, 999999).score;
+    candidates.push({ uci: SunfishBoard.toAlg(move.from) + SunfishBoard.toAlg(move.to) + promoChar(move.promo), score });
+  }
+  candidates.sort((a, b) => b.score - a.score);
+
   return {
     move: SunfishBoard.toAlg(m.from) + SunfishBoard.toAlg(m.to) + promoChar(m.promo),
     score: bestResult.score,
+    candidates: candidates.slice(0, 3)
   };
 }
 

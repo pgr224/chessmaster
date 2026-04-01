@@ -42,7 +42,12 @@ class AIEngineController {
   int _activeRequestId = 0;
 
   /// Current AI Personality Message (for UI thinking bubble)
-  String? get aiMessage => PersonalityEngine().currentPersonality.message;
+  /// Current AI Personality Message (for UI thinking bubble)
+  String get aiMessage => _latestThinkingMessage ?? PersonalityEngine().generateNewMessage();
+  String? _latestThinkingMessage;
+
+  void setThinkingMessage(String msg) => _latestThinkingMessage = msg;
+  void clearThinkingMessage() => _latestThinkingMessage = null;
 
   /// Initialize engine for the current game session
   void init(GameMode mode, AIDifficulty? difficulty) {
@@ -139,6 +144,17 @@ class AIEngineController {
           final int baseTime = (800 + (complexity * 50)).toInt();
           dynamicMoveTime =
               (baseTime * personalityMult).toInt().clamp(300, cap);
+
+          // SET DYNAMIC THINKING MESSAGE
+          if (pieceCount < 10) {
+            _latestThinkingMessage = "Endgame time! Let's see... 🔍";
+          } else if (complexity > 40) {
+            _latestThinkingMessage = "Hmm, this is tricky! 🧠";
+          } else if (engine.isInCheck) {
+            _latestThinkingMessage = "Check! I need to move! 🛡️";
+          } else {
+            _latestThinkingMessage = "Calculating... ⚙️";
+          }
         }
       }
 
