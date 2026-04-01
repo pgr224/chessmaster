@@ -90,11 +90,7 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
 
                     const SizedBox(height: 18),
 
-                    // ── OPTIONS ──
-                    _sectionCard(
-                      title: '⚙️ Options',
-                      child: _buildOptions(),
-                    ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.1),
+                    // options removed
 
                     const SizedBox(height: 36),
 
@@ -477,24 +473,6 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
     );
   }
 
-  Widget _buildOptions() {
-    return SwitchListTile(
-      title: Text('💡 Enable Hints (max 3)',
-          style: GoogleFonts.fredoka(
-            color: AppTheme.textPrimary,
-            fontSize: 17,
-          )),
-      subtitle: Text('Get best move suggestions!',
-          style: GoogleFonts.baloo2(
-            color: AppTheme.textMuted,
-            fontSize: 14,
-          )),
-      value: _hintsEnabled,
-      activeThumbColor: AppTheme.goldPrimary,
-      contentPadding: EdgeInsets.zero,
-      onChanged: (v) => setState(() => _hintsEnabled = v),
-    );
-  }
 
   void _startGame() {
     final useCustomColors = _playerColor == 'custom';
@@ -512,7 +490,7 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
           pieceStyle: themeState.pieceStyle,
           whitePieceColor: useCustomColors ? _whitePieceColor : null,
           blackPieceColor: useCustomColors ? _blackPieceColor : null,
-          hintsEnabled: _hintsEnabled,
+          hintsEnabled: true, // simplified configuration
         ));
   }
 

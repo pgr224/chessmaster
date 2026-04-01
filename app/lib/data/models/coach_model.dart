@@ -221,17 +221,35 @@ class CoachFeedback {
 }
 
 // ═══════════════════════════════════════════
-// HINT RESULT
+// HINT RESULT — 3-Level Progressive System
 // ═══════════════════════════════════════════
+/// Hint levels map to real coaching depth:
+/// Level 1 (5 XP)  — Concept/Theme: "There's a tactic involving your Knight"
+/// Level 2 (10 XP) — Direction:     "Move to the d5 area to create a fork"
+/// Level 3 (20 XP) — Full Move:     "Play Nd5! — it forks the Queen and Rook"
 class HintResult {
   final String bestMoveAlgebraic;
-  final String level1; // General direction
-  final String level2; // Piece suggestion
-  final String level3; // Square highlight
-  final String level4; // Full move explanation
+
+  /// L1 - Theme/Concept (cheapest hint)
+  final String level1;
+
+  /// L2 - Directional guidance (moderate cost)
+  final String level2;
+
+  /// L3 - Full move reveal (expensive, definitive)
+  final String level3;
+
+  // Legacy field for backward compat
+  final String level4;
+
   final String? alternativeMoveAlgebraic;
   final TacticalPattern pattern;
-  final int xpCost;
+
+  /// XP cost for the NEXT level upgrade (shown to user before they confirm)
+  final int xpCostLevel1; // Cost to first reveal
+  final int xpCostLevel2; // Cost to upgrade to L2
+  final int xpCostLevel3; // Cost to upgrade to L3
+
   final int currentLevel;
 
   const HintResult({
@@ -239,12 +257,34 @@ class HintResult {
     required this.level1,
     required this.level2,
     required this.level3,
-    required this.level4,
+    String? level4,
     this.alternativeMoveAlgebraic,
     this.pattern = TacticalPattern.none,
-    this.xpCost = 10,
+    this.xpCostLevel1 = 5,
+    this.xpCostLevel2 = 10,
+    this.xpCostLevel3 = 20,
     this.currentLevel = 1,
-  });
+  }) : level4 = level4 ?? level3;
+
+  /// Legacy compat
+  int get xpCost => xpCostLevel1;
+
+  /// XP cost to show the NEXT level upgrade (for the prompt button)
+  int get nextLevelXpCost => switch (currentLevel) {
+        1 => xpCostLevel2,
+        2 => xpCostLevel3,
+        _ => 0,
+      };
+
+  /// Total XP spent so far for the current level
+  int get totalXpSpent => switch (currentLevel) {
+        1 => xpCostLevel1,
+        2 => xpCostLevel1 + xpCostLevel2,
+        3 => xpCostLevel1 + xpCostLevel2 + xpCostLevel3,
+        _ => xpCostLevel1,
+      };
+
+  bool get canUpgrade => currentLevel < 3;
 
   HintResult copyWith({int? currentLevel}) => HintResult(
         bestMoveAlgebraic: bestMoveAlgebraic,
@@ -254,7 +294,9 @@ class HintResult {
         level4: level4,
         alternativeMoveAlgebraic: alternativeMoveAlgebraic,
         pattern: pattern,
-        xpCost: xpCost,
+        xpCostLevel1: xpCostLevel1,
+        xpCostLevel2: xpCostLevel2,
+        xpCostLevel3: xpCostLevel3,
         currentLevel: currentLevel ?? this.currentLevel,
       );
 
@@ -262,9 +304,24 @@ class HintResult {
         1 => level1,
         2 => level2,
         3 => level3,
-        _ => level4,
+        _ => level3,
+      };
+
+  String get currentLevelLabel => switch (currentLevel) {
+        1 => 'Concept',
+        2 => 'Direction',
+        3 => 'Best Move',
+        _ => 'Best Move',
+      };
+
+  String get currentLevelEmoji => switch (currentLevel) {
+        1 => '💡',
+        2 => '🎯',
+        3 => '♟️',
+        _ => '♟️',
       };
 }
+
 
 // ═══════════════════════════════════════════
 // POST-GAME ANALYSIS

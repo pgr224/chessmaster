@@ -378,6 +378,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     .read<auth.AuthBloc>()
                     .authRepository
                     .donateXP(recipientId: userId, amount: amount);
+                if (!context.mounted) return;
                 if (success) {
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                       content: Text('Donated $amount XP to $username!')));

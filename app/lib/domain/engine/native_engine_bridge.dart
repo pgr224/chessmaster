@@ -2,7 +2,6 @@ import 'dart:async';
 import 'native_stockfish.dart';
 import 'native_leela.dart';
 import 'candidate_model.dart';
-import 'candidate_model.dart';
 
 // These are called by AIEngineController on Native (Mobile/Desktop)
 String _currentDifficulty = 'basic';

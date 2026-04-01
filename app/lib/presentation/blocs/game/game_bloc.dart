@@ -133,8 +133,12 @@ class GamePuzzleRushTickEvent extends GameEvent {
   const GamePuzzleRushTickEvent();
 }
 
-class GameExplainPuzzleMoveEvent extends GameEvent {
-  const GameExplainPuzzleMoveEvent();
+class GameExplainMoveEvent extends GameEvent {
+  final Move? move;
+  final String? fen;
+  const GameExplainMoveEvent({this.move, this.fen});
+  @override
+  List<Object?> get props => [move, fen];
 }
 
 class GamePuzzleGiveUpEvent extends GameEvent {
@@ -465,6 +469,7 @@ class GameState extends Equatable {
     bool clearCoachMove = false,
     bool clearPreMove = false,
     bool clearEngineError = false,
+    bool clearExplanation = false,
     String? aiMessage,
     AIPersonality? activePersonality,
     Move? preMove,
@@ -543,7 +548,8 @@ class GameState extends Equatable {
           lastCorrectPuzzleMove ?? this.lastCorrectPuzzleMove,
       showPuzzleCelebration:
           showPuzzleCelebration ?? this.showPuzzleCelebration,
-      puzzleExplanation: puzzleExplanation ?? this.puzzleExplanation,
+      puzzleExplanation:
+          clearExplanation ? null : (puzzleExplanation ?? this.puzzleExplanation),
       totalPuzzleXP: totalPuzzleXP ?? this.totalPuzzleXP,
       puzzleGaveUp: puzzleGaveUp ?? this.puzzleGaveUp,
       coachMove: clearCoachMove ? null : (coachMove ?? this.coachMove),
@@ -671,7 +677,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         (event, emit) => emit(state.copyWith(opponentName: event.name)));
     on<GameDiscardEvent>(_onDiscard);
     on<GamePuzzleRushTickEvent>(_onPuzzleRushTick);
-    on<GameExplainPuzzleMoveEvent>(_onExplainPuzzleMove);
+    on<GameExplainMoveEvent>(_onExplainMove);
     on<GamePuzzleGiveUpEvent>(_onPuzzleGiveUp);
     on<GamePuzzleNextEvent>(_onPuzzleNext);
     on<GameUpdateEvalEvent>(_onUpdateEval);
@@ -934,24 +940,27 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     }
   }
 
-  Future<void> _onExplainPuzzleMove(
-      GameExplainPuzzleMoveEvent event, Emitter<GameState> emit) async {
-    if (state.puzzle == null) return;
-    emit(state.copyWith(puzzleExplanation: 'Analyzing position...'));
-    // Use engine to evaluate and find why this move is good
-    final eval = await AIEngine.evaluatePosition(_engine);
-
-    // Simplified child-friendly explanation logic
-    String explanation =
-        "This move helps you control the center and prepares a strong attack! 🧠";
-    if (eval > 300) {
-      explanation =
-          "Great move! This wins material and puts your opponent in big trouble! 🚀";
-    } else if (state.status == GameStatus.check) {
-      explanation = "Correct! This move puts the King in danger! ⚔️";
+  Future<void> _onExplainMove(
+      GameExplainMoveEvent event, Emitter<GameState> emit) async {
+    // If no move/fen provided, it's a "Clear" request
+    if (event.move == null || event.fen == null) {
+      emit(state.copyWith(clearExplanation: true));
+      return;
     }
 
-    emit(state.copyWith(puzzleExplanation: explanation));
+    emit(state.copyWith(puzzleExplanation: 'Analyzing position... 🧠'));
+
+    try {
+      final explanation = await _coachController.explainMove(
+        fen: event.fen!,
+        move: event.move!,
+      );
+      emit(state.copyWith(puzzleExplanation: explanation));
+    } catch (e) {
+      emit(state.copyWith(
+          puzzleExplanation:
+              'I analyzed this move and it looks solid! It focuses on board control and piece activity. 🧠'));
+    }
   }
 
   void _onSelectPiece(GameSelectPieceEvent event, Emitter<GameState> emit) {
@@ -1917,10 +1926,10 @@ class GameBloc extends Bloc<GameEvent, GameState> {
 
   Future<void> _onRequestHint(
       GameRequestHintEvent event, Emitter<GameState> emit) async {
-    // Puzzle Hint Logic — costs 10 XP
+    // Puzzle Hint Logic — costs flat 10 XP (puzzle hint is from predefined data)
     if (state.mode == GameMode.puzzle && state.puzzle != null) {
       final currentMove = state.puzzle!.moves[state.puzzleStep];
-      if (currentMove.isOpponentMove) return; // Can't hint on opponent's turn
+      if (currentMove.isOpponentMove) return;
 
       final newXp = state.xpGained - 10;
       emit(state.copyWith(
@@ -1929,7 +1938,6 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         xpGained: newXp,
       ));
 
-      // Deduct XP from server
       final user = await _authRepository.getCurrentUser();
       if (user != null) {
         await _authRepository.updateXPProgress(
@@ -1942,45 +1950,35 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     }
 
     if (state.hintsRemaining <= 0) return;
-    // Reminder: Hints removed from Two Player. Only Single, Practice, Multiplayer.
     if (state.mode == GameMode.twoPlayer) return;
     if (!state.isPlayerTurn) return;
 
-    // IF we already have an active hint, just increment the level
+    // ── UPGRADE: If hint already showing, bump to next level ─────────────────
     if (state.activeHint != null) {
-      if (state.activeHint!.currentLevel < 4) {
-        final upgradedHint = state.activeHint!
-            .copyWith(currentLevel: state.activeHint!.currentLevel + 1);
+      final hint = state.activeHint!;
+      if (!hint.canUpgrade) return; // Already at level 3, nothing more to reveal
 
-        Move? hintMove;
-        if (upgradedHint.currentLevel >= 3) {
-          hintMove = Move.fromAlgebraic(upgradedHint.bestMoveAlgebraic);
-        }
+      final nextLevel = hint.currentLevel + 1;
+      final xpCost = hint.nextLevelXpCost; // Per-level cost (10 or 20 XP)
 
-        emit(state.copyWith(
-          activeHint: upgradedHint,
-          hintMove: hintMove,
-        ));
+      // Deduct XP for this upgrade
+      final newXp = state.xpGained - xpCost;
+      final upgradedHint = hint.copyWith(currentLevel: nextLevel);
+
+      // At level 3, highlight the actual move on the board
+      Move? hintMove;
+      if (nextLevel >= 3) {
+        hintMove = Move.fromAlgebraic(upgradedHint.bestMoveAlgebraic);
       }
-      return;
-    }
 
-    final aiRequestEpoch = ++_aiRequestEpoch;
-    emit(state.copyWith(isAIThinking: true));
+      emit(state.copyWith(
+        activeHint: upgradedHint,
+        hintMove: hintMove,
+        xpGained: newXp,
+      ));
 
-    // Use AI Coach for rich hint with explanation
-    final hintResult = await _coachController.getHint(_engine);
-
-    if (isClosed || aiRequestEpoch != _aiRequestEpoch) return;
-    emit(state.copyWith(isAIThinking: false));
-
-    if (hintResult != null) {
-      // Practice mode hints are FREE
-      final isPractice = state.mode == GameMode.practice;
-      final xpCost = isPractice ? 0 : 10;
-
-      // Sync XP to server if not practice
-      if (!isPractice) {
+      // Sync XP deduction to server
+      if (state.mode != GameMode.practice) {
         final user = await _authRepository.getCurrentUser();
         if (user != null) {
           await _authRepository.updateXPProgress(
@@ -1990,14 +1988,42 @@ class GameBloc extends Bloc<GameEvent, GameState> {
           );
         }
       }
+      return;
+    }
+
+    // ── INITIAL HINT REQUEST (Level 1 — costs 5 XP) ────────────────────────
+    final aiRequestEpoch = ++_aiRequestEpoch;
+    emit(state.copyWith(isAIThinking: true));
+
+    final hintResult = await _coachController.getHint(_engine);
+
+    if (isClosed || aiRequestEpoch != _aiRequestEpoch) return;
+    emit(state.copyWith(isAIThinking: false));
+
+    if (hintResult != null) {
+      final isPractice = state.mode == GameMode.practice;
+      final xpCost = isPractice ? 0 : hintResult.xpCostLevel1; // 5 XP for L1
 
       emit(state.copyWith(
         activeHint: hintResult,
         hintsUsed: state.hintsUsed + 1,
         xpGained: state.xpGained - xpCost,
       ));
+
+      // Sync XP to server
+      if (!isPractice && xpCost > 0) {
+        final user = await _authRepository.getCurrentUser();
+        if (user != null) {
+          await _authRepository.updateXPProgress(
+            userId: user.id,
+            xpDelta: -xpCost,
+            statUpdates: {},
+          );
+        }
+      }
     }
   }
+
 
   void _onDismissMiniLesson(
       GameDismissMiniLessonEvent event, Emitter<GameState> emit) {

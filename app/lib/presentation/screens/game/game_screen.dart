@@ -224,7 +224,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                     if (state.mode == GameMode.multiplayer)
                       _buildFloatingChat(context),
                     if (state.puzzleExplanation != null)
-                      _buildPuzzleExplanation(state),
+                      _buildBrainExplainer(state),
                     if (state.engineError != null)
                       _buildEngineErrorOverlay(context, state),
                   ],
@@ -283,9 +283,14 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                           onTap: () => setState(() => _showMoves = false)),
                     ],
                   ),
-                  const Divider(color: Colors.white10, height: 20),
-                  Expanded(child: MoveHistoryWidget(moves: state.moveHistory)),
-                ],
+                   const Divider(color: Colors.white10, height: 20),
+                   Expanded(
+                     child: MoveHistoryWidget(
+                       moves: state.moveHistory,
+                       currentFen: state.currentFEN,
+                     ),
+                   ),
+                 ],
               ),
             )
                 .animate()
@@ -723,9 +728,15 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             const SizedBox(width: 8),
             _glassButton(
               icon: Icons.psychology_rounded,
-              onTap: () => context
-                  .read<GameBloc>()
-                  .add(const GameExplainPuzzleMoveEvent()),
+              onTap: () {
+                final moveStr = state.puzzle?.moves[state.puzzleStep].uciMove;
+                if (moveStr != null) {
+                  context.read<GameBloc>().add(GameExplainMoveEvent(
+                        move: Move.fromAlgebraic(moveStr),
+                        fen: state.currentFEN,
+                      ));
+                }
+              },
             ),
           ],
         ],
@@ -1113,43 +1124,84 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     ).animate().fadeIn().slideY(begin: -0.2);
   }
 
-  Widget _buildPuzzleExplanation(GameState state) {
+  Widget _buildBrainExplainer(GameState state) {
+    if (state.puzzleExplanation == null) return const SizedBox.shrink();
+    
     return Positioned(
-      top: 200,
-      left: 32,
-      right: 32,
+      top: 180,
+      left: 24,
+      right: 24,
       child: Center(
         child: Container(
-          padding: const EdgeInsets.all(16),
+          constraints: const BoxConstraints(maxWidth: 400),
+          padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: AppTheme.navyCard.withValues(alpha: 0.95),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: AppTheme.skyBlue.withValues(alpha: 0.5)),
-            boxShadow: [BoxShadow(color: Colors.black45, blurRadius: 20)],
+            color: AppTheme.navyCard.withValues(alpha: 0.98),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppTheme.skyBlue.withValues(alpha: 0.4), width: 2),
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.skyBlue.withValues(alpha: 0.15),
+                blurRadius: 30,
+                spreadRadius: 5,
+              ),
+              const BoxShadow(color: Colors.black54, blurRadius: 20),
+            ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Icon(Icons.psychology_rounded, color: AppTheme.skyBlue),
-                  const SizedBox(width: 10),
-                  Text('BRAIN EXPLAINS',
-                      style: GoogleFonts.fredoka(
-                          color: AppTheme.skyBlue,
-                          fontWeight: FontWeight.bold)),
+                  Row(
+                    children: [
+                      const Icon(Icons.psychology_rounded, color: AppTheme.skyBlue, size: 28),
+                      const SizedBox(width: 12),
+                      Text('BRAIN EXPLAINS',
+                          style: GoogleFonts.fredoka(
+                              color: AppTheme.skyBlue,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1.1)),
+                    ],
+                  ),
+                  IconButton(
+                    onPressed: () => context
+                        .read<GameBloc>()
+                        .add(const GameExplainMoveEvent()), // Clear
+                    icon: const Icon(Icons.close_rounded, color: AppTheme.textMuted),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
                 ],
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 16),
               Text(
-                state.puzzleExplanation ?? '',
-                style: GoogleFonts.baloo2(color: Colors.white, fontSize: 15),
+                state.puzzleExplanation!,
+                style: GoogleFonts.baloo2(
+                  color: Colors.white, 
+                  fontSize: 16,
+                  height: 1.5,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () => context
+                      .read<GameBloc>()
+                      .add(const GameExplainMoveEvent()), // Clear
+                  child: Text('GOT IT!', style: GoogleFonts.fredoka(color: AppTheme.skyBlue, fontWeight: FontWeight.bold)),
+                ),
               ),
             ],
           ),
         ),
       ),
-    ).animate().fadeIn().scale();
+    ).animate().fadeIn().scale(curve: Curves.easeOutBack);
   }
 
   Widget _buildWideLayout(
@@ -1380,9 +1432,15 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               icon: Icons.psychology_rounded,
               label: 'Explain',
               color: AppTheme.skyBlue,
-              onTap: () => context
-                  .read<GameBloc>()
-                  .add(const GameExplainPuzzleMoveEvent()),
+              onTap: () {
+                final moveStr = state.puzzle?.moves[state.puzzleStep].uciMove;
+                if (moveStr != null) {
+                  context.read<GameBloc>().add(GameExplainMoveEvent(
+                        move: Move.fromAlgebraic(moveStr),
+                        fen: state.currentFEN,
+                      ));
+                }
+              },
             ),
           // Undo — available for practice, single, and multiplayer
           if (isPracticeOrSingle || isMultiplayer)
@@ -1410,7 +1468,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             ),
 
           // Coach Settings
-          if (isPracticeOrSingle)
+          if (state.mode == GameMode.practice)
             _actionBtn(
               icon: Icons.face_rounded,
               label: 'Coach',
@@ -1681,9 +1739,14 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                 fontSize: 18,
                 fontWeight: FontWeight.w700),
           ),
-          const SizedBox(height: 10),
-          Expanded(child: MoveHistoryWidget(moves: state.moveHistory)),
-        ],
+           const SizedBox(height: 10),
+           Expanded(
+             child: MoveHistoryWidget(
+               moves: state.moveHistory,
+               currentFen: state.currentFEN,
+             ),
+           ),
+         ],
       ),
     );
   }

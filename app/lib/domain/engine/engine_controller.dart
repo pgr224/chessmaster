@@ -6,7 +6,6 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'chess_engine.dart';
-import 'ai_engine.dart';
 import '../../data/models/game_config.dart';
 
 // Conditional import: web gets the real JS bridge, mobile gets the real native bridge
@@ -15,7 +14,6 @@ import 'native_engine_bridge_stub.dart'
     if (dart.library.js_interop) 'js_engine_bridge.dart' as js_bridge;
 
 import 'personality_engine.dart';
-import 'move_selector.dart';
 import 'candidate_model.dart';
 
 class AIEngineController {
@@ -35,8 +33,6 @@ class AIEngineController {
     AIDifficulty.impossible: 5000, // Reduced from 17000 to keep it engaging
     AIDifficulty.aiMode: 7000, // Reduced from 25000
   };
-
-  static const int _fallbackBufferMs = 2000;
 
   /// Tracks active request to allow cancellation
   int _activeRequestId = 0;
@@ -96,10 +92,10 @@ class AIEngineController {
 
       // Simple call for lower difficulties
       final Map<String, dynamic>? res =
-          (await js_bridge.jsEngineGetBestMove(fen).timeout(
-                Duration(milliseconds: maxTime),
-                onTimeout: () => null,
-              )) as Map<String, dynamic>?;
+          await js_bridge.jsEngineGetBestMove(fen).timeout(
+            Duration(milliseconds: maxTime),
+            onTimeout: () => null,
+          );
       resultMove = res?['move'] as String?;
 
       if (resultMove == null && engine != null) {

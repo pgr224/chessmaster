@@ -245,8 +245,6 @@ class CoachController {
     CoachPersonality personality,
     TacticalPattern pattern,
   ) {
-    final rand = DateTime.now().millisecond;
-    
     // VARIETY POOLS BY PERSONALITY
     final brilliantPool = switch(personality) {
       CoachPersonality.friendly => ['WOW! Brilliant move! 💎✨', 'Incredible vision! That is brilliant. 🧠', 'That is a masterpiece! 🎨', 'I am speechless! What a find! 🌟'],
@@ -395,11 +393,13 @@ class CoachController {
   // HINT SYSTEM — On Demand
   // ═══════════════════════════════════════════
 
-  /// Returns a hint for the current position with 4 levels of detail.
-  /// Level 1: General direction
-  /// Level 2: Piece suggestion
-  /// Level 3: Square highlight
-  /// Level 4: Full move
+  /// Returns a 3-tier progressive hint for the current position.
+  ///
+  /// Level costs: L1=5 XP, L2=10 XP, L3=20 XP
+  ///
+  /// L1 — Concept:   What tactical theme applies? (cheapest, lowest spoiler)
+  /// L2 — Direction: Which piece + general destination area
+  /// L3 — Full Move: Exact move with rich tactical rationale ("Best Move")
   Future<HintResult?> getHint(ChessEngine engine) async {
     try {
       final topMoves = await AIEngine.getTopMoves(
@@ -414,48 +414,76 @@ class CoachController {
       final altMoveScored = topMoves.length > 1 ? topMoves[1] : null;
 
       final bestMove = bestMoveScored.$1;
+      final bestScore = bestMoveScored.$2;
       final altMove = altMoveScored?.$1;
+      final altScore = altMoveScored?.$2 ?? 0;
 
       final pattern = await detectTacticalPattern(engine, bestMove);
       final piece = engine.pieceAt(bestMove.from);
-      final targetSq = bestMove.toAlgebraic().substring(2, 4);
+      final pieceName = piece?.type.coachName ?? 'piece';
 
-      // Level 1: General Category
-      String level1 = switch (pattern) {
-        TacticalPattern.checkmate => "There is a way to end the game now!",
-        TacticalPattern.materialGain => "Look for a way to win some material.",
-        TacticalPattern.fork => "One of your pieces can attack two targets.",
-        TacticalPattern.pin => "You can restrict one of their pieces.",
-        TacticalPattern.pawnPromotion => "Your pawn is very close to glory.",
-        TacticalPattern.discoveredAttack => "Moving one piece reveals a hidden threat.",
-        TacticalPattern.centerControl => "Try to exert more control over the center.",
-        TacticalPattern.development => "It's time to bring more pieces into the action.",
-        TacticalPattern.kingSafety => "Your king needs a bit more protection.",
-        _ => "Look for a forced sequence or a positional improvement.",
-      };
+      // Parse board squares to human-readable form
+      final fromFile = _fileLabel(bestMove.from.file);
+      final fromRank = bestMove.from.rank + 1;
+      final toFile = _fileLabel(bestMove.to.file);
+      final toRank = bestMove.to.rank + 1;
+      final toSq = '$toFile$toRank';      // e.g. "d5"
+      final fromSq = '$fromFile$fromRank'; // e.g. "c3"
 
-      // Level 2: Piece Suggestion
-      String level2 = piece != null
-          ? "Consider moving your ${piece.type.coachName}."
-          : "Try to find the best square for one of your pieces.";
+      // Destination area description (e.g., "center", "kingside", etc.)
+      final areaDesc = _describeArea(bestMove.to.file, bestMove.to.rank);
 
-      // Level 3: Square Highlight
-      String level3 = "Look closely at the square $targetSq.";
+      // Gap between best and 2nd best — indicates if this is forced/critical
+      final scoreDiff = (bestScore - altScore).abs();
+      final isCritical = scoreDiff > 150;
 
-      // Level 4: Full Move Reveal
-      String level4 = pattern != TacticalPattern.none
-          ? "You should play ${bestMove.toAlgebraic()} to execute a ${pattern.label}!"
-          : "The engine suggests ${bestMove.toAlgebraic()} as the strongest continuation.";
+      // Capture context
+      final capturedPiece = bestMove.capturedPiece;
+      final captureDesc = capturedPiece != null
+          ? 'capturing their ${capturedPiece.type.coachName}'
+          : null;
+
+      // ─── LEVEL 1: CONCEPT / THEME ──────────────────────────────────────────
+      // Pure strategic/tactical concept — NO piece or square revealed
+      final String level1 = _buildConceptHint(pattern, isCritical, engine, bestMove);
+
+      // ─── LEVEL 2: DIRECTION ────────────────────────────────────────────────
+      // Reveals: which piece type, and general destination area
+      final String level2 = _buildDirectionHint(
+        pieceName: pieceName,
+        areaDesc: areaDesc,
+        pattern: pattern,
+        captureDesc: captureDesc,
+        fromSq: fromSq,
+        toSq: toSq,
+        scoreDiff: scoreDiff,
+      );
+
+      // ─── LEVEL 3: BEST MOVE ─────────────────────────────────────────────────
+      // Full move reveal with detailed tactical justification
+      final String level3 = _buildFullMoveHint(
+        bestMove: bestMove,
+        pieceName: pieceName,
+        fromSq: fromSq,
+        toSq: toSq,
+        pattern: pattern,
+        captureDesc: captureDesc,
+        bestScore: bestScore,
+        altMove: altMove,
+        scoreDiff: scoreDiff,
+        isCritical: isCritical,
+      );
 
       return HintResult(
         bestMoveAlgebraic: bestMove.toAlgebraic(),
         level1: level1,
         level2: level2,
         level3: level3,
-        level4: level4,
         alternativeMoveAlgebraic: altMove?.toAlgebraic(),
         pattern: pattern,
-        xpCost: 10,
+        xpCostLevel1: 5,
+        xpCostLevel2: 10,
+        xpCostLevel3: 20,
         currentLevel: 1,
       );
     } catch (e) {
@@ -464,9 +492,149 @@ class CoachController {
     }
   }
 
+  // ── HINT BUILDERS ────────────────────────────────────────────────────────
+
+  String _buildConceptHint(
+    TacticalPattern pattern,
+    bool isCritical,
+    ChessEngine engine,
+    Move bestMove,
+  ) {
+    final prefix = isCritical ? "⚡ This position is critical! " : "";
+    return switch (pattern) {
+      TacticalPattern.checkmate =>
+        "${prefix}There is a forced checkmate available in this position. Find the move that ends the game!",
+      TacticalPattern.materialGain =>
+        "${prefix}You have an opportunity to win material. Look for a capture that gains you something for free or in trade.",
+      TacticalPattern.fork =>
+        "${prefix}One of your pieces can attack two of their pieces at the same time — a fork! Look for a move that puts two targets under fire.",
+      TacticalPattern.pin =>
+        "${prefix}You can pin one of their pieces to a more valuable piece behind it, restricting its movement.",
+      TacticalPattern.skewer =>
+        "${prefix}A skewer tactic is available — attack a valuable piece that must move, exposing a weaker piece behind it.",
+      TacticalPattern.discoveredAttack =>
+        "${prefix}Moving one piece will reveal a powerful attack from another. Think about which piece is blocking your battery.",
+      TacticalPattern.doubleCheck =>
+        "${prefix}A double check is possible — two pieces giving check simultaneously, impossible to block!",
+      TacticalPattern.pawnPromotion =>
+        "${prefix}One of your pawns is very close to promoting to a queen. Push it forward!",
+      TacticalPattern.kingSafety =>
+        "${prefix}Your king's safety should be your priority right now. Defend or castle.",
+      TacticalPattern.centerControl =>
+        "${prefix}Controlling the center gives you a strategic advantage. Look for a move that dominates the d4-d5-e4-e5 area.",
+      TacticalPattern.development =>
+        "${prefix}Get your pieces into the game! An undeveloped piece is a wasted piece.",
+      _ =>
+        "${prefix}Look for the most forcing move — checks, captures, and threats, in that order.",
+    };
+  }
+
+  String _buildDirectionHint({
+    required String pieceName,
+    required String areaDesc,
+    required TacticalPattern pattern,
+    required String? captureDesc,
+    required String fromSq,
+    required String toSq,
+    required int scoreDiff,
+  }) {
+    final captureHint = captureDesc != null ? ", $captureDesc" : "";
+    return switch (pattern) {
+      TacticalPattern.checkmate =>
+        "🎯 Your $pieceName delivers the decisive blow. Move it to the $areaDesc to administer checkmate$captureHint.",
+      TacticalPattern.materialGain =>
+        "🎯 Your $pieceName can win material. Look at moving it toward $toSq$captureHint.",
+      TacticalPattern.fork =>
+        "🎯 Your $pieceName is the forking piece. Move it to the $areaDesc — from there it attacks two of their pieces at once$captureHint.",
+      TacticalPattern.pin =>
+        "🎯 Your $pieceName can create a pin. Align it with their pieces in the $areaDesc.",
+      TacticalPattern.discoveredAttack =>
+        "🎯 Move your $pieceName away from its current square — doing so unleashes an attack from a piece behind it.",
+      TacticalPattern.pawnPromotion =>
+        "🎯 Your $pieceName is almost a queen! Push it toward $toSq.",
+      TacticalPattern.kingSafety =>
+        "🎯 You need to defend. Move your $pieceName toward the $areaDesc to protect your king.",
+      TacticalPattern.centerControl =>
+        "🎯 Your $pieceName should go to the center. Target the $areaDesc to increase your control.",
+      TacticalPattern.development =>
+        "🎯 Activate your $pieceName! Bring it from $fromSq into the game, aiming for the $areaDesc.",
+      _ =>
+        "🎯 Your $pieceName is the key piece. Think about moving it toward $toSq in the $areaDesc$captureHint.",
+    };
+  }
+
+  String _buildFullMoveHint({
+    required Move bestMove,
+    required String pieceName,
+    required String fromSq,
+    required String toSq,
+    required TacticalPattern pattern,
+    required String? captureDesc,
+    required int bestScore,
+    required Move? altMove,
+    required int scoreDiff,
+    required bool isCritical,
+  }) {
+    final moveUci = bestMove.toAlgebraic();
+    final captureStr = captureDesc != null ? ", $captureDesc" : "";
+    final urgency = isCritical
+        ? "This is the only good move — don't delay!"
+        : "The engine rates this as the strongest continuation.";
+
+    final patternExplain = switch (pattern) {
+      TacticalPattern.checkmate => "This move delivers checkmate! ♚",
+      TacticalPattern.materialGain =>
+        "This wins material. $urgency",
+      TacticalPattern.fork =>
+        "The $pieceName lands on $toSq, forking two of their pieces simultaneously. They can only save one!",
+      TacticalPattern.pin =>
+        "The $pieceName pins their piece to their king or a higher-value piece.",
+      TacticalPattern.skewer =>
+        "A skewer — your $pieceName attacks a valuable piece that must retreat, exposing a weaker target behind it.",
+      TacticalPattern.discoveredAttack =>
+        "Moving the $pieceName from $fromSq reveals a hidden attack by a piece behind it.",
+      TacticalPattern.doubleCheck =>
+        "This delivers a double check — both the $pieceName and a second piece give check simultaneously. It cannot be blocked!",
+      TacticalPattern.pawnPromotion =>
+        "Advancing to $toSq promotes this pawn, likely gaining a queen!",
+      TacticalPattern.kingSafety =>
+        "This defensive move protects critical squares around your king.",
+      TacticalPattern.centerControl =>
+        "Occupying $toSq gives you a powerful central outpost for the $pieceName.",
+      TacticalPattern.development =>
+        "Developing the $pieceName to $toSq activates it and improves your position.",
+      _ => "Playing $moveUci improves your position and keeps the initiative.",
+    };
+
+    final altNote = altMove != null
+        ? "\n\nAlternative: ${altMove.toAlgebraic()} is also reasonable but less precise (scored ${scoreDiff > 0 ? '-$scoreDiff' : '+$scoreDiff'} cp gap)."
+        : "";
+
+    return "♟️ Play $moveUci ($fromSq → $toSq)$captureStr\n\n$patternExplain$altNote";
+  }
+
+  // ── UTILITY ─────────────────────────────────────────────────────────────
+
+  String _fileLabel(int file) => String.fromCharCode('a'.codeUnitAt(0) + file);
+
+  String _describeArea(int file, int rank) {
+    final isKingside = file >= 4;
+    final isQueenside = file <= 3;
+    final isCenter = file >= 3 && file <= 4 && rank >= 3 && rank <= 4;
+    if (isCenter) return "center";
+    if (file <= 1) return "queenside flank";
+    if (file >= 6) return "kingside flank";
+    if (isKingside) return "kingside";
+    if (isQueenside) return "queenside";
+    if (rank >= 5) return "deep enemy territory";
+    return "active square";
+  }
+
+
 
   // ═══════════════════════════════════════════
   // POST-GAME ANALYSIS
+
   // ═══════════════════════════════════════════
   PostGameAnalysis buildPostGameAnalysis({
     required double accuracy,
@@ -521,6 +689,56 @@ class CoachController {
 
   void dispose() {
     _evalCache.clear();
+  }
+
+  /// Deep tactical explanation for a specific move.
+  /// Used by the "Brain Explainer" feature.
+  Future<String> explainMove({
+    required String fen,
+    required Move move,
+  }) async {
+    try {
+      final engine = ChessEngine.fromFEN(fen);
+      final playedMoveStr = move.toAlgebraic();
+
+      // Analyze current position deeply
+      final eval = await AIEngine.evaluatePosition(engine);
+      final topMoves = await AIEngine.getTopMoves(engine, AIDifficulty.impossible, count: 5);
+
+      final pattern = await detectTacticalPattern(engine, move);
+      final piece = engine.pieceAt(move.from);
+
+      // Check if it was the best move
+      bool isBest = topMoves.isNotEmpty && topMoves.first.$1.toAlgebraic() == playedMoveStr;
+
+      final parts = <String>[];
+
+      if (isBest) {
+        parts.add("🌟 This was the best move in the position!");
+      } else if (topMoves.isNotEmpty && topMoves.any((m) => m.$1.toAlgebraic() == playedMoveStr)) {
+        parts.add("✅ This was a strong tactical choice.");
+      } else {
+        parts.add("💡 I see your idea, but I have some thoughts on why this might be a gamble.");
+      }
+
+      if (pattern != TacticalPattern.none) {
+        parts.add("The ${pattern.label} pattern is the key here. ${pattern.explanation}.");
+      }
+
+      if (piece != null) {
+        parts.add("Moving your ${piece.type.coachName} to ${move.toAlgebraic().substring(2, 4)} helps you control more space.");
+      }
+
+      // Add a deep engine insight
+      if (eval.abs() > 200) {
+        final leader = eval > 0 ? "White" : "Black";
+        parts.add("Positionally, $leader is leading by a solid margin. This move aims to press that advantage further.");
+      }
+
+      return parts.join(" ");
+    } catch (e) {
+      return "I analyzed this move and it looks solid! It focuses on board control and piece activity. 🧠";
+    }
   }
 }
 

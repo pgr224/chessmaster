@@ -1,0 +1,45 @@
+# Brain Explainer Implementation Plan
+
+The objective is to implement the functional logic for the "Brain Explainer" in the chess application. Currently, the UI exists as a placeholder primarily in `GameMode.puzzle`, but the user wants it to be a general feature that explains moves in any mode.
+
+## User Review Required
+
+> [!IMPORTANT]
+> The Brain Explainer will cost **15 XP** per use (compared to 10 XP for a hint) because it provides a deep tactical breakdown of why a specific move was played or why it was the best move.
+
+> [!NOTE]
+> We will integrate the "Brain Explainer" into the existing `CoachInteractionWidget` or a dedicated overlay that can be triggered from the move history or the board state. Initially, we will focus on making the `GameExplainPuzzleMoveEvent` functional and expanding it to general gameplay.
+
+## Proposed Changes
+
+### Domain Layer (Engine)
+
+#### [MODIFY] [coach_controller.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/domain/engine/coach_controller.dart)
+- Add `explainMove` method that takes a position (FEN) and a move (UCI/Algebraic).
+- It will perform a deep analysis (higher depth/nodes) to explain the tactical justification (patterns, material gain, positional advantage).
+- Return a structured `MoveExplanation` or a formatted string.
+
+### Presentation Layer (Bloc & UI)
+
+#### [MODIFY] [game_bloc.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/presentation/blocs/game/game_bloc.dart)
+- Implement `_onExplainPuzzleMove` using the refined `CoachController` logic.
+- Ensure XP deduction (15 XP) is handled correctly.
+- Ensure it works for both Puzzle mode and regular Game mode (might add a new event `GameExplainMoveEvent`).
+
+#### [MODIFY] [game_screen.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/presentation/screens/game/game_screen.dart)
+- Update `_buildPuzzleExplanation` to be more generic (`_buildBrainExplainer`).
+- Ensure the UI correctly displays the multi-line explanation with a "Close" button.
+- Add a "Brain" icon button in the move history or near the board to trigger the explainer for the last move.
+
+#### [MODIFY] [coach_interaction_widget.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/presentation/widgets/coach_interaction_widget.dart)
+- Add a "Brain Explains" button/toggle if the current state allows for it (e.g., after a move is made).
+
+## Verification Plan
+
+### Automated Tests
+- Trigger `GameExplainPuzzleMoveEvent` and verify `puzzleExplanation` in `GameState` is updated with non-placeholder text.
+- Verify XP deduction in logs.
+
+### Manual Verification
+- Open a puzzle, click "Brain Explains" (if available) or wait for auto-trigger, and check the text.
+- Play a regular game, click the "Brain" icon on a move, and verify the tactical breakdown appears.

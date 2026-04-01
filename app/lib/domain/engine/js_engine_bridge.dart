@@ -98,7 +98,7 @@ List<String> jsEngineGetLegalMoves(String fen, String square) {
   final svc = _getService();
   if (svc == null) return [];
   final result = svc.getLegalMoves(fen.toJS, square.toJS);
-  return result.toDart.map((e) => (e as JSString).toDart).toList();
+  return result.toDart.map((e) => e.toDart).toList();
 }
 
 /// Get the currently active engine name

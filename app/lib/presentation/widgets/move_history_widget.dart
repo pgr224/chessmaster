@@ -1,15 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../domain/engine/chess_engine.dart';
+import '../blocs/game/game_bloc.dart';
 
 class MoveHistoryWidget extends StatefulWidget {
   final List<Move> moves;
   final Axis scrollDirection;
+  final String? currentFen; // Required to explain historical moves
+  final List<String> fens; // Historical FENs
+  
   const MoveHistoryWidget({
     super.key,
     required this.moves,
     this.scrollDirection = Axis.vertical,
+    this.currentFen,
+    this.fens = const [],
   });
 
   @override
@@ -88,22 +95,46 @@ class _MoveHistoryWidgetState extends State<MoveHistoryWidget> {
                 const SizedBox(width: 4),
                 if (whiteMove != null)
                   Expanded(
-                    child: Text(
-                      whiteMove.algebraic ?? '?',
-                      style: GoogleFonts.fredoka(
-                          color: AppTheme.textPrimary,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700),
+                    child: InkWell(
+                      onTap: () {
+                        final fen = widget.fens.length > index * 2 ? widget.fens[index * 2] : widget.currentFen;
+                        if (fen != null) {
+                          context.read<GameBloc>().add(GameExplainMoveEvent(move: whiteMove, fen: fen));
+                        }
+                      },
+                      borderRadius: BorderRadius.circular(4),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                        child: Text(
+                          whiteMove.algebraic ?? '?',
+                          style: GoogleFonts.fredoka(
+                              color: AppTheme.textPrimary,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700),
+                        ),
+                      ),
                     ),
                   ),
                 if (blackMove != null)
                   Expanded(
-                    child: Text(
-                      blackMove.algebraic ?? '?',
-                      style: GoogleFonts.fredoka(
-                          color: AppTheme.textSecondary,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600),
+                    child: InkWell(
+                      onTap: () {
+                        final fen = widget.fens.length > index * 2 + 1 ? widget.fens[index * 2 + 1] : widget.currentFen;
+                        if (fen != null) {
+                          context.read<GameBloc>().add(GameExplainMoveEvent(move: blackMove, fen: fen));
+                        }
+                      },
+                      borderRadius: BorderRadius.circular(4),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                        child: Text(
+                          blackMove.algebraic ?? '?',
+                          style: GoogleFonts.fredoka(
+                              color: AppTheme.textSecondary,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600),
+                        ),
+                      ),
                     ),
                   ),
               ],
