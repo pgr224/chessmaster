@@ -729,13 +729,17 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             _glassButton(
               icon: Icons.psychology_rounded,
               onTap: () {
-                final moveStr = state.puzzle?.moves[state.puzzleStep].uciMove;
-                if (moveStr != null) {
-                  context.read<GameBloc>().add(GameExplainMoveEvent(
-                        move: Move.fromAlgebraic(moveStr),
-                        fen: state.currentFEN,
-                      ));
+                if (state.puzzleStep < 0 ||
+                    state.puzzleStep >= state.parsedPuzzleMoves.length) {
+                  return;
                 }
+
+                final parsedMove = state.parsedPuzzleMoves[state.puzzleStep];
+                if (parsedMove == null) return;
+                context.read<GameBloc>().add(GameExplainMoveEvent(
+                      move: parsedMove,
+                      fen: state.currentFEN,
+                    ));
               },
             ),
           ],
@@ -1433,13 +1437,17 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               label: 'Explain',
               color: AppTheme.skyBlue,
               onTap: () {
-                final moveStr = state.puzzle?.moves[state.puzzleStep].uciMove;
-                if (moveStr != null) {
-                  context.read<GameBloc>().add(GameExplainMoveEvent(
-                        move: Move.fromAlgebraic(moveStr),
-                        fen: state.currentFEN,
-                      ));
+                if (state.puzzleStep < 0 ||
+                    state.puzzleStep >= state.parsedPuzzleMoves.length) {
+                  return;
                 }
+
+                final parsedMove = state.parsedPuzzleMoves[state.puzzleStep];
+                if (parsedMove == null) return;
+                context.read<GameBloc>().add(GameExplainMoveEvent(
+                      move: parsedMove,
+                      fen: state.currentFEN,
+                    ));
               },
             ),
           // Undo — available for practice, single, and multiplayer

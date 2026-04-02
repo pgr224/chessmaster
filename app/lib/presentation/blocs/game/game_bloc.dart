@@ -227,6 +227,7 @@ class GameState extends Equatable {
   final int tutorialStep;
   final String? tutorialMessage;
   final Puzzle? puzzle;
+  final List<Move?> parsedPuzzleMoves;
   final int puzzleStep;
   final bool isPuzzleHintUsed;
   // Multiplayer undo tracking
@@ -325,6 +326,7 @@ class GameState extends Equatable {
     this.tutorialStep = 0,
     this.tutorialMessage,
     this.puzzle,
+    this.parsedPuzzleMoves = const [],
     this.puzzleStep = 0,
     this.isPuzzleHintUsed = false,
     this.mpUndosUsed = 0,
@@ -420,6 +422,7 @@ class GameState extends Equatable {
     int? tutorialStep,
     String? tutorialMessage,
     Puzzle? puzzle,
+    List<Move?>? parsedPuzzleMoves,
     int? puzzleStep,
     bool? isPuzzleHintUsed,
     int? mpUndosUsed,
@@ -515,6 +518,7 @@ class GameState extends Equatable {
           ? null
           : (tutorialMessage ?? this.tutorialMessage),
       puzzle: puzzle ?? this.puzzle,
+        parsedPuzzleMoves: parsedPuzzleMoves ?? this.parsedPuzzleMoves,
       puzzleStep: puzzleStep ?? this.puzzleStep,
       isPuzzleHintUsed: isPuzzleHintUsed ?? this.isPuzzleHintUsed,
       mpUndosUsed: mpUndosUsed ?? this.mpUndosUsed,
@@ -585,6 +589,7 @@ class GameState extends Equatable {
         tutorialMessage,
         pieceShape,
         pieceStyle,
+        parsedPuzzleMoves,
         lastMoveTimestamp,
         opponentName,
         confirmMoves,
@@ -765,6 +770,16 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     final playerColor =
         config.playerColor == 'black' ? PieceColor.black : PieceColor.white;
 
+    final parsedPuzzleMoves = (config.puzzle?.moves ?? const <PuzzleMove>[])
+        .map<Move?>((m) {
+          try {
+            return Move.fromAlgebraic(m.uciMove);
+          } catch (_) {
+            return null;
+          }
+        })
+        .toList(growable: false);
+
     final initialState = GameState(
       board: _engine.board,
       currentTurn: _engine.currentTurn,
@@ -788,6 +803,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
               ? event.tutorial!.steps.first.text
               : null,
       puzzle: config.puzzle,
+      parsedPuzzleMoves: parsedPuzzleMoves,
     );
     emit(initialState);
 
@@ -838,7 +854,16 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       if (firstMove.isOpponentMove) {
         await Future.delayed(const Duration(milliseconds: 600));
         if (isClosed) return;
-        final setupMove = Move.fromAlgebraic(firstMove.uciMove);
+        final setupMove =
+            parsedPuzzleMoves.isNotEmpty ? parsedPuzzleMoves[0] : null;
+        if (setupMove == null) {
+          emit(state.copyWith(
+            tutorialMessage:
+                'Puzzle data issue: unable to parse opening move. Loading next puzzle...',
+          ));
+          add(const GamePuzzleNextEvent());
+          return;
+        }
         add(GameMakeMoveEvent(setupMove.from, setupMove.to,
             promotion: setupMove.promotion));
       }
@@ -1102,7 +1127,16 @@ class GameBloc extends Bloc<GameEvent, GameState> {
 
     // Puzzle check — only validate user moves (not opponent auto-plays)
     if (state.mode == GameMode.puzzle && state.puzzle != null) {
-      final currentMove = state.puzzle!.moves[state.puzzleStep];
+      final moves = state.puzzle!.moves;
+      if (state.puzzleStep < 0 || state.puzzleStep >= moves.length) {
+        emit(state.copyWith(
+          tutorialMessage: 'Puzzle step out of sync. Loading a fresh puzzle...',
+        ));
+        add(const GamePuzzleNextEvent());
+        return;
+      }
+
+      final currentMove = moves[state.puzzleStep];
 
       // Skip validation if this is an auto-played opponent move
       if (!currentMove.isOpponentMove) {
@@ -1384,7 +1418,16 @@ class GameBloc extends Bloc<GameEvent, GameState> {
 
     // Puzzle Progress
     if (state.mode == GameMode.puzzle && state.puzzle != null) {
-      final isLastMove = state.puzzleStep == state.puzzle!.moves.length - 1;
+      final puzzleMoves = state.puzzle!.moves;
+      if (state.puzzleStep < 0 || state.puzzleStep >= puzzleMoves.length) {
+        emit(state.copyWith(
+          tutorialMessage: 'Puzzle progression error. Loading next puzzle...',
+        ));
+        add(const GamePuzzleNextEvent());
+        return;
+      }
+
+      final isLastMove = state.puzzleStep == puzzleMoves.length - 1;
 
       if (isLastMove) {
         // Puzzle solved! Award 50 XP
@@ -1434,7 +1477,15 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         }
       } else {
         final nextIdx = state.puzzleStep + 1;
-        final nextMove = state.puzzle!.moves[nextIdx];
+        if (nextIdx < 0 || nextIdx >= puzzleMoves.length) {
+          emit(state.copyWith(
+            tutorialMessage: 'Puzzle complete! Loading next challenge...'
+          ));
+          add(const GamePuzzleNextEvent());
+          return;
+        }
+
+        final nextMove = puzzleMoves[nextIdx];
 
         emit(state.copyWith(
           puzzleStep: nextIdx,
@@ -1446,9 +1497,19 @@ class GameBloc extends Bloc<GameEvent, GameState> {
           await Future.delayed(const Duration(milliseconds: 800));
           if (isClosed || state.isGameOver) return;
 
-          final opponentMove = Move.fromAlgebraic(nextMove.uciMove);
-          add(GameMakeMoveEvent(opponentMove.from, opponentMove.to,
-              promotion: opponentMove.promotion));
+          final parsed = (nextIdx < state.parsedPuzzleMoves.length)
+              ? state.parsedPuzzleMoves[nextIdx]
+              : null;
+          if (parsed == null) {
+            emit(state.copyWith(
+              tutorialMessage:
+                  'Could not parse opponent puzzle move. Loading next puzzle...',
+            ));
+            add(const GamePuzzleNextEvent());
+            return;
+          }
+          add(GameMakeMoveEvent(parsed.from, parsed.to,
+              promotion: parsed.promotion));
         }
       }
     }
@@ -1935,7 +1996,15 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       GameRequestHintEvent event, Emitter<GameState> emit) async {
     // Puzzle Hint Logic — costs flat 10 XP (puzzle hint is from predefined data)
     if (state.mode == GameMode.puzzle && state.puzzle != null) {
-      final currentMove = state.puzzle!.moves[state.puzzleStep];
+      final moves = state.puzzle!.moves;
+      if (state.puzzleStep < 0 || state.puzzleStep >= moves.length) {
+        emit(state.copyWith(
+          tutorialMessage: 'Hint unavailable: puzzle step is invalid.',
+        ));
+        return;
+      }
+
+      final currentMove = moves[state.puzzleStep];
       if (currentMove.isOpponentMove) return;
 
       final newXp = state.xpGained - 10;
@@ -2046,6 +2115,18 @@ class GameBloc extends Bloc<GameEvent, GameState> {
 
     // Build the solution explanation
     final puzzle = state.puzzle!;
+    if (state.puzzleStep < 0 || state.puzzleStep > puzzle.moves.length) {
+      emit(state.copyWith(
+        status: GameStatus.draw,
+        tutorialMessage:
+            'This puzzle data is out of sync. Loading another puzzle now...',
+        showPuzzleCelebration: false,
+        puzzleGaveUp: true,
+      ));
+      add(const GamePuzzleNextEvent());
+      return;
+    }
+
     final remainingMoves = puzzle.moves
         .sublist(state.puzzleStep)
         .where((m) => !m.isOpponentMove)
