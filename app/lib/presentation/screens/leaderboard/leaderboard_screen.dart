@@ -72,7 +72,13 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchLeaderboard();
+    final authState = context.read<AuthBloc>().state;
+    if (authState is AuthAuthenticatedState) {
+      _fetchLeaderboard();
+    } else {
+      _loading = false;
+      _error = 'Login required to view leaderboard';
+    }
   }
 
   Future<void> _fetchLeaderboard() async {

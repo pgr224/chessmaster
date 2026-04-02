@@ -2351,9 +2351,32 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         _engineController.clearThinkingMessage();
         emit(state.copyWith(clearTutorialMessage: true));
 
-        final aiMove = Move.fromAlgebraic(moveStr);
-        add(GameMakeMoveEvent(aiMove.from, aiMove.to,
-            promotion: aiMove.promotion));
+        try {
+          final aiMove = Move.fromAlgebraic(moveStr);
+          final legal = _engine.legalMovesFrom(aiMove.from).any((m) =>
+              m.to == aiMove.to && m.promotion == aiMove.promotion);
+
+          if (legal) {
+            add(GameMakeMoveEvent(aiMove.from, aiMove.to,
+                promotion: aiMove.promotion));
+            return;
+          }
+        } catch (_) {
+          // Fall through to robust fallback below.
+        }
+
+        final fallback = await _engineController.fallbackMove(_engine.toFEN(),
+            engine: _engine);
+        if (fallback != null) {
+          final fm = Move.fromAlgebraic(fallback);
+          add(GameMakeMoveEvent(fm.from, fm.to, promotion: fm.promotion));
+        } else {
+          emit(state.copyWith(
+            isAIThinking: false,
+            engineError:
+                "AI engine timed out and fallback found no legal move. Please try again.",
+          ));
+        }
       } else if (!state.isGameOver && isPlayable) {
         // FAILSAFE: Try fallback first
         final fallback = await _engineController.fallbackMove(_engine.toFEN(),

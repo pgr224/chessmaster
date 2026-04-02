@@ -143,76 +143,91 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return Container(
       decoration: BoxDecoration(gradient: page.gradient),
       child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 28),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // ── Generated illustration ──
-              Container(
-                height: 260,
-                width: 260,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(32),
-                  boxShadow: [
-                    BoxShadow(
-                      color: page.accentColor.withValues(alpha: 0.3),
-                      blurRadius: 40,
-                      spreadRadius: 8,
-                    ),
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(32),
-                  child: Image.asset(
-                    page.image,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      color: AppTheme.surface,
-                      child: Center(
-                        child: Text(page.emoji,
-                            style: const TextStyle(fontSize: 96)),
-                      ),
-                    ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = constraints.maxHeight < 430;
+            final imageSize = compact ? 190.0 : 260.0;
+            final titleSize = compact ? 24.0 : 30.0;
+            final subtitleSize = compact ? 16.0 : 18.0;
+            final spaceAfterImage = compact ? 22.0 : 40.0;
+
+            return SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 28),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // ── Generated illustration ──
+                      Container(
+                        height: imageSize,
+                        width: imageSize,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(32),
+                          boxShadow: [
+                            BoxShadow(
+                              color: page.accentColor.withValues(alpha: 0.3),
+                              blurRadius: 40,
+                              spreadRadius: 8,
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(32),
+                          child: Image.asset(
+                            page.image,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(
+                              color: AppTheme.surface,
+                              child: Center(
+                                child: Text(page.emoji,
+                                    style: const TextStyle(fontSize: 96)),
+                              ),
+                            ),
+                          ),
+                        ),
+                      )
+                          .animate()
+                          .scale(
+                              begin: const Offset(0.7, 0.7),
+                              duration: 600.ms,
+                              curve: Curves.elasticOut)
+                          .fadeIn(duration: 400.ms)
+                          .shimmer(duration: 1200.ms, delay: 350.ms),
+
+                      SizedBox(height: spaceAfterImage),
+
+                      // ── Title ──
+                      Text(
+                        page.title,
+                        style: GoogleFonts.fredoka(
+                          color: AppTheme.textPrimary,
+                          fontSize: titleSize,
+                          fontWeight: FontWeight.w700,
+                          height: 1.2,
+                        ),
+                        textAlign: TextAlign.center,
+                      ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.3),
+
+                      const SizedBox(height: 16),
+
+                      // ── Subtitle ──
+                      Text(
+                        page.subtitle,
+                        style: GoogleFonts.baloo2(
+                          color: AppTheme.textSecondary,
+                          fontSize: subtitleSize,
+                          height: 1.5,
+                        ),
+                        textAlign: TextAlign.center,
+                      ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.2),
+                    ],
                   ),
                 ),
-              )
-                  .animate()
-                  .scale(
-                      begin: const Offset(0.7, 0.7),
-                      duration: 600.ms,
-                      curve: Curves.elasticOut)
-                  .fadeIn(duration: 400.ms)
-                  .shimmer(duration: 1200.ms, delay: 350.ms),
-
-              const SizedBox(height: 40),
-
-              // ── Title ──
-              Text(
-                page.title,
-                style: GoogleFonts.fredoka(
-                  color: AppTheme.textPrimary,
-                  fontSize: 30,
-                  fontWeight: FontWeight.w700,
-                  height: 1.2,
-                ),
-                textAlign: TextAlign.center,
-              ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.3),
-
-              const SizedBox(height: 16),
-
-              // ── Subtitle ──
-              Text(
-                page.subtitle,
-                style: GoogleFonts.baloo2(
-                  color: AppTheme.textSecondary,
-                  fontSize: 18,
-                  height: 1.5,
-                ),
-                textAlign: TextAlign.center,
-              ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.2),
-            ],
-          ),
+              ),
+            );
+          },
         ),
       ),
     );

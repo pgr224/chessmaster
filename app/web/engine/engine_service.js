@@ -40,7 +40,7 @@
 
   const FALLBACK_BUFFER_MS = 500; // Stockfish buffer before sunfish fallback
   const HEARTBEAT_TIMEOUT_MS = 12000; // Hard limit for any search
-  const STOCKFISH_INIT_TIMEOUT_MS = 4000; // Max time to wait for WASM load
+  const STOCKFISH_INIT_TIMEOUT_MS = 7000; // Max time to wait for WASM load
 
   // ═══════════════════════════════════════
   // STATE
@@ -87,8 +87,8 @@
       // Init Timeout: If not ready in 4s, fallback to Sunfish for this session
       stockfishInitTimer = setTimeout(() => {
         if (!stockfishReady) {
-          console.warn('[EngineService] Stockfish Init Timeout - Routing to Sunfish');
-          activeEngineType = ENGINE_SUNFISH;
+          // Do not permanently reroute engine type; fallback is handled per request.
+          console.warn('[EngineService] Stockfish Init Timeout - Temporary per-request fallback will be used');
         }
       }, STOCKFISH_INIT_TIMEOUT_MS);
 
@@ -207,7 +207,7 @@
         const executeSearch = async (engineType, isFallback = false) => {
           pendingResolve = resolve;
 
-          const timeoutMs = isFallback ? 800 : budget;
+          const timeoutMs = isFallback ? 1600 : budget;
 
           pendingTimeout = setTimeout(() => {
             console.warn(`[EngineService] Timeout (${timeoutMs}ms) for ${engineType}`);

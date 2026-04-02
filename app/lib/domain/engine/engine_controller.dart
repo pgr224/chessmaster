@@ -39,6 +39,9 @@ class AIEngineController {
   /// Tracks active request to allow cancellation
   int _activeRequestId = 0;
 
+  /// Remember previous emergency fallback source square to reduce robotic repeats.
+  String? _lastFallbackFrom;
+
   /// Current AI Personality Message (for UI thinking bubble)
   /// Current AI Personality Message (for UI thinking bubble)
   String get aiMessage => _latestThinkingMessage ?? PersonalityEngine().generateNewMessage();
@@ -222,18 +225,101 @@ class AIEngineController {
   /// Immediate fallback move generation using Sunfish (Dart side)
   Future<String?> fallbackMove(String fen,
       {required ChessEngine engine}) async {
-    // Generate a quick move: Prefer captures or checks, otherwise first legal
     final moves = engine.allLegalMoves();
     if (moves.isEmpty) return null;
 
-    // Fast heuristic sort: Captures > Checks > Random
-    moves.sort((a, b) {
-      if (b.capturedPiece != null && a.capturedPiece == null) return 1;
-      if (a.capturedPiece != null && b.capturedPiece == null) return -1;
-      return 0;
-    });
+    final ranked = _rankFallbackMoves(engine, moves);
+    if (ranked.isEmpty) return moves.first.toAlgebraic();
 
-    return moves.first.toAlgebraic();
+    // Pick from top 2-3 to keep play natural while staying strong enough.
+    final topWindow = ranked.length >= 3 ? 3 : ranked.length;
+    final pick = ranked[math.Random().nextInt(topWindow)];
+    _lastFallbackFrom = pick.from.toAlgebraic();
+    return pick.toAlgebraic();
+  }
+
+  List<Move> _rankFallbackMoves(ChessEngine engine, List<Move> moves) {
+    final scored = <(Move, double)>[];
+
+    for (final m in moves) {
+      final piece = engine.pieceAt(m.from);
+      if (piece == null) continue;
+
+      double score = 0;
+
+      // Tactical priorities
+      if (m.capturedPiece != null) {
+        score += 80;
+        score += _pieceValue(m.capturedPiece!.type) * 1.5;
+      }
+      if (_givesCheck(engine, m)) score += 70;
+
+      // Strategic shape: prefer central influence and development.
+      score += _centerBonus(m.to) * 4;
+      if (_isDevelopingMove(piece, m)) score += 18;
+
+      // Keep the king safer in fallback mode (unless forced).
+      if (piece.type == PieceType.king && m.capturedPiece == null) score -= 12;
+
+      // Anti-repeat: avoid moving same source square if alternatives exist.
+      if (_lastFallbackFrom != null && m.from.toAlgebraic() == _lastFallbackFrom) {
+        score -= 30;
+      }
+
+      scored.add((m, score));
+    }
+
+    scored.sort((a, b) => b.$2.compareTo(a.$2));
+
+    // If every top option comes from the same square, allow it (forced-like positions).
+    if (scored.length > 1 && _lastFallbackFrom != null) {
+      final diversified = scored
+          .where((s) => s.$1.from.toAlgebraic() != _lastFallbackFrom)
+          .map((s) => s.$1)
+          .toList();
+      if (diversified.isNotEmpty) {
+        return [...diversified, ...scored.map((s) => s.$1)];
+      }
+    }
+
+    return scored.map((s) => s.$1).toList();
+  }
+
+  bool _givesCheck(ChessEngine engine, Move move) {
+    try {
+      final clone = ChessEngine.fromFEN(engine.toFEN());
+      final applied = clone.makeMove(Move.fromAlgebraic(move.toAlgebraic()));
+      if (!applied) return false;
+      return clone.status == GameStatus.check || clone.status == GameStatus.checkmate;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  double _centerBonus(Square sq) {
+    final center = const [Square(3, 3), Square(4, 3), Square(3, 4), Square(4, 4)];
+    if (center.contains(sq)) return 2.0;
+    final nearCenter = (sq.file >= 2 && sq.file <= 5 && sq.rank >= 2 && sq.rank <= 5);
+    return nearCenter ? 1.0 : 0.0;
+  }
+
+  bool _isDevelopingMove(ChessPiece piece, Move move) {
+    if (piece.type != PieceType.knight && piece.type != PieceType.bishop) return false;
+    final fromRank = move.from.rank;
+    final toRank = move.to.rank;
+    if (piece.color == PieceColor.white) return fromRank <= 1 && toRank >= 2;
+    return fromRank >= 6 && toRank <= 5;
+  }
+
+  int _pieceValue(PieceType t) {
+    return switch (t) {
+      PieceType.pawn => 1,
+      PieceType.knight => 3,
+      PieceType.bishop => 3,
+      PieceType.rook => 5,
+      PieceType.queen => 9,
+      PieceType.king => 100,
+    };
   }
 
   /// Background analysis of user move (AI Mode)
@@ -262,5 +348,6 @@ class AIEngineController {
   void dispose() {
     js_bridge.jsEngineDispose();
     _initialized = false;
+    _lastFallbackFrom = null;
   }
 }
