@@ -24,6 +24,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   int _currentPage = 0;
   bool _isLoading = false;
   String? _usernameErrorText;
+  bool _hasRetriedSuggestedUsername = false;
 
   final List<_OnboardPage> _pages = const [
     _OnboardPage(
@@ -366,6 +367,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     setState(() {
       _usernameErrorText = null;
       _isLoading = true;
+      _hasRetriedSuggestedUsername = false;
     });
     context.read<AuthBloc>().add(AuthRegisterEvent(username: username));
   }

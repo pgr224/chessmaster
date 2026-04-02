@@ -1175,11 +1175,12 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     ));
 
     // Update Evaluation asynchronously to not block the UI
-    final isAIAssistantMode = state.mode == GameMode.singlePlayer ||
-        state.mode == GameMode.practice ||
-        state.mode == GameMode.puzzle;
+    final isPracticeOrSingle =
+        state.mode == GameMode.singlePlayer || state.mode == GameMode.practice || state.mode == GameMode.twoPlayer;
+    final isMultiplayer = state.mode == GameMode.multiplayer;
+    final isPuzzle = state.mode == GameMode.puzzle;
 
-    if (!state.isGameOver && isAIAssistantMode) {
+    if (!state.isGameOver && isPracticeOrSingle) {
       final fenSnapshot = _engine.toFEN();
       final currTurn = _engine.currentTurn;
       AIEngine.evaluatePosition(ChessEngine.fromFEN(fenSnapshot)).then((score) {
@@ -1504,11 +1505,10 @@ class GameBloc extends Bloc<GameEvent, GameState> {
                     state.playerColor == PieceColor.white) ||
                 (state.result == GameResult.blackWins &&
                     state.playerColor == PieceColor.black);
-            final isLoss = (state.result == GameResult.blackWins &&
-                    state.playerColor == PieceColor.white) ||
-                (state.result == GameResult.whiteWins &&
-                    state.playerColor == PieceColor.black);
             final isDraw = state.result == GameResult.draw;
+            final hasWinner = state.result == GameResult.whiteWins ||
+              state.result == GameResult.blackWins;
+            final isLoss = !isWin && !isDraw && hasWinner;
 
             // ── XP & REWARDS CALCULATION (Robust Engine) ──
             int xpDelta = 0;
@@ -1789,8 +1789,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
   }
 
   Future<void> _onUndo(GameUndoEvent event, Emitter<GameState> emit) async {
-    // 5-Second Rule Enforcement for ALL interactive modes
-    if (state.lastMoveTimestamp != null) {
+    // 5-Second Rule Enforcement — only for Multiplayer (Online) to prevent frustration
+    if (state.mode == GameMode.multiplayer && state.lastMoveTimestamp != null) {
       final elapsed = DateTime.now().difference(state.lastMoveTimestamp!);
       if (elapsed.inSeconds >= 5) {
         emit(state.copyWith(
@@ -1801,8 +1801,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     }
 
     if (state.mode == GameMode.multiplayer ||
-        state.mode == GameMode.twoPlayer ||
-        state.mode == GameMode.practice) {
+        state.mode == GameMode.twoPlayer) {
       if (state.mode == GameMode.multiplayer && state.mpUndosUsed >= 2) return;
       if (_engine.moveHistory.isEmpty) return;
 
@@ -1825,7 +1824,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     }
 
     // Undo 2 moves if vs AI (Take back player's move + AI's response)
-    final isVsAI = state.mode == GameMode.singlePlayer;
+    final isVsAI = state.mode == GameMode.singlePlayer || state.mode == GameMode.practice;
     if (!isVsAI) return;
 
     if (_engine.moveHistory.isEmpty) return;
@@ -1834,22 +1833,30 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     final lastMove = _engine.moveHistory.last;
     final penaltySquare = lastMove.to;
 
-    // Cost 25 XP for all 5 difficulty modes
-    final newXpDelta = state.xpGained - 25;
-    emit(state.copyWith(
-      xpGained: newXpDelta,
-      tutorialMessage: "⏪ Take back applied! (-25 XP)",
-      lastUndoPenaltySquare: penaltySquare,
-    ));
+    if (state.mode == GameMode.singlePlayer) {
+      // Cost 25 XP for single player modes
+      final newXpDelta = state.xpGained - 25;
+      emit(state.copyWith(
+        xpGained: newXpDelta,
+        tutorialMessage: "⏪ Take back applied! (-25 XP)",
+        lastUndoPenaltySquare: penaltySquare,
+      ));
 
-    // Sync XP reduction
-    final user = await _authRepository.getCurrentUser();
-    if (user != null) {
-      await _authRepository.updateXPProgress(
-        userId: user.id,
-        xpDelta: -25,
-        statUpdates: {},
-      );
+      // Sync XP reduction
+      final user = await _authRepository.getCurrentUser();
+      if (user != null) {
+        await _authRepository.updateXPProgress(
+          userId: user.id,
+          xpDelta: -25,
+          statUpdates: {},
+        );
+      }
+    } else {
+      // Practice Mode: Free undo
+      emit(state.copyWith(
+        tutorialMessage: "⏪ Take back applied!",
+        lastUndoPenaltySquare: penaltySquare,
+      ));
     }
 
     final undoCount = 2; // Always 2 vs AI
@@ -1949,9 +1956,10 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       return;
     }
 
-    if (state.hintsRemaining <= 0) return;
-    if (state.mode == GameMode.twoPlayer) return;
-    if (!state.isPlayerTurn) return;
+    final isLocalMode = state.mode == GameMode.practice || state.mode == GameMode.twoPlayer;
+    if (!isLocalMode && state.hintsRemaining <= 0) return;
+    // Allow hints in local modes regardless of 'player side'
+    if (!isLocalMode && !state.isPlayerTurn) return;
 
     // ── UPGRADE: If hint already showing, bump to next level ─────────────────
     if (state.activeHint != null) {

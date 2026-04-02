@@ -34,6 +34,8 @@ class AIEngineController {
     AIDifficulty.aiMode: 7000, // Reduced from 25000
   };
 
+  static const int _fallbackBufferMs = 2000; // reserved for retry logic
+
   /// Tracks active request to allow cancellation
   int _activeRequestId = 0;
 

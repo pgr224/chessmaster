@@ -52,7 +52,9 @@ class GameRepository {
     await box.put(id, jsonEncode(updatedGame.toJson()));
 
     // Try server sync asynchronously
-    _syncGameCreate(id, updatedGame);
+    if (_shouldSyncMode(updatedGame.mode)) {
+      _syncGameCreate(id, updatedGame);
+    }
 
     return id;
   }
@@ -75,25 +77,51 @@ class GameRepository {
     await box.put(game.id, jsonEncode(game.toJson()));
 
     // 2. Push to server asynchronously
-    _syncGameComplete(game);
+    if (_shouldSyncMode(game.mode)) {
+      _syncGameComplete(game);
+    }
+  }
+
+  bool _shouldSyncMode(String mode) {
+    final normalized = mode.toLowerCase();
+    // Puzzle is local progression; no game row is guaranteed on backend.
+    return normalized != 'puzzle';
   }
 
   Future<void> _syncGameComplete(GameModel game) async {
-    try {
-      final res = game.result.toLowerCase();
-      String winner = 'draw';
-      if (res.contains('whit')) winner = 'white';
-      if (res.contains('black')) winner = 'black';
+    final payload = {
+      'gameId': game.id,
+      'result': _mapResultToWinner(game.result),
+      'termination': game.termination ?? game.status,
+      'pgn': game.pgn,
+    };
 
-      await _dio.post('/api/game/complete', data: {
-        'gameId': game.id,
-        'result': winner,
-        'termination': game.status,
-        'pgn': game.pgn,
-      });
+    try {
+      await _dio.post('/api/game/complete', data: payload);
+    } on DioException catch (e) {
+      // If game does not exist on server (e.g. create sync failed/offline),
+      // create it first and retry completion once.
+      if (e.response?.statusCode == 404) {
+        try {
+          await _syncGameCreate(game.id, game);
+          await _dio.post('/api/game/complete', data: payload);
+          return;
+        } catch (retryError) {
+          print('[GameRepository] Server sync failed (complete retry): $retryError');
+        }
+      }
+
+      print('[GameRepository] Server sync failed (complete): $e');
     } catch (e) {
       print('[GameRepository] Server sync failed (complete): $e');
     }
+  }
+
+  String _mapResultToWinner(String rawResult) {
+    final res = rawResult.toLowerCase();
+    if (res.contains('white')) return 'white';
+    if (res.contains('black')) return 'black';
+    return 'draw';
   }
 
   Future<List<GameModel>> getSavedGames() async {

@@ -1373,7 +1373,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   Widget _buildActionBar(BuildContext context, GameState state) {
     final settings = context.watch<SettingsBloc>().state;
     final isPracticeOrSingle =
-        state.mode == GameMode.singlePlayer || state.mode == GameMode.practice;
+        state.mode == GameMode.singlePlayer || state.mode == GameMode.practice || state.mode == GameMode.twoPlayer;
     final isMultiplayer = state.mode == GameMode.multiplayer;
     final isPuzzle = state.mode == GameMode.puzzle;
 
@@ -1421,7 +1421,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               label: isPuzzle ? 'Hint (10XP)' : 'Hint',
               color: AppTheme.goldPrimary,
               onTap: !state.isGameOver &&
-                      state.isPlayerTurn &&
+                      (state.isPlayerTurn || state.mode == GameMode.practice || state.mode == GameMode.twoPlayer) &&
                       !state.isAIThinking
                   ? () => context.read<GameBloc>().add(GameRequestHintEvent())
                   : null,
