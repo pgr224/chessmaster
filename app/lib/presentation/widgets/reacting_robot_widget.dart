@@ -156,7 +156,7 @@ class _ReactingRobotWidgetState extends State<ReactingRobotWidget>
     final feedback = s.coachFeedback;
     final oldMood = _mood;
 
-    if (s.isAIThinking) {
+    if (s.isAIThinking && s.mode != GameMode.practice) {
       _mood = RobotMood.thinking;
       _startMessageCycle();
     } else if (s.activeHint != null) {
@@ -293,7 +293,8 @@ class _ReactingRobotWidgetState extends State<ReactingRobotWidget>
     final s = widget.state;
     final feedback = s.coachFeedback;
     final hint = s.activeHint;
-    final isThinking = s.isAIThinking;
+    // In practice mode, suppress thinking display — only show reactions & hints
+    final isThinking = s.isAIThinking && s.mode != GameMode.practice;
 
     // Determine what message to show
     String bubbleText;

@@ -1363,7 +1363,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                 ),
 
               // AI COACH TALKING WINDOW - Elegantly floating near active side
-              if (state.isAIThinking ||
+              // Practice mode: skip "thinking" messages, only show reactions & hints
+              if ((state.isAIThinking && state.mode != GameMode.practice) ||
                   state.coachFeedback != null ||
                   state.activeHint != null)
                 Positioned(
@@ -1428,7 +1429,11 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           if (isPracticeOrSingle || isPuzzle || isMultiplayer)
             _actionBtn(
               icon: Icons.lightbulb_rounded,
-              label: isPuzzle ? 'Hint (10XP)' : 'Hint',
+              label: isPuzzle
+                  ? 'Hint (10XP)'
+                  : state.mode == GameMode.practice
+                      ? 'Hint ∞'
+                      : 'Hint',
               color: AppTheme.goldPrimary,
               onTap: !state.isGameOver &&
                       (state.isPlayerTurn || state.mode == GameMode.practice || state.mode == GameMode.twoPlayer) &&
@@ -1460,7 +1465,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           if (isPracticeOrSingle || isMultiplayer)
             _actionBtn(
               icon: Icons.undo_rounded,
-              label: 'Undo',
+              label: state.mode == GameMode.practice ? 'Undo ∞' : 'Undo',
               color: AppTheme.skyBlue,
               onTap: (isPracticeOrSingle &&
                           state.moveHistory.isNotEmpty &&

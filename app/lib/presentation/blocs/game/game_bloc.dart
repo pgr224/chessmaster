@@ -1306,11 +1306,23 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         // Use pre-move FEN captured before engine.makeMove()
         final engineBefore = ChessEngine.fromFEN(fenBeforeMove);
 
-        final feedback = await _coachController.evaluateMove(
-          engineBeforeMove: engineBefore,
-          playedMove: move,
-          engineAfterMove: _engine,
-        );
+        // Practice Mode: Use external engine (Stockfish/Sunfish) for deeper,
+        // more accurate best-move comparison and richer coaching messages
+        final CoachFeedback feedback;
+        if (state.mode == GameMode.practice) {
+          feedback = await _coachController.evaluateMoveForPractice(
+            engineBeforeMove: engineBefore,
+            playedMove: move,
+            engineAfterMove: _engine,
+            externalAnalyze: (fen) => _engineController.analyzeMoveBackground(fen),
+          );
+        } else {
+          feedback = await _coachController.evaluateMove(
+            engineBeforeMove: engineBefore,
+            playedMove: move,
+            engineAfterMove: _engine,
+          );
+        }
 
         // Update stats based on classification
         switch (feedback.classification) {
@@ -1380,8 +1392,11 @@ class GameBloc extends Bloc<GameEvent, GameState> {
           clearActiveHint: true,
         ));
 
-        // AUTO-CLEAR COACH FEEDBACK after 8 seconds
-        Future.delayed(const Duration(seconds: 8)).then((_) {
+        // AUTO-CLEAR COACH FEEDBACK — longer in Practice Mode for rich messages
+        final clearDelay = state.mode == GameMode.practice
+            ? const Duration(seconds: 18)
+            : const Duration(seconds: 8);
+        Future.delayed(clearDelay).then((_) {
           if (!isClosed && state.coachFeedback == feedback) {
             add(GameUpdatePersonalityEvent(
               personality: state.activePersonality ?? AIPersonality.aggressive,
@@ -2060,9 +2075,10 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       if (!hint.canUpgrade) return; // Already at level 3, nothing more to reveal
 
       final nextLevel = hint.currentLevel + 1;
-      final xpCost = hint.nextLevelXpCost; // Per-level cost (10 or 20 XP)
+      final isPractice = state.mode == GameMode.practice;
+      final xpCost = isPractice ? 0 : hint.nextLevelXpCost; // Free in practice
 
-      // Deduct XP for this upgrade
+      // Deduct XP for this upgrade (free in practice mode)
       final newXp = state.xpGained - xpCost;
       final upgradedHint = hint.copyWith(currentLevel: nextLevel);
 

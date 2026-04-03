@@ -116,7 +116,10 @@ flutter:
     - assets/pieces/pychess/staunty/
     - assets/pieces/pychess/tatiana/
     - assets/sounds/
-    - assets/images/
+    - assets/images/onboarding_1.png
+    - assets/images/onboarding_2.png
+    - assets/images/onboarding_3.png
+    - assets/images/onboarding_4.png
     - assets/animations/
     - assets/themes/
     - assets/tutorials/
