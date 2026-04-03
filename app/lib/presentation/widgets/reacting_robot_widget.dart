@@ -12,6 +12,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:chess_master/presentation/blocs/game/game_bloc.dart';
 import 'package:chess_master/core/theme/app_theme.dart';
 import 'package:chess_master/data/models/coach_model.dart';
+import 'package:chess_master/data/models/game_config.dart';
 import 'package:chess_master/domain/engine/personality_engine.dart';
 
 // ═══════════════════════════════════════════════════
