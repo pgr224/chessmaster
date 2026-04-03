@@ -263,7 +263,7 @@ class _MainScaffoldState extends State<MainScaffold> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(24),
           side:
-              BorderSide(color: const Color(0xFFD4AF37).withValues(alpha: 0.3)),
+              BorderSide(color: const Color(0xFFD4AF37).withOpacity(0.3)),
         ),
         title: Text('Quit Game?',
             style: GoogleFonts.fredoka(
@@ -311,7 +311,7 @@ class _MainScaffoldState extends State<MainScaffold> {
         onDestinationSelected: (index) {
           context.go(_navItems[index].path);
         },
-        indicatorColor: const Color(0xFFD4AF37).withValues(alpha: 0.2),
+        indicatorColor: const Color(0xFFD4AF37).withOpacity(0.2),
         destinations: [
           for (final item in _navItems)
             NavigationDestination(

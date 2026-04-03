@@ -33,19 +33,19 @@ class PlayerInfoWidget extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: isActive
-            ? AppTheme.surface.withValues(alpha: 0.95)
-            : AppTheme.navyCard.withValues(alpha: 0.5),
+            ? AppTheme.surface.withOpacity(0.95)
+            : AppTheme.navyCard.withOpacity(0.5),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isActive
-              ? AppTheme.goldPrimary.withValues(alpha: 0.8)
+              ? AppTheme.goldPrimary.withOpacity(0.8)
               : Colors.transparent,
           width: 1.5,
         ),
         boxShadow: isActive
             ? [
                 BoxShadow(
-                    color: AppTheme.goldPrimary.withValues(alpha: 0.1),
+                    color: AppTheme.goldPrimary.withOpacity(0.1),
                     blurRadius: 8)
               ]
             : null,
@@ -63,7 +63,7 @@ class PlayerInfoWidget extends StatelessWidget {
               shape: BoxShape.circle,
               boxShadow: isActive ? [
                 BoxShadow(
-                  color: (avatarUrl != null ? AppTheme.goldPrimary : (color == PieceColor.white ? Colors.white70 : Colors.black54)).withValues(alpha: 0.3),
+                  color: (avatarUrl != null ? AppTheme.goldPrimary : (color == PieceColor.white ? Colors.white70 : Colors.black54)).withOpacity(0.3),
                   blurRadius: 8,
                   spreadRadius: 1,
                 )

@@ -413,7 +413,7 @@ class _ReactingRobotWidgetState extends State<ReactingRobotWidget>
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: _moodColor.withValues(alpha: pulseVal),
+                color: _moodColor.withOpacity(pulseVal),
                 blurRadius: 24,
                 spreadRadius: 8,
               ),
@@ -431,10 +431,10 @@ class _ReactingRobotWidgetState extends State<ReactingRobotWidget>
       decoration: BoxDecoration(
         color: const Color(0xFF1A1A2E),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: _moodColor.withValues(alpha: 0.6), width: 2),
+        border: Border.all(color: _moodColor.withOpacity(0.6), width: 2),
         boxShadow: [
           BoxShadow(
-            color: _moodColor.withValues(alpha: 0.25),
+            color: _moodColor.withOpacity(0.25),
             blurRadius: 12,
             spreadRadius: 1,
           ),
@@ -454,7 +454,7 @@ class _ReactingRobotWidgetState extends State<ReactingRobotWidget>
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: _moodColor.withValues(alpha: 0.3),
+                    color: _moodColor.withOpacity(0.3),
                     blurRadius: 6,
                   ),
                 ],
@@ -476,7 +476,7 @@ class _ReactingRobotWidgetState extends State<ReactingRobotWidget>
         border: Border.all(color: _moodColor, width: 2),
         boxShadow: [
           BoxShadow(
-            color: _moodColor.withValues(alpha: 0.2),
+            color: _moodColor.withOpacity(0.2),
             blurRadius: 8,
           ),
         ],
@@ -520,7 +520,7 @@ class _ReactingRobotWidgetState extends State<ReactingRobotWidget>
             borderRadius: BorderRadius.circular(5),
             boxShadow: [
               BoxShadow(
-                color: _eyeColor.withValues(alpha: 0.7),
+                color: _eyeColor.withOpacity(0.7),
                 blurRadius: 6,
                 spreadRadius: 1,
               ),
@@ -543,13 +543,13 @@ class _ReactingRobotWidgetState extends State<ReactingRobotWidget>
       // Smile arc
       return CustomPaint(
         size: const Size(20, 6),
-        painter: _SmilePainter(color: _moodColor.withValues(alpha: 0.7)),
+        painter: _SmilePainter(color: _moodColor.withOpacity(0.7)),
       );
     } else if (isWorried) {
       // Worried mouth (slight frown)
       return CustomPaint(
         size: const Size(20, 6),
-        painter: _FrownPainter(color: _moodColor.withValues(alpha: 0.7)),
+        painter: _FrownPainter(color: _moodColor.withOpacity(0.7)),
       );
     }
 
@@ -557,7 +557,7 @@ class _ReactingRobotWidgetState extends State<ReactingRobotWidget>
     return Container(
       height: 2,
       decoration: BoxDecoration(
-        color: _moodColor.withValues(alpha: 0.5),
+        color: _moodColor.withOpacity(0.5),
         borderRadius: BorderRadius.circular(2),
       ),
     );
@@ -622,11 +622,11 @@ class _ReactingRobotWidgetState extends State<ReactingRobotWidget>
               width: 14,
               height: 7,
               decoration: BoxDecoration(
-                color: _moodColor.withValues(alpha: 0.85),
+                color: _moodColor.withOpacity(0.85),
                 borderRadius: BorderRadius.circular(4),
                 boxShadow: [
                   BoxShadow(
-                    color: _moodColor.withValues(alpha: 0.35),
+                    color: _moodColor.withOpacity(0.35),
                     blurRadius: 5,
                   ),
                 ],
@@ -655,7 +655,7 @@ class _ReactingRobotWidgetState extends State<ReactingRobotWidget>
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: _moodColor.withValues(alpha: 0.4),
+                    color: _moodColor.withOpacity(0.4),
                     blurRadius: 6,
                     spreadRadius: 2,
                   ),
@@ -669,7 +669,7 @@ class _ReactingRobotWidgetState extends State<ReactingRobotWidget>
           width: 3,
           height: 6,
           decoration: BoxDecoration(
-            color: _moodColor.withValues(alpha: 0.6),
+            color: _moodColor.withOpacity(0.6),
             borderRadius: BorderRadius.circular(2),
           ),
         ),
@@ -690,7 +690,7 @@ class _ReactingRobotWidgetState extends State<ReactingRobotWidget>
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A2E).withValues(alpha: 0.97),
+        color: const Color(0xFF1A1A2E).withOpacity(0.97),
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(22),
           topRight: Radius.circular(22),
@@ -698,12 +698,12 @@ class _ReactingRobotWidgetState extends State<ReactingRobotWidget>
           bottomRight: Radius.circular(22),
         ),
         border: Border.all(
-          color: _moodColor.withValues(alpha: 0.5),
+          color: _moodColor.withOpacity(0.5),
           width: 2,
         ),
         boxShadow: [
           BoxShadow(
-            color: _moodColor.withValues(alpha: 0.12),
+            color: _moodColor.withOpacity(0.12),
             blurRadius: 18,
             spreadRadius: 2,
           ),
@@ -749,7 +749,7 @@ class _ReactingRobotWidgetState extends State<ReactingRobotWidget>
             Text(
               subtext,
               style: GoogleFonts.outfit(
-                color: Colors.white.withValues(alpha: 0.8),
+                color: Colors.white.withOpacity(0.8),
                 fontSize: 12,
                 height: 1.4,
                 fontWeight: FontWeight.w500,
@@ -827,9 +827,9 @@ class _ReactingRobotWidgetState extends State<ReactingRobotWidget>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: _moodColor.withValues(alpha: 0.12),
+        color: _moodColor.withOpacity(0.12),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _moodColor.withValues(alpha: 0.35)),
+        border: Border.all(color: _moodColor.withOpacity(0.35)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -855,7 +855,7 @@ class _ReactingRobotWidgetState extends State<ReactingRobotWidget>
             Text(
               hint.pattern.label.toUpperCase(),
               style: GoogleFonts.outfit(
-                color: _moodColor.withValues(alpha: 0.6),
+                color: _moodColor.withOpacity(0.6),
                 fontSize: 8,
                 fontWeight: FontWeight.w700,
               ),
@@ -876,7 +876,7 @@ class _ReactingRobotWidgetState extends State<ReactingRobotWidget>
           child: CircularProgressIndicator(
             strokeWidth: 2,
             valueColor: AlwaysStoppedAnimation<Color>(
-                _moodColor.withValues(alpha: 0.7)),
+                _moodColor.withOpacity(0.7)),
           ),
         ),
         const SizedBox(width: 8),
@@ -934,7 +934,7 @@ class _ReactingRobotWidgetState extends State<ReactingRobotWidget>
                 decoration: BoxDecoration(
                   color: isActive
                       ? dotColor
-                      : dotColor.withValues(alpha: 0.2),
+                      : dotColor.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(2),
                 ),
               );
@@ -950,13 +950,13 @@ class _ReactingRobotWidgetState extends State<ReactingRobotWidget>
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    AppTheme.goldPrimary.withValues(alpha: 0.18),
-                    AppTheme.accentOrange.withValues(alpha: 0.08),
+                    AppTheme.goldPrimary.withOpacity(0.18),
+                    AppTheme.accentOrange.withOpacity(0.08),
                   ],
                 ),
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
-                  color: AppTheme.goldPrimary.withValues(alpha: 0.5),
+                  color: AppTheme.goldPrimary.withOpacity(0.5),
                 ),
               ),
               child: Row(
@@ -978,7 +978,7 @@ class _ReactingRobotWidgetState extends State<ReactingRobotWidget>
                     padding: const EdgeInsets.symmetric(
                         horizontal: 5, vertical: 1),
                     decoration: BoxDecoration(
-                      color: Colors.amberAccent.withValues(alpha: 0.18),
+                      color: Colors.amberAccent.withOpacity(0.18),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
@@ -1153,12 +1153,12 @@ class _HintUpgradeSheet extends StatelessWidget {
         color: const Color(0xFF1A1A2E),
         borderRadius: BorderRadius.circular(28),
         border: Border.all(
-          color: accentColor.withValues(alpha: 0.4),
+          color: accentColor.withOpacity(0.4),
           width: 2,
         ),
         boxShadow: [
           BoxShadow(
-            color: accentColor.withValues(alpha: 0.1),
+            color: accentColor.withOpacity(0.1),
             blurRadius: 30,
             spreadRadius: 4,
           ),
@@ -1173,7 +1173,7 @@ class _HintUpgradeSheet extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: accentColor.withValues(alpha: 0.15),
+                  color: accentColor.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(
@@ -1217,10 +1217,10 @@ class _HintUpgradeSheet extends StatelessWidget {
             padding:
                 const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
             decoration: BoxDecoration(
-              color: accentColor.withValues(alpha: 0.08),
+              color: accentColor.withOpacity(0.08),
               borderRadius: BorderRadius.circular(16),
               border:
-                  Border.all(color: accentColor.withValues(alpha: 0.25)),
+                  Border.all(color: accentColor.withOpacity(0.25)),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -1248,7 +1248,7 @@ class _HintUpgradeSheet extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.05),
+                      color: Colors.white.withOpacity(0.05),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: Colors.white12),
                     ),
@@ -1274,14 +1274,14 @@ class _HintUpgradeSheet extends StatelessWidget {
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          accentColor.withValues(alpha: 0.9),
-                          accentColor.withValues(alpha: 0.6),
+                          accentColor.withOpacity(0.9),
+                          accentColor.withOpacity(0.6),
                         ],
                       ),
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: accentColor.withValues(alpha: 0.3),
+                          color: accentColor.withOpacity(0.3),
                           blurRadius: 12,
                           spreadRadius: 2,
                         ),

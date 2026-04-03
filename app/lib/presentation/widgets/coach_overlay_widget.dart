@@ -87,25 +87,25 @@ class _CoachOverlayWidgetState extends State<CoachOverlayWidget> {
   Widget _buildCard(CoachFeedback feedback) {
     final classification = feedback.classification;
     final color = _classificationColor(classification);
-    final bgColor = color.withValues(alpha: 0.15);
-    final borderColor = color.withValues(alpha: 0.6);
+    final bgColor = color.withOpacity(0.15);
+    final borderColor = color.withOpacity(0.6);
 
     return Container(
       constraints: const BoxConstraints(maxWidth: 400),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: AppTheme.navyCard.withValues(alpha: 0.95),
+        color: AppTheme.navyCard.withOpacity(0.95),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: borderColor, width: 2),
         boxShadow: [
           BoxShadow(
-            color: color.withValues(alpha: 0.3),
+            color: color.withOpacity(0.3),
             blurRadius: 20,
             spreadRadius: 2,
             offset: const Offset(0, 4),
           ),
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
+            color: Colors.black.withOpacity(0.3),
             blurRadius: 10,
             offset: const Offset(0, 6),
           ),
@@ -148,7 +148,7 @@ class _CoachOverlayWidgetState extends State<CoachOverlayWidget> {
               decoration: BoxDecoration(
                 color: bgColor,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: borderColor.withValues(alpha: 0.3)),
+                border: Border.all(color: borderColor.withOpacity(0.3)),
               ),
               child: Text(
                 feedback.explanation!,
@@ -195,7 +195,7 @@ class _CoachOverlayWidgetState extends State<CoachOverlayWidget> {
         .shimmer(
           duration: 800.ms,
           color: _classificationColor(feedback.classification)
-              .withValues(alpha: 0.15),
+              .withOpacity(0.15),
         );
   }
 
@@ -205,10 +205,10 @@ class _CoachOverlayWidgetState extends State<CoachOverlayWidget> {
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.5)),
+        border: Border.all(color: color.withOpacity(0.5)),
         boxShadow: [
           BoxShadow(
-            color: color.withValues(alpha: 0.2),
+            color: color.withOpacity(0.2),
             blurRadius: 8,
           ),
         ],
@@ -243,9 +243,9 @@ class _CoachOverlayWidgetState extends State<CoachOverlayWidget> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.15),
+          color: color.withOpacity(0.15),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withValues(alpha: 0.3)),
+          border: Border.all(color: color.withOpacity(0.3)),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -300,20 +300,20 @@ class HintOverlayWidget extends StatelessWidget {
           constraints: const BoxConstraints(maxWidth: 380),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: AppTheme.navyCard.withValues(alpha: 0.98),
+            color: AppTheme.navyCard.withOpacity(0.98),
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
-              color: AppTheme.skyBlue.withValues(alpha: 0.6),
+              color: AppTheme.skyBlue.withOpacity(0.6),
               width: 2,
             ),
             boxShadow: [
               BoxShadow(
-                color: AppTheme.skyBlue.withValues(alpha: 0.2),
+                color: AppTheme.skyBlue.withOpacity(0.2),
                 blurRadius: 20,
                 spreadRadius: 2,
               ),
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.4),
+                color: Colors.black.withOpacity(0.4),
                 blurRadius: 15,
                 offset: const Offset(0, 8),
               ),
@@ -329,7 +329,7 @@ class HintOverlayWidget extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: AppTheme.skyBlue.withValues(alpha: 0.15),
+                      color: AppTheme.skyBlue.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(
@@ -364,7 +364,7 @@ class HintOverlayWidget extends StatelessWidget {
                               decoration: BoxDecoration(
                                 color: isActive
                                     ? AppTheme.skyBlue
-                                    : Colors.white.withValues(alpha: 0.1),
+                                    : Colors.white.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(2),
                               ),
                             );
@@ -377,7 +377,7 @@ class HintOverlayWidget extends StatelessWidget {
                     Text(
                       '-${hint.xpCost} XP',
                       style: GoogleFonts.fredoka(
-                        color: AppTheme.accentRed.withValues(alpha: 0.8),
+                        color: AppTheme.accentRed.withOpacity(0.8),
                         fontSize: 10,
                         fontWeight: FontWeight.w600,
                       ),
@@ -388,7 +388,7 @@ class HintOverlayWidget extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.1),
+                        color: Colors.white.withOpacity(0.1),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
@@ -449,10 +449,10 @@ class HintOverlayWidget extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: AppTheme.goldPrimary.withValues(alpha: 0.1),
+                    color: AppTheme.goldPrimary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                      color: AppTheme.goldPrimary.withValues(alpha: 0.3),
+                      color: AppTheme.goldPrimary.withOpacity(0.3),
                     ),
                   ),
                   child: Row(
@@ -505,9 +505,9 @@ class CoachEvalIndicator extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
+        color: color.withOpacity(0.15),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withValues(alpha: 0.4)),
+        border: Border.all(color: color.withOpacity(0.4)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

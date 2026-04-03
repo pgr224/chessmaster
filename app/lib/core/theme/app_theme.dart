@@ -32,56 +32,56 @@ class AppTheme {
   // ═══════════════════════════════════════════
   // BOARD THEMES
   // ═══════════════════════════════════════════
-  static Map<String, _BoardThemeData> boardThemes = {
-    'classic': _BoardThemeData(
+  static Map<String, BoardThemeData> boardThemes = {
+    'classic': BoardThemeData(
         light: Color(0xFFF5E6CA),
         dark: Color(0xFF8B6B4A),
         notation: Color(0xFF8B6B4A)),
-    'grey': _BoardThemeData(
+    'grey': BoardThemeData(
         light: Color(0xFFB2B2B2),
         dark: Color(0xFF808080),
         notation: Color(0xFF808080)),
-    'dark': _BoardThemeData(
+    'dark': BoardThemeData(
         light: Color(0xFF444444),
         dark: Color(0xFF333333),
         notation: Color(0xFFCCCCCC)),
-    'amoled': _BoardThemeData(
+    'amoled': BoardThemeData(
         light: Color(0xFF222222),
         dark: Color(0xFF000000),
         notation: Color(0xFF888888)),
-    'lewis': _BoardThemeData(
+    'lewis': BoardThemeData(
         light: Color(0xFFDBD1C1),
         dark: Color(0xFFAB3848),
         notation: Color(0xFFAB3848)),
-    'cherry': _BoardThemeData(
+    'cherry': BoardThemeData(
         light: Color(0xFFDB5E5C),
         dark: Color(0xFF645183),
         notation: Color(0xFFFFFFFF)),
-    'sage': _BoardThemeData(
+    'sage': BoardThemeData(
         light: Color(0xFFB2AD91),
         dark: Color(0xFF83886F),
         notation: Color(0xFF83886F)),
-    'tan': _BoardThemeData(
+    'tan': BoardThemeData(
         light: Color(0xFFD3A373),
         dark: Color(0xFF866749),
         notation: Color(0xFF866749)),
-    'jade': _BoardThemeData(
+    'jade': BoardThemeData(
         light: Color(0xFF85B39F),
         dark: Color(0xFF517970),
         notation: Color(0xFFD0F0E0)),
-    'stellar': _BoardThemeData(
+    'stellar': BoardThemeData(
         light: Color(0xFFE2E8F0),
         dark: Color(0xFF475569),
         notation: Color(0xFF475569)),
-    'green': _BoardThemeData(
+    'green': BoardThemeData(
         light: Color(0xFFEBECD0),
         dark: Color(0xFF779556),
         notation: Color(0xFF779556)),
-    'royal': _BoardThemeData(
+    'royal': BoardThemeData(
         light: Color(0xFFD1B28C),
         dark: Color(0xFF8D6E63),
         notation: Color(0xFF8D6E63)),
-    'electric': _BoardThemeData(
+    'electric': BoardThemeData(
         light: Color(0xFFD1D1FF),
         dark: Color(0xFF5353EC),
         notation: Color(0xFF5353EC)),
@@ -171,21 +171,21 @@ class AppTheme {
   // ═══════════════════════════════════════════
   static List<BoxShadow> goldShadow = [
     BoxShadow(
-        color: goldPrimary.withValues(alpha: 0.4),
+        color: goldPrimary.withOpacity(0.4),
         blurRadius: 24,
         spreadRadius: 4),
   ];
 
   static List<BoxShadow> cyanShadow = [
     BoxShadow(
-        color: accentCyan.withValues(alpha: 0.3),
+        color: accentCyan.withOpacity(0.3),
         blurRadius: 20,
         spreadRadius: 2),
   ];
 
   static List<BoxShadow> cardShadow = [
     BoxShadow(
-      color: Colors.black.withValues(alpha: 0.3),
+      color: Colors.black.withOpacity(0.3),
       blurRadius: 16,
       offset: const Offset(0, 8),
     ),
@@ -193,7 +193,7 @@ class AppTheme {
 
   static List<BoxShadow> pinkShadow = [
     BoxShadow(
-        color: accentPurple.withValues(alpha: 0.3),
+        color: accentPurple.withOpacity(0.3),
         blurRadius: 20,
         spreadRadius: 2),
   ];
@@ -316,7 +316,7 @@ class AppTheme {
       cardTheme: CardThemeData(
         color: navyCard,
         elevation: 8,
-        shadowColor: Colors.black.withValues(alpha: 0.4),
+        shadowColor: Colors.black.withOpacity(0.4),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -324,7 +324,7 @@ class AppTheme {
           backgroundColor: goldPrimary,
           foregroundColor: midnight,
           elevation: 8,
-          shadowColor: goldPrimary.withValues(alpha: 0.4),
+          shadowColor: goldPrimary.withOpacity(0.4),
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 18),
@@ -382,7 +382,7 @@ class AppTheme {
       ),
       chipTheme: ChipThemeData(
         backgroundColor: surface,
-        selectedColor: goldPrimary.withValues(alpha: 0.2),
+        selectedColor: goldPrimary.withOpacity(0.2),
         labelStyle: GoogleFonts.fredoka(fontSize: 14, color: textPrimary),
         side: const BorderSide(color: Color(0xFF2D3A6A)),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -391,10 +391,10 @@ class AppTheme {
   }
 }
 
-class _BoardThemeData {
+class BoardThemeData {
   final Color light;
   final Color dark;
   final Color notation;
-  const _BoardThemeData(
+  const BoardThemeData(
       {required this.light, required this.dark, required this.notation});
 }

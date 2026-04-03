@@ -43,10 +43,10 @@ class _ChatWidgetState extends State<ChatWidget> {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppTheme.midnight.withValues(alpha: 0.95),
+        color: AppTheme.midnight.withOpacity(0.95),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 20),
+          BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 20),
         ],
       ),
       child: Column(
@@ -105,7 +105,7 @@ class _ChatWidgetState extends State<ChatWidget> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
             color: msg.isMe
-                ? AppTheme.goldPrimary.withValues(alpha: 0.15)
+                ? AppTheme.goldPrimary.withOpacity(0.15)
                 : AppTheme.surface,
             borderRadius: BorderRadius.circular(16).copyWith(
               bottomRight: msg.isMe ? const Radius.circular(0) : null,
@@ -113,7 +113,7 @@ class _ChatWidgetState extends State<ChatWidget> {
             ),
             border: Border.all(
                 color: msg.isMe
-                    ? AppTheme.goldPrimary.withValues(alpha: 0.3)
+                    ? AppTheme.goldPrimary.withOpacity(0.3)
                     : Colors.white10),
           ),
           child: Column(
@@ -159,12 +159,12 @@ class _ChatWidgetState extends State<ChatWidget> {
               decoration: InputDecoration(
                 hintText: 'Type a message...',
                 hintStyle:
-                    TextStyle(color: AppTheme.textMuted.withValues(alpha: 0.5)),
+                    TextStyle(color: AppTheme.textMuted.withOpacity(0.5)),
                 border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(25),
                     borderSide: BorderSide.none),
                 filled: true,
-                fillColor: AppTheme.midnight.withValues(alpha: 0.5),
+                fillColor: AppTheme.midnight.withOpacity(0.5),
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               ),

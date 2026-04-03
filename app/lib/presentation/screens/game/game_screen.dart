@@ -249,7 +249,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         children: [
           GestureDetector(
             onTap: () => setState(() => _showMoves = false),
-            child: Container(color: Colors.black.withValues(alpha: 0.2)),
+            child: Container(color: Colors.black.withOpacity(0.2)),
           ),
           Positioned(
             right: 16,
@@ -259,13 +259,13 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             child: Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppTheme.navyCard.withValues(alpha: 0.95),
+                color: AppTheme.navyCard.withOpacity(0.95),
                 borderRadius: BorderRadius.circular(24),
                 border:
-                    Border.all(color: AppTheme.skyBlue.withValues(alpha: 0.3)),
+                    Border.all(color: AppTheme.skyBlue.withOpacity(0.3)),
                 boxShadow: [
                   BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.4),
+                      color: Colors.black.withOpacity(0.4),
                       blurRadius: 20,
                       offset: const Offset(0, 8)),
                 ],
@@ -314,7 +314,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       child: Container(
         padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.1), shape: BoxShape.circle),
+            color: Colors.white.withOpacity(0.1), shape: BoxShape.circle),
         child: Icon(icon, color: AppTheme.textPrimary, size: size - 8),
       ),
     );
@@ -336,13 +336,13 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: shadowColor.withValues(alpha: isMyTurn ? 0.5 : 0.2),
+            color: shadowColor.withOpacity(isMyTurn ? 0.5 : 0.2),
             blurRadius: isMyTurn ? 20 : 10,
             offset: const Offset(0, 4),
           ),
           if (isMyTurn)
             BoxShadow(
-              color: AppTheme.goldPrimary.withValues(alpha: 0.3),
+              color: AppTheme.goldPrimary.withOpacity(0.3),
               blurRadius: 30,
               spreadRadius: 2,
             ),
@@ -385,7 +385,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             .shimmer(
                 delay: 3.seconds,
                 duration: 1200.ms,
-                color: AppTheme.goldLight.withValues(alpha: 0.3)),
+                color: AppTheme.goldLight.withOpacity(0.3)),
       );
     }
 
@@ -463,13 +463,13 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           decoration: BoxDecoration(
-            color: AppTheme.navyCard.withValues(alpha: 0.95),
+            color: AppTheme.navyCard.withOpacity(0.95),
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
-                color: AppTheme.goldPrimary.withValues(alpha: 0.6), width: 2),
+                color: AppTheme.goldPrimary.withOpacity(0.6), width: 2),
             boxShadow: [
               BoxShadow(
-                  color: AppTheme.goldPrimary.withValues(alpha: 0.2),
+                  color: AppTheme.goldPrimary.withOpacity(0.2),
                   blurRadius: 20,
                   offset: const Offset(0, 8)),
             ],
@@ -527,18 +527,18 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         constraints: const BoxConstraints(maxHeight: 220),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppTheme.navyCard.withValues(alpha: 0.97),
+          color: AppTheme.navyCard.withOpacity(0.97),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isCompleted
-                ? AppTheme.accentCyan.withValues(alpha: 0.7)
-                : AppTheme.goldPrimary.withValues(alpha: 0.5),
+                ? AppTheme.accentCyan.withOpacity(0.7)
+                : AppTheme.goldPrimary.withOpacity(0.5),
             width: 2,
           ),
           boxShadow: [
             BoxShadow(
               color: (isCompleted ? AppTheme.accentCyan : AppTheme.goldPrimary)
-                  .withValues(alpha: 0.2),
+                  .withOpacity(0.2),
               blurRadius: 16,
               offset: const Offset(0, 4),
             ),
@@ -592,7 +592,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                               ? AppTheme.accentCyan
                               : isActive
                                   ? AppTheme.goldPrimary
-                                  : AppTheme.textMuted.withValues(alpha: 0.3),
+                                  : AppTheme.textMuted.withOpacity(0.3),
                           borderRadius: BorderRadius.circular(4),
                         ),
                       );
@@ -624,10 +624,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
-                          color: AppTheme.skyBlue.withValues(alpha: 0.1),
+                          color: AppTheme.skyBlue.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                              color: AppTheme.skyBlue.withValues(alpha: 0.2)),
+                              color: AppTheme.skyBlue.withOpacity(0.2)),
                         ),
                         child: Row(
                           children: [
@@ -683,7 +683,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.2),
+                    color: Colors.black.withOpacity(0.2),
                     blurRadius: 8,
                     offset: const Offset(0, 4)),
               ],
@@ -763,16 +763,16 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         height: 48,
         decoration: BoxDecoration(
           color: onTap != null
-              ? AppTheme.surface.withValues(alpha: 0.8)
-              : AppTheme.surface.withValues(alpha: 0.3),
+              ? AppTheme.surface.withOpacity(0.8)
+              : AppTheme.surface.withOpacity(0.3),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
               color: (onTap != null ? AppTheme.textMuted : Colors.transparent)
-                  .withValues(alpha: 0.3)),
+                  .withOpacity(0.3)),
           boxShadow: onTap != null
               ? [
                   BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.1),
+                      color: Colors.black.withOpacity(0.1),
                       blurRadius: 4,
                       offset: const Offset(0, 2))
                 ]
@@ -978,7 +978,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.4),
+                            color: Colors.black.withOpacity(0.4),
                             blurRadius: 12,
                             offset: const Offset(0, 4),
                           ),
@@ -1044,11 +1044,11 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           color: (isMe ? AppTheme.goldPrimary : Colors.white)
-              .withValues(alpha: 0.15),
+              .withOpacity(0.15),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
               color: (isMe ? AppTheme.goldPrimary : Colors.white)
-                  .withValues(alpha: 0.1)),
+                  .withOpacity(0.1)),
         ),
         child: Text(
           text,
@@ -1099,7 +1099,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               color: AppTheme.navyCard,
               borderRadius: BorderRadius.circular(12),
               border:
-                  Border.all(color: AppTheme.accentCyan.withValues(alpha: 0.5)),
+                  Border.all(color: AppTheme.accentCyan.withOpacity(0.5)),
             ),
             child: Row(
               children: [
@@ -1118,10 +1118,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: AppTheme.goldPrimary.withValues(alpha: 0.1),
+              color: AppTheme.goldPrimary.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                  color: AppTheme.goldPrimary.withValues(alpha: 0.3)),
+                  color: AppTheme.goldPrimary.withOpacity(0.3)),
             ),
             child: Text(
               '${state.totalPuzzleXP} XP',
@@ -1146,12 +1146,12 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           constraints: const BoxConstraints(maxWidth: 400),
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: AppTheme.navyCard.withValues(alpha: 0.98),
+            color: AppTheme.navyCard.withOpacity(0.98),
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: AppTheme.skyBlue.withValues(alpha: 0.4), width: 2),
+            border: Border.all(color: AppTheme.skyBlue.withOpacity(0.4), width: 2),
             boxShadow: [
               BoxShadow(
-                color: AppTheme.skyBlue.withValues(alpha: 0.15),
+                color: AppTheme.skyBlue.withOpacity(0.15),
                 blurRadius: 30,
                 spreadRadius: 5,
               ),
@@ -1391,11 +1391,11 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
       decoration: BoxDecoration(
-        color: AppTheme.deepSpace.withValues(alpha: 0.9),
+        color: AppTheme.deepSpace.withOpacity(0.9),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withValues(alpha: 0.3),
+              color: Colors.black.withOpacity(0.3),
               blurRadius: 20,
               offset: const Offset(0, -4)),
         ],
@@ -1538,7 +1538,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
         decoration: BoxDecoration(
           color: onTap != null
-              ? (color ?? AppTheme.textSecondary).withValues(alpha: 0.1)
+              ? (color ?? AppTheme.textSecondary).withOpacity(0.1)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),
@@ -1578,7 +1578,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           gradient: AppTheme.cardGradient,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
           border: Border.all(
-              color: AppTheme.accentPurple.withValues(alpha: 0.3), width: 2),
+              color: AppTheme.accentPurple.withOpacity(0.3), width: 2),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1589,7 +1589,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppTheme.accentPurple.withValues(alpha: 0.2),
+                    color: AppTheme.accentPurple.withOpacity(0.2),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(Icons.face_rounded,
@@ -1669,12 +1669,12 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                     decoration: BoxDecoration(
                       color: isSelected
                           ? AppTheme.accentPurple
-                          : AppTheme.surface.withValues(alpha: 0.5),
+                          : AppTheme.surface.withOpacity(0.5),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
                         color: isSelected
                             ? AppTheme.accentPurple
-                            : AppTheme.textMuted.withValues(alpha: 0.2),
+                            : AppTheme.textMuted.withOpacity(0.2),
                       ),
                     ),
                     child: Text(
@@ -1700,7 +1700,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             const SizedBox(height: 12),
             Container(
               decoration: BoxDecoration(
-                color: AppTheme.surface.withValues(alpha: 0.3),
+                color: AppTheme.surface.withOpacity(0.3),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Slider(
@@ -1746,7 +1746,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       decoration: BoxDecoration(
         gradient: AppTheme.cardGradient,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppTheme.skyBlue.withValues(alpha: 0.2)),
+        border: Border.all(color: AppTheme.skyBlue.withOpacity(0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1858,11 +1858,11 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
               decoration: BoxDecoration(
-                color: AppTheme.accentRed.withValues(alpha: 0.95),
+                color: AppTheme.accentRed.withOpacity(0.95),
                 borderRadius: BorderRadius.circular(28),
                 boxShadow: [
                   BoxShadow(
-                      color: AppTheme.accentRed.withValues(alpha: 0.5),
+                      color: AppTheme.accentRed.withOpacity(0.5),
                       blurRadius: 24,
                       spreadRadius: 4),
                 ],
@@ -1897,11 +1897,11 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
             decoration: BoxDecoration(
-              color: AppTheme.accentRed.withValues(alpha: 0.95),
+              color: AppTheme.accentRed.withOpacity(0.95),
               borderRadius: BorderRadius.circular(28),
               boxShadow: [
                 BoxShadow(
-                    color: AppTheme.accentRed.withValues(alpha: 0.5),
+                    color: AppTheme.accentRed.withOpacity(0.5),
                     blurRadius: 24,
                     spreadRadius: 4),
               ],
@@ -1943,7 +1943,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           constraints: const BoxConstraints(maxWidth: 180),
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.7),
+            color: Colors.black.withOpacity(0.7),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: Colors.white24),
           ),
@@ -2016,7 +2016,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               onPressed: () => Navigator.pop(ctx, 'quit_no_save'),
               style: OutlinedButton.styleFrom(
                 side: BorderSide(
-                    color: AppTheme.textMuted.withValues(alpha: 0.35)),
+                    color: AppTheme.textMuted.withOpacity(0.35)),
               ),
               child: Text('Quit Without Save',
                   style: GoogleFonts.fredoka(color: AppTheme.textSecondary)),
@@ -2180,7 +2180,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     return Positioned.fill(
       child: Stack(
         children: [
-          Container(color: Colors.black.withValues(alpha: 0.4)),
+          Container(color: Colors.black.withOpacity(0.4)),
           Center(
             child: Container(
               width: 300,
@@ -2189,7 +2189,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                 color: AppTheme.navyCard,
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(
-                    color: AppTheme.goldPrimary.withValues(alpha: 0.5)),
+                    color: AppTheme.goldPrimary.withOpacity(0.5)),
                 boxShadow: [
                   BoxShadow(
                       color: Colors.black,

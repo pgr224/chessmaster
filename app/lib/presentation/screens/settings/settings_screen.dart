@@ -218,7 +218,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       decoration: BoxDecoration(
         gradient: AppTheme.cardGradient,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+        border: Border.all(color: Colors.white.withOpacity(0.06)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -299,7 +299,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           labelStyle: TextStyle(
               color: selected ? AppTheme.midnight : AppTheme.textPrimary),
           selectedColor: AppTheme.goldPrimary,
-          backgroundColor: AppTheme.surface.withValues(alpha: 0.7),
+          backgroundColor: AppTheme.surface.withOpacity(0.7),
         );
       }).toList(),
     );
@@ -316,9 +316,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                child: Container(
                  padding: const EdgeInsets.all(12),
                  decoration: BoxDecoration(
-                   color: AppTheme.surface.withValues(alpha: 0.3),
+                   color: AppTheme.surface.withOpacity(0.3),
                    borderRadius: BorderRadius.circular(12),
-                   border: Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.3)),
+                   border: Border.all(color: AppTheme.goldPrimary.withOpacity(0.3)),
                  ),
                  child: Row(
                    children: [
@@ -373,9 +373,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         width: double.infinity,
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: AppTheme.surface.withValues(alpha: 0.3),
+          color: AppTheme.surface.withOpacity(0.3),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppTheme.accentCyan.withValues(alpha: 0.3)),
+          border: Border.all(color: AppTheme.accentCyan.withOpacity(0.3)),
         ),
         child: Column(
           children: [
@@ -399,9 +399,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.surface.withValues(alpha: 0.3),
+        color: AppTheme.surface.withOpacity(0.3),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.3)),
+        border: Border.all(color: AppTheme.goldPrimary.withOpacity(0.3)),
       ),
       child: Column(
         children: [
@@ -416,7 +416,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                    color: AppTheme.goldPrimary.withValues(alpha: 0.2),
+                    color: AppTheme.goldPrimary.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(8)),
                 child: Text(_pieceStyle.toUpperCase(),
                     style: GoogleFonts.fredoka(
@@ -452,9 +452,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.05),
+          color: Colors.white.withOpacity(0.05),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+          border: Border.all(color: Colors.white.withOpacity(0.1)),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -486,7 +486,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         decoration: BoxDecoration(
           color: AppTheme.midnight,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-          border: Border.all(color: AppTheme.skyBlue.withValues(alpha: 0.1)),
+          border: Border.all(color: AppTheme.skyBlue.withOpacity(0.1)),
         ),
         child: Column(
           children: [
@@ -526,7 +526,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     },
                     child: Container(
                       decoration: BoxDecoration(
-                        color: isSelected ? AppTheme.goldPrimary.withValues(alpha: 0.1) : Colors.white.withValues(alpha: 0.03),
+                        color: isSelected ? AppTheme.goldPrimary.withOpacity(0.1) : Colors.white.withOpacity(0.03),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(color: isSelected ? AppTheme.goldPrimary : Colors.white10, width: 2),
                       ),
@@ -572,7 +572,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
+        color: Colors.white.withOpacity(0.05),
         borderRadius: BorderRadius.circular(8),
       ),
       child: ChessPieceWidget(
@@ -612,7 +612,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: Container(
         padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.1), shape: BoxShape.circle),
+            color: Colors.white.withOpacity(0.1), shape: BoxShape.circle),
         child: Icon(icon, color: AppTheme.textPrimary, size: size - 12),
       ),
     );
@@ -675,7 +675,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           labelStyle: TextStyle(
               color: selected ? AppTheme.midnight : AppTheme.textPrimary),
           selectedColor: AppTheme.goldPrimary,
-          backgroundColor: AppTheme.surface.withValues(alpha: 0.7),
+          backgroundColor: AppTheme.surface.withOpacity(0.7),
         );
       }).toList(),
     );
@@ -693,7 +693,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: AppTheme.goldPrimary.withValues(alpha: 0.1),
+          color: AppTheme.goldPrimary.withOpacity(0.1),
           shape: BoxShape.circle,
         ),
         child: Icon(icon, color: AppTheme.goldPrimary, size: 22),
@@ -797,7 +797,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               boxShadow: isSelected
                   ? [
                       BoxShadow(
-                          color: AppTheme.goldPrimary.withValues(alpha: 0.2),
+                          color: AppTheme.goldPrimary.withOpacity(0.2),
                           blurRadius: 8)
                     ]
                   : null,

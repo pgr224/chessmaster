@@ -159,7 +159,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       decoration: BoxDecoration(
         gradient: hasError ? AppTheme.errorGradient : AppTheme.cardGradient,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -174,7 +174,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 BoxShadow(
                   color:
                       (isConnected ? AppTheme.accentGreen : AppTheme.accentRed)
-                          .withValues(alpha: 0.5),
+                          .withOpacity(0.5),
                   blurRadius: 8,
                 ),
               ],
@@ -264,7 +264,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 18),
                   side: BorderSide(
-                      color: AppTheme.goldPrimary.withValues(alpha: 0.5)),
+                      color: AppTheme.goldPrimary.withOpacity(0.5)),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20)),
                 ),
@@ -303,9 +303,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.redAccent.withValues(alpha: 0.15),
+          color: Colors.redAccent.withOpacity(0.15),
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: Colors.redAccent.withValues(alpha: 0.4)),
+          border: Border.all(color: Colors.redAccent.withOpacity(0.4)),
         ),
         child: Row(
           children: [
@@ -408,7 +408,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.goldPrimary.withValues(alpha: 0.2),
+            color: AppTheme.goldPrimary.withOpacity(0.2),
             blurRadius: 18,
             offset: const Offset(0, 8),
           ),
@@ -434,7 +434,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 Text(
                   'Quick match, direct 1v1 challenge, or send a tournament invite from the player list.',
                   style: GoogleFonts.baloo2(
-                    color: AppTheme.midnight.withValues(alpha: 0.9),
+                    color: AppTheme.midnight.withOpacity(0.9),
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ),
@@ -521,26 +521,26 @@ class _LobbyScreenState extends State<LobbyScreen> {
               gradient: isSelected
                   ? LinearGradient(
                       colors: [
-                        accentColor.withValues(alpha: 0.15),
-                        accentColor.withValues(alpha: 0.05)
+                        accentColor.withOpacity(0.15),
+                        accentColor.withOpacity(0.05)
                       ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     )
                   : null,
               color:
-                  isSelected ? null : AppTheme.surface.withValues(alpha: 0.6),
+                  isSelected ? null : AppTheme.surface.withOpacity(0.6),
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
                 color: isSelected
                     ? accentColor
-                    : AppTheme.textMuted.withValues(alpha: 0.1),
+                    : AppTheme.textMuted.withOpacity(0.1),
                 width: isSelected ? 2 : 1,
               ),
               boxShadow: isSelected
                   ? [
                       BoxShadow(
-                          color: accentColor.withValues(alpha: 0.2),
+                          color: accentColor.withOpacity(0.2),
                           blurRadius: 8,
                           offset: const Offset(0, 2))
                     ]
@@ -587,7 +587,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     style: GoogleFonts.baloo2(
                       color: isSelected
                           ? AppTheme.textSecondary
-                          : AppTheme.textMuted.withValues(alpha: 0.7),
+                          : AppTheme.textMuted.withOpacity(0.7),
                       fontSize: 9,
                       fontWeight: FontWeight.w500,
                       height: 1.2,
@@ -633,7 +633,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       decoration: BoxDecoration(
         gradient: AppTheme.cardGradient,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: Colors.white.withOpacity(0.08)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -695,7 +695,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppTheme.surface.withValues(alpha: 0.8),
+        color: AppTheme.surface.withOpacity(0.8),
         borderRadius: BorderRadius.circular(18),
       ),
       child: Row(
@@ -734,7 +734,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: (isAvailable ? AppTheme.accentCyan : AppTheme.textMuted)
-            .withValues(alpha: 0.16),
+            .withOpacity(0.16),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
@@ -776,7 +776,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           width: 56,
                           height: 6,
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.18),
+                            color: Colors.white.withOpacity(0.18),
                             borderRadius: BorderRadius.circular(999),
                           ),
                         ),
@@ -907,7 +907,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       color: AppTheme.navyCard,
                       borderRadius: BorderRadius.circular(18),
                       border: Border.all(
-                          color: AppTheme.accentOrange.withValues(alpha: 0.3)),
+                          color: AppTheme.accentOrange.withOpacity(0.3)),
                     ),
                     child: Row(
                       children: [
@@ -961,7 +961,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       decoration: BoxDecoration(
         gradient: AppTheme.cardGradient,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: Colors.white.withOpacity(0.08)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1048,7 +1048,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
         backgroundColor: AppTheme.goldPrimary,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
         elevation: 8,
-        shadowColor: AppTheme.goldPrimary.withValues(alpha: 0.5),
+        shadowColor: AppTheme.goldPrimary.withOpacity(0.5),
       ),
       onPressed: isReady
           ? () {

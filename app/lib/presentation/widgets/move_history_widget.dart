@@ -77,9 +77,9 @@ class _MoveHistoryWidgetState extends State<MoveHistoryWidget> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: AppTheme.surface.withValues(alpha: 0.5),
+              color: AppTheme.surface.withOpacity(0.5),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+              border: Border.all(color: Colors.white.withOpacity(0.05)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,

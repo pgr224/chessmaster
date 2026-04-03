@@ -138,7 +138,7 @@ class _ChessWorldScreenState extends State<ChessWorldScreen> {
         borderRadius: BorderRadius.circular(26),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.goldPrimary.withValues(alpha: 0.3),
+            color: AppTheme.goldPrimary.withOpacity(0.3),
             blurRadius: 18,
             offset: const Offset(0, 8),
           ),
@@ -169,7 +169,7 @@ class _ChessWorldScreenState extends State<ChessWorldScreen> {
           Text(
             'News, events, and inspiration for your chess journey.',
             style: GoogleFonts.baloo2(
-              color: AppTheme.midnight.withValues(alpha: 0.9),
+              color: AppTheme.midnight.withOpacity(0.9),
               fontSize: 18,
               fontWeight: FontWeight.w600,
               height: 1.25,
@@ -185,9 +185,9 @@ class _ChessWorldScreenState extends State<ChessWorldScreen> {
       margin: const EdgeInsets.only(top: 10),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        color: AppTheme.accentGreen.withValues(alpha: 0.12),
+        color: AppTheme.accentGreen.withOpacity(0.12),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.accentGreen.withValues(alpha: 0.2)),
+        border: Border.all(color: AppTheme.accentGreen.withOpacity(0.2)),
       ),
       child: Row(
         children: [
@@ -217,7 +217,7 @@ class _ChessWorldScreenState extends State<ChessWorldScreen> {
         gradient: AppTheme.cardGradient,
         borderRadius: BorderRadius.circular(24),
         border:
-            Border.all(color: Colors.white.withValues(alpha: 0.08), width: 1.2),
+            Border.all(color: Colors.white.withOpacity(0.08), width: 1.2),
         boxShadow: AppTheme.cardShadow,
       ),
       child: Padding(
@@ -318,7 +318,7 @@ class _WorldCard extends StatelessWidget {
         gradient: AppTheme.cardGradient,
         borderRadius: BorderRadius.circular(24),
         border:
-            Border.all(color: Colors.white.withValues(alpha: 0.08), width: 1.2),
+            Border.all(color: Colors.white.withOpacity(0.08), width: 1.2),
         boxShadow: AppTheme.cardShadow,
       ),
       child: Padding(

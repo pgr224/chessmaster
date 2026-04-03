@@ -117,9 +117,9 @@ class _MatchmakingScreenState extends State<MatchmakingScreen>
             height: 100,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: AppTheme.goldPrimary.withValues(alpha: 0.1),
+              color: AppTheme.goldPrimary.withOpacity(0.1),
               border: Border.all(
-                  color: AppTheme.goldPrimary.withValues(alpha: 0.3), width: 2),
+                  color: AppTheme.goldPrimary.withOpacity(0.3), width: 2),
             ),
             child: const Center(
               child: Icon(Icons.search_rounded,
@@ -138,8 +138,8 @@ class _MatchmakingScreenState extends State<MatchmakingScreen>
                     shape: BoxShape.circle,
                     gradient: SweepGradient(
                       colors: [
-                        AppTheme.goldPrimary.withValues(alpha: 0.0),
-                        AppTheme.goldPrimary.withValues(alpha: 0.4),
+                        AppTheme.goldPrimary.withOpacity(0.0),
+                        AppTheme.goldPrimary.withOpacity(0.4),
                       ],
                       stops: const [0.8, 1.0],
                     ),

@@ -116,15 +116,15 @@ class _TutorialScreenState extends State<TutorialScreen> {
         decoration: BoxDecoration(
           gradient: isSelected
               ? LinearGradient(colors: [
-                  color.withValues(alpha: 0.2),
-                  color.withValues(alpha: 0.05)
+                  color.withOpacity(0.2),
+                  color.withOpacity(0.05)
                 ])
               : null,
-          color: !isSelected ? AppTheme.surface.withValues(alpha: 0.5) : null,
+          color: !isSelected ? AppTheme.surface.withOpacity(0.5) : null,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color:
-                isSelected ? color : AppTheme.textMuted.withValues(alpha: 0.2),
+                isSelected ? color : AppTheme.textMuted.withOpacity(0.2),
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -161,10 +161,10 @@ class _TutorialScreenState extends State<TutorialScreen> {
           gradient: AppTheme.cardGradient,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-              color: difficultyColor.withValues(alpha: 0.15), width: 1.5),
+              color: difficultyColor.withOpacity(0.15), width: 1.5),
           boxShadow: [
             BoxShadow(
-                color: difficultyColor.withValues(alpha: 0.08),
+                color: difficultyColor.withOpacity(0.08),
                 blurRadius: 12,
                 offset: const Offset(0, 4)),
           ],
@@ -178,7 +178,7 @@ class _TutorialScreenState extends State<TutorialScreen> {
                   width: 56,
                   height: 56,
                   decoration: BoxDecoration(
-                    color: difficultyColor.withValues(alpha: 0.12),
+                    color: difficultyColor.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Center(
@@ -219,7 +219,7 @@ class _TutorialScreenState extends State<TutorialScreen> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: difficultyColor.withValues(alpha: 0.1),
+                    color: difficultyColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(

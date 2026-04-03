@@ -167,7 +167,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           borderRadius: BorderRadius.circular(32),
                           boxShadow: [
                             BoxShadow(
-                              color: page.accentColor.withValues(alpha: 0.3),
+                              color: page.accentColor.withOpacity(0.3),
                               blurRadius: 40,
                               spreadRadius: 8,
                             ),
@@ -242,7 +242,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
+            color: Colors.black.withOpacity(0.3),
             blurRadius: 20,
             offset: const Offset(0, -4),
           ),
@@ -270,7 +270,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             : null,
                         color: _currentPage == i
                             ? null
-                            : AppTheme.textMuted.withValues(alpha: 0.4),
+                            : AppTheme.textMuted.withOpacity(0.4),
                         borderRadius: BorderRadius.circular(5),
                       ),
                     )),
@@ -320,7 +320,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 elevation: 8,
                 shadowColor:
                     (isLast ? AppTheme.accentCyan : AppTheme.goldPrimary)
-                        .withValues(alpha: 0.5),
+                        .withOpacity(0.5),
               ),
               onPressed: _isLoading
                   ? null

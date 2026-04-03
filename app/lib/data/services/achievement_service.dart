@@ -91,7 +91,7 @@ class AchievementService {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
             side: BorderSide(
-              color: AppTheme.goldPrimary.withValues(alpha: 0.5),
+              color: AppTheme.goldPrimary.withOpacity(0.5),
               width: 2,
             ),
           ),
@@ -103,7 +103,7 @@ class AchievementService {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: AppTheme.goldPrimary.withValues(alpha: 0.2),
+                  color: AppTheme.goldPrimary.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Center(
@@ -140,7 +140,7 @@ class AchievementService {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppTheme.goldPrimary.withValues(alpha: 0.15),
+                  color: AppTheme.goldPrimary.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(

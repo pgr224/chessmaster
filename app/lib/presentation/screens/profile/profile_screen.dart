@@ -136,7 +136,7 @@ class _ProfileContent extends StatelessWidget {
                   gradient: AppTheme.rainbowGradient,
                   boxShadow: [
                     BoxShadow(
-                      color: AppTheme.goldPrimary.withValues(alpha: 0.3),
+                      color: AppTheme.goldPrimary.withOpacity(0.3),
                       blurRadius: 20,
                       spreadRadius: 2,
                     )
@@ -165,7 +165,7 @@ class _ProfileContent extends StatelessWidget {
                 Text(
                   'GRANDMASTER STRATEGIST',
                   style: GoogleFonts.baloo2(
-                    color: AppTheme.goldPrimary.withValues(alpha: 0.8),
+                    color: AppTheme.goldPrimary.withOpacity(0.8),
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 1.2,
@@ -221,9 +221,9 @@ class _ProfileContent extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: AppTheme.surface.withValues(alpha: 0.3),
+            color: AppTheme.surface.withOpacity(0.3),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+            border: Border.all(color: Colors.white.withOpacity(0.05)),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -254,10 +254,10 @@ class _ProfileContent extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: AppTheme.navyCard.withValues(alpha: 0.8),
+            color: AppTheme.navyCard.withOpacity(0.8),
             borderRadius: BorderRadius.circular(24),
             border:
-                Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.1)),
+                Border.all(color: AppTheme.goldPrimary.withOpacity(0.1)),
           ),
           child: Column(
             children: [
@@ -281,7 +281,7 @@ class _ProfileContent extends StatelessWidget {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: AppTheme.goldPrimary.withValues(alpha: 0.1),
+                      color: AppTheme.goldPrimary.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text('${user.xp} XP',
@@ -295,7 +295,7 @@ class _ProfileContent extends StatelessWidget {
               LinearPercentIndicator(
                 lineHeight: 12,
                 percent: progress.clamp(0.0, 1.0),
-                backgroundColor: Colors.white.withValues(alpha: 0.05),
+                backgroundColor: Colors.white.withOpacity(0.05),
                 progressColor: AppTheme.goldPrimary,
                 barRadius: const Radius.circular(6),
                 animation: true,
@@ -346,16 +346,16 @@ class _ProfileContent extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.navyCard.withValues(alpha: 0.6),
+        color: AppTheme.navyCard.withOpacity(0.6),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.1)),
+        border: Border.all(color: color.withOpacity(0.1)),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
+              color: color.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: color, size: 20),
@@ -389,7 +389,7 @@ class _ProfileContent extends StatelessWidget {
           decoration: BoxDecoration(
             gradient: AppTheme.cardGradient,
             borderRadius: BorderRadius.circular(28),
-            border: Border.all(color: AppTheme.skyBlue.withValues(alpha: 0.15)),
+            border: Border.all(color: AppTheme.skyBlue.withOpacity(0.15)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -439,7 +439,7 @@ class _ProfileContent extends StatelessWidget {
       child: Row(
         children: [
           Icon(icon,
-              size: 14, color: AppTheme.textSecondary.withValues(alpha: 0.5)),
+              size: 14, color: AppTheme.textSecondary.withOpacity(0.5)),
           const SizedBox(width: 8),
           Text(title.toUpperCase(),
               style: GoogleFonts.fredoka(
@@ -464,7 +464,7 @@ class _ProfileContent extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.05),
+              color: color.withOpacity(0.05),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Text(value,
@@ -512,16 +512,16 @@ class _ProfileContent extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.surface.withValues(alpha: 0.2),
+        color: AppTheme.surface.withOpacity(0.2),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.03)),
+        border: Border.all(color: Colors.white.withOpacity(0.03)),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
+              color: color.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
             child: Text(isWin ? '🏆' : (isDraw ? '🤝' : '💀'),
@@ -620,7 +620,7 @@ void showEditProfileModal(BuildContext context, UserModel user) {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
-                    color: AppTheme.accentRed.withValues(alpha: 0.1),
+                    color: AppTheme.accentRed.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
@@ -639,7 +639,7 @@ void showEditProfileModal(BuildContext context, UserModel user) {
               else
                 Text('CHANGES ALLOWED: ${2 - user.usernameChanges} REMAINING',
                     style: GoogleFonts.fredoka(
-                        color: AppTheme.goldPrimary.withValues(alpha: 0.7),
+                        color: AppTheme.goldPrimary.withOpacity(0.7),
                         fontSize: 12,
                         fontWeight: FontWeight.w600)),
               const SizedBox(height: 32),
@@ -731,7 +731,7 @@ void showEditProfileModal(BuildContext context, UserModel user) {
                   labelStyle: GoogleFonts.fredoka(
                       color: user.usernameChanges < 2 
                           ? AppTheme.textSecondary 
-                          : AppTheme.accentRed.withValues(alpha: 0.5), 
+                          : AppTheme.accentRed.withOpacity(0.5), 
                       letterSpacing: 1),
                   prefixIcon: const Icon(Icons.stars_rounded,
                       color: AppTheme.goldPrimary),
@@ -750,7 +750,7 @@ void showEditProfileModal(BuildContext context, UserModel user) {
                                   color: Colors.green)
                               : const Icon(Icons.error, color: Colors.red))),
                   filled: true,
-                  fillColor: Colors.white.withValues(alpha: 0.03),
+                  fillColor: Colors.white.withOpacity(0.03),
                   border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(20),
                       borderSide: BorderSide.none),
@@ -823,7 +823,7 @@ void showEditProfileModal(BuildContext context, UserModel user) {
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20)),
                     elevation: 8,
-                    shadowColor: AppTheme.goldPrimary.withValues(alpha: 0.4),
+                    shadowColor: AppTheme.goldPrimary.withOpacity(0.4),
                   ),
                   child: Text('APPLY CHANGES',
                       style: GoogleFonts.fredoka(
