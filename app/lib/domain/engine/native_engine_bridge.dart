@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'native_stockfish.dart';
-import 'native_leela.dart';
 import 'candidate_model.dart';
 
 // These are called by AIEngineController on Native (Mobile/Desktop)
@@ -8,17 +7,15 @@ String _currentDifficulty = 'basic';
 
 void jsEngineInit(String mode, String difficulty) {
   _currentDifficulty = difficulty;
-  if (difficulty == 'aiMode') {
-    NativeLeela().init();
-  } else {
-    NativeStockfish().init();
-  }
+  NativeStockfish().init();
 }
 
 Future<Map<String, dynamic>?> jsEngineGetBestMove(String fen,
     {int? movetime}) async {
   if (_currentDifficulty == 'aiMode') {
-    final best = await NativeLeela().getBestMove(fen, 1000);
+    // Temporary fallback: route aiMode to a stronger Stockfish search on Android.
+    final best = await NativeStockfish()
+        .getBestMove(fen, depth: 20, movetime: movetime);
     return best != null ? {'move': best} : null;
   }
 
@@ -51,12 +48,10 @@ Future<List<MoveCandidate>> jsEngineGetTopMoves(
 }
 
 String jsEngineGetActiveEngine() =>
-    _currentDifficulty == 'aiMode' ? 'lc0_native' : 'stockfish_native';
+    _currentDifficulty == 'aiMode'
+        ? 'stockfish_native_ai_fallback'
+        : 'stockfish_native';
 
 void jsEngineDispose() {
-  if (_currentDifficulty == 'aiMode') {
-    NativeLeela().dispose();
-  } else {
-    NativeStockfish().dispose();
-  }
+  NativeStockfish().dispose();
 }

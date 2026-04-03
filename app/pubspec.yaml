@@ -21,7 +21,6 @@ dependencies:
   device_info_plus: ^12.3.0
   network_info_plus: ^7.0.0
   connectivity_plus: ^7.0.0
-  leela_chess_zero: ^1.0.0
   stockfish: ^1.8.1
   chess: ^0.8.1
   flutter_animate: ^4.5.0

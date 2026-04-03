@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:audioplayers/audioplayers.dart';
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -227,6 +228,11 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                       _buildBrainExplainer(state),
                     if (state.engineError != null)
                       _buildEngineErrorOverlay(context, state),
+                    if (kDebugMode &&
+                        (state.mode == GameMode.singlePlayer ||
+                            state.mode == GameMode.practice) &&
+                        state.aiMoveSourceHistory.isNotEmpty)
+                      _buildAIMoveSourceOverlay(state),
                   ],
                 );
               },
@@ -1914,6 +1920,53 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               .fadeIn(duration: 400.ms)
               .then()
               .fadeOut(duration: 400.ms),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAIMoveSourceOverlay(GameState state) {
+    final history = state.aiMoveSourceHistory;
+    final start = history.length > 6 ? history.length - 6 : 0;
+    final recent = history.sublist(start).reversed.toList(growable: false);
+
+    return Positioned(
+      top: 88,
+      right: 12,
+      child: IgnorePointer(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 180),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.7),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.white24),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'AI PATH',
+                style: GoogleFonts.fredoka(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.8,
+                ),
+              ),
+              const SizedBox(height: 4),
+              for (var i = 0; i < recent.length; i++)
+                Text(
+                  '${history.length - i}. ${recent[i]}',
+                  style: GoogleFonts.inter(
+                    color: Colors.white70,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );

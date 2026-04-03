@@ -9,6 +9,7 @@ const VAPID_PUBLIC_KEY = 'BCX...'; // USER: Please replace with your actual VAPI
 
 function showInstallBanner() {
     if (isStandalone()) return;
+    if (document.getElementById('install-banner-overlay')) return;
 
     const overlay = document.createElement('div');
     overlay.id = 'install-banner-overlay';
@@ -19,36 +20,21 @@ function showInstallBanner() {
     const isDesktop = !isMobile();
 
     overlay.innerHTML = `
-        <div id="install-banner-content">
-            <div id="install-banner-inner">
-                <img id="install-banner-icon" src="icons/Icon-192.png" alt="Chess Master">
-                <div id="install-banner-title">Chess Master</div>
-                <div id="install-banner-text">The full grandmaster experience. Install for offline notifications, zero-lag play, and desktop integration.</div>
-                
-                <!-- PWA Primary Option -->
-                <button class="install-button pwa-button" id="pwa-install-btn">
-                    ⭐ Add to Home Screen (Web App)
-                </button>
+        <div id="install-banner-content" role="dialog" aria-modal="true" aria-labelledby="install-banner-title">
+            <button id="close-install" aria-label="Close install banner">&times;</button>
+            <img id="install-banner-icon" src="icons/Icon-192.png" alt="Chess Master">
+            <div id="install-banner-title">Install Chess Master</div>
+            <div id="install-banner-text">Install for faster launch and offline play. Share with friends in one tap.</div>
+            ${isIOS ? '<div id="install-banner-hint">On iPhone/iPad: tap Share, then Add to Home Screen.</div>' : ''}
 
-                <div class="divider"><span>OR DOWNLOAD DIRECTLY</span></div>
+            <div id="banner-actions">
+                <button class="install-button" id="pwa-install-btn">Install</button>
+                <button id="share-banner-btn" class="secondary-action">Share</button>
+            </div>
 
-                <div id="direct-downloads">
-                   ${isAndroid ? `
-                     <a href="${APK_DOWNLOAD_URL}" class="direct-link anim-pulse">
-                        📦 Download Android APK
-                     </a>
-                   ` : ''}
-                   ${isIOS || isDesktop ? `
-                     <a href="${DMG_DOWNLOAD_URL}" class="direct-link">
-                        🍎 Download for macOS/iOS (.dmg)
-                     </a>
-                   ` : ''}
-                </div>
-
-                <div id="banner-actions">
-                    <button id="share-banner-btn" class="secondary-action">🔗 Share App</button>
-                    <button id="dismiss-install" class="secondary-action">Continue in Browser</button>
-                </div>
+            <div id="direct-downloads">
+                ${isAndroid ? `<a href="${APK_DOWNLOAD_URL}" class="direct-link">Download Android APK</a>` : ''}
+                ${isIOS || isDesktop ? `<a href="${DMG_DOWNLOAD_URL}" class="direct-link">Download for macOS/iOS</a>` : ''}
             </div>
         </div>
     `;
@@ -57,15 +43,20 @@ function showInstallBanner() {
 
     // Capture the PWA install prompt event
     const pwaBtn = document.getElementById('pwa-install-btn');
+    const closeBanner = () => {
+        overlay.remove();
+        sessionStorage.setItem('install_banner_dismissed', 'true');
+    };
+
     if (!deferredInstallPrompt) {
         pwaBtn.style.opacity = '0.5';
-        pwaBtn.innerText = 'Add to Home Screen (Use Browser Menu)';
+        pwaBtn.innerText = isIOS ? 'Open Share Menu' : 'Install from Browser Menu';
     }
 
     // Handlers
-    document.getElementById('dismiss-install').addEventListener('click', () => {
-        overlay.style.display = 'none';
-        sessionStorage.setItem('install_banner_dismissed', 'true');
+    document.getElementById('close-install').addEventListener('click', closeBanner);
+    overlay.addEventListener('click', (event) => {
+        if (event.target === overlay) closeBanner();
     });
 
     document.getElementById('share-banner-btn').addEventListener('click', () => {
@@ -90,7 +81,7 @@ function showInstallBanner() {
         
         // Always try to request notification permission after intent
         requestNotificationPermission();
-        overlay.style.display = 'none';
+        closeBanner();
     });
 }
 

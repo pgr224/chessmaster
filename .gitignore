@@ -34,3 +34,12 @@ tmp/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Keys and credentials
+*.pem
+*.key
+*.crt
+*.env
+credentials.json
+secret.json
+android/key.properties

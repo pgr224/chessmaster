@@ -42,6 +42,11 @@ class AIEngineController {
   /// Remember previous emergency fallback source square to reduce robotic repeats.
   String? _lastFallbackFrom;
 
+  /// Tracks which path produced the latest AI move for debug UI.
+  String _lastMoveSource = 'none';
+
+  String get lastMoveSource => _lastMoveSource;
+
   /// Current AI Personality Message (for UI thinking bubble)
   /// Current AI Personality Message (for UI thinking bubble)
   String get aiMessage => _latestThinkingMessage ?? PersonalityEngine().generateNewMessage();
@@ -66,6 +71,8 @@ class AIEngineController {
     if (!_initialized) return null;
     if (_mode == GameMode.twoPlayer || _mode == GameMode.multiplayer)
       return null;
+
+    _lastMoveSource = 'none';
 
     final requestId = ++_activeRequestId;
 
@@ -102,6 +109,9 @@ class AIEngineController {
             onTimeout: () => null,
           );
       resultMove = res?['move'] as String?;
+      if (resultMove != null) {
+        _lastMoveSource = _normalizeMoveSource(js_bridge.jsEngineGetActiveEngine());
+      }
 
       if (resultMove == null && engine != null) {
         if (requestId != _activeRequestId) return null;
@@ -165,11 +175,16 @@ class AIEngineController {
         candidates = List<MoveCandidate>.from(rawCandidates);
         if (candidates.isNotEmpty) {
           bestFound = candidates.first.uci;
+          _lastMoveSource = _normalizeMoveSource(js_bridge.jsEngineGetActiveEngine());
         }
       } else {
         final res =
             await js_bridge.jsEngineGetBestMove(fen, movetime: dynamicMoveTime);
         bestFound = res?['move'] as String?;
+        if (bestFound != null) {
+          _lastMoveSource =
+              _normalizeMoveSource(js_bridge.jsEngineGetActiveEngine());
+        }
         if (res?['candidates'] != null) {
           candidates = List<MoveCandidate>.from(res!['candidates'] as List);
         } else if (bestFound != null) {
@@ -190,6 +205,10 @@ class AIEngineController {
 
       // ── 2. QUALITY FILTER (Reject repetitive edge pawn spam e.g., a6, h6) ──
       String move = _pickSmartMove(candidates);
+
+      if (_lastMoveSource == 'none') {
+        _lastMoveSource = _normalizeMoveSource(js_bridge.jsEngineGetActiveEngine());
+      }
 
       return move;
     } catch (e) {
@@ -235,7 +254,15 @@ class AIEngineController {
     final topWindow = ranked.length >= 3 ? 3 : ranked.length;
     final pick = ranked[math.Random().nextInt(topWindow)];
     _lastFallbackFrom = pick.from.toAlgebraic();
+    _lastMoveSource = 'dart-fallback';
     return pick.toAlgebraic();
+  }
+
+  String _normalizeMoveSource(String raw) {
+    final v = raw.toLowerCase();
+    if (v.contains('sunfish')) return 'sunfish';
+    if (v.contains('stockfish')) return 'stockfish';
+    return 'stockfish';
   }
 
   List<Move> _rankFallbackMoves(ChessEngine engine, List<Move> moves) {
@@ -349,5 +376,6 @@ class AIEngineController {
     js_bridge.jsEngineDispose();
     _initialized = false;
     _lastFallbackFrom = null;
+    _lastMoveSource = 'none';
   }
 }

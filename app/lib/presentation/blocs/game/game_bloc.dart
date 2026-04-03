@@ -252,6 +252,8 @@ class GameState extends Equatable {
   final String? analysisMessage;
   final String? engineError;
   final bool showMiniLesson;
+  final String? lastAIMoveSource;
+  final List<String> aiMoveSourceHistory;
 
   // AI Coach System
   final CoachFeedback? coachFeedback;
@@ -346,6 +348,8 @@ class GameState extends Equatable {
     this.coachMessage,
     this.engineError,
     this.showMiniLesson = false,
+    this.lastAIMoveSource,
+    this.aiMoveSourceHistory = const [],
     this.coachFeedback,
     this.activeHint,
     this.coachSettings = const CoachSettings(),
@@ -442,6 +446,8 @@ class GameState extends Equatable {
     String? coachMessage,
     String? engineError,
     bool? showMiniLesson,
+    String? lastAIMoveSource,
+    List<String>? aiMoveSourceHistory,
     CoachFeedback? coachFeedback,
     HintResult? activeHint,
     CoachSettings? coachSettings,
@@ -539,6 +545,8 @@ class GameState extends Equatable {
           clearCoachMessage ? null : (coachMessage ?? this.coachMessage),
       engineError: clearEngineError ? null : (engineError ?? this.engineError),
       showMiniLesson: showMiniLesson ?? this.showMiniLesson,
+        lastAIMoveSource: lastAIMoveSource ?? this.lastAIMoveSource,
+        aiMoveSourceHistory: aiMoveSourceHistory ?? this.aiMoveSourceHistory,
       coachFeedback:
           clearCoachFeedback ? null : (coachFeedback ?? this.coachFeedback),
       activeHint: clearActiveHint ? null : (activeHint ?? this.activeHint),
@@ -603,6 +611,8 @@ class GameState extends Equatable {
         xpGained,
         coachMessage,
         showMiniLesson,
+        lastAIMoveSource,
+        aiMoveSourceHistory,
         analysisMessage,
         coachFeedback,
         activeHint,
@@ -1341,6 +1351,20 @@ class GameBloc extends Bloc<GameEvent, GameState> {
           newHintedIndices.add(_engine.moveHistory.length - 1);
         }
 
+        // Generate personality-flavored reaction if feedback has no message
+        final personality = state.activePersonality ?? AIPersonality.aggressive;
+        final classKey = switch (feedback.classification) {
+          MoveClassification.brilliant => 'brilliant',
+          MoveClassification.best => 'best',
+          MoveClassification.good => 'good',
+          MoveClassification.needsImprovement => 'mistake',
+          MoveClassification.mistake => 'mistake',
+          MoveClassification.blunder => 'blunder',
+        };
+        final reactionMsg = feedback.message.isNotEmpty
+            ? feedback.message
+            : personality.getMoveReaction(classKey);
+
         emit(state.copyWith(
           accuracy: accuracy,
           mistakes: mistakes,
@@ -1348,7 +1372,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
           bestMoves: bestMoves,
           missedWins: missedWins,
           coachFeedback: feedback,
-          aiMessage: feedback.message, // SYNC feedback message to AI talk bubble
+          aiMessage: reactionMsg, // Personality-driven reaction
           showMiniLesson: feedback.classification == MoveClassification.blunder,
           gameCoachHistory: updatedHistory,
           coachMove: coachMove,
@@ -2357,6 +2381,11 @@ class GameBloc extends Bloc<GameEvent, GameState> {
               m.to == aiMove.to && m.promotion == aiMove.promotion);
 
           if (legal) {
+            final source = _engineController.lastMoveSource;
+            emit(state.copyWith(
+              lastAIMoveSource: source,
+              aiMoveSourceHistory: _appendAISource(state.aiMoveSourceHistory, source),
+            ));
             add(GameMakeMoveEvent(aiMove.from, aiMove.to,
                 promotion: aiMove.promotion));
             return;
@@ -2369,6 +2398,11 @@ class GameBloc extends Bloc<GameEvent, GameState> {
             engine: _engine);
         if (fallback != null) {
           final fm = Move.fromAlgebraic(fallback);
+          const source = 'dart-fallback';
+          emit(state.copyWith(
+            lastAIMoveSource: source,
+            aiMoveSourceHistory: _appendAISource(state.aiMoveSourceHistory, source),
+          ));
           add(GameMakeMoveEvent(fm.from, fm.to, promotion: fm.promotion));
         } else {
           emit(state.copyWith(
@@ -2383,6 +2417,11 @@ class GameBloc extends Bloc<GameEvent, GameState> {
             engine: _engine);
         if (fallback != null) {
           final fm = Move.fromAlgebraic(fallback);
+          const source = 'dart-fallback';
+          emit(state.copyWith(
+            lastAIMoveSource: source,
+            aiMoveSourceHistory: _appendAISource(state.aiMoveSourceHistory, source),
+          ));
           add(GameMakeMoveEvent(fm.from, fm.to, promotion: fm.promotion));
         } else {
           // TOTAL FAILURE: Popup Error Message
@@ -2403,5 +2442,12 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         ));
       }
     }
+  }
+
+  List<String> _appendAISource(List<String> history, String source) {
+    const maxEntries = 10;
+    final next = [...history, source];
+    if (next.length <= maxEntries) return next;
+    return next.sublist(next.length - maxEntries);
   }
 }
