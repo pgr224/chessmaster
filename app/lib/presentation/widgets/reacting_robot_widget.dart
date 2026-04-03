@@ -19,13 +19,13 @@ import 'package:chess_master/domain/engine/personality_engine.dart';
 // ROBOT STATE — Determines the robot's overall mood
 // ═══════════════════════════════════════════════════
 enum RobotMood {
-  idle,        // Calm, waiting for player's move
-  thinking,    // AI is calculating
-  happy,       // Player made a good move / AI is confident
-  impressed,   // Brilliant move from player
-  worried,     // Player made a strong move against AI
-  disappointed,// Player blundered
-  hinting,     // Showing a hint
+  idle, // Calm, waiting for player's move
+  thinking, // AI is calculating
+  happy, // Player made a good move / AI is confident
+  impressed, // Brilliant move from player
+  worried, // Player made a strong move against AI
+  disappointed, // Player blundered
+  hinting, // Showing a hint
   celebrating, // Checkmate or win
 }
 
@@ -157,17 +157,21 @@ class _ReactingRobotWidgetState extends State<ReactingRobotWidget>
     final feedback = s.coachFeedback;
     final oldMood = _mood;
 
-    if (s.isAIThinking && s.mode != GameMode.practice) {
-      _mood = RobotMood.thinking;
-      _startMessageCycle();
+    if (feedback != null) {
+      _mood = _moodFromClassification(feedback.classification);
+      // Generate a contextual reaction from personality + classification
+      _currentReaction = _generateReaction(feedback, s);
+      if (s.isAIThinking && s.mode != GameMode.practice) {
+        _startMessageCycle();
+      } else {
+        _stopMessageCycle();
+      }
     } else if (s.activeHint != null) {
       _mood = RobotMood.hinting;
       _stopMessageCycle();
-    } else if (feedback != null) {
-      _mood = _moodFromClassification(feedback.classification);
-      _stopMessageCycle();
-      // Generate a contextual reaction from personality + classification
-      _currentReaction = _generateReaction(feedback, s);
+    } else if (s.isAIThinking && s.mode != GameMode.practice) {
+      _mood = RobotMood.thinking;
+      _startMessageCycle();
     } else if (s.isGameOver) {
       _mood = RobotMood.celebrating;
       _stopMessageCycle();
@@ -237,7 +241,8 @@ class _ReactingRobotWidgetState extends State<ReactingRobotWidget>
 
   void _startMessageCycle() {
     _messageCycleTimer?.cancel();
-    _messageCycleTimer = Timer.periodic(const Duration(milliseconds: 2800), (_) {
+    _messageCycleTimer =
+        Timer.periodic(const Duration(milliseconds: 2800), (_) {
       if (mounted && widget.state.isAIThinking) {
         setState(() {
           _messageIndex++;
@@ -304,15 +309,23 @@ class _ReactingRobotWidgetState extends State<ReactingRobotWidget>
 
     if (isThinking) {
       final thinkMsgs = _moodReactions[RobotMood.thinking]!;
-      bubbleText = s.aiMessage ?? thinkMsgs[_messageIndex % thinkMsgs.length];
+      final thinkText =
+          s.aiMessage ?? thinkMsgs[_messageIndex % thinkMsgs.length];
+
+      if (feedback != null) {
+        // Unify coaching feedback with thinking indicator
+        bubbleText = '${_currentReaction ?? feedback.message}\n\n$thinkText';
+        subtextStr = feedback.explanation;
+      } else {
+        bubbleText = thinkText;
+      }
     } else if (hint != null) {
       bubbleText = '${hint.currentLevelEmoji} ${hint.currentLevelLabel}';
       subtextStr = hint.currentHintText;
     } else if (feedback != null) {
       bubbleText = _currentReaction ?? feedback.message;
       subtextStr = feedback.explanation;
-    } else if (_mood == RobotMood.idle ||
-        _mood == RobotMood.celebrating) {
+    } else if (_mood == RobotMood.idle || _mood == RobotMood.celebrating) {
       bubbleText = _currentReaction ?? _pickRandomMessage(_mood);
     } else {
       showBubble = false;
@@ -326,7 +339,11 @@ class _ReactingRobotWidgetState extends State<ReactingRobotWidget>
         // 🤖 ANIMATED ROBOT AVATAR
         _buildRobotAvatar()
             .animate()
-            .slideX(begin: -0.5, end: 0, duration: 400.ms, curve: Curves.easeOutBack)
+            .slideX(
+                begin: -0.5,
+                end: 0,
+                duration: 400.ms,
+                curve: Curves.easeOutBack)
             .fadeIn(),
 
         const SizedBox(width: 6),
@@ -449,8 +466,8 @@ class _ReactingRobotWidgetState extends State<ReactingRobotWidget>
               width: 8,
               height: 8,
               decoration: BoxDecoration(
-                color: _moodColor.withValues(
-                    alpha: 0.4 + _pulseController.value * 0.6),
+                color:
+                    _moodColor.withOpacity(0.4 + _pulseController.value * 0.6),
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
@@ -536,8 +553,8 @@ class _ReactingRobotWidgetState extends State<ReactingRobotWidget>
     final isHappy = _mood == RobotMood.happy ||
         _mood == RobotMood.impressed ||
         _mood == RobotMood.celebrating;
-    final isWorried = _mood == RobotMood.worried ||
-        _mood == RobotMood.disappointed;
+    final isWorried =
+        _mood == RobotMood.worried || _mood == RobotMood.disappointed;
 
     if (isHappy) {
       // Smile arc
@@ -563,7 +580,8 @@ class _ReactingRobotWidgetState extends State<ReactingRobotWidget>
     );
   }
 
-  Widget _buildAnimatedArm({required bool isLeft, required double breathOffset}) {
+  Widget _buildAnimatedArm(
+      {required bool isLeft, required double breathOffset}) {
     return AnimatedBuilder(
       animation: _handController,
       builder: (context, _) {
@@ -576,22 +594,18 @@ class _ReactingRobotWidgetState extends State<ReactingRobotWidget>
         switch (_mood) {
           case RobotMood.thinking:
             // Circular thinking motion
-            rotation = math.sin(handVal * math.pi * 2) *
-                0.4 *
-                (isLeft ? 1 : -1);
+            rotation =
+                math.sin(handVal * math.pi * 2) * 0.4 * (isLeft ? 1 : -1);
             offsetY = math.cos(handVal * math.pi * 2) * 4;
           case RobotMood.happy:
           case RobotMood.celebrating:
             // Wave/cheer
-            rotation = math.sin(handVal * math.pi) *
-                0.6 *
-                (isLeft ? 1 : -1);
+            rotation = math.sin(handVal * math.pi) * 0.6 * (isLeft ? 1 : -1);
             offsetY = -handVal * 12;
           case RobotMood.impressed:
             // Rapid excited wave
-            rotation = math.sin(handVal * math.pi * 4) *
-                0.5 *
-                (isLeft ? 1 : -1);
+            rotation =
+                math.sin(handVal * math.pi * 4) * 0.5 * (isLeft ? 1 : -1);
             offsetY = -handVal * 15;
           case RobotMood.worried:
             // Nervous fidget
@@ -607,9 +621,7 @@ class _ReactingRobotWidgetState extends State<ReactingRobotWidget>
             rotation = 0.4 * (isLeft ? 1 : -1);
           case RobotMood.idle:
             // Gentle sway
-            rotation = math.sin(handVal * math.pi) *
-                0.15 *
-                (isLeft ? 1 : -1);
+            rotation = math.sin(handVal * math.pi) * 0.15 * (isLeft ? 1 : -1);
         }
 
         return Positioned(
@@ -650,8 +662,8 @@ class _ReactingRobotWidgetState extends State<ReactingRobotWidget>
               width: 6,
               height: 6,
               decoration: BoxDecoration(
-                color: _moodColor.withValues(
-                    alpha: 0.5 + _pulseController.value * 0.5),
+                color:
+                    _moodColor.withOpacity(0.5 + _pulseController.value * 0.5),
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
@@ -814,9 +826,7 @@ class _ReactingRobotWidgetState extends State<ReactingRobotWidget>
       };
       icon = switch (_mood) {
         RobotMood.thinking => Icons.psychology_rounded,
-        RobotMood.happy ||
-        RobotMood.impressed =>
-          Icons.thumb_up_alt_rounded,
+        RobotMood.happy || RobotMood.impressed => Icons.thumb_up_alt_rounded,
         RobotMood.worried => Icons.warning_amber_rounded,
         RobotMood.disappointed => Icons.error_outline_rounded,
         RobotMood.celebrating => Icons.emoji_events_rounded,
@@ -875,8 +885,8 @@ class _ReactingRobotWidgetState extends State<ReactingRobotWidget>
           height: 16,
           child: CircularProgressIndicator(
             strokeWidth: 2,
-            valueColor: AlwaysStoppedAnimation<Color>(
-                _moodColor.withOpacity(0.7)),
+            valueColor:
+                AlwaysStoppedAnimation<Color>(_moodColor.withOpacity(0.7)),
           ),
         ),
         const SizedBox(width: 8),
@@ -932,9 +942,7 @@ class _ReactingRobotWidgetState extends State<ReactingRobotWidget>
                 width: isActive ? 18 : 8,
                 height: 3,
                 decoration: BoxDecoration(
-                  color: isActive
-                      ? dotColor
-                      : dotColor.withOpacity(0.2),
+                  color: isActive ? dotColor : dotColor.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(2),
                 ),
               );
@@ -945,8 +953,7 @@ class _ReactingRobotWidgetState extends State<ReactingRobotWidget>
           GestureDetector(
             onTap: () => _showUpgradeConfirm(context, nextLabel, xpCost),
             child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
@@ -975,8 +982,8 @@ class _ReactingRobotWidgetState extends State<ReactingRobotWidget>
                   ),
                   const SizedBox(width: 6),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 5, vertical: 1),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                     decoration: BoxDecoration(
                       color: Colors.amberAccent.withOpacity(0.18),
                       borderRadius: BorderRadius.circular(6),
@@ -1214,13 +1221,11 @@ class _HintUpgradeSheet extends StatelessWidget {
           const SizedBox(height: 20),
           Container(
             width: double.infinity,
-            padding:
-                const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
             decoration: BoxDecoration(
               color: accentColor.withOpacity(0.08),
               borderRadius: BorderRadius.circular(16),
-              border:
-                  Border.all(color: accentColor.withOpacity(0.25)),
+              border: Border.all(color: accentColor.withOpacity(0.25)),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -1312,8 +1317,7 @@ class _HintUpgradeSheet extends StatelessWidget {
       ),
     )
         .animate()
-        .slideY(
-            begin: 0.3, duration: 350.ms, curve: Curves.easeOutBack)
+        .slideY(begin: 0.3, duration: 350.ms, curve: Curves.easeOutBack)
         .fadeIn();
   }
 }

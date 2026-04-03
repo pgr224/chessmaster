@@ -27,7 +27,7 @@ class UserModel {
     this.isGhibli = false,
     this.usernameChanges = 0,
   });
-  
+
   int get level => UserStats.calculateLevel(xp);
   double get levelProgress => UserStats.progressToNextLevel(xp);
 
@@ -225,7 +225,10 @@ class UserStats {
       };
 
   // Level Logic
-  static int xpToLevel(int xp) => (xp <= 0) ? 1 : (xp / 100).toInt() + 1; // Basic for now, user requested sqrt(totalXP / 100)
+  static int xpToLevel(int xp) => (xp <= 0)
+      ? 1
+      : (xp / 100).toInt() +
+          1; // Basic for now, user requested sqrt(totalXP / 100)
   // Re-reading user request: level = sqrt(totalXP / 100)
   static int calculateLevel(int totalXP) =>
       (totalXP <= 0) ? 1 : (math.sqrt(totalXP / 100)).floor() + 1;

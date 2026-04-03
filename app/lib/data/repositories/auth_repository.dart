@@ -388,7 +388,7 @@ class AuthRepository {
       // Enforce caps: 2000 per day, 10000 max
       final now = DateTime.now();
       final todayStr = "${now.year}-${now.month}-${now.day}";
-      
+
       int currentDaily = user.stats.dailyDonatedXP;
       if (user.stats.lastDonationDate != todayStr) {
         currentDaily = 0; // New day, reset daily cap
@@ -414,12 +414,13 @@ class AuthRepository {
           final Map<String, dynamic> data = jsonDecode(userData);
           final userJson = data['user'] as Map<String, dynamic>;
           final statsJson = userJson['stats'] as Map<String, dynamic>;
-          
+
           userJson['xp'] = (userJson['xp'] as int? ?? 0) - amount;
           statsJson['daily_donated_xp'] = currentDaily + amount;
-          statsJson['total_donated_xp'] = (statsJson['total_donated_xp'] as int? ?? 0) + amount;
+          statsJson['total_donated_xp'] =
+              (statsJson['total_donated_xp'] as int? ?? 0) + amount;
           statsJson['last_donation_date'] = todayStr;
-          
+
           await prefs.setString(_userKey, jsonEncode(data));
         }
         return true;
@@ -549,7 +550,7 @@ class AuthRepository {
 
       // Reset on server
       await _dio.post('/api/profile/$userId/reset-stats');
-      
+
       // Mark as reset for the new system
       await prefs.setBool('system_reset_v2', true);
 

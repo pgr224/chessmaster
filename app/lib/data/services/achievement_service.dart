@@ -107,7 +107,8 @@ class AchievementService {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Center(
-                  child: Text(achievement.icon, style: const TextStyle(fontSize: 24)),
+                  child: Text(achievement.icon,
+                      style: const TextStyle(fontSize: 24)),
                 ),
               ),
               const SizedBox(width: 14),
@@ -138,7 +139,8 @@ class AchievementService {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: AppTheme.goldPrimary.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(8),
@@ -194,20 +196,28 @@ class AchievementService {
     if (stats.currentStreak >= 10) unlockAchievement('win_streak_10');
 
     // Beating AIs
-    final isPlayerWin = (state.result == GameResult.whiteWins && state.playerColor == PieceColor.white) ||
-                         (state.result == GameResult.blackWins && state.playerColor == PieceColor.black);
+    final isPlayerWin = (state.result == GameResult.whiteWins &&
+            state.playerColor == PieceColor.white) ||
+        (state.result == GameResult.blackWins &&
+            state.playerColor == PieceColor.black);
 
     if (isPlayerWin && state.mode == GameMode.singlePlayer) {
       // Player won!
-      if (state.aiDifficulty == AIDifficulty.basic) unlockAchievement('beat_ai_basic');
-      if (state.aiDifficulty == AIDifficulty.intermediate) unlockAchievement('beat_ai_intermediate');
-      if (state.aiDifficulty == AIDifficulty.advanced) unlockAchievement('beat_ai_advanced');
-      if (state.aiDifficulty == AIDifficulty.impossible) unlockAchievement('beat_ai_impossible');
+      if (state.aiDifficulty == AIDifficulty.basic)
+        unlockAchievement('beat_ai_basic');
+      if (state.aiDifficulty == AIDifficulty.intermediate)
+        unlockAchievement('beat_ai_intermediate');
+      if (state.aiDifficulty == AIDifficulty.advanced)
+        unlockAchievement('beat_ai_advanced');
+      if (state.aiDifficulty == AIDifficulty.impossible)
+        unlockAchievement('beat_ai_impossible');
 
       // Strategy
-      if (state.playerColor == PieceColor.white && state.capturedWhite.isEmpty) {
+      if (state.playerColor == PieceColor.white &&
+          state.capturedWhite.isEmpty) {
         unlockAchievement('no_pieces_lost');
-      } else if (state.playerColor == PieceColor.black && state.capturedBlack.isEmpty) {
+      } else if (state.playerColor == PieceColor.black &&
+          state.capturedBlack.isEmpty) {
         unlockAchievement('no_pieces_lost');
       }
     }
@@ -230,8 +240,10 @@ class AchievementService {
 
     // Fast checkmate
     if (state.status == GameStatus.checkmate) {
-      if (state.moveHistory.length <= 40) unlockAchievement('checkmate_fast'); // Under 20 full moves
-      if (state.moveHistory.length <= 8) unlockAchievement('scholars_mate'); // Under 4 full moves
+      if (state.moveHistory.length <= 40)
+        unlockAchievement('checkmate_fast'); // Under 20 full moves
+      if (state.moveHistory.length <= 8)
+        unlockAchievement('scholars_mate'); // Under 4 full moves
     }
 
     // Social / Multiplayer

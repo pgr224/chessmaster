@@ -311,42 +311,52 @@ class _SettingsScreenState extends State<SettingsScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-           children: [
-             Expanded(
-               child: Container(
-                 padding: const EdgeInsets.all(12),
-                 decoration: BoxDecoration(
-                   color: AppTheme.surface.withOpacity(0.3),
-                   borderRadius: BorderRadius.circular(12),
-                   border: Border.all(color: AppTheme.goldPrimary.withOpacity(0.3)),
-                 ),
-                 child: Row(
-                   children: [
-                     _getPieceAvatar(_pieceShape),
-                     const SizedBox(width: 12),
-                     Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('CURRENT SHAPE', style: GoogleFonts.fredoka(color: AppTheme.textSecondary, fontSize: 10, fontWeight: FontWeight.bold)),
-                          Text(_cap(_pieceShape.replaceAll('_', ' ')), style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
-                        ],
-                     ),
-                     const Spacer(),
-                     if (!isShuffled) ...[
-                       IconButton(
-                         icon: const Icon(Icons.shuffle_rounded, color: AppTheme.accentCyan, size: 20),
-                         onPressed: () {
-                           setState(() => _pieceShape = 'shuffled');
-                           _updateTheme();
-                         },
-                         tooltip: 'Toggle Shuffle Mode',
-                       ),
-                     ],
-                   ],
-                 ),
-               ),
-             ),
-           ],
+          children: [
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.surface.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(12),
+                  border:
+                      Border.all(color: AppTheme.goldPrimary.withOpacity(0.3)),
+                ),
+                child: Row(
+                  children: [
+                    _getPieceAvatar(_pieceShape),
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('CURRENT SHAPE',
+                            style: GoogleFonts.fredoka(
+                                color: AppTheme.textSecondary,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold)),
+                        Text(_cap(_pieceShape.replaceAll('_', ' ')),
+                            style: GoogleFonts.fredoka(
+                                color: AppTheme.textPrimary,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                    const Spacer(),
+                    if (!isShuffled) ...[
+                      IconButton(
+                        icon: const Icon(Icons.shuffle_rounded,
+                            color: AppTheme.accentCyan, size: 20),
+                        onPressed: () {
+                          setState(() => _pieceShape = 'shuffled');
+                          _updateTheme();
+                        },
+                        tooltip: 'Toggle Shuffle Mode',
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 12),
         _glassButton(
@@ -362,9 +372,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void _updateTheme() {
     context.read<ThemeBloc>().add(ThemeChangeEvent(
-      boardTheme: _boardTheme,
-      pieceShape: _pieceShape,
-      pieceStyle: _pieceStyle));
+        boardTheme: _boardTheme,
+        pieceShape: _pieceShape,
+        pieceStyle: _pieceStyle));
   }
 
   Widget _buildCurrentThemeKeyPiecesPreview() {
@@ -474,8 +484,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void _showPieceSelector(BuildContext context) {
     // Merge basic and vector shapes
-    const basicShapes = ['classic', 'modern', 'angular', 'neo', 'wood', 'fantasy', 'iconic', 'artwork'];
-    final List<String> allShapes = {...basicShapes, ...PiecePathProvider.pychessShapes}.toList();
+    const basicShapes = [
+      'classic',
+      'modern',
+      'angular',
+      'neo',
+      'wood',
+      'fantasy',
+      'iconic',
+      'artwork'
+    ];
+    final List<String> allShapes =
+        {...basicShapes, ...PiecePathProvider.pychessShapes}.toList();
 
     showModalBottomSheet(
       context: context,
@@ -491,15 +511,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
         child: Column(
           children: [
             const SizedBox(height: 12),
-            Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
+            Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                    color: Colors.white24,
+                    borderRadius: BorderRadius.circular(2))),
             Padding(
               padding: const EdgeInsets.all(24),
               child: Row(
                 children: [
                   Text('Piece Shapes',
-                      style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontSize: 22, fontWeight: FontWeight.bold)),
+                      style: GoogleFonts.fredoka(
+                          color: AppTheme.textPrimary,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold)),
                   const Spacer(),
-                  _glassAction(icon: Icons.close_rounded, size: 32, onTap: () => Navigator.pop(context)),
+                  _glassAction(
+                      icon: Icons.close_rounded,
+                      size: 32,
+                      onTap: () => Navigator.pop(context)),
                 ],
               ),
             ),
@@ -516,8 +547,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 itemBuilder: (context, index) {
                   final s = allShapes[index];
                   final isSelected = _pieceShape == s;
-                  final displayName = s.replaceAll('_', ' ').replaceAll(' SVG', '');
-                  
+                  final displayName =
+                      s.replaceAll('_', ' ').replaceAll(' SVG', '');
+
                   return GestureDetector(
                     onTap: () {
                       setState(() => _pieceShape = s);
@@ -526,9 +558,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     },
                     child: Container(
                       decoration: BoxDecoration(
-                        color: isSelected ? AppTheme.goldPrimary.withOpacity(0.1) : Colors.white.withOpacity(0.03),
+                        color: isSelected
+                            ? AppTheme.goldPrimary.withOpacity(0.1)
+                            : Colors.white.withOpacity(0.03),
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: isSelected ? AppTheme.goldPrimary : Colors.white10, width: 2),
+                        border: Border.all(
+                            color: isSelected
+                                ? AppTheme.goldPrimary
+                                : Colors.white10,
+                            width: 2),
                       ),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -536,7 +574,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           _pychessPreview(s),
                           const SizedBox(height: 10),
                           Text(_cap(displayName),
-                              style: GoogleFonts.fredoka(color: isSelected ? AppTheme.goldPrimary : AppTheme.textSecondary, fontSize: 11, fontWeight: FontWeight.bold),
+                              style: GoogleFonts.fredoka(
+                                  color: isSelected
+                                      ? AppTheme.goldPrimary
+                                      : AppTheme.textSecondary,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold),
                               textAlign: TextAlign.center,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis),

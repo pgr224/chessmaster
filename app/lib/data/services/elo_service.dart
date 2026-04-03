@@ -1,8 +1,8 @@
 /// ELO Rating calculation service for ranked play.
 class EloService {
-  static const int kFactorNewbie = 40;     // Under 30 games
-  static const int kFactorRegular = 20;    // 30+ games, under 2400 rating
-  static const int kFactorMaster = 10;     // 2400+ rating
+  static const int kFactorNewbie = 40; // Under 30 games
+  static const int kFactorRegular = 20; // 30+ games, under 2400 rating
+  static const int kFactorMaster = 10; // 2400+ rating
 
   /// Calculate new ELO ratings for both players after a game.
   /// [score] is 1.0 for a win, 0.5 for a draw, 0.0 for a loss (from player1's perspective).

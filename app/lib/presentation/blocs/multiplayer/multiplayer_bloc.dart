@@ -442,7 +442,8 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
         emit(state.copyWith(lobbyNotice: null, challengerId: null)));
 
     on<MpXpBroadcastRequestEvent>((event, emit) {
-      final requests = List<Map<String, dynamic>>.from(state.xpBroadcastRequests);
+      final requests =
+          List<Map<String, dynamic>>.from(state.xpBroadcastRequests);
       requests.add({
         'userId': event.userId,
         'username': event.username,
@@ -493,7 +494,9 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
         final data = msg['data'] as Map;
         add(MpGameFoundEvent(
           data['gameId']?.toString() ?? '',
-          (data['color']?.toString() == 'black') ? PieceColor.black : PieceColor.white,
+          (data['color']?.toString() == 'black')
+              ? PieceColor.black
+              : PieceColor.white,
           data['opponentName']?.toString() ?? 'Unknown',
           mode: data['mode']?.toString(),
           timeControl: data['timeControl']?.toString(),

@@ -106,8 +106,7 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(22)),
                           elevation: 10,
-                          shadowColor:
-                              AppTheme.accentCyan.withOpacity(0.5),
+                          shadowColor: AppTheme.accentCyan.withOpacity(0.5),
                         ),
                         icon: const Icon(Icons.play_arrow_rounded, size: 34),
                         label: Text(
@@ -472,7 +471,6 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
       }).toList()),
     );
   }
-
 
   void _startGame() {
     final useCustomColors = _playerColor == 'custom';

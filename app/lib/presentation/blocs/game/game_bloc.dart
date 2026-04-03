@@ -524,7 +524,7 @@ class GameState extends Equatable {
           ? null
           : (tutorialMessage ?? this.tutorialMessage),
       puzzle: puzzle ?? this.puzzle,
-        parsedPuzzleMoves: parsedPuzzleMoves ?? this.parsedPuzzleMoves,
+      parsedPuzzleMoves: parsedPuzzleMoves ?? this.parsedPuzzleMoves,
       puzzleStep: puzzleStep ?? this.puzzleStep,
       isPuzzleHintUsed: isPuzzleHintUsed ?? this.isPuzzleHintUsed,
       mpUndosUsed: mpUndosUsed ?? this.mpUndosUsed,
@@ -545,8 +545,8 @@ class GameState extends Equatable {
           clearCoachMessage ? null : (coachMessage ?? this.coachMessage),
       engineError: clearEngineError ? null : (engineError ?? this.engineError),
       showMiniLesson: showMiniLesson ?? this.showMiniLesson,
-        lastAIMoveSource: lastAIMoveSource ?? this.lastAIMoveSource,
-        aiMoveSourceHistory: aiMoveSourceHistory ?? this.aiMoveSourceHistory,
+      lastAIMoveSource: lastAIMoveSource ?? this.lastAIMoveSource,
+      aiMoveSourceHistory: aiMoveSourceHistory ?? this.aiMoveSourceHistory,
       coachFeedback:
           clearCoachFeedback ? null : (coachFeedback ?? this.coachFeedback),
       activeHint: clearActiveHint ? null : (activeHint ?? this.activeHint),
@@ -560,8 +560,9 @@ class GameState extends Equatable {
           lastCorrectPuzzleMove ?? this.lastCorrectPuzzleMove,
       showPuzzleCelebration:
           showPuzzleCelebration ?? this.showPuzzleCelebration,
-      puzzleExplanation:
-          clearExplanation ? null : (puzzleExplanation ?? this.puzzleExplanation),
+      puzzleExplanation: clearExplanation
+          ? null
+          : (puzzleExplanation ?? this.puzzleExplanation),
       totalPuzzleXP: totalPuzzleXP ?? this.totalPuzzleXP,
       puzzleGaveUp: puzzleGaveUp ?? this.puzzleGaveUp,
       coachMove: clearCoachMove ? null : (coachMove ?? this.coachMove),
@@ -780,15 +781,14 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     final playerColor =
         config.playerColor == 'black' ? PieceColor.black : PieceColor.white;
 
-    final parsedPuzzleMoves = (config.puzzle?.moves ?? const <PuzzleMove>[])
-        .map<Move?>((m) {
-          try {
-            return Move.fromAlgebraic(m.uciMove);
-          } catch (_) {
-            return null;
-          }
-        })
-        .toList(growable: false);
+    final parsedPuzzleMoves =
+        (config.puzzle?.moves ?? const <PuzzleMove>[]).map<Move?>((m) {
+      try {
+        return Move.fromAlgebraic(m.uciMove);
+      } catch (_) {
+        return null;
+      }
+    }).toList(growable: false);
 
     final initialState = GameState(
       board: _engine.board,
@@ -1219,8 +1219,9 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     ));
 
     // Update Evaluation asynchronously to not block the UI
-    final isPracticeOrSingle =
-        state.mode == GameMode.singlePlayer || state.mode == GameMode.practice || state.mode == GameMode.twoPlayer;
+    final isPracticeOrSingle = state.mode == GameMode.singlePlayer ||
+        state.mode == GameMode.practice ||
+        state.mode == GameMode.twoPlayer;
     final isMultiplayer = state.mode == GameMode.multiplayer;
     final isPuzzle = state.mode == GameMode.puzzle;
 
@@ -1282,14 +1283,20 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     // a) It's a User Move (not Computer move)
     // b) Mode is Practice/SinglePlayer
     // c) Mode is Multiplayer/2-Player AND enabled in settings
-    
-    final justMovedColor = state.currentTurn == PieceColor.white ? PieceColor.black : PieceColor.white;
-    final isHumanMove = (state.playerColor == null) || (justMovedColor == state.playerColor);
+
+    final justMovedColor = state.currentTurn == PieceColor.white
+        ? PieceColor.black
+        : PieceColor.white;
+    final isHumanMove =
+        (state.playerColor == null) || (justMovedColor == state.playerColor);
 
     bool shouldAnalyze = isHumanMove;
-    if (state.mode == GameMode.multiplayer || state.mode == GameMode.twoPlayer) {
-      shouldAnalyze = isHumanMove && state.coachSettings.enableMultiplayerCoaching;
-    } else if (state.mode == GameMode.singlePlayer || state.mode == GameMode.practice) {
+    if (state.mode == GameMode.multiplayer ||
+        state.mode == GameMode.twoPlayer) {
+      shouldAnalyze =
+          isHumanMove && state.coachSettings.enableMultiplayerCoaching;
+    } else if (state.mode == GameMode.singlePlayer ||
+        state.mode == GameMode.practice) {
       shouldAnalyze = isHumanMove;
     } else {
       shouldAnalyze = false;
@@ -1314,7 +1321,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
             engineBeforeMove: engineBefore,
             playedMove: move,
             engineAfterMove: _engine,
-            externalAnalyze: (fen) => _engineController.analyzeMoveBackground(fen),
+            externalAnalyze: (fen) =>
+                _engineController.analyzeMoveBackground(fen),
           );
         } else {
           feedback = await _coachController.evaluateMove(
@@ -1400,7 +1408,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
           if (!isClosed && state.coachFeedback == feedback) {
             add(GameUpdatePersonalityEvent(
               personality: state.activePersonality ?? AIPersonality.aggressive,
-              message: '', 
+              message: '',
             ));
             emit(state.copyWith(clearCoachFeedback: true));
           }
@@ -1518,8 +1526,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         final nextIdx = state.puzzleStep + 1;
         if (nextIdx < 0 || nextIdx >= puzzleMoves.length) {
           emit(state.copyWith(
-            tutorialMessage: 'Puzzle complete! Loading next challenge...'
-          ));
+              tutorialMessage: 'Puzzle complete! Loading next challenge...'));
           add(const GamePuzzleNextEvent());
           return;
         }
@@ -1607,7 +1614,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
                     state.playerColor == PieceColor.black);
             final isDraw = state.result == GameResult.draw;
             final hasWinner = state.result == GameResult.whiteWins ||
-              state.result == GameResult.blackWins;
+                state.result == GameResult.blackWins;
             final isLoss = !isWin && !isDraw && hasWinner;
 
             // ── XP & REWARDS CALCULATION (Robust Engine) ──
@@ -1658,7 +1665,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
                   _ => 600,
                 };
               } else if (state.mode == GameMode.multiplayer) {
-                opponentElo = playerElo; // Simplified for now, or fetch from state if available
+                opponentElo =
+                    playerElo; // Simplified for now, or fetch from state if available
               }
 
               if (opponentElo != null) {
@@ -1678,7 +1686,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
                 // Assuming opponentName is the ID for ID matching, or fetching opponent info
                 // We'll treat opponentId as a separate field if needed, but for now we'll match on bountyUserId
                 xpDelta = (xpDelta * 1.5).round();
-                mapUpdates['bounty_claimed'] = true; 
+                mapUpdates['bounty_claimed'] = true;
               }
 
               // 5. Streak Multiplier (10% per streak point, max 2.0x)
@@ -1687,14 +1695,16 @@ class GameBloc extends Bloc<GameEvent, GameState> {
 
               // Enhanced AI Streak Multiplier (+10% per streak point in AI mode, max 10 wins total 2.0x)
               // Since the base already covers 10% per point, we just ensure it stays consistent
-              // Or if the base was different, we'd adjust here. 
+              // Or if the base was different, we'd adjust here.
               // The user specified +10% per win, which matches the base (1.0 + streak * 0.1).
-              
+
               xpDelta = (xpDelta * streakMultiplier).round();
 
               mapUpdates['wins'] = 1;
-              if (state.mode == GameMode.singlePlayer) mapUpdates['ai_wins'] = 1;
-              if (state.mode == GameMode.multiplayer) mapUpdates['multiplayer_wins'] = 1;
+              if (state.mode == GameMode.singlePlayer)
+                mapUpdates['ai_wins'] = 1;
+              if (state.mode == GameMode.multiplayer)
+                mapUpdates['multiplayer_wins'] = 1;
             } else if (isLoss) {
               xpDelta = -20;
               mapUpdates['losses'] = 1;
@@ -1722,7 +1732,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
 
               // Multiplayer: assume opponent exists in state or similar rating
               final opponentElo = currentElo; // Default fallback
-              
+
               final result = EloService.calculateNewRatings(
                 player1Rating: currentElo,
                 player2Rating: opponentElo,
@@ -1730,7 +1740,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
                 player1Games: playerGames,
                 player2Games: 30, // Opponent assumed established
               );
-              
+
               final newElo = result.$1;
               eloChange = (newElo - currentElo).toInt();
 
@@ -1753,15 +1763,17 @@ class GameBloc extends Bloc<GameEvent, GameState> {
                   state.playerColor == PieceColor.black);
 
           _achievementService.evaluatePostGame(state, updatedUser.stats);
-          
+
           // Trigger Mission updates
           _missionService.updateProgress('daily_games');
           if (state.mode == GameMode.multiplayer && isWin) {
             _missionService.updateProgress('online_win');
           }
           if (isWin) {
-            _missionService.updateProgress('streak_hunter', 
-              delta: updatedUser.stats.currentStreak >= 3 ? 3 : 0); // Simplified for now
+            _missionService.updateProgress('streak_hunter',
+                delta: updatedUser.stats.currentStreak >= 3
+                    ? 3
+                    : 0); // Simplified for now
           }
         }
 
@@ -1829,9 +1841,9 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         // BLUNDER DETECTION LOGIC
         // We compare what the user played vs what the engine thinks was best.
         // A "Blunder" is roughly a 300 centipawn drop in the player's favor.
-        
+
         String response = "Nice move! But check this out... ⚡";
-        
+
         // Find if user move was among candidates to get its score
         final candidates = res['candidates'] as List<dynamic>? ?? [];
         final userMoveObj = candidates.firstWhere(
@@ -1852,10 +1864,11 @@ class GameBloc extends Bloc<GameEvent, GameState> {
             response = "Wow! You're playing like a grandmaster! 🌟";
             PersonalityEngine().forcePersonality(AIPersonality.defensive);
           } else {
-             // Standard response or personality switch
-             if (math.Random().nextDouble() > 0.7) {
-                response = PersonalityEngine().currentPersonality.getRandomMessage(null);
-             }
+            // Standard response or personality switch
+            if (math.Random().nextDouble() > 0.7) {
+              response =
+                  PersonalityEngine().currentPersonality.getRandomMessage(null);
+            }
           }
         } else {
           // If move not in candidates, it's likely suboptimal or a blunder
@@ -1894,7 +1907,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       final elapsed = DateTime.now().difference(state.lastMoveTimestamp!);
       if (elapsed.inSeconds >= 5) {
         emit(state.copyWith(
-          tutorialMessage: "⚠️ Thinking time passed! Cannot take back moves after 5 seconds.",
+          tutorialMessage:
+              "⚠️ Thinking time passed! Cannot take back moves after 5 seconds.",
         ));
         return;
       }
@@ -1924,7 +1938,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     }
 
     // Undo 2 moves if vs AI (Take back player's move + AI's response)
-    final isVsAI = state.mode == GameMode.singlePlayer || state.mode == GameMode.practice;
+    final isVsAI =
+        state.mode == GameMode.singlePlayer || state.mode == GameMode.practice;
     if (!isVsAI) return;
 
     if (_engine.moveHistory.isEmpty) return;
@@ -1963,7 +1978,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     for (int i = 0; i < undoCount; i++) {
       if (_engine.moveHistory.isNotEmpty) _engine.undoMove();
     }
-    
+
     emit(state.copyWith(
       board: _engine.board,
       currentTurn: _engine.currentTurn,
@@ -2064,7 +2079,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       return;
     }
 
-    final isLocalMode = state.mode == GameMode.practice || state.mode == GameMode.twoPlayer;
+    final isLocalMode =
+        state.mode == GameMode.practice || state.mode == GameMode.twoPlayer;
     if (!isLocalMode && state.hintsRemaining <= 0) return;
     // Allow hints in local modes regardless of 'player side'
     if (!isLocalMode && !state.isPlayerTurn) return;
@@ -2072,7 +2088,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     // ── UPGRADE: If hint already showing, bump to next level ─────────────────
     if (state.activeHint != null) {
       final hint = state.activeHint!;
-      if (!hint.canUpgrade) return; // Already at level 3, nothing more to reveal
+      if (!hint.canUpgrade)
+        return; // Already at level 3, nothing more to reveal
 
       final nextLevel = hint.currentLevel + 1;
       final isPractice = state.mode == GameMode.practice;
@@ -2140,7 +2157,6 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       }
     }
   }
-
 
   void _onDismissMiniLesson(
       GameDismissMiniLessonEvent event, Emitter<GameState> emit) {
@@ -2367,8 +2383,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
 
     final aiRequestEpoch = ++_aiRequestEpoch;
     emit(state.copyWith(
-        isAIThinking: true,
-        aiMessage: _engineController.aiMessage, // Set initial thinking message
+      isAIThinking: true,
+      aiMessage: _engineController.aiMessage, // Set initial thinking message
     ));
 
     // UI Delay for "human feel"
@@ -2393,14 +2409,16 @@ class GameBloc extends Bloc<GameEvent, GameState> {
 
         try {
           final aiMove = Move.fromAlgebraic(moveStr);
-          final legal = _engine.legalMovesFrom(aiMove.from).any((m) =>
-              m.to == aiMove.to && m.promotion == aiMove.promotion);
+          final legal = _engine
+              .legalMovesFrom(aiMove.from)
+              .any((m) => m.to == aiMove.to && m.promotion == aiMove.promotion);
 
           if (legal) {
             final source = _engineController.lastMoveSource;
             emit(state.copyWith(
               lastAIMoveSource: source,
-              aiMoveSourceHistory: _appendAISource(state.aiMoveSourceHistory, source),
+              aiMoveSourceHistory:
+                  _appendAISource(state.aiMoveSourceHistory, source),
             ));
             add(GameMakeMoveEvent(aiMove.from, aiMove.to,
                 promotion: aiMove.promotion));
@@ -2417,7 +2435,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
           const source = 'dart-fallback';
           emit(state.copyWith(
             lastAIMoveSource: source,
-            aiMoveSourceHistory: _appendAISource(state.aiMoveSourceHistory, source),
+            aiMoveSourceHistory:
+                _appendAISource(state.aiMoveSourceHistory, source),
           ));
           add(GameMakeMoveEvent(fm.from, fm.to, promotion: fm.promotion));
         } else {
@@ -2436,7 +2455,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
           const source = 'dart-fallback';
           emit(state.copyWith(
             lastAIMoveSource: source,
-            aiMoveSourceHistory: _appendAISource(state.aiMoveSourceHistory, source),
+            aiMoveSourceHistory:
+                _appendAISource(state.aiMoveSourceHistory, source),
           ));
           add(GameMakeMoveEvent(fm.from, fm.to, promotion: fm.promotion));
         } else {

@@ -115,16 +115,13 @@ class _TutorialScreenState extends State<TutorialScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
         decoration: BoxDecoration(
           gradient: isSelected
-              ? LinearGradient(colors: [
-                  color.withOpacity(0.2),
-                  color.withOpacity(0.05)
-                ])
+              ? LinearGradient(
+                  colors: [color.withOpacity(0.2), color.withOpacity(0.05)])
               : null,
           color: !isSelected ? AppTheme.surface.withOpacity(0.5) : null,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color:
-                isSelected ? color : AppTheme.textMuted.withOpacity(0.2),
+            color: isSelected ? color : AppTheme.textMuted.withOpacity(0.2),
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -160,8 +157,8 @@ class _TutorialScreenState extends State<TutorialScreen> {
         decoration: BoxDecoration(
           gradient: AppTheme.cardGradient,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-              color: difficultyColor.withOpacity(0.15), width: 1.5),
+          border:
+              Border.all(color: difficultyColor.withOpacity(0.15), width: 1.5),
           boxShadow: [
             BoxShadow(
                 color: difficultyColor.withOpacity(0.08),

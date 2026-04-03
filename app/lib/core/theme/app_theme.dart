@@ -171,16 +171,12 @@ class AppTheme {
   // ═══════════════════════════════════════════
   static List<BoxShadow> goldShadow = [
     BoxShadow(
-        color: goldPrimary.withOpacity(0.4),
-        blurRadius: 24,
-        spreadRadius: 4),
+        color: goldPrimary.withOpacity(0.4), blurRadius: 24, spreadRadius: 4),
   ];
 
   static List<BoxShadow> cyanShadow = [
     BoxShadow(
-        color: accentCyan.withOpacity(0.3),
-        blurRadius: 20,
-        spreadRadius: 2),
+        color: accentCyan.withOpacity(0.3), blurRadius: 20, spreadRadius: 2),
   ];
 
   static List<BoxShadow> cardShadow = [
@@ -193,9 +189,7 @@ class AppTheme {
 
   static List<BoxShadow> pinkShadow = [
     BoxShadow(
-        color: accentPurple.withOpacity(0.3),
-        blurRadius: 20,
-        spreadRadius: 2),
+        color: accentPurple.withOpacity(0.3), blurRadius: 20, spreadRadius: 2),
   ];
 
   // ═══════════════════════════════════════════

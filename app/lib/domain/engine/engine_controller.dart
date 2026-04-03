@@ -49,7 +49,8 @@ class AIEngineController {
 
   /// Current AI Personality Message (for UI thinking bubble)
   /// Current AI Personality Message (for UI thinking bubble)
-  String get aiMessage => _latestThinkingMessage ?? PersonalityEngine().generateNewMessage();
+  String get aiMessage =>
+      _latestThinkingMessage ?? PersonalityEngine().generateNewMessage();
   String? _latestThinkingMessage;
 
   void setThinkingMessage(String msg) => _latestThinkingMessage = msg;
@@ -105,12 +106,13 @@ class AIEngineController {
       // Simple call for lower difficulties
       final Map<String, dynamic>? res =
           await js_bridge.jsEngineGetBestMove(fen).timeout(
-            Duration(milliseconds: maxTime),
-            onTimeout: () => null,
-          );
+                Duration(milliseconds: maxTime),
+                onTimeout: () => null,
+              );
       resultMove = res?['move'] as String?;
       if (resultMove != null) {
-        _lastMoveSource = _normalizeMoveSource(js_bridge.jsEngineGetActiveEngine());
+        _lastMoveSource =
+            _normalizeMoveSource(js_bridge.jsEngineGetActiveEngine());
       }
 
       if (resultMove == null && engine != null) {
@@ -175,7 +177,8 @@ class AIEngineController {
         candidates = List<MoveCandidate>.from(rawCandidates);
         if (candidates.isNotEmpty) {
           bestFound = candidates.first.uci;
-          _lastMoveSource = _normalizeMoveSource(js_bridge.jsEngineGetActiveEngine());
+          _lastMoveSource =
+              _normalizeMoveSource(js_bridge.jsEngineGetActiveEngine());
         }
       } else {
         final res =
@@ -207,7 +210,8 @@ class AIEngineController {
       String move = _pickSmartMove(candidates);
 
       if (_lastMoveSource == 'none') {
-        _lastMoveSource = _normalizeMoveSource(js_bridge.jsEngineGetActiveEngine());
+        _lastMoveSource =
+            _normalizeMoveSource(js_bridge.jsEngineGetActiveEngine());
       }
 
       return move;
@@ -289,7 +293,8 @@ class AIEngineController {
       if (piece.type == PieceType.king && m.capturedPiece == null) score -= 12;
 
       // Anti-repeat: avoid moving same source square if alternatives exist.
-      if (_lastFallbackFrom != null && m.from.toAlgebraic() == _lastFallbackFrom) {
+      if (_lastFallbackFrom != null &&
+          m.from.toAlgebraic() == _lastFallbackFrom) {
         score -= 30;
       }
 
@@ -317,21 +322,29 @@ class AIEngineController {
       final clone = ChessEngine.fromFEN(engine.toFEN());
       final applied = clone.makeMove(Move.fromAlgebraic(move.toAlgebraic()));
       if (!applied) return false;
-      return clone.status == GameStatus.check || clone.status == GameStatus.checkmate;
+      return clone.status == GameStatus.check ||
+          clone.status == GameStatus.checkmate;
     } catch (_) {
       return false;
     }
   }
 
   double _centerBonus(Square sq) {
-    final center = const [Square(3, 3), Square(4, 3), Square(3, 4), Square(4, 4)];
+    final center = const [
+      Square(3, 3),
+      Square(4, 3),
+      Square(3, 4),
+      Square(4, 4)
+    ];
     if (center.contains(sq)) return 2.0;
-    final nearCenter = (sq.file >= 2 && sq.file <= 5 && sq.rank >= 2 && sq.rank <= 5);
+    final nearCenter =
+        (sq.file >= 2 && sq.file <= 5 && sq.rank >= 2 && sq.rank <= 5);
     return nearCenter ? 1.0 : 0.0;
   }
 
   bool _isDevelopingMove(ChessPiece piece, Move move) {
-    if (piece.type != PieceType.knight && piece.type != PieceType.bishop) return false;
+    if (piece.type != PieceType.knight && piece.type != PieceType.bishop)
+      return false;
     final fromRank = move.from.rank;
     final toRank = move.to.rank;
     if (piece.color == PieceColor.white) return fromRank <= 1 && toRank >= 2;

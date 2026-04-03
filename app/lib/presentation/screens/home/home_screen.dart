@@ -244,10 +244,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildLevelProgress(UserModel? user) {
     if (user == null) return const SizedBox.shrink();
-    
+
     final level = user.level;
     final progress = user.levelProgress;
-    
+
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -264,7 +264,8 @@ class _HomeScreenState extends State<HomeScreen> {
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       gradient: AppTheme.rainbowGradient,
                       borderRadius: BorderRadius.circular(12),
@@ -316,7 +317,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 duration: 1.seconds,
                 curve: Curves.easeOutCubic,
                 height: 8,
-                width: MediaQuery.of(context).size.width * (progress.clamp(0.0, 1.0) * 0.85),
+                width: MediaQuery.of(context).size.width *
+                    (progress.clamp(0.0, 1.0) * 0.85),
                 decoration: BoxDecoration(
                   gradient: AppTheme.rainbowGradient,
                   borderRadius: BorderRadius.circular(10),
@@ -349,7 +351,8 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _statItem('${user?.stats.wins ?? 0}', '🏆 Wins', AppTheme.goldPrimary),
+          _statItem(
+              '${user?.stats.wins ?? 0}', '🏆 Wins', AppTheme.goldPrimary),
           _divider(),
           _statItem(
             '${user?.stats.winRate.toStringAsFixed(0) ?? 0}%',
@@ -362,10 +365,7 @@ class _HomeScreenState extends State<HomeScreen> {
               '${EloService.getRankEmoji(user?.stats.eloRating ?? 1200)} Rating',
               AppTheme.lavender),
           _divider(),
-          _statItem(
-              '${user?.xp ?? 0}',
-              '✨ XP',
-              AppTheme.goldPrimary),
+          _statItem('${user?.xp ?? 0}', '✨ XP', AppTheme.goldPrimary),
         ],
       ),
     ).animate().fadeIn(delay: 150.ms).slideY(begin: 0.1);
@@ -548,7 +548,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     Clipboard.setData(ClipboardData(text: url));
                     Navigator.pop(ctx);
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Link copied to clipboard!')),
+                      const SnackBar(
+                          content: Text('Link copied to clipboard!')),
                     );
                   },
                 ),
@@ -704,8 +705,7 @@ class _HomeScreenState extends State<HomeScreen> {
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: AppTheme.lavender.withOpacity(0.4)),
         boxShadow: [
-          BoxShadow(
-              color: AppTheme.lavender.withOpacity(0.15), blurRadius: 20),
+          BoxShadow(color: AppTheme.lavender.withOpacity(0.15), blurRadius: 20),
         ],
       ),
       child: Row(

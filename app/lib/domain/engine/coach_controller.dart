@@ -380,9 +380,9 @@ class CoachController {
       final transition = parts.isNotEmpty ? ' Instead, ' : 'A better idea was ';
       if (level == CoachingLevel.beginner) {
         final toSquare = bestMove.length >= 4 ? bestMove.substring(2, 4) : 'the target square';
-        parts.add('`$1looking at square $toSquare would have been better.');
+        parts.add('Looking at square $toSquare would have been better.');
       } else {
-        parts.add('`$1playing $bestMove was the winning line.');
+        parts.add('Playing $bestMove was the winning line.');
       }
     }
 
@@ -503,29 +503,29 @@ class CoachController {
     final prefix = isCritical ? "⚡ This position is critical! " : "";
     return switch (pattern) {
       TacticalPattern.checkmate =>
-        "`$1There is a forced checkmate available in this position. Find the move that ends the game!",
+        "${prefix}There is a forced checkmate available in this position. Find the move that ends the game!",
       TacticalPattern.materialGain =>
-        "`$1You have an opportunity to win material. Look for a capture that gains you something for free or in trade.",
+        "${prefix}You have an opportunity to win material. Look for a capture that gains you something for free or in trade.",
       TacticalPattern.fork =>
-        "`$1One of your pieces can attack two of their pieces at the same time — a fork! Look for a move that puts two targets under fire.",
+        "${prefix}One of your pieces can attack two of their pieces at the same time — a fork! Look for a move that puts two targets under fire.",
       TacticalPattern.pin =>
-        "`$1You can pin one of their pieces to a more valuable piece behind it, restricting its movement.",
+        "${prefix}You can pin one of their pieces to a more valuable piece behind it, restricting its movement.",
       TacticalPattern.skewer =>
-        "`$1A skewer tactic is available — attack a valuable piece that must move, exposing a weaker piece behind it.",
+        "${prefix}A skewer tactic is available — attack a valuable piece that must move, exposing a weaker piece behind it.",
       TacticalPattern.discoveredAttack =>
-        "`$1Moving one piece will reveal a powerful attack from another. Think about which piece is blocking your battery.",
+        "${prefix}Moving one piece will reveal a powerful attack from another. Think about which piece is blocking your battery.",
       TacticalPattern.doubleCheck =>
-        "`$1A double check is possible — two pieces giving check simultaneously, impossible to block!",
+        "${prefix}A double check is possible — two pieces giving check simultaneously, impossible to block!",
       TacticalPattern.pawnPromotion =>
-        "`$1One of your pawns is very close to promoting to a queen. Push it forward!",
+        "${prefix}One of your pawns is very close to promoting to a queen. Push it forward!",
       TacticalPattern.kingSafety =>
-        "`$1Your king's safety should be your priority right now. Defend or castle.",
+        "${prefix}Your king's safety should be your priority right now. Defend or castle.",
       TacticalPattern.centerControl =>
-        "`$1Controlling the center gives you a strategic advantage. Look for a move that dominates the d4-d5-e4-e5 area.",
+        "${prefix}Controlling the center gives you a strategic advantage. Look for a move that dominates the d4-d5-e4-e5 area.",
       TacticalPattern.development =>
-        "`$1Get your pieces into the game! An undeveloped piece is a wasted piece.",
+        "${prefix}Get your pieces into the game! An undeveloped piece is a wasted piece.",
       _ =>
-        "`$1Look for the most forcing move — checks, captures, and threats, in that order.",
+        "${prefix}Look for the most forcing move — checks, captures, and threats, in that order.",
     };
   }
 

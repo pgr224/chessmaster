@@ -50,9 +50,9 @@ class _CoachOverlayWidgetState extends State<CoachOverlayWidget> {
       // Base: 4s. Add 1s for every 10 words in explanation for psychological comfort.
       int wordCount = widget.feedback!.explanation?.split(' ').length ?? 0;
       int extraSeconds = (wordCount / 10).floor();
-      
+
       final duration = Duration(seconds: (4 + extraSeconds).clamp(4, 10));
-      
+
       _autoDismissTimer = Timer(duration, () {
         if (mounted) widget.onDismiss?.call();
       });
@@ -72,7 +72,7 @@ class _CoachOverlayWidgetState extends State<CoachOverlayWidget> {
 
     return Positioned(
       // Positioning adapted to avoid obstructing central gameboard area
-      top: MediaQuery.of(context).size.height * 0.12, 
+      top: MediaQuery.of(context).size.height * 0.12,
       left: 16,
       right: 16,
       child: Center(
@@ -194,8 +194,8 @@ class _CoachOverlayWidgetState extends State<CoachOverlayWidget> {
         .then()
         .shimmer(
           duration: 800.ms,
-          color: _classificationColor(feedback.classification)
-              .withOpacity(0.15),
+          color:
+              _classificationColor(feedback.classification).withOpacity(0.15),
         );
   }
 
@@ -410,10 +410,13 @@ class HintOverlayWidget extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                   height: 1.4,
                 ),
-              ).animate(key: ValueKey(hint.currentLevel)).fadeIn().slideX(begin: 0.1),
-              
+              )
+                  .animate(key: ValueKey(hint.currentLevel))
+                  .fadeIn()
+                  .slideX(begin: 0.1),
+
               const SizedBox(height: 16),
-              
+
               // Actions
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -421,7 +424,8 @@ class HintOverlayWidget extends StatelessWidget {
                   if (hint.currentLevel < 4)
                     TextButton.icon(
                       onPressed: onNextLevel,
-                      icon: const Icon(Icons.add_circle_outline_rounded, size: 18),
+                      icon: const Icon(Icons.add_circle_outline_rounded,
+                          size: 18),
                       label: Text(
                         'NEED MORE?',
                         style: GoogleFonts.fredoka(fontWeight: FontWeight.w700),
@@ -442,12 +446,14 @@ class HintOverlayWidget extends StatelessWidget {
                     ).animate().shimmer(),
                 ],
               ),
-              
+
               // Pattern badge (only for levels 1 & 4)
-              if (hint.pattern != TacticalPattern.none && (hint.currentLevel == 1 || hint.currentLevel == 4)) ...[
+              if (hint.pattern != TacticalPattern.none &&
+                  (hint.currentLevel == 1 || hint.currentLevel == 4)) ...[
                 const SizedBox(height: 12),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: AppTheme.goldPrimary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10),
@@ -458,7 +464,8 @@ class HintOverlayWidget extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(hint.pattern.emoji, style: const TextStyle(fontSize: 14)),
+                      Text(hint.pattern.emoji,
+                          style: const TextStyle(fontSize: 14)),
                       const SizedBox(width: 8),
                       Text(
                         hint.pattern.label,
@@ -476,7 +483,10 @@ class HintOverlayWidget extends StatelessWidget {
           ),
         )
             .animate()
-            .scale(begin: const Offset(0.95, 0.95), duration: 250.ms, curve: Curves.easeOutBack)
+            .scale(
+                begin: const Offset(0.95, 0.95),
+                duration: 250.ms,
+                curve: Curves.easeOutBack)
             .fadeIn(duration: 200.ms),
       ),
     );

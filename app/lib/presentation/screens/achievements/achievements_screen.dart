@@ -81,8 +81,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
                           gradient: AppTheme.cardGradient,
                           borderRadius: BorderRadius.circular(24),
                           border: Border.all(
-                              color:
-                                  AppTheme.goldPrimary.withOpacity(0.25)),
+                              color: AppTheme.goldPrimary.withOpacity(0.25)),
                           boxShadow: AppTheme.cardShadow,
                         ),
                         child: Column(
@@ -109,8 +108,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
                               borderRadius: BorderRadius.circular(6),
                               child: LinearProgressIndicator(
                                 value: unlocked / total,
-                                backgroundColor:
-                                    Colors.white.withOpacity(0.05),
+                                backgroundColor: Colors.white.withOpacity(0.05),
                                 valueColor: const AlwaysStoppedAnimation(
                                     AppTheme.goldPrimary),
                                 minHeight: 8,
@@ -295,9 +293,7 @@ class _AchievementCard extends StatelessWidget {
                     achievement.icon,
                     style: TextStyle(
                       fontSize: 26,
-                      color: isUnlocked
-                          ? null
-                          : Colors.white.withOpacity(0.3),
+                      color: isUnlocked ? null : Colors.white.withOpacity(0.3),
                     ),
                   ),
                 ),

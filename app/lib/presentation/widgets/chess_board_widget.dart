@@ -96,7 +96,8 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
                       if (widget.showCoordinates) _buildCoordinates(sqSize),
                       if (widget.isInteractive) _buildTapOverlay(sqSize),
                       if (widget.lastUndoPenaltySquare != null)
-                        _buildUndoPenalty(widget.lastUndoPenaltySquare!, sqSize),
+                        _buildUndoPenalty(
+                            widget.lastUndoPenaltySquare!, sqSize),
                     ],
                   ),
                 ),
@@ -144,8 +145,8 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
         // Hint highlight
         if (widget.hintMove != null) ...[
           _highlight(widget.hintMove!.from, sqSize, AppTheme.hintSq),
-          _highlight(widget.hintMove!.to, sqSize,
-              AppTheme.hintSq.withOpacity(0.9)),
+          _highlight(
+              widget.hintMove!.to, sqSize, AppTheme.hintSq.withOpacity(0.9)),
         ],
         // Selected piece
         if (widget.selectedSquare != null)
@@ -162,10 +163,10 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
         ],
         // Pre Move Glow
         if (widget.preMove != null) ...[
-          _highlight(widget.preMove!.from, sqSize,
-              Colors.redAccent.withOpacity(0.6)),
-          _highlight(widget.preMove!.to, sqSize,
-              Colors.redAccent.withOpacity(0.6)),
+          _highlight(
+              widget.preMove!.from, sqSize, Colors.redAccent.withOpacity(0.6)),
+          _highlight(
+              widget.preMove!.to, sqSize, Colors.redAccent.withOpacity(0.6)),
         ],
       ],
     );
@@ -288,7 +289,8 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
       )
           .animate()
           .fadeIn(duration: 200.ms)
-          .slideY(begin: 0.5, end: -0.5, duration: 800.ms, curve: Curves.easeOut)
+          .slideY(
+              begin: 0.5, end: -0.5, duration: 800.ms, curve: Curves.easeOut)
           .fadeOut(delay: 1000.ms, duration: 400.ms),
     );
   }

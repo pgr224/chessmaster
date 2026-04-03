@@ -107,7 +107,8 @@ class GameRepository {
           await _dio.post('/api/game/complete', data: payload);
           return;
         } catch (retryError) {
-          print('[GameRepository] Server sync failed (complete retry): $retryError');
+          print(
+              '[GameRepository] Server sync failed (complete retry): $retryError');
         }
       }
 

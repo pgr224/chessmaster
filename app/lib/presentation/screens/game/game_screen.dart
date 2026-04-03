@@ -27,7 +27,7 @@ import '../../widgets/promotion_dialog.dart';
 import '../../widgets/game_over_overlay.dart';
 import '../../widgets/player_info_widget.dart';
 
-import '../../widgets/coach_interaction_widget.dart';
+import '../../widgets/reacting_robot_widget.dart';
 import '../../widgets/timer_widget.dart';
 import '../../widgets/game_rules_dialog.dart';
 import '../../widgets/eval_bar_widget.dart';
@@ -47,7 +47,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   late ConfettiController _confettiController;
   late AnimationController _checkAnimController;
   final AudioPlayer _audioPlayer = AudioPlayer();
-  Offset _chatPosition = const Offset(16, 450); // Initial floating chat position
+  Offset _chatPosition =
+      const Offset(16, 450); // Initial floating chat position
   bool _isChatDragging = false;
 
   @override
@@ -261,8 +262,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               decoration: BoxDecoration(
                 color: AppTheme.navyCard.withOpacity(0.95),
                 borderRadius: BorderRadius.circular(24),
-                border:
-                    Border.all(color: AppTheme.skyBlue.withOpacity(0.3)),
+                border: Border.all(color: AppTheme.skyBlue.withOpacity(0.3)),
                 boxShadow: [
                   BoxShadow(
                       color: Colors.black.withOpacity(0.4),
@@ -289,14 +289,14 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                           onTap: () => setState(() => _showMoves = false)),
                     ],
                   ),
-                   const Divider(color: Colors.white10, height: 20),
-                   Expanded(
-                     child: MoveHistoryWidget(
-                       moves: state.moveHistory,
-                       currentFen: state.currentFEN,
-                     ),
-                   ),
-                 ],
+                  const Divider(color: Colors.white10, height: 20),
+                  Expanded(
+                    child: MoveHistoryWidget(
+                      moves: state.moveHistory,
+                      currentFen: state.currentFEN,
+                    ),
+                  ),
+                ],
               ),
             )
                 .animate()
@@ -373,10 +373,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             .fadeIn(duration: 300.ms)
             .then()
             .fade(
-                begin: 1.0,
-                end: 0.4,
-                duration: 700.ms,
-                curve: Curves.easeInOut)
+                begin: 1.0, end: 0.4, duration: 700.ms, curve: Curves.easeInOut)
             .scale(
                 begin: const Offset(1.0, 1.0),
                 end: const Offset(1.06, 1.06),
@@ -811,8 +808,12 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             color: state.playerColor == PieceColor.white
                 ? PieceColor.black
                 : PieceColor.white,
-            avatarUrl: state.mode == GameMode.multiplayer ? mpState.opponentAvatarUrl : null,
-            localAvatar: state.mode == GameMode.multiplayer ? mpState.opponentLocalAvatar : null,
+            avatarUrl: state.mode == GameMode.multiplayer
+                ? mpState.opponentAvatarUrl
+                : null,
+            localAvatar: state.mode == GameMode.multiplayer
+                ? mpState.opponentLocalAvatar
+                : null,
           ),
           if (state.mode == GameMode.multiplayer) ...[
             const SizedBox(width: 12),
@@ -951,7 +952,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   if (!_isChatDragging)
                     IgnorePointer(
                       child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 250, maxHeight: 150),
+                        constraints:
+                            const BoxConstraints(maxWidth: 250, maxHeight: 150),
                         child: ListView.builder(
                           shrinkWrap: true,
                           itemCount: messages.length > 3 ? 3 : messages.length,
@@ -969,7 +971,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   const SizedBox(height: 8),
                   // The main drabbable bubble/handle
                   GestureDetector(
-                    onTap: () => _showChatHistory(context, mpState.chatMessages),
+                    onTap: () =>
+                        _showChatHistory(context, mpState.chatMessages),
                     child: Container(
                       width: 56,
                       height: 56,
@@ -987,9 +990,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                       child: Stack(
                         alignment: Alignment.center,
                         children: [
-                          const Icon(Icons.forum_rounded, color: AppTheme.midnight, size: 28),
+                          const Icon(Icons.forum_rounded,
+                              color: AppTheme.midnight, size: 28),
                           if (mpState.chatMessages.isNotEmpty)
-                             Positioned(
+                            Positioned(
                               top: 0,
                               right: 0,
                               child: Container(
@@ -998,10 +1002,14 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                   color: AppTheme.accentRed,
                                   shape: BoxShape.circle,
                                 ),
-                                constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                                constraints: const BoxConstraints(
+                                    minWidth: 18, minHeight: 18),
                                 child: Text(
                                   '${mpState.chatMessages.length}',
-                                  style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold),
                                   textAlign: TextAlign.center,
                                 ),
                               ),
@@ -1009,8 +1017,11 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                         ],
                       ),
                     ),
-                  ).animate(onPlay: (c) => c.repeat(reverse: true))
-                   .scale(begin: const Offset(1, 1), end: const Offset(1.05, 1.05), duration: 2.seconds, curve: Curves.easeInOut),
+                  ).animate(onPlay: (c) => c.repeat(reverse: true)).scale(
+                      begin: const Offset(1, 1),
+                      end: const Offset(1.05, 1.05),
+                      duration: 2.seconds,
+                      curve: Curves.easeInOut),
                 ],
               ),
             ),
@@ -1043,8 +1054,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: (isMe ? AppTheme.goldPrimary : Colors.white)
-              .withOpacity(0.15),
+          color: (isMe ? AppTheme.goldPrimary : Colors.white).withOpacity(0.15),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
               color: (isMe ? AppTheme.goldPrimary : Colors.white)
@@ -1058,7 +1068,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       ),
     );
   }
-
 
   Widget _buildPuzzleRushOverlay(GameState state) {
     return Positioned(
@@ -1098,8 +1107,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             decoration: BoxDecoration(
               color: AppTheme.navyCard,
               borderRadius: BorderRadius.circular(12),
-              border:
-                  Border.all(color: AppTheme.accentCyan.withOpacity(0.5)),
+              border: Border.all(color: AppTheme.accentCyan.withOpacity(0.5)),
             ),
             child: Row(
               children: [
@@ -1120,8 +1128,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             decoration: BoxDecoration(
               color: AppTheme.goldPrimary.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                  color: AppTheme.goldPrimary.withOpacity(0.3)),
+              border: Border.all(color: AppTheme.goldPrimary.withOpacity(0.3)),
             ),
             child: Text(
               '${state.totalPuzzleXP} XP',
@@ -1136,7 +1143,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
   Widget _buildBrainExplainer(GameState state) {
     if (state.puzzleExplanation == null) return const SizedBox.shrink();
-    
+
     return Positioned(
       top: 180,
       left: 24,
@@ -1148,7 +1155,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           decoration: BoxDecoration(
             color: AppTheme.navyCard.withOpacity(0.98),
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: AppTheme.skyBlue.withOpacity(0.4), width: 2),
+            border:
+                Border.all(color: AppTheme.skyBlue.withOpacity(0.4), width: 2),
             boxShadow: [
               BoxShadow(
                 color: AppTheme.skyBlue.withOpacity(0.15),
@@ -1167,7 +1175,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.psychology_rounded, color: AppTheme.skyBlue, size: 28),
+                      const Icon(Icons.psychology_rounded,
+                          color: AppTheme.skyBlue, size: 28),
                       const SizedBox(width: 12),
                       Text('BRAIN EXPLAINS',
                           style: GoogleFonts.fredoka(
@@ -1181,7 +1190,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                     onPressed: () => context
                         .read<GameBloc>()
                         .add(const GameExplainMoveEvent()), // Clear
-                    icon: const Icon(Icons.close_rounded, color: AppTheme.textMuted),
+                    icon: const Icon(Icons.close_rounded,
+                        color: AppTheme.textMuted),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                   ),
@@ -1191,7 +1201,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               Text(
                 state.puzzleExplanation!,
                 style: GoogleFonts.baloo2(
-                  color: Colors.white, 
+                  color: Colors.white,
                   fontSize: 16,
                   height: 1.5,
                   fontWeight: FontWeight.w500,
@@ -1204,7 +1214,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   onPressed: () => context
                       .read<GameBloc>()
                       .add(const GameExplainMoveEvent()), // Clear
-                  child: Text('GOT IT!', style: GoogleFonts.fredoka(color: AppTheme.skyBlue, fontWeight: FontWeight.bold)),
+                  child: Text('GOT IT!',
+                      style: GoogleFonts.fredoka(
+                          color: AppTheme.skyBlue,
+                          fontWeight: FontWeight.bold)),
                 ),
               ),
             ],
@@ -1372,7 +1385,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   right: -20,
                   top: state.currentTurn == perspective ? null : -130,
                   bottom: state.currentTurn == perspective ? -130 : null,
-                  child: CoachInteractionWidget(state: state),
+                  child: ReactingRobotWidget(state: state),
                 ),
             ],
           ),
@@ -1383,8 +1396,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
   Widget _buildActionBar(BuildContext context, GameState state) {
     final settings = context.watch<SettingsBloc>().state;
-    final isPracticeOrSingle =
-        state.mode == GameMode.singlePlayer || state.mode == GameMode.practice || state.mode == GameMode.twoPlayer;
+    final isPracticeOrSingle = state.mode == GameMode.singlePlayer ||
+        state.mode == GameMode.practice ||
+        state.mode == GameMode.twoPlayer;
     final isMultiplayer = state.mode == GameMode.multiplayer;
     final isPuzzle = state.mode == GameMode.puzzle;
 
@@ -1436,7 +1450,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                       : 'Hint',
               color: AppTheme.goldPrimary,
               onTap: !state.isGameOver &&
-                      (state.isPlayerTurn || state.mode == GameMode.practice || state.mode == GameMode.twoPlayer) &&
+                      (state.isPlayerTurn ||
+                          state.mode == GameMode.practice ||
+                          state.mode == GameMode.twoPlayer) &&
                       !state.isAIThinking
                   ? () => context.read<GameBloc>().add(GameRequestHintEvent())
                   : null,
@@ -1634,13 +1650,15 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               title: Text('Coaching in Online/2P',
                   style: GoogleFonts.fredoka(
                       color: AppTheme.textPrimary, fontSize: 18)),
-              subtitle: Text('Enable analysis in competitive matches (Off by default)',
+              subtitle: Text(
+                  'Enable analysis in competitive matches (Off by default)',
                   style: GoogleFonts.baloo2(color: AppTheme.textSecondary)),
               value: state.coachSettings.enableMultiplayerCoaching,
               activeThumbColor: AppTheme.accentCyan,
               onChanged: (val) {
                 context.read<GameBloc>().add(GameUpdateCoachSettingsEvent(
-                      state.coachSettings.copyWith(enableMultiplayerCoaching: val),
+                      state.coachSettings
+                          .copyWith(enableMultiplayerCoaching: val),
                     ));
               },
             ),
@@ -1758,14 +1776,14 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                 fontSize: 18,
                 fontWeight: FontWeight.w700),
           ),
-           const SizedBox(height: 10),
-           Expanded(
-             child: MoveHistoryWidget(
-               moves: state.moveHistory,
-               currentFen: state.currentFEN,
-             ),
-           ),
-         ],
+          const SizedBox(height: 10),
+          Expanded(
+            child: MoveHistoryWidget(
+              moves: state.moveHistory,
+              currentFen: state.currentFEN,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -2015,8 +2033,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             OutlinedButton(
               onPressed: () => Navigator.pop(ctx, 'quit_no_save'),
               style: OutlinedButton.styleFrom(
-                side: BorderSide(
-                    color: AppTheme.textMuted.withOpacity(0.35)),
+                side: BorderSide(color: AppTheme.textMuted.withOpacity(0.35)),
               ),
               child: Text('Quit Without Save',
                   style: GoogleFonts.fredoka(color: AppTheme.textSecondary)),
@@ -2188,8 +2205,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               decoration: BoxDecoration(
                 color: AppTheme.navyCard,
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                    color: AppTheme.goldPrimary.withOpacity(0.5)),
+                border:
+                    Border.all(color: AppTheme.goldPrimary.withOpacity(0.5)),
                 boxShadow: [
                   BoxShadow(
                       color: Colors.black,

@@ -115,8 +115,7 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
             decoration: BoxDecoration(
               gradient: AppTheme.cardGradient,
               borderRadius: BorderRadius.circular(28),
-              border: Border.all(
-                  color: statusColor.withOpacity(0.6), width: 3),
+              border: Border.all(color: statusColor.withOpacity(0.6), width: 3),
               boxShadow: [
                 BoxShadow(
                     color: statusColor.withOpacity(0.3),
@@ -260,8 +259,8 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                     decoration: BoxDecoration(
                       color: AppTheme.surface.withOpacity(0.3),
                       borderRadius: BorderRadius.circular(18),
-                      border: Border.all(
-                          color: AppTheme.skyBlue.withOpacity(0.1)),
+                      border:
+                          Border.all(color: AppTheme.skyBlue.withOpacity(0.1)),
                     ),
                     child: Column(
                       children: [
@@ -314,8 +313,7 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                               color: AppTheme.skyBlue.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                  color:
-                                      AppTheme.skyBlue.withOpacity(0.2)),
+                                  color: AppTheme.skyBlue.withOpacity(0.2)),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
@@ -451,8 +449,7 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppTheme.textPrimary,
                             side: BorderSide(
-                                color:
-                                    AppTheme.textMuted.withOpacity(0.3),
+                                color: AppTheme.textMuted.withOpacity(0.3),
                                 width: 2),
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(18)),

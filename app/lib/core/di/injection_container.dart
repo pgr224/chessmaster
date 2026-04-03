@@ -22,7 +22,8 @@ Future<void> init() async {
   final prefs = await SharedPreferences.getInstance();
   sl.registerSingleton<SharedPreferences>(prefs);
 
-  sl.registerSingleton<AchievementService>(AchievementService(sl<SharedPreferences>()));
+  sl.registerSingleton<AchievementService>(
+      AchievementService(sl<SharedPreferences>()));
 
   // ── External services ──
   sl.registerLazySingleton<Dio>(() {
@@ -77,11 +78,12 @@ Future<void> init() async {
   sl.registerLazySingleton<GameRepository>(() => GameRepository(sl<Dio>()));
   sl.registerLazySingleton<PuzzleRepository>(() => PuzzleRepository());
   sl.registerSingleton<MultiplayerService>(MultiplayerService());
-  sl.registerSingleton<MissionService>(MissionService(sl<SharedPreferences>(), sl<AuthRepository>()));
+  sl.registerSingleton<MissionService>(
+      MissionService(sl<SharedPreferences>(), sl<AuthRepository>()));
 
   // ── BLoCs ──
   sl.registerLazySingleton<AuthBloc>(() => AuthBloc(sl<AuthRepository>()));
-        sl.registerFactory<GameBloc>(() => GameBloc(
+  sl.registerFactory<GameBloc>(() => GameBloc(
         sl<GameRepository>(),
         sl<AuthRepository>(),
         sl<PuzzleRepository>(),

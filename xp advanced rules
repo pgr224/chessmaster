@@ -1,0 +1,61 @@
+# XP Progression & Engagement Redesign (Updated)
+
+This plan incorporates the detailed feedback provided for the XP and progression systems.
+
+## ✨ New Gameplay & Rule Updates
+
+### 1. Undo/Take Back Evolution
+- **Single Player (All 5 Difficulty Modes):** Each "Take back" move will deduct **-25 XP**.
+- **UX Update:** Implement a "**bubble animated notification**" on the board when an undo is performed to clearly show the penalty.
+- **5-Second Rule:** Strictly enforce the "5-second rule" for undoing in **Multiplayer** and **Two-Player** modes.
+
+### 2. Strategic XP Bonuses
+- **AI Streak Multiplier:** Implement an XP multiplier for consecutive wins in **AI Mode**.
+- **Tiered Underdog XP:**
+    - **Elo diff 200–500:** +200 bonus XP.
+    - **Elo diff 500–1000:** +500 bonus XP.
+    - **Elo diff >1000:** +1000 bonus XP.
+    - *Applies to both Single Player and Multiplayer.*
+
+### 3. Progressive Bounty System
+- **Single Target:** A "Bounty" is placed on exactly **one** leaderboard player at a time.
+- **Rotation:** The target rotates every **4 hours** automatically.
+- **Reward:** Defeating the bounty target grants a **50% XP Bonus** and a unique temporary badge.
+
+### 4. Donation & Recovery Infrastructure
+- **Donation Limits:**
+    - Daily limit: **2000 XP**.
+    - Maximum total transfer: **10000 XP**.
+- **Flexible Amounts:** Users can send any custom or fixed amount within these limits.
+- **Broadcast Requests:**
+    - Users can broadcast an XP request to all online users.
+    - **Lifecycle:** 24-hour persistent visibility or until accepted/rejected/failed.
+
+## 🛠️ Implementation Strategy
+
+### Phase 1: Logic & Rules (`GameBloc`, `AuthRepository`)
+- Update `GameBloc._onUndo` to include the tiered penalty and 5s rule.
+- Implement streak logic for AI mode XP in post-game block.
+- Update `AuthRepository.donateXP` to enforce daily and total caps (using local persistence and server sync).
+
+### Phase 2: Bounty & Broadcast (`MissionService`, `AuthRepository`)
+- Implement a time-based rotation logic in `MissionService` for the bounty target (seed-based target selection).
+- Create a new `BroadcastService` or update `AuthRepository` to handle the 24h lifecycle of XP requests.
+
+### Phase 3: UI & Feedback (`GameOverOverlay`, `BoardWidgets`)
+- Implement the "bubble animated notification" for undo penalties using `flutter_animate`.
+- Update `LeaderboardScreen` to visually highlight the current "Bounty" target.
+- Add a "Broadcast" button for XP requests when XP is negative or low.
+
+## 📸 Component Showcase
+
+### Undo Penalty Bubble
+A subtle, floating "-25 XP" animation that rises from the source square.
+
+### Bounty Highlight
+A golden crosshair icon next to the targeted player on the leaderboard.
+
+## Open Questions
+- **Broadcast Visibility:** Should the broadcast appear as a notification or a dedicated "Requests" tab?
+- **AI Mode Streak Multiplier:** What is the base multiplier for the streak? (e.g., +10% per win up to 5)
+- **Bounty Rotation:** How should we choose the next target? (Random from top 100 or weighted?)

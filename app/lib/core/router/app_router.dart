@@ -262,8 +262,7 @@ class _MainScaffoldState extends State<MainScaffold> {
         backgroundColor: const Color(0xFF0A0E27),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(24),
-          side:
-              BorderSide(color: const Color(0xFFD4AF37).withOpacity(0.3)),
+          side: BorderSide(color: const Color(0xFFD4AF37).withOpacity(0.3)),
         ),
         title: Text('Quit Game?',
             style: GoogleFonts.fredoka(

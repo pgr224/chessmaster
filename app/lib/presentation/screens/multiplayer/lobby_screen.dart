@@ -42,9 +42,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
               .read<MultiplayerBloc>()
               .add(MpAcceptChallengeEvent(widget.initialChallengeId!));
         } else {
-           // We can't show the dialog yet because the lobby isn't connected
-           // The Bloc will receive the updated state soon, but we ensure 
-           // the deep-link is prioritized.
+          // We can't show the dialog yet because the lobby isn't connected
+          // The Bloc will receive the updated state soon, but we ensure
+          // the deep-link is prioritized.
         }
       }
     }
@@ -263,8 +263,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
               child: OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 18),
-                  side: BorderSide(
-                      color: AppTheme.goldPrimary.withOpacity(0.5)),
+                  side:
+                      BorderSide(color: AppTheme.goldPrimary.withOpacity(0.5)),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20)),
                 ),
@@ -383,9 +383,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                       content: Text('Donated $amount XP to $username!')));
                   // ignore: use_build_context_synchronously
-                  context
-                      .read<auth.AuthBloc>()
-                      .add(auth.AuthCheckStatusEvent()); // Refresh local user XP
+                  context.read<auth.AuthBloc>().add(
+                      auth.AuthCheckStatusEvent()); // Refresh local user XP
                 }
               } catch (e) {
                 // ignore: use_build_context_synchronously
@@ -528,8 +527,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       end: Alignment.bottomRight,
                     )
                   : null,
-              color:
-                  isSelected ? null : AppTheme.surface.withOpacity(0.6),
+              color: isSelected ? null : AppTheme.surface.withOpacity(0.6),
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
                 color: isSelected

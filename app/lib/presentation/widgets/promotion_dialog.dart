@@ -96,8 +96,7 @@ class PromotionDialog extends StatelessWidget {
             end: Alignment.bottomCenter,
           ),
           borderRadius: BorderRadius.circular(22),
-          border:
-              Border.all(color: AppTheme.goldPrimary.withOpacity(0.2)),
+          border: Border.all(color: AppTheme.goldPrimary.withOpacity(0.2)),
           boxShadow: [
             BoxShadow(
                 color: Colors.black.withOpacity(0.2),

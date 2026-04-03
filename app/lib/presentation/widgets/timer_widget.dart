@@ -34,8 +34,14 @@ class _TimerWidgetState extends State<TimerWidget> {
   @override
   void didUpdateWidget(TimerWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Sync with server authoritative time
-    _currentTime = widget.timeInSeconds;
+    // Sync with server authoritative time only if the value differs significantly,
+    // to prevent jitter and loops during active countdowns.
+    if (widget.timeInSeconds != oldWidget.timeInSeconds) {
+      if (!widget.isActive ||
+          (_currentTime - widget.timeInSeconds).abs() > 0.5) {
+        _currentTime = widget.timeInSeconds;
+      }
+    }
 
     if (widget.isActive != oldWidget.isActive) {
       if (widget.isActive) {
@@ -101,9 +107,7 @@ class _TimerWidgetState extends State<TimerWidget> {
             : Colors.black.withOpacity(0.2),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: widget.isActive
-              ? color.withOpacity(0.6)
-              : Colors.transparent,
+          color: widget.isActive ? color.withOpacity(0.6) : Colors.transparent,
           width: 2,
         ),
         boxShadow: widget.isActive

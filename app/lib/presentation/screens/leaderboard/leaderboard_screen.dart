@@ -465,8 +465,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                              color:
-                                  AppTheme.goldPrimary.withOpacity(0.2),
+                              color: AppTheme.goldPrimary.withOpacity(0.2),
                               borderRadius: BorderRadius.circular(6)),
                           child: Text('YOU',
                               style: GoogleFonts.fredoka(
@@ -493,14 +492,16 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                 if (entry.id == _bountyUserId)
                   const Padding(
                     padding: EdgeInsets.only(bottom: 4),
-                    child: Icon(Icons.stars_rounded, color: AppTheme.goldPrimary, size: 20),
+                    child: Icon(Icons.stars_rounded,
+                        color: AppTheme.goldPrimary, size: 20),
                   ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: AppTheme.goldPrimary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
-                    border: entry.id == _bountyUserId 
+                    border: entry.id == _bountyUserId
                         ? Border.all(color: AppTheme.goldPrimary, width: 1.5)
                         : null,
                   ),
@@ -514,7 +515,11 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                 if (entry.id == _bountyUserId)
                   Padding(
                     padding: const EdgeInsets.only(top: 2),
-                    child: Text('BOUNTY', style: GoogleFonts.fredoka(color: AppTheme.goldPrimary, fontSize: 8, fontWeight: FontWeight.bold)),
+                    child: Text('BOUNTY',
+                        style: GoogleFonts.fredoka(
+                            color: AppTheme.goldPrimary,
+                            fontSize: 8,
+                            fontWeight: FontWeight.bold)),
                   ),
               ],
             ),

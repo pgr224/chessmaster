@@ -10,7 +10,7 @@ class MoveHistoryWidget extends StatefulWidget {
   final Axis scrollDirection;
   final String? currentFen; // Required to explain historical moves
   final List<String> fens; // Historical FENs
-  
+
   const MoveHistoryWidget({
     super.key,
     required this.moves,
@@ -97,14 +97,18 @@ class _MoveHistoryWidgetState extends State<MoveHistoryWidget> {
                   Expanded(
                     child: InkWell(
                       onTap: () {
-                        final fen = widget.fens.length > index * 2 ? widget.fens[index * 2] : widget.currentFen;
+                        final fen = widget.fens.length > index * 2
+                            ? widget.fens[index * 2]
+                            : widget.currentFen;
                         if (fen != null) {
-                          context.read<GameBloc>().add(GameExplainMoveEvent(move: whiteMove, fen: fen));
+                          context.read<GameBloc>().add(
+                              GameExplainMoveEvent(move: whiteMove, fen: fen));
                         }
                       },
                       borderRadius: BorderRadius.circular(4),
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 4, vertical: 2),
                         child: Text(
                           whiteMove.algebraic ?? '?',
                           style: GoogleFonts.fredoka(
@@ -119,14 +123,18 @@ class _MoveHistoryWidgetState extends State<MoveHistoryWidget> {
                   Expanded(
                     child: InkWell(
                       onTap: () {
-                        final fen = widget.fens.length > index * 2 + 1 ? widget.fens[index * 2 + 1] : widget.currentFen;
+                        final fen = widget.fens.length > index * 2 + 1
+                            ? widget.fens[index * 2 + 1]
+                            : widget.currentFen;
                         if (fen != null) {
-                          context.read<GameBloc>().add(GameExplainMoveEvent(move: blackMove, fen: fen));
+                          context.read<GameBloc>().add(
+                              GameExplainMoveEvent(move: blackMove, fen: fen));
                         }
                       },
                       borderRadius: BorderRadius.circular(4),
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 4, vertical: 2),
                         child: Text(
                           blackMove.algebraic ?? '?',
                           style: GoogleFonts.fredoka(

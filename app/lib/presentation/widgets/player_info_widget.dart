@@ -45,8 +45,7 @@ class PlayerInfoWidget extends StatelessWidget {
         boxShadow: isActive
             ? [
                 BoxShadow(
-                    color: AppTheme.goldPrimary.withOpacity(0.1),
-                    blurRadius: 8)
+                    color: AppTheme.goldPrimary.withOpacity(0.1), blurRadius: 8)
               ]
             : null,
       ),
@@ -54,20 +53,25 @@ class PlayerInfoWidget extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           // Avatar / piece color indicator
-          isAI 
-          ? AnimatedRobotCoach(isThinking: isThinking) 
-          : Container(
+          Container(
             width: 38,
             height: 38,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              boxShadow: isActive ? [
-                BoxShadow(
-                  color: (avatarUrl != null ? AppTheme.goldPrimary : (color == PieceColor.white ? Colors.white70 : Colors.black54)).withOpacity(0.3),
-                  blurRadius: 8,
-                  spreadRadius: 1,
-                )
-              ] : null,
+              boxShadow: isActive
+                  ? [
+                      BoxShadow(
+                        color: (avatarUrl != null
+                                ? AppTheme.goldPrimary
+                                : (color == PieceColor.white
+                                    ? Colors.white70
+                                    : Colors.black54))
+                            .withOpacity(0.3),
+                        blurRadius: 8,
+                        spreadRadius: 1,
+                      )
+                    ]
+                  : null,
               border: Border.all(
                 color: isActive
                     ? AppTheme.goldPrimary
@@ -102,8 +106,7 @@ class PlayerInfoWidget extends StatelessWidget {
               Text(
                 color == PieceColor.white ? '⚪ White' : '⚫ Black',
                 style: GoogleFonts.baloo2(
-                  color:
-                      isActive ? AppTheme.textSecondary : AppTheme.textMuted,
+                  color: isActive ? AppTheme.textSecondary : AppTheme.textMuted,
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                 ),
@@ -123,7 +126,7 @@ class PlayerInfoWidget extends StatelessWidget {
         errorBuilder: (context, error, stackTrace) => _buildDefaultIcon(),
       );
     }
-    
+
     if (localAvatar != null && localAvatar!.isNotEmpty) {
       if (localAvatar!.startsWith('assets/')) {
         return Image.asset(
@@ -133,7 +136,7 @@ class PlayerInfoWidget extends StatelessWidget {
         );
       }
     }
-    
+
     return _buildDefaultIcon();
   }
 
@@ -142,7 +145,8 @@ class PlayerInfoWidget extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: color == PieceColor.white
             ? const LinearGradient(colors: [Colors.white, Color(0xFFF5E6CA)])
-            : const LinearGradient(colors: [Color(0xFF2D1B69), AppTheme.midnight]),
+            : const LinearGradient(
+                colors: [Color(0xFF2D1B69), AppTheme.midnight]),
       ),
       child: Center(
         child: Icon(

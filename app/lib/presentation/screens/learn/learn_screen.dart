@@ -474,9 +474,7 @@ class LearnScreen extends StatelessWidget {
       onTap: () => context.push('/learn/week/${plan.week}'),
       child: Container(
         decoration: BoxDecoration(
-          color: isEven
-              ? Colors.white.withOpacity(0.02)
-              : Colors.transparent,
+          color: isEven ? Colors.white.withOpacity(0.02) : Colors.transparent,
           borderRadius: isLast
               ? const BorderRadius.only(
                   bottomLeft: Radius.circular(24),
@@ -739,8 +737,7 @@ class LearnScreen extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppTheme.goldPrimary.withOpacity(0.08),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                  color: AppTheme.goldPrimary.withOpacity(0.2)),
+              border: Border.all(color: AppTheme.goldPrimary.withOpacity(0.2)),
             ),
             child: Row(
               children: [

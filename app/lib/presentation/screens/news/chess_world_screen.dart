@@ -216,8 +216,7 @@ class _ChessWorldScreenState extends State<ChessWorldScreen> {
       decoration: BoxDecoration(
         gradient: AppTheme.cardGradient,
         borderRadius: BorderRadius.circular(24),
-        border:
-            Border.all(color: Colors.white.withOpacity(0.08), width: 1.2),
+        border: Border.all(color: Colors.white.withOpacity(0.08), width: 1.2),
         boxShadow: AppTheme.cardShadow,
       ),
       child: Padding(
@@ -317,8 +316,7 @@ class _WorldCard extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: AppTheme.cardGradient,
         borderRadius: BorderRadius.circular(24),
-        border:
-            Border.all(color: Colors.white.withOpacity(0.08), width: 1.2),
+        border: Border.all(color: Colors.white.withOpacity(0.08), width: 1.2),
         boxShadow: AppTheme.cardShadow,
       ),
       child: Padding(

@@ -256,8 +256,7 @@ class _ProfileContent extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppTheme.navyCard.withOpacity(0.8),
             borderRadius: BorderRadius.circular(24),
-            border:
-                Border.all(color: AppTheme.goldPrimary.withOpacity(0.1)),
+            border: Border.all(color: AppTheme.goldPrimary.withOpacity(0.1)),
           ),
           child: Column(
             children: [
@@ -438,8 +437,7 @@ class _ProfileContent extends StatelessWidget {
       padding: const EdgeInsets.only(top: 16, bottom: 8),
       child: Row(
         children: [
-          Icon(icon,
-              size: 14, color: AppTheme.textSecondary.withOpacity(0.5)),
+          Icon(icon, size: 14, color: AppTheme.textSecondary.withOpacity(0.5)),
           const SizedBox(width: 8),
           Text(title.toUpperCase(),
               style: GoogleFonts.fredoka(
@@ -618,7 +616,8 @@ void showEditProfileModal(BuildContext context, UserModel user) {
               const SizedBox(height: 8),
               if (user.usernameChanges >= 2)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
                     color: AppTheme.accentRed.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
@@ -626,7 +625,8 @@ void showEditProfileModal(BuildContext context, UserModel user) {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.lock_rounded, color: AppTheme.accentRed, size: 14),
+                      const Icon(Icons.lock_rounded,
+                          color: AppTheme.accentRed, size: 14),
                       const SizedBox(width: 8),
                       Text('RENAME LIMIT REACHED (2/2)',
                           style: GoogleFonts.fredoka(
@@ -698,8 +698,8 @@ void showEditProfileModal(BuildContext context, UserModel user) {
                 controller: nameController,
                 enabled: user.usernameChanges < 2,
                 style: GoogleFonts.fredoka(
-                    color: user.usernameChanges < 2 
-                        ? AppTheme.textPrimary 
+                    color: user.usernameChanges < 2
+                        ? AppTheme.textPrimary
                         : AppTheme.textMuted),
                 onChanged: (val) async {
                   if (val == user.username) {
@@ -727,11 +727,12 @@ void showEditProfileModal(BuildContext context, UserModel user) {
                   }
                 },
                 decoration: InputDecoration(
-                  labelText: user.usernameChanges < 2 ? 'PLAYER NAME' : 'NAME LOCKED',
+                  labelText:
+                      user.usernameChanges < 2 ? 'PLAYER NAME' : 'NAME LOCKED',
                   labelStyle: GoogleFonts.fredoka(
-                      color: user.usernameChanges < 2 
-                          ? AppTheme.textSecondary 
-                          : AppTheme.accentRed.withOpacity(0.5), 
+                      color: user.usernameChanges < 2
+                          ? AppTheme.textSecondary
+                          : AppTheme.accentRed.withOpacity(0.5),
                       letterSpacing: 1),
                   prefixIcon: const Icon(Icons.stars_rounded,
                       color: AppTheme.goldPrimary),

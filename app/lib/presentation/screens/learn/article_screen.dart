@@ -1126,8 +1126,7 @@ class ArticleScreen extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppTheme.navyCard,
             borderRadius: BorderRadius.circular(20),
-            border:
-                Border.all(color: AppTheme.goldPrimary.withOpacity(0.15)),
+            border: Border.all(color: AppTheme.goldPrimary.withOpacity(0.15)),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,

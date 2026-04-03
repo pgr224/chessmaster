@@ -66,8 +66,7 @@ class EvalBarWidget extends StatelessWidget {
       decoration: BoxDecoration(
         color: topColor,
         borderRadius: BorderRadius.circular(width / 2),
-        border:
-            Border.all(color: Colors.white.withOpacity(0.1), width: 1),
+        border: Border.all(color: Colors.white.withOpacity(0.1), width: 1),
       ),
       child: Stack(
         alignment: Alignment.bottomCenter,

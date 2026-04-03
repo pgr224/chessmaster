@@ -6,7 +6,7 @@ import '../repositories/auth_repository.dart';
 class MissionService {
   final SharedPreferences _prefs;
   final AuthRepository _authRepository;
-  
+
   static const String _missionsKey = 'user_missions_v1';
   static const String _lastResetKey = 'mission_last_reset';
   static const String _bountyTargetKey = 'bounty_target_id';
@@ -69,7 +69,8 @@ class MissionService {
       _bountyExpiry = now.add(const Duration(hours: 4));
 
       await _prefs.setString(_bountyTargetKey, _bountyUserId!);
-      await _prefs.setString(_bountyExpiryKey, _bountyExpiry!.toIso8601String());
+      await _prefs.setString(
+          _bountyExpiryKey, _bountyExpiry!.toIso8601String());
     } catch (e) {
       print('Bounty rotation failed: $e');
     }
@@ -110,16 +111,19 @@ class MissionService {
   }
 
   void _saveMissions() {
-    _prefs.setString(_missionsKey, jsonEncode(_activeMissions.map((m) => m.toJson()).toList()));
+    _prefs.setString(_missionsKey,
+        jsonEncode(_activeMissions.map((m) => m.toJson()).toList()));
   }
 
   void _checkDailyReset() {
     final now = DateTime.now();
     final lastResetStr = _prefs.getString(_lastResetKey);
-    
+
     if (lastResetStr != null) {
       final lastReset = DateTime.parse(lastResetStr);
-      if (now.day != lastReset.day || now.month != lastReset.month || now.year != lastReset.year) {
+      if (now.day != lastReset.day ||
+          now.month != lastReset.month ||
+          now.year != lastReset.year) {
         _generateDefaultMissions();
         _prefs.setString(_lastResetKey, now.toIso8601String());
       }
@@ -136,7 +140,7 @@ class MissionService {
       );
       _activeMissions[index] = updated;
       _saveMissions();
-      
+
       if (updated.isCompleted) {
         // Auto-claim reward for now
         await claimReward(missionId);
@@ -146,9 +150,11 @@ class MissionService {
 
   Future<void> claimReward(String missionId) async {
     final index = _activeMissions.indexWhere((m) => m.id == missionId);
-    if (index != -1 && _activeMissions[index].isCompleted && !_activeMissions[index].isClaimed) {
+    if (index != -1 &&
+        _activeMissions[index].isCompleted &&
+        !_activeMissions[index].isClaimed) {
       final mission = _activeMissions[index];
-      
+
       final user = await _authRepository.getCurrentUser();
       if (user != null) {
         await _authRepository.updateXPProgress(
@@ -156,7 +162,7 @@ class MissionService {
           xpDelta: mission.rewardXP,
           statUpdates: {},
         );
-        
+
         _activeMissions[index] = mission.copyWith(isClaimed: true);
         _saveMissions();
       }

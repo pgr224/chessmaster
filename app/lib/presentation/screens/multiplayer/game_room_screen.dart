@@ -57,7 +57,10 @@ class GameRoomScreen extends StatelessWidget {
         if (mpState.status != MultiplayerStatus.inGame &&
             mpState.status != MultiplayerStatus.gameOver) {
           return const Scaffold(
-              body: Center(child: CircularProgressIndicator()));
+              backgroundColor: AppTheme.midnight,
+              body: Center(
+                  child:
+                      CircularProgressIndicator(color: AppTheme.goldPrimary)));
         }
 
         final themeState = context.read<ThemeBloc>().state;

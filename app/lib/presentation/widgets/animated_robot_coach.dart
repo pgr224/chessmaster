@@ -48,11 +48,14 @@ class AnimatedRobotCoach extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: mainColor.withOpacity(0.5), width: 2),
               boxShadow: [
-                BoxShadow(color: mainColor.withOpacity(0.3), blurRadius: 10, spreadRadius: 1),
+                BoxShadow(
+                    color: mainColor.withOpacity(0.3),
+                    blurRadius: 10,
+                    spreadRadius: 1),
               ],
             ),
           ),
-          
+
           // ROBOT HEAD
           Positioned(
             top: 2,
@@ -93,12 +96,14 @@ class AnimatedRobotCoach extends StatelessWidget {
                 ],
               ),
             ),
-          ).animate(onPlay: (c) => c.repeat(reverse: true)).moveY(begin: 0, end: -2, duration: 2.seconds),
+          )
+              .animate(onPlay: (c) => c.repeat(reverse: true))
+              .moveY(begin: 0, end: -2, duration: 2.seconds),
 
           // ARMS / HANDS
           _buildArm(true, mainColor),
           _buildArm(false, mainColor),
-          
+
           // ANTENNA
           Positioned(
             top: -2,
@@ -122,56 +127,70 @@ class AnimatedRobotCoach extends StatelessWidget {
         shape: BoxShape.circle,
         boxShadow: [BoxShadow(color: color, blurRadius: 4)],
       ),
-    ).animate(onPlay: (c) => c.repeat(reverse: true))
-     .scaleY(begin: 1, end: 0.1, delay: 2.seconds, duration: 150.ms) // Blinking
-     .then(delay: 3.seconds);
+    )
+        .animate(onPlay: (c) => c.repeat(reverse: true))
+        .scaleY(
+            begin: 1, end: 0.1, delay: 2.seconds, duration: 150.ms) // Blinking
+        .then(delay: 3.seconds);
   }
 
   Widget _buildArm(bool isLeft, Color color) {
     // Default: Breathing/Floating motion
-    void Function(AnimationController) animation = (AnimationController c) => c.repeat(reverse: true);
-    
-    bool isSuccess = classification == MoveClassification.brilliant || classification == MoveClassification.best;
-    bool isWarning = classification == MoveClassification.mistake || classification == MoveClassification.blunder;
+    void Function(AnimationController) animation =
+        (AnimationController c) => c.repeat(reverse: true);
+
+    bool isSuccess = classification == MoveClassification.brilliant ||
+        classification == MoveClassification.best;
+    bool isWarning = classification == MoveClassification.mistake ||
+        classification == MoveClassification.blunder;
 
     if (isThinking) {
-       animation = (AnimationController c) => c.repeat();
+      animation = (AnimationController c) => c.repeat();
     } else if (isSuccess) {
-       animation = (AnimationController c) => c.repeat(reverse: true);
+      animation = (AnimationController c) => c.repeat(reverse: true);
     } else if (isWarning) {
-       animation = (AnimationController c) => c.repeat(reverse: true);
+      animation = (AnimationController c) => c.repeat(reverse: true);
     } else if (isHint) {
-       animation = (AnimationController c) => c.repeat(reverse: true);
+      animation = (AnimationController c) => c.repeat(reverse: true);
     }
 
     // Since onPlay only handles the controller, we apply the visual effects via the chain.
     // The animation parameter is just to control the execution (repeat/reverse).
-    
+
     var anim = Container(
-        width: 14,
-        height: 6,
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.9),
-          borderRadius: BorderRadius.circular(4),
-          boxShadow: [BoxShadow(color: color.withOpacity(0.4), blurRadius: 4)],
-        ),
-      ).animate(onPlay: animation);
+      width: 14,
+      height: 6,
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.9),
+        borderRadius: BorderRadius.circular(4),
+        boxShadow: [BoxShadow(color: color.withOpacity(0.4), blurRadius: 4)],
+      ),
+    ).animate(onPlay: animation);
 
     if (isThinking) {
-      anim = anim.rotate(begin: 0, end: 6.28 * (isLeft ? 1 : -1), duration: 0.8.seconds)
-                 .scale(begin: const Offset(1,1), end: const Offset(1.2, 1.2), duration: 0.4.seconds);
+      anim = anim
+          .rotate(
+              begin: 0, end: 6.28 * (isLeft ? 1 : -1), duration: 0.8.seconds)
+          .scale(
+              begin: const Offset(1, 1),
+              end: const Offset(1.2, 1.2),
+              duration: 0.4.seconds);
     } else if (isSuccess) {
-      anim = anim.moveY(begin: 0, end: -15, duration: 300.ms)
-                 .rotate(begin: 0, end: 0.5 * (isLeft ? 1 : -1), duration: 200.ms)
-                 .shake(hz: 8);
+      anim = anim
+          .moveY(begin: 0, end: -15, duration: 300.ms)
+          .rotate(begin: 0, end: 0.5 * (isLeft ? 1 : -1), duration: 200.ms)
+          .shake(hz: 8);
     } else if (isWarning) {
-      anim = anim.moveY(begin: 0, end: 5, duration: 1.seconds)
-                 .rotate(begin: 0, end: -0.3 * (isLeft ? 1 : -1), duration: 500.ms);
+      anim = anim
+          .moveY(begin: 0, end: 5, duration: 1.seconds)
+          .rotate(begin: 0, end: -0.3 * (isLeft ? 1 : -1), duration: 500.ms);
     } else if (isHint) {
-      anim = anim.moveX(begin: 0, end: 8 * (isLeft ? 1 : -1), duration: 600.ms)
-                 .rotate(begin: 0, end: 0.4 * (isLeft ? 1 : -1), duration: 600.ms);
+      anim = anim
+          .moveX(begin: 0, end: 8 * (isLeft ? 1 : -1), duration: 600.ms)
+          .rotate(begin: 0, end: 0.4 * (isLeft ? 1 : -1), duration: 600.ms);
     } else {
-      anim = anim.rotate(begin: 0, end: 0.2 * (isLeft ? 1 : -1), duration: 1.2.seconds);
+      anim = anim.rotate(
+          begin: 0, end: 0.2 * (isLeft ? 1 : -1), duration: 1.2.seconds);
     }
 
     return Positioned(

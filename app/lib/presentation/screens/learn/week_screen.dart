@@ -687,8 +687,7 @@ class _WeekScreenState extends State<WeekScreen> {
               decoration: BoxDecoration(
                 gradient: AppTheme.cardGradient,
                 borderRadius: BorderRadius.circular(16),
-                border:
-                    Border.all(color: AppTheme.skyBlue.withOpacity(0.15)),
+                border: Border.all(color: AppTheme.skyBlue.withOpacity(0.15)),
               ),
               child: Row(children: [
                 Container(
@@ -779,8 +778,7 @@ class _WeekScreenState extends State<WeekScreen> {
                 decoration: BoxDecoration(
                   gradient: AppTheme.cardGradient,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                      color: AppTheme.skyBlue.withOpacity(0.15)),
+                  border: Border.all(color: AppTheme.skyBlue.withOpacity(0.15)),
                 ),
                 child: Row(children: [
                   const Icon(Icons.open_in_new_rounded,

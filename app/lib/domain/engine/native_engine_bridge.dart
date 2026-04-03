@@ -14,8 +14,8 @@ Future<Map<String, dynamic>?> jsEngineGetBestMove(String fen,
     {int? movetime}) async {
   if (_currentDifficulty == 'aiMode') {
     // Temporary fallback: route aiMode to a stronger Stockfish search on Android.
-    final best = await NativeStockfish()
-        .getBestMove(fen, depth: 20, movetime: movetime);
+    final best =
+        await NativeStockfish().getBestMove(fen, depth: 20, movetime: movetime);
     return best != null ? {'move': best} : null;
   }
 
@@ -47,10 +47,9 @@ Future<List<MoveCandidate>> jsEngineGetTopMoves(
   return NativeStockfish().getTopMoves(fen, depth, count, movetime: movetime);
 }
 
-String jsEngineGetActiveEngine() =>
-    _currentDifficulty == 'aiMode'
-        ? 'stockfish_native_ai_fallback'
-        : 'stockfish_native';
+String jsEngineGetActiveEngine() => _currentDifficulty == 'aiMode'
+    ? 'stockfish_native_ai_fallback'
+    : 'stockfish_native';
 
 void jsEngineDispose() {
   NativeStockfish().dispose();
