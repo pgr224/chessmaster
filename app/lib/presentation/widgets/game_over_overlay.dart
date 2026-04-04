@@ -24,6 +24,8 @@ class GameOverOverlay extends StatefulWidget {
   final int mistakes;
   final int blunders;
   final int xpGained;
+  final int xpReward;
+  final int xpPenalty;
   final String? analysisMessage;
   final List<double> evalHistory;
   final int eloChange;
@@ -46,6 +48,8 @@ class GameOverOverlay extends StatefulWidget {
     this.mistakes = 0,
     this.blunders = 0,
     this.xpGained = 0,
+    this.xpReward = 0,
+    this.xpPenalty = 0,
     this.analysisMessage,
     this.evalHistory = const [],
     this.eloChange = 0,
@@ -360,14 +364,16 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                     ),
 
                   // ── XP GAINED / LOST ──
-                  if (widget.xpGained != 0)
+                  if (widget.xpGained != 0 ||
+                      widget.xpReward != 0 ||
+                      widget.xpPenalty != 0)
                     Container(
                       margin: const EdgeInsets.only(bottom: 12),
                       padding: const EdgeInsets.symmetric(
                           horizontal: 24, vertical: 12),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
-                            colors: widget.xpGained > 0
+                            colors: (widget.xpReward > 0 || widget.xpGained > 0)
                                 ? [
                                     AppTheme.goldPrimary.withValues(alpha: 0.4),
                                     AppTheme.goldPrimary.withValues(alpha: 0.1)
@@ -378,14 +384,14 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                                   ]),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                            color: (widget.xpGained > 0
+                          color: ((widget.xpReward > 0 || widget.xpGained > 0)
                                     ? AppTheme.goldPrimary
                                     : AppTheme.accentRed)
                                 .withValues(alpha: 0.5),
                             width: 2),
                         boxShadow: [
                           BoxShadow(
-                            color: (widget.xpGained > 0
+                          color: ((widget.xpReward > 0 || widget.xpGained > 0)
                                     ? AppTheme.goldPrimary
                                     : AppTheme.accentRed)
                                 .withValues(alpha: 0.2),
@@ -394,30 +400,79 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                           ),
                         ],
                       ),
-                      child: Row(
+                      child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
-                            widget.xpGained > 0
-                                ? Icons.stars_rounded
-                                : Icons.trending_down_rounded,
-                            color: widget.xpGained > 0
-                                ? AppTheme.goldPrimary
-                                : AppTheme.accentRed,
-                            size: 26,
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                (widget.xpReward > 0 || widget.xpGained > 0)
+                                    ? Icons.stars_rounded
+                                    : Icons.trending_down_rounded,
+                                color: (widget.xpReward > 0 || widget.xpGained > 0)
+                                    ? AppTheme.goldPrimary
+                                    : AppTheme.accentRed,
+                                size: 30,
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                widget.xpReward > 0
+                                    ? '+${widget.xpReward} XP'
+                                    : (widget.xpGained > 0
+                                        ? '+${widget.xpGained} XP'
+                                        : '${widget.xpGained} XP'),
+                                style: GoogleFonts.fredoka(
+                                  color: (widget.xpReward > 0 || widget.xpGained > 0)
+                                      ? AppTheme.goldPrimary
+                                      : AppTheme.accentRed,
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(height: 4),
                           Text(
-                            widget.xpGained > 0
-                                ? '+${widget.xpGained} XP GAINED!'
-                                : '${widget.xpGained} XP PENALTY',
+                            widget.xpReward > 0
+                                ? 'WIN REWARD'
+                                : (widget.xpGained > 0 ? 'XP GAINED' : 'XP PENALTY'),
                             style: GoogleFonts.fredoka(
-                              color: widget.xpGained > 0
-                                  ? AppTheme.goldPrimary
-                                  : AppTheme.accentRed,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 0.5,
+                              color: AppTheme.textPrimary,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.1,
+                            ),
+                          ),
+                          if (widget.xpPenalty > 0) ...[
+                            const SizedBox(height: 6),
+                            Text(
+                              '-${widget.xpPenalty} XP deductions',
+                              style: GoogleFonts.baloo2(
+                                color: AppTheme.textSecondary,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              widget.xpGained >= 0
+                                  ? 'Net +${widget.xpGained} XP applied to score'
+                                  : 'Net ${widget.xpGained} XP applied to score',
+                              style: GoogleFonts.fredoka(
+                                color: AppTheme.textPrimary,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ),
                         ],
@@ -565,8 +620,30 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
         null => 'The game ends in a draw! 😊',
       };
     }
-    final winner = widget.result == GameResult.whiteWins ? 'White' : 'Black';
     if (widget.puzzle != null) return 'Puzzle solved with brilliance! 🧠';
+
+    final didPlayerWin = (widget.result == GameResult.whiteWins &&
+            widget.playerColor == PieceColor.white) ||
+        (widget.result == GameResult.blackWins &&
+            widget.playerColor == PieceColor.black);
+    final didPlayerLose = (widget.result == GameResult.whiteWins &&
+            widget.playerColor == PieceColor.black) ||
+        (widget.result == GameResult.blackWins &&
+            widget.playerColor == PieceColor.white);
+
+    if (widget.gameMode == GameMode.singlePlayer ||
+        widget.gameMode == GameMode.practice) {
+      final opponentLabel = widget.opponentName ?? 'Computer';
+      if (didPlayerWin) return 'You defeated $opponentLabel! 🥳';
+      if (didPlayerLose) return '$opponentLabel wins this round.';
+    }
+
+    if (widget.gameMode == GameMode.multiplayer && widget.opponentName != null) {
+      if (didPlayerWin) return 'You defeated ${widget.opponentName}! 🥳';
+      if (didPlayerLose) return '${widget.opponentName} wins this round.';
+    }
+
+    final winner = widget.result == GameResult.whiteWins ? 'White' : 'Black';
     return '$winner wins the battle! 🥳';
   }
 }

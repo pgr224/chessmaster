@@ -248,6 +248,8 @@ class GameState extends Equatable {
   final int missedWins;
   final int bestMoves;
   final int xpGained;
+  final int xpReward;
+  final int xpPenalty;
   final String? coachMessage;
   final String? analysisMessage;
   final String? engineError;
@@ -344,6 +346,8 @@ class GameState extends Equatable {
     this.missedWins = 0,
     this.bestMoves = 0,
     this.xpGained = 0,
+    this.xpReward = 0,
+    this.xpPenalty = 0,
     this.analysisMessage,
     this.coachMessage,
     this.engineError,
@@ -442,6 +446,8 @@ class GameState extends Equatable {
     int? missedWins,
     int? bestMoves,
     int? xpGained,
+    int? xpReward,
+    int? xpPenalty,
     String? analysisMessage,
     String? coachMessage,
     String? engineError,
@@ -540,6 +546,8 @@ class GameState extends Equatable {
       missedWins: missedWins ?? this.missedWins,
       bestMoves: bestMoves ?? this.bestMoves,
       xpGained: xpGained ?? this.xpGained,
+      xpReward: xpReward ?? this.xpReward,
+      xpPenalty: xpPenalty ?? this.xpPenalty,
       analysisMessage: analysisMessage ?? this.analysisMessage,
       coachMessage:
           clearCoachMessage ? null : (coachMessage ?? this.coachMessage),
@@ -610,6 +618,8 @@ class GameState extends Equatable {
         missedWins,
         bestMoves,
         xpGained,
+        xpReward,
+        xpPenalty,
         coachMessage,
         showMiniLesson,
         lastAIMoveSource,
@@ -1607,7 +1617,9 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         }
 
         // Calculate XP Rewards & Update Stats
-        int xp = 0;
+        int xp = state.xpGained;
+        int xpReward = state.xpGained > 0 ? state.xpGained : 0;
+        int xpPenalty = state.xpGained < 0 ? -state.xpGained : 0;
         int eloChange = 0;
         final mapUpdates = <String, dynamic>{
           'games_played': 1,
@@ -1723,8 +1735,12 @@ class GameBloc extends Bloc<GameEvent, GameState> {
               mapUpdates['draws'] = 1;
             }
 
-            // Sync XP
-            final totalDelta = xpDelta + state.xpGained;
+            xpReward =
+                (xpDelta > 0 ? xpDelta : 0) + (state.xpGained > 0 ? state.xpGained : 0);
+            xpPenalty =
+                (xpDelta < 0 ? -xpDelta : 0) + (state.xpGained < 0 ? -state.xpGained : 0);
+            final totalDelta = xpReward - xpPenalty;
+            xp = totalDelta;
 
             await _authRepository.updateXPProgress(
               userId: user.id,
@@ -1802,7 +1818,9 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         }
 
         emit(state.copyWith(
-          xpGained: xp + state.xpGained,
+          xpGained: xp,
+          xpReward: xpReward,
+          xpPenalty: xpPenalty,
           analysisMessage: msg,
           eloChange: eloChange,
         ));

@@ -55,6 +55,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   Offset _chatPosition =
       const Offset(16, 450); // Initial floating chat position
   bool _isChatDragging = false;
+  bool _didRefreshPostGameAuth = false;
 
   @override
   void initState() {
@@ -108,7 +109,16 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         listener: (context, state) {
           final settings = context.read<SettingsBloc>().state;
 
+          if (!state.isGameOver) {
+            _didRefreshPostGameAuth = false;
+          }
+
           if (state.isGameOver) {
+            if (!_didRefreshPostGameAuth) {
+              context.read<AuthBloc>().add(AuthCheckStatusEvent());
+              _didRefreshPostGameAuth = true;
+            }
+
             final isWin = (state.result == GameResult.whiteWins &&
                     state.playerColor == PieceColor.white) ||
                 (state.result == GameResult.blackWins &&

@@ -16,6 +16,8 @@ extension GameScreenOverlays on _GameScreenState {
       mistakes: state.mistakes,
       blunders: state.blunders,
       xpGained: state.xpGained,
+      xpReward: state.xpReward,
+      xpPenalty: state.xpPenalty,
       analysisMessage: state.analysisMessage,
       evalHistory: state.evalHistory,
       eloChange: state.eloChange,
