@@ -24,6 +24,11 @@ import '../../presentation/screens/learn/learn_screen.dart';
 import '../../presentation/screens/learn/article_screen.dart';
 import '../../presentation/screens/learn/week_screen.dart';
 import '../../presentation/screens/achievements/achievements_screen.dart';
+import '../../presentation/screens/tournament/tournament_invite_screen.dart';
+import '../../presentation/screens/tournament/tournament_lobby_screen.dart';
+import '../../presentation/screens/tournament/tournament_result_screen.dart';
+import '../../presentation/blocs/tournament/tournament_bloc.dart';
+import '../../data/repositories/tournament_repository.dart';
 import '../../data/models/game_config.dart';
 import '../../data/models/tutorial_model.dart';
 export '../../data/models/game_config.dart';
@@ -180,6 +185,37 @@ class AppRouter {
         path: '/achievements',
         name: 'achievements',
         builder: (context, state) => const AchievementsScreen(),
+      ),
+      GoRoute(
+        path: '/tournament/invite',
+        name: 'tournament_invite',
+        builder: (context, state) => const TournamentInviteScreen(),
+      ),
+      GoRoute(
+        path: '/tournament/:id',
+        name: 'tournament_lobby',
+        builder: (context, state) => BlocProvider<TournamentBloc>(
+          create: (_) => TournamentBloc(
+            di.sl<TournamentRepository>(),
+            di.sl(),
+          ),
+          child: TournamentLobbyScreen(
+            tournamentId: state.pathParameters['id']!,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/tournament/:id/result',
+        name: 'tournament_result',
+        builder: (context, state) => BlocProvider<TournamentBloc>(
+          create: (_) => TournamentBloc(
+            di.sl<TournamentRepository>(),
+            di.sl(),
+          ),
+          child: TournamentResultScreen(
+            tournamentId: state.pathParameters['id']!,
+          ),
+        ),
       ),
     ],
   );

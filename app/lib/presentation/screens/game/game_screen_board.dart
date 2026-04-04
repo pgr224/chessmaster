@@ -63,7 +63,7 @@ extension GameScreenBoard on _GameScreenState {
                       : (sq) {
                           context.read<GameBloc>().add(GameSelectPieceEvent(sq));
                         },
-                  isInteractive: !state.isAIThinking,
+                  isInteractive: state.mode == GameMode.multiplayer || !state.isAIThinking,
                   lastCorrectMove: state.coachMove,
                   preMove: state.preMove,
                 ),
@@ -82,7 +82,7 @@ extension GameScreenBoard on _GameScreenState {
                 ),
 
               // AI COACH TALKING WINDOW
-              if ((state.isAIThinking && state.mode != GameMode.practice) || state.coachFeedback != null || state.activeHint != null)
+              if ((state.isAIThinking && state.mode != GameMode.practice && state.mode != GameMode.multiplayer) || state.coachFeedback != null || state.activeHint != null)
                 Positioned(
                   left: -20,
                   right: -20,
@@ -101,6 +101,10 @@ extension GameScreenBoard on _GameScreenState {
     final isMyTurn = state.currentTurn == state.playerColor;
     if (state.isGameOver) return const SizedBox.shrink();
 
+    final isMultiplayer = state.mode == GameMode.multiplayer;
+    final opponentLabel = isMultiplayer ? 'OPPONENT\'S TURN' : 'AI THINKING...';
+    final opponentIcon = isMultiplayer ? Icons.person_rounded : Icons.computer_rounded;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
@@ -115,13 +119,13 @@ extension GameScreenBoard on _GameScreenState {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            isMyTurn ? Icons.person_rounded : Icons.computer_rounded,
+            isMyTurn ? Icons.person_rounded : opponentIcon,
             color: isMyTurn ? AppTheme.accentCyan : Colors.white70,
             size: 18,
           ),
           const SizedBox(width: 8),
           Text(
-            isMyTurn ? 'YOUR TURN' : 'AI THINKING...',
+            isMyTurn ? 'YOUR TURN' : opponentLabel,
             style: GoogleFonts.fredoka(
               color: isMyTurn ? AppTheme.accentCyan : Colors.white70,
               fontSize: 14,

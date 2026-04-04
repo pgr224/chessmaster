@@ -160,6 +160,39 @@ class MpSetXpBroadcastRequestsEvent extends MultiplayerEvent {
   const MpSetXpBroadcastRequestsEvent(this.requests);
 }
 
+class MpSendTournamentInviteEvent extends MultiplayerEvent {
+  final OnlineLobbyUser opponent;
+  final String tournamentId;
+  final int totalRounds;
+  final String timeControl;
+  const MpSendTournamentInviteEvent({
+    required this.opponent,
+    required this.tournamentId,
+    required this.totalRounds,
+    required this.timeControl,
+  });
+  @override
+  List<Object?> get props => [opponent, tournamentId, totalRounds, timeControl];
+}
+
+class MpTournamentChallengeReceivedEvent extends MultiplayerEvent {
+  final String challengerId;
+  final String challengerName;
+  final String tournamentId;
+  final int totalRounds;
+  final String timeControl;
+  const MpTournamentChallengeReceivedEvent({
+    required this.challengerId,
+    required this.challengerName,
+    required this.tournamentId,
+    required this.totalRounds,
+    required this.timeControl,
+  });
+  @override
+  List<Object?> get props =>
+      [challengerId, challengerName, tournamentId, totalRounds, timeControl];
+}
+
 // STATE
 enum MultiplayerStatus { disconnected, inLobby, matchmaking, inGame, gameOver }
 
@@ -194,6 +227,12 @@ class MultiplayerState extends Equatable {
   final String? lobbyNotice;
   final String? challengerId;
   final String? challengerMode;
+  // Tournament challenge fields
+  final String? pendingTournamentId;
+  final String? pendingTournamentChallengerId;
+  final String? pendingTournamentChallengerName;
+  final int pendingTournamentRounds;
+  final String? pendingTournamentTimeControl;
 
   const MultiplayerState({
     this.status = MultiplayerStatus.disconnected,
@@ -226,6 +265,11 @@ class MultiplayerState extends Equatable {
     this.xpBroadcastRequests = const [],
     this.opponentAvatarUrl,
     this.opponentLocalAvatar,
+    this.pendingTournamentId,
+    this.pendingTournamentChallengerId,
+    this.pendingTournamentChallengerName,
+    this.pendingTournamentRounds = 3,
+    this.pendingTournamentTimeControl,
   });
 
   MultiplayerState copyWith({
@@ -259,6 +303,11 @@ class MultiplayerState extends Equatable {
     List<Map<String, dynamic>>? xpBroadcastRequests,
     String? opponentAvatarUrl,
     String? opponentLocalAvatar,
+    String? pendingTournamentId,
+    String? pendingTournamentChallengerId,
+    String? pendingTournamentChallengerName,
+    int? pendingTournamentRounds,
+    String? pendingTournamentTimeControl,
   }) {
     return MultiplayerState(
       status: status ?? this.status,
@@ -296,6 +345,15 @@ class MultiplayerState extends Equatable {
       xpBroadcastRequests: xpBroadcastRequests ?? this.xpBroadcastRequests,
       opponentAvatarUrl: opponentAvatarUrl ?? this.opponentAvatarUrl,
       opponentLocalAvatar: opponentLocalAvatar ?? this.opponentLocalAvatar,
+      pendingTournamentId: pendingTournamentId ?? this.pendingTournamentId,
+      pendingTournamentChallengerId:
+          pendingTournamentChallengerId ?? this.pendingTournamentChallengerId,
+      pendingTournamentChallengerName: pendingTournamentChallengerName ??
+          this.pendingTournamentChallengerName,
+      pendingTournamentRounds:
+          pendingTournamentRounds ?? this.pendingTournamentRounds,
+      pendingTournamentTimeControl:
+          pendingTournamentTimeControl ?? this.pendingTournamentTimeControl,
     );
   }
 
@@ -338,6 +396,9 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
   StreamSubscription? _lobbySub;
   StreamSubscription? _gameSub;
   String? _myUserId;
+
+  /// Exposed so screens can call service methods not wrapped in events.
+  MultiplayerService get mpService => _service;
 
   MultiplayerBloc(this._service) : super(const MultiplayerState()) {
     on<MpConnectLobbyEvent>(_onConnectLobby);
@@ -458,6 +519,27 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
       emit(state.copyWith(xpBroadcastRequests: requests));
     });
 
+    on<MpSendTournamentInviteEvent>((event, emit) {
+      _service.sendTournamentChallenge(
+        opponentId: event.opponent.id,
+        tournamentId: event.tournamentId,
+        totalRounds: event.totalRounds,
+        timeControl: event.timeControl,
+      );
+      emit(state.copyWith(
+          lobbyNotice: '🏆 Tournament invite sent to ${event.opponent.name}!'));
+    });
+    on<MpTournamentChallengeReceivedEvent>((event, emit) {
+      emit(state.copyWith(
+        pendingTournamentId: event.tournamentId,
+        pendingTournamentChallengerId: event.challengerId,
+        pendingTournamentChallengerName: event.challengerName,
+        pendingTournamentRounds: event.totalRounds,
+        pendingTournamentTimeControl: event.timeControl,
+        lobbyNotice:
+            '🏆 ${event.challengerName} invited you to a ${event.totalRounds}-round tournament!',
+      ));
+    });
     on<MpSendXpBroadcastEvent>((event, emit) {
       _service.sendXpBroadcast(event.amount);
     });
@@ -518,6 +600,15 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
           challengerId: d['challengerId']?.toString(),
           mode: d['mode']?.toString(),
           timeControl: d['timeControl']?.toString(),
+        ));
+      } else if (msg['type'] == 'TOURNAMENT_CHALLENGE_RECEIVED') {
+        final d = msg['data'] as Map;
+        add(MpTournamentChallengeReceivedEvent(
+          challengerId: d['challengerId']?.toString() ?? '',
+          challengerName: d['challengerName']?.toString() ?? 'Someone',
+          tournamentId: d['tournamentId']?.toString() ?? '',
+          totalRounds: (d['totalRounds'] as num?)?.toInt() ?? 3,
+          timeControl: d['timeControl']?.toString() ?? '10+0',
         ));
       } else if (msg['type'] == 'XP_BROADCAST') {
         final d = msg['data'] as Map;

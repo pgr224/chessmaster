@@ -6,12 +6,14 @@ import '../router/app_router.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/game_repository.dart';
 import '../../data/repositories/puzzle_repository.dart';
+import '../../data/repositories/tournament_repository.dart';
 import '../../data/services/multiplayer_service.dart';
 import '../../presentation/blocs/auth/auth_bloc.dart';
 import '../../presentation/blocs/game/game_bloc.dart';
 import '../../presentation/blocs/multiplayer/multiplayer_bloc.dart';
 import '../../presentation/blocs/theme/theme_bloc.dart';
 import '../../presentation/blocs/settings/settings_bloc.dart';
+import '../../presentation/blocs/tournament/tournament_bloc.dart';
 import '../../data/services/achievement_service.dart';
 import '../../data/services/mission_service.dart';
 
@@ -77,6 +79,8 @@ Future<void> init() async {
   sl.registerLazySingleton<AuthRepository>(() => AuthRepository(sl<Dio>()));
   sl.registerLazySingleton<GameRepository>(() => GameRepository(sl<Dio>()));
   sl.registerLazySingleton<PuzzleRepository>(() => PuzzleRepository());
+  sl.registerLazySingleton<TournamentRepository>(
+      () => TournamentRepository(sl<Dio>()));
   sl.registerSingleton<MultiplayerService>(MultiplayerService());
   sl.registerSingleton<MissionService>(
       MissionService(sl<SharedPreferences>(), sl<AuthRepository>()));
@@ -93,6 +97,8 @@ Future<void> init() async {
       ));
   sl.registerLazySingleton<MultiplayerBloc>(
       () => MultiplayerBloc(sl<MultiplayerService>()));
+  sl.registerFactory<TournamentBloc>(
+      () => TournamentBloc(sl<TournamentRepository>(), sl<MultiplayerService>()));
   sl.registerLazySingleton<ThemeBloc>(() => ThemeBloc());
   sl.registerLazySingleton<SettingsBloc>(() => SettingsBloc(dio: sl<Dio>()));
 }

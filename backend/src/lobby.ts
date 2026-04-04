@@ -117,6 +117,45 @@ export class Lobby implements DurableObject {
           }
           break
         }
+
+        case 'TOURNAMENT_CHALLENGE': {
+          // Challenger sends: { opponentId, tournamentId, totalRounds, timeControl }
+          const { opponentId, tournamentId, totalRounds, timeControl: tc } = msg
+          const sockets = this.state.getWebSockets()
+          const opponent = sockets.find(s => (s.deserializeAttachment() as LobbyPlayer)?.id === opponentId)
+          if (opponent) {
+            opponent.send(JSON.stringify({
+              type: 'TOURNAMENT_CHALLENGE_RECEIVED',
+              data: {
+                challengerId: meta.id,
+                challengerName: meta.name,
+                tournamentId,
+                totalRounds,
+                timeControl: tc,
+              }
+            }))
+          }
+          break
+        }
+
+        case 'TOURNAMENT_CHALLENGE_ACCEPTED': {
+          // Acceptor sends: { challengerId, tournamentId }
+          const { challengerId: cId, tournamentId: tId } = msg
+          const sockets = this.state.getWebSockets()
+          const challenger2 = sockets.find(s => (s.deserializeAttachment() as LobbyPlayer)?.id === cId)
+          if (challenger2) {
+            challenger2.send(JSON.stringify({
+              type: 'TOURNAMENT_ACCEPTED',
+              data: { tournamentId: tId, acceptorId: meta.id, acceptorName: meta.name }
+            }))
+          }
+          // Also notify the acceptor (self) with confirmation
+          ws.send(JSON.stringify({
+            type: 'TOURNAMENT_ACCEPTED',
+            data: { tournamentId: tId, acceptorId: meta.id, acceptorName: meta.name }
+          }))
+          break
+        }
       }
     } catch (e) {
       console.error('Lobby DO error:', e)

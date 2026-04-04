@@ -13,12 +13,14 @@ import { pushRoutes } from './routes/push'
 // Durable Objects
 export { Lobby } from './lobby'
 export { GameRoom } from './room'
+export { TournamentRoom } from './tournament_room'
 
 export interface Env {
   DB: D1Database
   CHESS_KV: KVNamespace
   LOBBY: DurableObjectNamespace
   GAME_ROOM: DurableObjectNamespace
+  TOURNAMENT_ROOM: DurableObjectNamespace
   JWT_SECRET: string
   ENVIRONMENT: string
   VAPID_PUBLIC_KEY: string
@@ -81,6 +83,17 @@ app.get('/multiplayer/game/:gameId', async (c) => {
   const gameId = c.req.param('gameId')
   const id = c.env.GAME_ROOM.idFromName(gameId)
   const stub = c.env.GAME_ROOM.get(id)
+  return stub.fetch(c.req.raw)
+})
+
+// TOURNAMENT ROOM (Tournament WebSocket)
+app.get('/multiplayer/tournament/:tournamentId', async (c) => {
+  const upgrade = c.req.header('Upgrade')
+  if (upgrade !== 'websocket') return c.text('Expect WebSocket', 426)
+
+  const tournamentId = c.req.param('tournamentId')
+  const id = c.env.TOURNAMENT_ROOM.idFromName(tournamentId)
+  const stub = c.env.TOURNAMENT_ROOM.get(id)
   return stub.fetch(c.req.raw)
 })
 

@@ -29,6 +29,10 @@ class_name = "GameRoom"
 name = "LOBBY"
 class_name = "Lobby"
 
+[[durable_objects.bindings]]
+name = "TOURNAMENT_ROOM"
+class_name = "TournamentRoom"
+
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["GameRoom"]
@@ -36,6 +40,10 @@ new_sqlite_classes = ["GameRoom"]
 [[migrations]]
 tag = "v2"
 new_sqlite_classes = ["Lobby"]
+
+[[migrations]]
+tag = "v3"
+new_sqlite_classes = ["TournamentRoom"]
 
 # ════════════════════════════════════
 # ENVIRONMENT VARIABLES

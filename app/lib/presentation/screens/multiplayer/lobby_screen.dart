@@ -80,13 +80,20 @@ class _LobbyScreenState extends State<LobbyScreen> {
     return BlocConsumer<MultiplayerBloc, MultiplayerState>(
       listenWhen: (previous, current) =>
           previous.status != current.status ||
-          previous.lobbyNotice != current.lobbyNotice,
+          previous.lobbyNotice != current.lobbyNotice ||
+          previous.pendingTournamentId != current.pendingTournamentId,
       listener: (context, state) {
         if (state.status == MultiplayerStatus.matchmaking) {
           context.push('/matchmaking');
         } else if (state.status == MultiplayerStatus.inGame &&
             state.gameId != null) {
           context.go('/room/${state.gameId}');
+        }
+
+        // Show incoming tournament challenge dialog
+        if (state.pendingTournamentId != null &&
+            state.pendingTournamentChallengerId != null) {
+          _showTournamentChallengeDialog(context, state);
         }
 
         if (state.lobbyNotice != null) {
@@ -294,14 +301,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       borderRadius: BorderRadius.circular(20)),
                 ),
                 onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Private rooms coming soon!')),
-                  );
+                  context.push('/tournament/invite');
                 },
                 icon:
-                    const Icon(Icons.lock_rounded, color: AppTheme.goldPrimary),
+                    const Icon(Icons.emoji_events_rounded, color: AppTheme.goldPrimary),
                 label: Text(
-                  'Create Private Game',
+                  '🏆 Tournament',
                   style: GoogleFonts.fredoka(
                     color: AppTheme.goldPrimary,
                     fontSize: 18,
@@ -1173,6 +1178,65 @@ class _LobbyScreenState extends State<LobbyScreen> {
             },
             child: Text('Accept',
                 style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showTournamentChallengeDialog(
+      BuildContext context, MultiplayerState state) {
+    final challName = state.pendingTournamentChallengerName ?? 'Someone';
+    final rounds = state.pendingTournamentRounds;
+    final tc = state.pendingTournamentTimeControl ?? '10+0';
+    final tId = state.pendingTournamentId!;
+    final cId = state.pendingTournamentChallengerId!;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.midnight,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Text('🏆 Tournament Invite!',
+            style: GoogleFonts.fredoka(color: AppTheme.goldPrimary)),
+        content: Text(
+          '$challName wants to play a $rounds-round tournament with $tc time control.',
+          style:
+              GoogleFonts.baloo2(color: AppTheme.textPrimary, fontSize: 15),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              context.read<MultiplayerBloc>().add(MpClearNoticeEvent());
+              Navigator.pop(ctx);
+            },
+            child: Text('Decline',
+                style: GoogleFonts.fredoka(
+                    color: AppTheme.accentRed,
+                    fontWeight: FontWeight.w600)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.goldPrimary,
+              foregroundColor: AppTheme.midnight,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14)),
+            ),
+            onPressed: () {
+              // Accept via lobby WS
+              final mpService = context
+                  .read<MultiplayerBloc>()
+                  .mpService;
+              mpService.acceptTournamentChallenge(cId, tId);
+              context.read<MultiplayerBloc>().add(MpClearNoticeEvent());
+              Navigator.pop(ctx);
+              // Navigate to tournament lobby
+              context.push('/tournament/$tId');
+            },
+            child: Text('Accept',
+                style:
+                    GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
           ),
         ],
       ),

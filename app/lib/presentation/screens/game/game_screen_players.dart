@@ -16,7 +16,8 @@ extension GameScreenPlayers on _GameScreenState {
       opponentName = multiplayerState.opponentName!;
       opponentAvatar = multiplayerState.opponentAvatarUrl;
       opponentLocal = multiplayerState.opponentLocalAvatar;
-      isOpponentThinking = state.currentTurn != state.playerColor;
+      // Don't show AI thinking indicator for human opponents
+      isOpponentThinking = false;
     } else {
       opponentName = _aiName(state.aiDifficulty);
       isOpponentThinking = state.currentTurn != state.playerColor &&

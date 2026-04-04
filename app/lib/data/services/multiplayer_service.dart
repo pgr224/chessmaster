@@ -233,6 +233,114 @@ class MultiplayerService {
     _gameChannel = null;
   }
 
+  // ─── Tournament WebSocket ───────────────────────────────────────
+
+  WebSocketChannel? _tournamentChannel;
+  StreamController<Map<String, dynamic>>? _tournamentStreamCtrl;
+
+  Stream<Map<String, dynamic>> get tournamentUpdates {
+    _tournamentStreamCtrl ??=
+        StreamController<Map<String, dynamic>>.broadcast();
+    return _tournamentStreamCtrl!.stream;
+  }
+
+  bool get isTournamentConnected => _tournamentChannel != null;
+
+  /// Connect to a TournamentRoom Durable Object
+  Future<void> connectTournament(
+    String tournamentId,
+    String userId,
+    String username, {
+    int rating = 1200,
+    int totalRounds = 3,
+    String timeControl = '10+0',
+    String type = 'private',
+  }) async {
+    if (_tournamentStreamCtrl == null || _tournamentStreamCtrl!.isClosed) {
+      _tournamentStreamCtrl =
+          StreamController<Map<String, dynamic>>.broadcast();
+    }
+
+    final baseUrl =
+        dotenv.env['WS_URL'] ?? 'wss://chess-master-api.pp942920.workers.dev';
+    final uri = Uri.parse(
+      '$baseUrl/multiplayer/tournament/$tournamentId'
+      '?userId=$userId&username=$username&rating=$rating'
+      '&totalRounds=$totalRounds&timeControl=${Uri.encodeComponent(timeControl)}&type=$type',
+    );
+
+    try {
+      await _tournamentChannel?.sink.close();
+    } catch (_) {}
+
+    _tournamentChannel = WebSocketChannel.connect(uri);
+    _tournamentChannel!.stream.listen(
+      (msg) {
+        final data = jsonDecode(msg) as Map<String, dynamic>;
+        if (!(_tournamentStreamCtrl?.isClosed ?? true)) {
+          _tournamentStreamCtrl!.add(data);
+        }
+      },
+      onDone: () {
+        _tournamentChannel = null;
+        if (!(_tournamentStreamCtrl?.isClosed ?? true)) {
+          _tournamentStreamCtrl!.add({'type': 'TOURNAMENT_CONNECTION_LOST'});
+        }
+      },
+      onError: (err) {
+        _tournamentChannel = null;
+        debugPrint('Tournament WS error: $err');
+      },
+    );
+  }
+
+  /// Signal ready to start (triggers auto-start for 2-player private)
+  void sendTournamentReady() {
+    _tournamentChannel?.sink.add(jsonEncode({'type': 'READY'}));
+  }
+
+  /// Report a match result to the TournamentRoom DO
+  void sendTournamentResult(String gameId, String result) {
+    _tournamentChannel?.sink.add(jsonEncode({
+      'type': 'MATCH_RESULT',
+      'gameId': gameId,
+      'result': result,
+    }));
+  }
+
+  /// Send a tournament challenge via the lobby
+  void sendTournamentChallenge({
+    required String opponentId,
+    required String tournamentId,
+    required int totalRounds,
+    required String timeControl,
+  }) {
+    _lobbyChannel?.sink.add(jsonEncode({
+      'type': 'TOURNAMENT_CHALLENGE',
+      'opponentId': opponentId,
+      'tournamentId': tournamentId,
+      'totalRounds': totalRounds,
+      'timeControl': timeControl,
+    }));
+  }
+
+  /// Accept a tournament challenge received via lobby
+  void acceptTournamentChallenge(String challengerId, String tournamentId) {
+    _lobbyChannel?.sink.add(jsonEncode({
+      'type': 'TOURNAMENT_CHALLENGE_ACCEPTED',
+      'challengerId': challengerId,
+      'tournamentId': tournamentId,
+    }));
+  }
+
+  /// Disconnect tournament WebSocket
+  void disconnectTournament() {
+    try {
+      _tournamentChannel?.sink.close();
+    } catch (_) {}
+    _tournamentChannel = null;
+  }
+
   /// Full dispose — closes everything, streams can be re-created on next connect
   void dispose() {
     try {
@@ -241,12 +349,18 @@ class MultiplayerService {
     try {
       _gameChannel?.sink.close();
     } catch (_) {}
+    try {
+      _tournamentChannel?.sink.close();
+    } catch (_) {}
     _lobbyChannel = null;
     _gameChannel = null;
+    _tournamentChannel = null;
     // Close stream controllers — they'll be lazily re-created
     _lobbyStreamCtrl?.close();
     _gameStreamCtrl?.close();
+    _tournamentStreamCtrl?.close();
     _lobbyStreamCtrl = null;
     _gameStreamCtrl = null;
+    _tournamentStreamCtrl = null;
   }
 }
