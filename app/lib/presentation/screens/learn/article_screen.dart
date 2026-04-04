@@ -922,7 +922,7 @@ class ArticleScreen extends StatelessWidget {
                   end: Alignment.bottomCenter,
                   colors: [
                     Colors.transparent,
-                    AppTheme.midnight.withOpacity(0.9)
+                    AppTheme.midnight.withValues(alpha: 0.9)
                   ],
                 ),
               ),
@@ -976,7 +976,7 @@ class ArticleScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-          color: color.withOpacity(0.12),
+          color: color.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(8)),
       child: Text(label,
           style: TextStyle(
@@ -992,7 +992,7 @@ class ArticleScreen extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: AppTheme.cardGradient,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.goldPrimary.withOpacity(0.15)),
+        border: Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.15)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -1075,7 +1075,7 @@ class ArticleScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppTheme.navyCard,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.accentPurple.withOpacity(0.2)),
+        border: Border.all(color: AppTheme.accentPurple.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1126,7 +1126,7 @@ class ArticleScreen extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppTheme.navyCard,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: AppTheme.goldPrimary.withOpacity(0.15)),
+            border: Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.15)),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -1177,7 +1177,7 @@ class ArticleScreen extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: AppTheme.cardGradient,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: week.color.withOpacity(0.2)),
+        border: Border.all(color: week.color.withValues(alpha: 0.2)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1185,7 +1185,7 @@ class ArticleScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
-              color: week.color.withOpacity(0.15),
+              color: week.color.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Text(week.period,
@@ -1243,7 +1243,7 @@ class ArticleScreen extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: AppTheme.cardGradient,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppTheme.skyBlue.withOpacity(0.15)),
+          border: Border.all(color: AppTheme.skyBlue.withValues(alpha: 0.15)),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1251,7 +1251,7 @@ class ArticleScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: AppTheme.skyBlue.withOpacity(0.12),
+                color: AppTheme.skyBlue.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(ref.type,
@@ -1306,7 +1306,7 @@ class ArticleScreen extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: AppTheme.cardGradient,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.accentPurple.withOpacity(0.2)),
+        border: Border.all(color: AppTheme.accentPurple.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1403,7 +1403,7 @@ class ArticleScreen extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: AppTheme.cardGradient,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

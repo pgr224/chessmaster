@@ -1,108 +1,80 @@
-﻿Analyzing app...                                                
+﻿Analyzing app...
 
-   info - Invalid use of a private type in a public API - lib\core\theme\app_theme.dart:35:22 - library_private_types_in_public_api
-   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\theme\app_theme.dart:115:34 - deprecated_member_use
-   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\theme\app_theme.dart:119:33 - deprecated_member_use
-   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\theme\app_theme.dart:124:27 - deprecated_member_use
-   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\theme\app_theme.dart:131:35 - deprecated_member_use
-   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\theme\app_theme.dart:217:35 - deprecated_member_use
-   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\theme\app_theme.dart:225:36 - deprecated_member_use
-   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\theme\app_theme.dart:279:36 - deprecated_member_use
-warning - Unused import: 'user_model.dart' - lib\data\models\game_record_model.dart:1:8 - unused_import
-   info - The constant name 'FIND_MATCH' isn't a lowerCamelCase identifier - lib\data\services\multiplayer_service.dart:8:3 - constant_identifier_names
-   info - The constant name 'CANCEL_FIND_MATCH' isn't a lowerCamelCase identifier - lib\data\services\multiplayer_service.dart:8:15 - constant_identifier_names
-   info - The constant name 'MOVE' isn't a lowerCamelCase identifier - lib\data\services\multiplayer_service.dart:8:34 - constant_identifier_names
-   info - The constant name 'CHAT' isn't a lowerCamelCase identifier - lib\data\services\multiplayer_service.dart:8:40 - constant_identifier_names
-   info - The constant name 'RESIGN' isn't a lowerCamelCase identifier - lib\data\services\multiplayer_service.dart:8:46 - constant_identifier_names
-   info - The constant name 'LOBBY_UPDATE' isn't a lowerCamelCase identifier - lib\data\services\multiplayer_service.dart:10:3 - constant_identifier_names
-   info - The constant name 'MATCH_FOUND' isn't a lowerCamelCase identifier - lib\data\services\multiplayer_service.dart:10:17 - constant_identifier_names
-   info - The constant name 'MOVE_UPDATE' isn't a lowerCamelCase identifier - lib\data\services\multiplayer_service.dart:10:30 - constant_identifier_names
-   info - The constant name 'CHAT_UPDATE' isn't a lowerCamelCase identifier - lib\data\services\multiplayer_service.dart:10:43 - constant_identifier_names
-   info - The constant name 'ROOM_STATE' isn't a lowerCamelCase identifier - lib\data\services\multiplayer_service.dart:10:56 - constant_identifier_names
-   info - The constant name 'PLAYER_DISCONNECTED' isn't a lowerCamelCase identifier - lib\data\services\multiplayer_service.dart:11:3 - constant_identifier_names
-   info - The constant name 'GAME_OVER' isn't a lowerCamelCase identifier - lib\data\services\multiplayer_service.dart:11:24 - constant_identifier_names
-   info - The constant name 'ERROR' isn't a lowerCamelCase identifier - lib\data\services\multiplayer_service.dart:11:35 - constant_identifier_names
-warning - The value of the field '_rating' isn't used - lib\data\services\multiplayer_service.dart:23:7 - unused_field
-   info - Don't invoke 'print' in production code - lib\data\services\multiplayer_service.dart:51:7 - avoid_print
-   info - Don't invoke 'print' in production code - lib\data\services\multiplayer_service.dart:78:22 - avoid_print
-   info - Dangling library doc comment - lib\domain\engine\chess_engine.dart:1:1 - dangling_library_doc_comments
-   info - The private field _moveHistory could be 'final' - lib\domain\engine\chess_engine.dart:154:14 - prefer_final_fields
-   info - The private field _positionHistory could be 'final' - lib\domain\engine\chess_engine.dart:155:16 - prefer_final_fields
-warning - The declaration '_resetCastlingRights' isn't referenced - lib\domain\engine\chess_engine.dart:527:8 - unused_element
-warning - The declaration '_findKing' isn't referenced - lib\domain\engine\chess_engine.dart:703:10 - unused_element
-   info - Dangling library doc comment - lib\domain\engine\engine_controller.dart:1:1 - dangling_library_doc_comments
-warning - The value of the field '_rng' isn't used - lib\domain\engine\engine_controller.dart:24:28 - unused_field
-   info - Dangling library doc comment - lib\domain\engine\js_engine_bridge.dart:1:1 - dangling_library_doc_comments
-   info - Don't invoke 'print' in production code - lib\domain\engine\js_engine_bridge.dart:35:5 - avoid_print
-   info - Don't invoke 'print' in production code - lib\domain\engine\js_engine_bridge.dart:50:5 - avoid_print
-   info - Dangling library doc comment - lib\domain\engine\native_engine_bridge.dart:1:1 - dangling_library_doc_comments
-warning - The value of the field '_engine' isn't used - lib\domain\engine\native_engine_bridge.dart:11:16 - unused_field
-   info - Dangling library doc comment - lib\domain\engine\native_engine_bridge_stub.dart:1:1 - dangling_library_doc_comments
-  error - 'analysisMessage' isn't a field in the enclosing class - lib\presentation\blocs\game\game_bloc.dart:189:5 - initializing_formal_for_non_existent_field
-  error - The getter 'analysisMessage' isn't defined for the type 'GameState' - lib\presentation\blocs\game\game_bloc.dart:312:48 - undefined_getter
-   info - Statements in an if should be enclosed in a block - lib\presentation\blocs\game\game_bloc.dart:389:22 - curly_braces_in_flow_control_structures
-   info - Statements in an if should be enclosed in a block - lib\presentation\blocs\game\game_bloc.dart:390:27 - curly_braces_in_flow_control_structures
-   info - Statements in an if should be enclosed in a block - lib\presentation\blocs\game\game_bloc.dart:391:27 - curly_braces_in_flow_control_structures
-   info - Statements in an if should be enclosed in a block - lib\presentation\blocs\game\game_bloc.dart:392:14 - curly_braces_in_flow_control_structures
-   info - Unnecessary 'this.' qualifier - lib\presentation\blocs\game\game_bloc.dart:760:12 - unnecessary_this
-   info - Unnecessary 'this.' qualifier - lib\presentation\blocs\game\game_bloc.dart:762:31 - unnecessary_this
-  error - The named parameter 'playerColor' isn't defined - lib\presentation\blocs\game\game_bloc.dart:872:11 - undefined_named_parameter
-   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\screens\game\game_screen.dart:293:38 - deprecated_member_use
-   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\screens\game\game_screen.dart:297:41 - deprecated_member_use
-  error - The getter 'analysisMessage' isn't defined for the type 'GameState' - lib\presentation\screens\game\game_screen.dart:835:30 - undefined_getter
-  error - The type 'GameMode' isn't exhaustively matched by the switch cases since it doesn't match the pattern 'GameMode.practice' - lib\presentation\screens\game\game_screen.dart:911:38 - non_exhaustive_switch_expression
-warning - The member 'emit' can only be used within 'package:bloc/src/bloc.dart' or a test - lib\presentation\screens\game\game_screen.dart:1192:65 - invalid_use_of_visible_for_testing_member
-warning - The value of the field '_timeControl' isn't used - lib\presentation\screens\game\game_setup_screen.dart:25:8 - unused_field
-   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\presentation\screens\game\game_setup_screen.dart:324:40 - deprecated_member_use
-   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\presentation\screens\game\game_setup_screen.dart:324:58 - deprecated_member_use
-   info - 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre - lib\presentation\screens\game\game_setup_screen.dart:416:7 - deprecated_member_use
-warning - The declaration '_MiniKingPainter' isn't referenced - lib\presentation\screens\game\game_setup_screen.dart:456:7 - unused_element
-   info - The member 'build' overrides an inherited member but isn't annotated with '@override' - lib\presentation\screens\home\home_screen.dart:40:10 - annotate_overrides
-   info - The import of '../../../data/models/game_config.dart' is unnecessary because all of the used elements are also provided by the import of '../../../core/router/app_router.dart' - lib\presentation\screens\learn\week_screen.dart:9:8 - unnecessary_import
-   info - Invalid use of a private type in a public API - lib\presentation\screens\learn\week_screen.dart:22:14 - library_private_types_in_public_api
-   info - Invalid use of a private type in a public API - lib\presentation\screens\learn\week_screen.dart:24:14 - library_private_types_in_public_api
-warning - Unused import: '../../blocs/auth/auth_bloc.dart' - lib\presentation\screens\multiplayer\game_room_screen.dart:6:8 - unused_import
-warning - The value of the field '_hasRetriedSuggestedUsername' isn't used - lib\presentation\screens\onboarding\onboarding_screen.dart:27:8 - unused_field
-warning - Unused import: 'dart:math' - lib\presentation\screens\profile\profile_screen.dart:2:8 - unused_import
-   info - Unnecessary use of 'toList' in a spread - lib\presentation\screens\profile\profile_screen.dart:405:66 - unnecessary_to_list_in_spreads
-  error - The method 'showEditProfileModal' isn't defined for the type 'ProfileScreen' - lib\presentation\screens\profile\profile_screen.dart:459:19 - undefined_method
-warning - The declaration 'showEditProfileModal' isn't referenced - lib\presentation\screens\profile\profile_screen.dart:463:15 - unused_element
-  error - The method 'copyWith' isn't defined for the type 'UserModel' - lib\presentation\screens\profile\profile_screen.dart:518:55 - undefined_method
-   info - 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor or activeTrackColor instead. This feature was deprecated after v3.31.0-2.0.pre - lib\presentation\screens\profile\profile_screen.dart:567:23 - deprecated_member_use
-  error - The method 'showEditProfileModal' isn't defined for the type 'ProfileScreen' - lib\presentation\screens\settings\settings_screen.dart:69:47 - undefined_method
-   info - 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor or activeTrackColor instead. This feature was deprecated after v3.31.0-2.0.pre - lib\presentation\screens\settings\settings_screen.dart:397:7 - deprecated_member_use
-   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\chat_widget.dart:46:34 - deprecated_member_use
-   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\chat_widget.dart:49:41 - deprecated_member_use
-   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\chat_widget.dart:101:52 - deprecated_member_use
-   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\chat_widget.dart:106:71 - deprecated_member_use
-   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\chat_widget.dart:144:64 - deprecated_member_use
-   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\chat_widget.dart:147:46 - deprecated_member_use
-warning - Unused import: 'package:flutter_svg/flutter_svg.dart' - lib\presentation\widgets\chess_board_widget.dart:5:8 - unused_import
-   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\chess_board_widget.dart:76:41 - deprecated_member_use
-   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\chess_board_widget.dart:140:67 - deprecated_member_use
-   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\chess_board_widget.dart:144:74 - deprecated_member_use
-   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\chess_board_widget.dart:289:46 - deprecated_member_use
-   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\chess_board_widget.dart:333:46 - deprecated_member_use
-   info - 'translate' is deprecated and shouldn't be used. Use translateByVector3, translateByVector4, or translateByDouble instead - lib\presentation\widgets\chess_board_widget.dart:538:9 - deprecated_member_use
-   info - 'scale' is deprecated and shouldn't be used. Use scaleByVector3, scaleByVector4, or scaleByDouble instead - lib\presentation\widgets\chess_board_widget.dart:539:9 - deprecated_member_use
-   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\chess_board_widget.dart:556:27 - deprecated_member_use
-   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\chess_board_widget.dart:567:36 - deprecated_member_use
-   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\chess_board_widget.dart:586:70 - deprecated_member_use
-   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\chess_board_widget.dart:590:29 - deprecated_member_use
-   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\chess_board_widget.dart:593:42 - deprecated_member_use
-   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\chess_board_widget.dart:597:62 - deprecated_member_use
-   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\chess_board_widget.dart:633:26 - deprecated_member_use
-   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\game_over_overlay.dart:87:31 - deprecated_member_use
-   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\game_over_overlay.dart:99:53 - deprecated_member_use
-   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\game_over_overlay.dart:101:46 - deprecated_member_use
-   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\game_over_overlay.dart:114:44 - deprecated_member_use
-   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\game_over_overlay.dart:153:45 - deprecated_member_use
-   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\game_over_overlay.dart:155:64 - deprecated_member_use
-   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\game_over_overlay.dart:192:78 - deprecated_member_use
-   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\game_over_overlay.dart:192:117 - deprecated_member_use
-   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\game_over_overlay.dart:194:70 - deprecated_member_use
-   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\game_over_overlay.dart:216:70 - deprecated_member_use
-warning - The declaration '_infoChip' isn't referenced - lib\presentation\widgets\game_over_overlay.dart:292:10 - unused_element
-warning - The declaration '_modeLabel' isn't referenced - lib\presentation\widgets\game_over_overlay.dart:303:10 - unused_element
-  error - The type 'GameMode?' isn't exhaustively matched by the switch cases since it doesn't match the pattern 'GameMode.practice' - lib\presentation\widgets\game_over_overlay.dart:303:26 - non_exhaustive_switch_expression
+warning - lib\domain\engine\chess_engine.dart:618:8 - The declaration '_resetCastlingRights' isn't referenced. Try removing the declaration of '_resetCastlingRights'. - unused_element
+warning - lib\domain\engine\chess_engine.dart:832:10 - The declaration '_findKing' isn't referenced. Try removing the declaration of '_findKing'. - unused_element
+warning - lib\domain\engine\coach_controller.dart:380:13 - The value of the local variable 'transition' isn't used. Try removing the variable or using it. - unused_local_variable
+warning - lib\domain\engine\coach_controller.dart:828:11 - The value of the local variable 'rk' isn't used. Try removing the variable or using it. - unused_local_variable
+warning - lib\domain\engine\coach_controller.dart:831:11 - The value of the local variable 'bot' isn't used. Try removing the variable or using it. - unused_local_variable
+warning - lib\domain\engine\coach_controller.dart:964:11 - The value of the local variable 'bot' isn't used. Try removing the variable or using it. - unused_local_variable
+warning - lib\domain\engine\engine_controller.dart:37:20 - The value of the field '_fallbackBufferMs' isn't used. Try removing the field, or using it. - unused_field
+warning - lib\presentation\blocs\game\game_bloc.dart:1225:11 - The value of the local variable 'isMultiplayer' isn't used. Try removing the variable or using it. - unused_local_variable
+warning - lib\presentation\blocs\game\game_bloc.dart:1226:11 - The value of the local variable 'isPuzzle' isn't used. Try removing the variable or using it. - unused_local_variable
+warning - lib\presentation\screens\game\game_setup_screen.dart:24:8 - The value of the field '_hintsEnabled' isn't used. Try removing the field, or using it. - unused_field
+warning - lib\presentation\screens\game\game_setup_screen.dart:25:8 - The value of the field '_timeControl' isn't used. Try removing the field, or using it. - unused_field
+warning - lib\presentation\screens\game\game_setup_screen.dart:535:7 - The declaration '_MiniKingPainter' isn't referenced. Try removing the declaration of '_MiniKingPainter'. - unused_element
+warning - lib\presentation\screens\onboarding\onboarding_screen.dart:27:8 - The value of the field '_hasRetriedSuggestedUsername' isn't used. Try removing the field, or using it. - unused_field
+warning - lib\presentation\widgets\player_info_widget.dart:6:8 - Unused import: './animated_robot_coach.dart'. Try removing the import directive. - unused_import
+   info - fix_opacity.dart:17:9 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - fix_opacity.dart:21:3 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - lib\data\models\achievement_model.dart:42:7 - Statements in an if should be enclosed in a block. Try wrapping the statement in a block. - curly_braces_in_flow_control_structures
+   info - lib\data\repositories\auth_repository.dart:73:7 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - lib\data\repositories\auth_repository.dart:429:7 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - lib\data\repositories\auth_repository.dart:443:7 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - lib\data\repositories\auth_repository.dart:455:7 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - lib\data\repositories\auth_repository.dart:471:7 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - lib\data\repositories\auth_repository.dart:484:7 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - lib\data\repositories\auth_repository.dart:559:7 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - lib\data\repositories\game_repository.dart:21:7 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - lib\data\repositories\game_repository.dart:70:7 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - lib\data\repositories\game_repository.dart:110:11 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - lib\data\repositories\game_repository.dart:115:7 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - lib\data\repositories\game_repository.dart:117:7 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - lib\data\repositories\game_repository.dart:138:13 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - lib\data\repositories\game_repository.dart:156:7 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - lib\data\repositories\game_repository.dart:195:7 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - lib\data\repositories\puzzle_repository.dart:16:7 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - lib\data\repositories\puzzle_repository.dart:32:7 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - lib\data\services\achievement_service.dart:207:9 - Statements in an if should be enclosed in a block. Try wrapping the statement in a block. - curly_braces_in_flow_control_structures
+   info - lib\data\services\achievement_service.dart:209:9 - Statements in an if should be enclosed in a block. Try wrapping the statement in a block. - curly_braces_in_flow_control_structures
+   info - lib\data\services\achievement_service.dart:211:9 - Statements in an if should be enclosed in a block. Try wrapping the statement in a block. - curly_braces_in_flow_control_structures
+   info - lib\data\services\achievement_service.dart:213:9 - Statements in an if should be enclosed in a block. Try wrapping the statement in a block. - curly_braces_in_flow_control_structures
+   info - lib\data\services\achievement_service.dart:244:9 - Statements in an if should be enclosed in a block. Try wrapping the statement in a block. - curly_braces_in_flow_control_structures
+   info - lib\data\services\achievement_service.dart:246:9 - Statements in an if should be enclosed in a block. Try wrapping the statement in a block. - curly_braces_in_flow_control_structures
+   info - lib\data\services\mission_service.dart:75:7 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - lib\domain\engine\ai_engine.dart:133:7 - Statements in an if should be enclosed in a block. Try wrapping the statement in a block. - curly_braces_in_flow_control_structures
+   info - lib\domain\engine\ai_engine.dart:140:9 - Statements in an if should be enclosed in a block. Try wrapping the statement in a block. - curly_braces_in_flow_control_structures
+   info - lib\domain\engine\ai_engine.dart:146:9 - Statements in an if should be enclosed in a block. Try wrapping the statement in a block. - curly_braces_in_flow_control_structures
+   info - lib\domain\engine\ai_engine.dart:194:35 - Statements in an if should be enclosed in a block. Try wrapping the statement in a block. - curly_braces_in_flow_control_structures
+   info - lib\domain\engine\ai_engine.dart:208:43 - Statements in an if should be enclosed in a block. Try wrapping the statement in a block. - curly_braces_in_flow_control_structures
+   info - lib\domain\engine\chess_engine.dart:281:7 - Statements in an if should be enclosed in a block. Try wrapping the statement in a block. - curly_braces_in_flow_control_structures
+   info - lib\domain\engine\chess_engine.dart:694:11 - Statements in an if should be enclosed in a block. Try wrapping the statement in a block. - curly_braces_in_flow_control_structures
+   info - lib\domain\engine\chess_engine.dart:713:11 - Statements in an if should be enclosed in a block. Try wrapping the statement in a block. - curly_braces_in_flow_control_structures
+   info - lib\domain\engine\chess_engine.dart:730:13 - Statements in an if should be enclosed in a block. Try wrapping the statement in a block. - curly_braces_in_flow_control_structures
+   info - lib\domain\engine\chess_engine.dart:750:13 - Statements in an if should be enclosed in a block. Try wrapping the statement in a block. - curly_braces_in_flow_control_structures
+   info - lib\domain\engine\chess_engine.dart:772:11 - Statements in an if should be enclosed in a block. Try wrapping the statement in a block. - curly_braces_in_flow_control_structures
+   info - lib\domain\engine\coach_controller.dart:747:7 - The 'if' statement could be replaced by a null-aware assignment. Try using the '??=' operator to conditionally assign a value. - prefer_conditional_assignment
+   info - lib\domain\engine\engine_controller.dart:74:7 - Statements in an if should be enclosed in a block. Try wrapping the statement in a block. - curly_braces_in_flow_control_structures
+   info - lib\domain\engine\engine_controller.dart:219:7 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - lib\domain\engine\engine_controller.dart:347:7 - Statements in an if should be enclosed in a block. Try wrapping the statement in a block. - curly_braces_in_flow_control_structures
+   info - lib\domain\engine\js_engine_bridge.dart:32:5 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - lib\domain\engine\js_engine_bridge.dart:72:5 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - lib\domain\engine\move_selector.dart:33:11 - Statements in an if should be enclosed in a block. Try wrapping the statement in a block. - curly_braces_in_flow_control_structures
+   info - lib\domain\engine\native_stockfish.dart:37:9 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - lib\presentation\blocs\game\game_bloc.dart:1705:17 - Statements in an if should be enclosed in a block. Try wrapping the statement in a block. - curly_braces_in_flow_control_structures
+   info - lib\presentation\blocs\game\game_bloc.dart:1707:17 - Statements in an if should be enclosed in a block. Try wrapping the statement in a block. - curly_braces_in_flow_control_structures
+   info - lib\presentation\blocs\game\game_bloc.dart:2092:9 - Statements in an if should be enclosed in a block. Try wrapping the statement in a block. - curly_braces_in_flow_control_structures
+   info - lib\presentation\blocs\settings\settings_bloc.dart:217:11 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - lib\presentation\screens\game\game_setup_screen.dart:24:8 - The private field _hintsEnabled could be 'final'. Try making the field 'final'. - prefer_final_fields
+   info - lib\presentation\screens\learn\article_screen.dart:1454:7 - Statements in an if should be enclosed in a block. Try wrapping the statement in a block. - curly_braces_in_flow_control_structures
+   info - lib\presentation\screens\learn\learn_screen.dart:799:7 - Statements in an if should be enclosed in a block. Try wrapping the statement in a block. - curly_braces_in_flow_control_structures
+   info - lib\presentation\screens\learn\week_screen.dart:22:14 - Invalid use of a private type in a public API. Try making the private type public, or making the API that uses the private type also be private. - library_private_types_in_public_api
+   info - lib\presentation\screens\learn\week_screen.dart:24:14 - Invalid use of a private type in a public API. Try making the private type public, or making the API that uses the private type also be private. - library_private_types_in_public_api
+   info - lib\presentation\screens\learn\week_screen.dart:773:19 - Statements in an if should be enclosed in a block. Try wrapping the statement in a block. - curly_braces_in_flow_control_structures
+   info - lib\presentation\screens\multiplayer\lobby_screen.dart:383:40 - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check. Guard a 'State.context' use with a 'mounted' check on the State, and other BuildContext use with a 'mounted' check on the BuildContext. - use_build_context_synchronously
+   info - lib\presentation\widgets\chess_piece_widget.dart:86:48 - Unnecessary braces in a string interpolation. Try removing the braces. - unnecessary_brace_in_string_interps
+   info - lib\presentation\widgets\reacting_robot_animator.dart:3:36 - Invalid use of a private type in a public API. Try making the private type public, or making the API that uses the private type also be private. - library_private_types_in_public_api
+   info - lib\presentation\widgets\reacting_robot_bubble.dart:3:34 - Invalid use of a private type in a public API. Try making the private type public, or making the API that uses the private type also be private. - library_private_types_in_public_api
+   info - safe_fix_opacity.dart:16:9 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - safe_fix_opacity.dart:20:3 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
 
+76 issues found.

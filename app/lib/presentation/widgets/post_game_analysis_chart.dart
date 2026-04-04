@@ -33,11 +33,11 @@ class PostGameAnalysisChart extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.navyCard.withOpacity(0.9),
+        color: AppTheme.navyCard.withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppTheme.skyBlue.withOpacity(0.2)),
+        border: Border.all(color: AppTheme.skyBlue.withValues(alpha: 0.2)),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 16),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 16),
         ],
       ),
       child: Column(
@@ -50,7 +50,7 @@ class PostGameAnalysisChart extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppTheme.skyBlue.withOpacity(0.15),
+                  color: AppTheme.skyBlue.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(Icons.analytics_rounded,
@@ -122,12 +122,12 @@ class PostGameAnalysisChart extends StatelessWidget {
           getDrawingHorizontalLine: (value) {
             if (value == 0) {
               return FlLine(
-                color: Colors.white.withOpacity(0.3),
+                color: Colors.white.withValues(alpha: 0.3),
                 strokeWidth: 1.5,
               );
             }
             return FlLine(
-              color: Colors.white.withOpacity(0.05),
+              color: Colors.white.withValues(alpha: 0.05),
               strokeWidth: 0.5,
             );
           },
@@ -207,8 +207,8 @@ class PostGameAnalysisChart extends StatelessWidget {
             curveSmoothness: 0.3,
             gradient: LinearGradient(
               colors: [
-                AppTheme.accentCyan.withOpacity(0.8),
-                AppTheme.skyBlue.withOpacity(0.8),
+                AppTheme.accentCyan.withValues(alpha: 0.8),
+                AppTheme.skyBlue.withValues(alpha: 0.8),
               ],
             ),
             barWidth: 2.5,
@@ -243,7 +243,7 @@ class PostGameAnalysisChart extends StatelessWidget {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  AppTheme.accentCyan.withOpacity(0.15),
+                  AppTheme.accentCyan.withValues(alpha: 0.15),
                   Colors.transparent,
                 ],
                 stops: const [0.0, 1.0],
@@ -257,7 +257,7 @@ class PostGameAnalysisChart extends StatelessWidget {
                 begin: Alignment.bottomCenter,
                 end: Alignment.topCenter,
                 colors: [
-                  AppTheme.accentRed.withOpacity(0.1),
+                  AppTheme.accentRed.withValues(alpha: 0.1),
                   Colors.transparent,
                 ],
                 stops: const [0.0, 1.0],
@@ -306,9 +306,9 @@ class PostGameAnalysisChart extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppTheme.navyCard.withOpacity(0.6),
+        color: AppTheme.navyCard.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.textMuted.withOpacity(0.1)),
+        border: Border.all(color: AppTheme.textMuted.withValues(alpha: 0.1)),
       ),
       child: Row(
         children: [

@@ -103,17 +103,17 @@ class _TimerWidgetState extends State<TimerWidget> {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
         color: widget.isActive
-            ? AppTheme.navyCard.withOpacity(0.95)
-            : Colors.black.withOpacity(0.2),
+            ? AppTheme.navyCard.withValues(alpha: 0.95)
+            : Colors.black.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: widget.isActive ? color.withOpacity(0.6) : Colors.transparent,
+          color: widget.isActive ? color.withValues(alpha: 0.6) : Colors.transparent,
           width: 2,
         ),
         boxShadow: widget.isActive
             ? [
                 BoxShadow(
-                  color: color.withOpacity(0.3),
+                  color: color.withValues(alpha: 0.3),
                   blurRadius: 12,
                   spreadRadius: 2,
                 )
@@ -126,7 +126,7 @@ class _TimerWidgetState extends State<TimerWidget> {
           Icon(
             Icons.timer_outlined,
             size: 14,
-            color: color.withOpacity(0.7),
+            color: color.withValues(alpha: 0.7),
           ),
           const SizedBox(width: 10),
           Text(

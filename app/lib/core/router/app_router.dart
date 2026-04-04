@@ -151,6 +151,9 @@ class AppRouter {
         builder: (context, state) => LobbyScreen(
           initialChallengeId: state.uri.queryParameters['accept_challenge'],
           autoAccept: state.uri.queryParameters['auto_accept'] == 'true',
+          initialXpRequestId: state.uri.queryParameters['xp_request_id'],
+          autoAcceptXp: state.uri.queryParameters['auto_accept_xp'] == 'true',
+          autoRejectXp: state.uri.queryParameters['auto_reject_xp'] == 'true',
         ),
       ),
       GoRoute(
@@ -262,7 +265,7 @@ class _MainScaffoldState extends State<MainScaffold> {
         backgroundColor: const Color(0xFF0A0E27),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(24),
-          side: BorderSide(color: const Color(0xFFD4AF37).withOpacity(0.3)),
+          side: BorderSide(color: const Color(0xFFD4AF37).withValues(alpha: 0.3)),
         ),
         title: Text('Quit Game?',
             style: GoogleFonts.fredoka(
@@ -310,7 +313,7 @@ class _MainScaffoldState extends State<MainScaffold> {
         onDestinationSelected: (index) {
           context.go(_navItems[index].path);
         },
-        indicatorColor: const Color(0xFFD4AF37).withOpacity(0.2),
+        indicatorColor: const Color(0xFFD4AF37).withValues(alpha: 0.2),
         destinations: [
           for (final item in _navItems)
             NavigationDestination(

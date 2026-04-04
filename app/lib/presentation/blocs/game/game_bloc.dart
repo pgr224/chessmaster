@@ -1214,8 +1214,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       pendingMove: null, // Clear any pending move UI
       clearHint: true,
       clearCoachMove: true,
-      clearCoachMessage: true,
-      clearCoachFeedback: true,
+      clearCoachMessage: (state.playerColor == null) || (state.currentTurn == state.playerColor),
+      clearCoachFeedback: (state.playerColor == null) || (state.currentTurn == state.playerColor),
     ));
 
     // Update Evaluation asynchronously to not block the UI
@@ -1400,17 +1400,25 @@ class GameBloc extends Bloc<GameEvent, GameState> {
           clearActiveHint: true,
         ));
 
-        // AUTO-CLEAR COACH FEEDBACK — longer in Practice Mode for rich messages
-        final clearDelay = state.mode == GameMode.practice
-            ? const Duration(seconds: 18)
-            : const Duration(seconds: 8);
+        // Dynamic duration based on text length (base 4s + 65ms per character)
+        // Max duration is 20s for Practice Mode and 10s for other modes.
+        final totalTextLength =
+          reactionMsg.length + (feedback.explanation?.length ?? 0);
+        final baseDurationMs = 4000;
+        final perCharMs = 65;
+        final maxDurationMs = state.mode == GameMode.practice ? 20000 : 10000;
+
+        final dynamicDuration = (baseDurationMs + (totalTextLength * perCharMs))
+            .clamp(baseDurationMs, maxDurationMs);
+
+        final clearDelay = Duration(milliseconds: dynamicDuration);
         Future.delayed(clearDelay).then((_) {
           if (!isClosed && state.coachFeedback == feedback) {
             add(GameUpdatePersonalityEvent(
               personality: state.activePersonality ?? AIPersonality.aggressive,
               message: '',
             ));
-            emit(state.copyWith(clearCoachFeedback: true));
+            add(GameDismissCoachFeedbackEvent());
           }
         });
       } catch (e) {
@@ -1701,10 +1709,12 @@ class GameBloc extends Bloc<GameEvent, GameState> {
               xpDelta = (xpDelta * streakMultiplier).round();
 
               mapUpdates['wins'] = 1;
-              if (state.mode == GameMode.singlePlayer)
+              if (state.mode == GameMode.singlePlayer) {
                 mapUpdates['ai_wins'] = 1;
-              if (state.mode == GameMode.multiplayer)
+              }
+              if (state.mode == GameMode.multiplayer) {
                 mapUpdates['multiplayer_wins'] = 1;
+              }
             } else if (isLoss) {
               xpDelta = -20;
               mapUpdates['losses'] = 1;
@@ -1970,7 +1980,6 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       // Practice Mode: Free undo
       emit(state.copyWith(
         tutorialMessage: "⏪ Take back applied!",
-        lastUndoPenaltySquare: penaltySquare,
       ));
     }
 
@@ -2088,8 +2097,9 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     // ── UPGRADE: If hint already showing, bump to next level ─────────────────
     if (state.activeHint != null) {
       final hint = state.activeHint!;
-      if (!hint.canUpgrade)
+      if (!hint.canUpgrade) {
         return; // Already at level 3, nothing more to reveal
+      }
 
       final nextLevel = hint.currentLevel + 1;
       final isPractice = state.mode == GameMode.practice;

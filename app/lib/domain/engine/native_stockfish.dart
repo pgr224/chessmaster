@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:stockfish/stockfish.dart';
 import 'candidate_model.dart';
+import '../../core/services/logging_service.dart';
 
 class NativeStockfish {
   static final NativeStockfish _instance = NativeStockfish._internal();
@@ -34,7 +35,7 @@ class NativeStockfish {
       } else if (line.startsWith('info depth') && line.contains('multipv')) {
         _parseInfoLine(line);
       } else if (line == 'readyok') {
-        print('[NativeStockfish] Engine is ready');
+        LoggingService.info('[NativeStockfish] Engine is ready');
       }
     });
 

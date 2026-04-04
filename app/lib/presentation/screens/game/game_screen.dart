@@ -34,6 +34,11 @@ import '../../widgets/eval_bar_widget.dart';
 import '../../widgets/chat_widget.dart';
 import '../../../data/models/coach_model.dart';
 
+part 'game_screen_players.dart';
+part 'game_screen_board.dart';
+part 'game_screen_controls.dart';
+part 'game_screen_overlays.dart';
+
 class GameScreen extends StatefulWidget {
   final GameConfig config;
   final TutorialLesson? tutorial;
@@ -250,7 +255,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         children: [
           GestureDetector(
             onTap: () => setState(() => _showMoves = false),
-            child: Container(color: Colors.black.withOpacity(0.2)),
+            child: Container(color: Colors.black.withValues(alpha: 0.2)),
           ),
           Positioned(
             right: 16,
@@ -260,12 +265,12 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             child: Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppTheme.navyCard.withOpacity(0.95),
+                color: AppTheme.navyCard.withValues(alpha: 0.95),
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: AppTheme.skyBlue.withOpacity(0.3)),
+                border: Border.all(color: AppTheme.skyBlue.withValues(alpha: 0.3)),
                 boxShadow: [
                   BoxShadow(
-                      color: Colors.black.withOpacity(0.4),
+                      color: Colors.black.withValues(alpha: 0.4),
                       blurRadius: 20,
                       offset: const Offset(0, 8)),
                 ],
@@ -314,85 +319,12 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       child: Container(
         padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.1), shape: BoxShape.circle),
+            color: Colors.white.withValues(alpha: 0.1), shape: BoxShape.circle),
         child: Icon(icon, color: AppTheme.textPrimary, size: size - 8),
       ),
     );
   }
 
-  Widget _buildTurnOverlay(GameState state, bool minimalMotion) {
-    final isMyTurn = state.isPlayerTurn;
-    final label = isMyTurn ? '⚡ YOUR TURN!' : "⏳ OPPONENT'S TURN";
-    final gradient = isMyTurn
-        ? AppTheme.goldGradient
-        : const LinearGradient(colors: [Color(0xFF4A5580), Color(0xFF3A4570)]);
-    final textColor = isMyTurn ? AppTheme.midnight : Colors.white70;
-    final shadowColor = isMyTurn ? AppTheme.goldPrimary : AppTheme.textMuted;
-
-    Widget turnPill = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
-      decoration: BoxDecoration(
-        gradient: gradient,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: shadowColor.withOpacity(isMyTurn ? 0.5 : 0.2),
-            blurRadius: isMyTurn ? 20 : 10,
-            offset: const Offset(0, 4),
-          ),
-          if (isMyTurn)
-            BoxShadow(
-              color: AppTheme.goldPrimary.withOpacity(0.3),
-              blurRadius: 30,
-              spreadRadius: 2,
-            ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            label,
-            style: GoogleFonts.fredoka(
-              color: textColor,
-              fontSize: isMyTurn ? 14 : 12,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 1.2,
-            ),
-          ),
-        ],
-      ),
-    );
-
-    if (minimalMotion) return turnPill;
-
-    if (isMyTurn) {
-      return IgnorePointer(
-        child: turnPill
-            .animate(onPlay: (c) => c.repeat(reverse: true))
-            .fadeIn(duration: 300.ms)
-            .then()
-            .fade(
-                begin: 1.0, end: 0.4, duration: 700.ms, curve: Curves.easeInOut)
-            .scale(
-                begin: const Offset(1.0, 1.0),
-                end: const Offset(1.06, 1.06),
-                duration: 700.ms,
-                curve: Curves.easeInOut)
-            .shimmer(
-                delay: 3.seconds,
-                duration: 1200.ms,
-                color: AppTheme.goldLight.withOpacity(0.3)),
-      );
-    }
-
-    return IgnorePointer(
-      child: Opacity(
-        opacity: 0.85,
-        child: turnPill,
-      ),
-    );
-  }
 
   Widget _buildEngineErrorOverlay(BuildContext context, GameState state) {
     return Positioned.fill(
@@ -460,13 +392,13 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           decoration: BoxDecoration(
-            color: AppTheme.navyCard.withOpacity(0.95),
+            color: AppTheme.navyCard.withValues(alpha: 0.95),
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
-                color: AppTheme.goldPrimary.withOpacity(0.6), width: 2),
+                color: AppTheme.goldPrimary.withValues(alpha: 0.6), width: 2),
             boxShadow: [
               BoxShadow(
-                  color: AppTheme.goldPrimary.withOpacity(0.2),
+                  color: AppTheme.goldPrimary.withValues(alpha: 0.2),
                   blurRadius: 20,
                   offset: const Offset(0, 8)),
             ],
@@ -524,18 +456,18 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         constraints: const BoxConstraints(maxHeight: 220),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppTheme.navyCard.withOpacity(0.97),
+          color: AppTheme.navyCard.withValues(alpha: 0.97),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isCompleted
-                ? AppTheme.accentCyan.withOpacity(0.7)
-                : AppTheme.goldPrimary.withOpacity(0.5),
+                ? AppTheme.accentCyan.withValues(alpha: 0.7)
+                : AppTheme.goldPrimary.withValues(alpha: 0.5),
             width: 2,
           ),
           boxShadow: [
             BoxShadow(
               color: (isCompleted ? AppTheme.accentCyan : AppTheme.goldPrimary)
-                  .withOpacity(0.2),
+                  .withValues(alpha: 0.2),
               blurRadius: 16,
               offset: const Offset(0, 4),
             ),
@@ -589,7 +521,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                               ? AppTheme.accentCyan
                               : isActive
                                   ? AppTheme.goldPrimary
-                                  : AppTheme.textMuted.withOpacity(0.3),
+                                  : AppTheme.textMuted.withValues(alpha: 0.3),
                           borderRadius: BorderRadius.circular(4),
                         ),
                       );
@@ -621,10 +553,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
-                          color: AppTheme.skyBlue.withOpacity(0.1),
+                          color: AppTheme.skyBlue.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                              color: AppTheme.skyBlue.withOpacity(0.2)),
+                              color: AppTheme.skyBlue.withValues(alpha: 0.2)),
                         ),
                         child: Row(
                           children: [
@@ -680,7 +612,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
+                    color: Colors.black.withValues(alpha: 0.2),
                     blurRadius: 8,
                     offset: const Offset(0, 4)),
               ],
@@ -760,16 +692,16 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         height: 48,
         decoration: BoxDecoration(
           color: onTap != null
-              ? AppTheme.surface.withOpacity(0.8)
-              : AppTheme.surface.withOpacity(0.3),
+              ? AppTheme.surface.withValues(alpha: 0.8)
+              : AppTheme.surface.withValues(alpha: 0.3),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
               color: (onTap != null ? AppTheme.textMuted : Colors.transparent)
-                  .withOpacity(0.3)),
+                  .withValues(alpha: 0.3)),
           boxShadow: onTap != null
               ? [
                   BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: Colors.black.withValues(alpha: 0.1),
                       blurRadius: 4,
                       offset: const Offset(0, 2))
                 ]
@@ -782,95 +714,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildOpponentInfo(GameState state) {
-    final mpState = context.read<MultiplayerBloc>().state;
-    final opponentLabel = state.mode == GameMode.singlePlayer
-        ? 'Chess Robot (${state.aiDifficulty?.name.capitalize() ?? ""})'
-        : state.mode == GameMode.multiplayer && state.opponentName != null
-            ? '🌍 ${state.opponentName}'
-            : '👤 Opponent';
-
-    final isOpponentTurn = state.currentTurn != state.playerColor;
-    final opponentTime = state.playerColor == PieceColor.white
-        ? mpState.blackTime
-        : mpState.whiteTime;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          PlayerInfoWidget(
-            name: opponentLabel,
-            isActive: isOpponentTurn,
-            isAI: state.mode == GameMode.singlePlayer,
-            isThinking: false, // Using overlay now
-            color: state.playerColor == PieceColor.white
-                ? PieceColor.black
-                : PieceColor.white,
-            avatarUrl: state.mode == GameMode.multiplayer
-                ? mpState.opponentAvatarUrl
-                : null,
-            localAvatar: state.mode == GameMode.multiplayer
-                ? mpState.opponentLocalAvatar
-                : null,
-          ),
-          if (state.mode == GameMode.multiplayer) ...[
-            const SizedBox(width: 12),
-            TimerWidget(
-                timeInSeconds: opponentTime,
-                isActive: isOpponentTurn,
-                label: 'Opponent'),
-          ]
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPlayerInfo(GameState state) {
-    final mpState = context.read<MultiplayerBloc>().state;
-    final authState = context.read<AuthBloc>().state;
-    UserModel? user;
-    if (authState is AuthAuthenticatedState) {
-      user = authState.user;
-    }
-
-    final isPlayerTurn = state.currentTurn == state.playerColor;
-    final playerTime = state.playerColor == PieceColor.white
-        ? mpState.whiteTime
-        : mpState.blackTime;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          PlayerInfoWidget(
-            name: user?.username ?? '👑 You',
-            isActive: isPlayerTurn,
-            isAI: false,
-            isThinking: false,
-            color: state.playerColor ?? PieceColor.white,
-            avatarUrl: user?.avatarUrl,
-            localAvatar: user?.localAvatar,
-          ),
-          if (state.mode == GameMode.multiplayer) ...[
-            const SizedBox(width: 12),
-            TimerWidget(
-                timeInSeconds: playerTime,
-                isActive: isPlayerTurn,
-                label: 'You'),
-          ]
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCapturedPieces(GameState state, PieceColor color) {
-    final pieces =
-        color == PieceColor.white ? state.capturedWhite : state.capturedBlack;
-    return CapturedPiecesWidget(pieces: pieces, color: color);
-  }
 
   bool _showMoves = false;
   bool _didShowRules = false;
@@ -981,7 +824,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.4),
+                            color: Colors.black.withValues(alpha: 0.4),
                             blurRadius: 12,
                             offset: const Offset(0, 4),
                           ),
@@ -1054,11 +897,11 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: (isMe ? AppTheme.goldPrimary : Colors.white).withOpacity(0.15),
+          color: (isMe ? AppTheme.goldPrimary : Colors.white).withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
               color: (isMe ? AppTheme.goldPrimary : Colors.white)
-                  .withOpacity(0.1)),
+                  .withValues(alpha: 0.1)),
         ),
         child: Text(
           text,
@@ -1107,7 +950,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             decoration: BoxDecoration(
               color: AppTheme.navyCard,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppTheme.accentCyan.withOpacity(0.5)),
+              border: Border.all(color: AppTheme.accentCyan.withValues(alpha: 0.5)),
             ),
             child: Row(
               children: [
@@ -1126,9 +969,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: AppTheme.goldPrimary.withOpacity(0.1),
+              color: AppTheme.goldPrimary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppTheme.goldPrimary.withOpacity(0.3)),
+              border: Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.3)),
             ),
             child: Text(
               '${state.totalPuzzleXP} XP',
@@ -1153,13 +996,13 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           constraints: const BoxConstraints(maxWidth: 400),
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: AppTheme.navyCard.withOpacity(0.98),
+            color: AppTheme.navyCard.withValues(alpha: 0.98),
             borderRadius: BorderRadius.circular(24),
             border:
-                Border.all(color: AppTheme.skyBlue.withOpacity(0.4), width: 2),
+                Border.all(color: AppTheme.skyBlue.withValues(alpha: 0.4), width: 2),
             boxShadow: [
               BoxShadow(
-                color: AppTheme.skyBlue.withOpacity(0.15),
+                color: AppTheme.skyBlue.withValues(alpha: 0.15),
                 blurRadius: 30,
                 spreadRadius: 5,
               ),
@@ -1286,667 +1129,17 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildBoardFrame(BuildContext context, GameState state,
-      {required double maxDimension}) {
-    final dimension = math.max(300.0, math.min(maxDimension, 860.0));
-    final settings = context.watch<SettingsBloc>().state;
-    final themeState = context.watch<ThemeBloc>().state;
 
-    // In multiplayer, always use playerColor for perspective (never auto-flip)
-    final PieceColor perspective;
-    if (state.mode == GameMode.multiplayer && state.playerColor != null) {
-      perspective = state.playerColor!;
-    } else if (settings.autoFlipBoard) {
-      perspective = state.currentTurn;
-    } else {
-      perspective = state.playerColor ?? PieceColor.white;
-    }
 
-    final minimalMotion = settings.moveAnimationSpeed == 'off';
 
-    return ConstrainedBox(
-      constraints:
-          BoxConstraints.tightFor(width: dimension + 30, height: dimension),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          if (state.coachSettings.showEvalBar &&
-              (state.mode == GameMode.singlePlayer ||
-                  state.mode == GameMode.practice)) ...[
-            EvalBarWidget(
-              evalScore: state.evalScore,
-              perspective: perspective,
-              height: dimension,
-              isGameOver: state.isGameOver,
-              result: state.result,
-            ),
-            const SizedBox(width: 8),
-          ],
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              // THE BOARD
-              SizedBox(
-                width: dimension,
-                height: dimension,
-                child: ChessBoardWidget(
-                  board: state.board,
-                  perspective: perspective,
-                  selectedSquare: state.selectedSquare,
-                  legalMoves:
-                      settings.showLegalMoves ? state.legalMoves : const [],
-                  lastMove: state.moveHistory.isNotEmpty
-                      ? state.moveHistory.last
-                      : null,
-                  hintMove: state.hintMove,
-                  status: state.status,
-                  boardTheme: themeState.boardTheme,
-                  pieceShape: themeState.pieceShape,
-                  pieceStyle: themeState.pieceStyle,
-                  moveAnimationSpeed: settings.moveAnimationSpeed,
-                  showCoordinates: settings.showCoordinates,
-                  showSquareLabels: settings.showSquareLabels,
-                  whitePieceColor: state.whitePieceColor,
-                  blackPieceColor: state.blackPieceColor,
-                  currentTurn: state.currentTurn,
-                  lastUndoPenaltySquare: state.lastUndoPenaltySquare,
-                  onSquareTap: state.isGameOver
-                      ? null
-                      : (sq) {
-                          context
-                              .read<GameBloc>()
-                              .add(GameSelectPieceEvent(sq));
-                        },
-                  isInteractive: !state.isAIThinking,
-                  lastCorrectMove: state.coachMove,
-                  preMove: state.preMove,
-                ),
-              ),
 
-              // TURN INDICATORS - Centered & Stick to borders
-              if (!state.isGameOver)
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  top: state.currentTurn == perspective ? null : -45,
-                  bottom: state.currentTurn == perspective ? -45 : null,
-                  child: Center(
-                    child: _buildTurnOverlay(state, minimalMotion),
-                  ),
-                ),
 
-              // AI COACH TALKING WINDOW - Elegantly floating near active side
-              // Practice mode: skip "thinking" messages, only show reactions & hints
-              if ((state.isAIThinking && state.mode != GameMode.practice) ||
-                  state.coachFeedback != null ||
-                  state.activeHint != null)
-                Positioned(
-                  left: -20,
-                  right: -20,
-                  top: state.currentTurn == perspective ? null : -130,
-                  bottom: state.currentTurn == perspective ? -130 : null,
-                  child: ReactingRobotWidget(state: state),
-                ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildActionBar(BuildContext context, GameState state) {
-    final settings = context.watch<SettingsBloc>().state;
-    final isPracticeOrSingle = state.mode == GameMode.singlePlayer ||
-        state.mode == GameMode.practice ||
-        state.mode == GameMode.twoPlayer;
-    final isMultiplayer = state.mode == GameMode.multiplayer;
-    final isPuzzle = state.mode == GameMode.puzzle;
 
-    return Container(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
-      decoration: BoxDecoration(
-        color: AppTheme.deepSpace.withOpacity(0.9),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.3),
-              blurRadius: 20,
-              offset: const Offset(0, -4)),
-        ],
-      ),
-      child: Wrap(
-        alignment: WrapAlignment.spaceEvenly,
-        runSpacing: 8,
-        spacing: 6,
-        children: [
-          // Puzzle specific buttons
-          if (isPuzzle && !state.isGameOver)
-            _actionBtn(
-              icon: Icons.flag_rounded,
-              label: 'Give Up',
-              color: AppTheme.accentRed,
-              onTap: () =>
-                  context.read<GameBloc>().add(const GamePuzzleGiveUpEvent()),
-              width: 78,
-            ),
-          if (isPuzzle && state.isGameOver)
-            _actionBtn(
-              icon: Icons.skip_next_rounded,
-              label: 'Next Puzzle',
-              color: AppTheme.accentCyan,
-              onTap: () =>
-                  context.read<GameBloc>().add(const GamePuzzleNextEvent()),
-              width: 90,
-            ),
 
-          // Hint button (single player, practice, puzzle, or online multiplayer)
-          if (isPracticeOrSingle || isPuzzle || isMultiplayer)
-            _actionBtn(
-              icon: Icons.lightbulb_rounded,
-              label: isPuzzle
-                  ? 'Hint (10XP)'
-                  : state.mode == GameMode.practice
-                      ? 'Hint ∞'
-                      : 'Hint',
-              color: AppTheme.goldPrimary,
-              onTap: !state.isGameOver &&
-                      (state.isPlayerTurn ||
-                          state.mode == GameMode.practice ||
-                          state.mode == GameMode.twoPlayer) &&
-                      !state.isAIThinking
-                  ? () => context.read<GameBloc>().add(GameRequestHintEvent())
-                  : null,
-            ),
 
-          if (isPuzzle)
-            _actionBtn(
-              icon: Icons.psychology_rounded,
-              label: 'Explain',
-              color: AppTheme.skyBlue,
-              onTap: () {
-                if (state.puzzleStep < 0 ||
-                    state.puzzleStep >= state.parsedPuzzleMoves.length) {
-                  return;
-                }
 
-                final parsedMove = state.parsedPuzzleMoves[state.puzzleStep];
-                if (parsedMove == null) return;
-                context.read<GameBloc>().add(GameExplainMoveEvent(
-                      move: parsedMove,
-                      fen: state.currentFEN,
-                    ));
-              },
-            ),
-          // Undo — available for practice, single, and multiplayer
-          if (isPracticeOrSingle || isMultiplayer)
-            _actionBtn(
-              icon: Icons.undo_rounded,
-              label: state.mode == GameMode.practice ? 'Undo ∞' : 'Undo',
-              color: AppTheme.skyBlue,
-              onTap: (isPracticeOrSingle &&
-                          state.moveHistory.isNotEmpty &&
-                          !state.isGameOver) ||
-                      state.canMpUndo
-                  ? () => context.read<GameBloc>().add(GameUndoEvent())
-                  : null,
-            ),
-          // Resign (not for puzzles)
-          if (!isPuzzle)
-            _actionBtn(
-              icon: Icons.flag_rounded,
-              label: 'Resign',
-              color: AppTheme.accentRed,
-              onTap: !state.isGameOver
-                  ? () => _resign(context, settings.confirmResign)
-                  : null,
-              width: isMultiplayer ? 70 : 80,
-            ),
 
-          // Coach Settings
-          if (state.mode == GameMode.practice)
-            _actionBtn(
-              icon: Icons.face_rounded,
-              label: 'Coach',
-              color: AppTheme.accentPurple,
-              onTap: () => _showCoachSettings(context, state),
-            ),
-          // Draw offer — multiplayer only
-          if (isMultiplayer)
-            _actionBtn(
-              icon: Icons.handshake_rounded,
-              label: 'Draw',
-              color: AppTheme.skyBlue,
-              onTap: !state.isGameOver
-                  ? () =>
-                      context.read<MultiplayerBloc>().add(MpDrawOfferEvent())
-                  : null,
-              width: 70,
-            ),
-          // Save (multiplayer)
-          if (isMultiplayer)
-            _actionBtn(
-              icon: Icons.save_rounded,
-              label: 'Save Game',
-              color: AppTheme.accentCyan,
-              onTap: !state.isGameOver
-                  ? () =>
-                      context.read<MultiplayerBloc>().add(MpSaveRequestEvent())
-                  : null,
-              width: 70,
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _actionBtn({
-    required IconData icon,
-    required String label,
-    Color? color,
-    VoidCallback? onTap,
-    double? width,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: 200.ms,
-        width: width ?? 78,
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-        decoration: BoxDecoration(
-          color: onTap != null
-              ? (color ?? AppTheme.textSecondary).withOpacity(0.1)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon,
-                color: onTap != null
-                    ? (color ?? AppTheme.textSecondary)
-                    : AppTheme.textMuted,
-                size: 22),
-            const SizedBox(height: 4),
-            Text(label,
-                style: GoogleFonts.fredoka(
-                  color: onTap != null
-                      ? (color ?? AppTheme.textSecondary)
-                      : AppTheme.textMuted,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showCoachSettings(BuildContext context, GameState state) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          gradient: AppTheme.cardGradient,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-          border: Border.all(
-              color: AppTheme.accentPurple.withOpacity(0.3), width: 2),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppTheme.accentPurple.withOpacity(0.2),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.face_rounded,
-                      color: AppTheme.accentPurple, size: 28),
-                ),
-                const SizedBox(width: 16),
-                Text(
-                  'AI Coach Settings',
-                  style: GoogleFonts.fredoka(
-                      color: AppTheme.textPrimary,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold),
-                ),
-                const Spacer(),
-                IconButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  icon: const Icon(Icons.close_rounded,
-                      color: AppTheme.textMuted),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-
-            // Toggle Coaching
-            SwitchListTile(
-              title: Text('Real-time Feedback',
-                  style: GoogleFonts.fredoka(
-                      color: AppTheme.textPrimary, fontSize: 18)),
-              subtitle: Text('Context-aware help while playing',
-                  style: GoogleFonts.baloo2(color: AppTheme.textSecondary)),
-              value: state.coachSettings.enableRealTimeCoaching,
-              activeThumbColor: AppTheme.accentPurple,
-              onChanged: (val) {
-                context.read<GameBloc>().add(GameUpdateCoachSettingsEvent(
-                      state.coachSettings.copyWith(enableRealTimeCoaching: val),
-                    ));
-              },
-            ),
-
-            // Toggle Multiplayer Feedback
-            SwitchListTile(
-              title: Text('Coaching in Online/2P',
-                  style: GoogleFonts.fredoka(
-                      color: AppTheme.textPrimary, fontSize: 18)),
-              subtitle: Text(
-                  'Enable analysis in competitive matches (Off by default)',
-                  style: GoogleFonts.baloo2(color: AppTheme.textSecondary)),
-              value: state.coachSettings.enableMultiplayerCoaching,
-              activeThumbColor: AppTheme.accentCyan,
-              onChanged: (val) {
-                context.read<GameBloc>().add(GameUpdateCoachSettingsEvent(
-                      state.coachSettings
-                          .copyWith(enableMultiplayerCoaching: val),
-                    ));
-              },
-            ),
-
-            const Divider(color: Colors.white12, height: 32),
-
-            // Personality Selector
-            Text('Coach Personality',
-                style: GoogleFonts.fredoka(
-                    color: AppTheme.textPrimary, fontSize: 18)),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: CoachPersonality.values.map((p) {
-                final isSelected = state.coachSettings.personality == p;
-                return GestureDetector(
-                  onTap: () {
-                    context.read<GameBloc>().add(GameUpdateCoachSettingsEvent(
-                          state.coachSettings.copyWith(personality: p),
-                        ));
-                  },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? AppTheme.accentPurple
-                          : AppTheme.surface.withOpacity(0.5),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: isSelected
-                            ? AppTheme.accentPurple
-                            : AppTheme.textMuted.withOpacity(0.2),
-                      ),
-                    ),
-                    child: Text(
-                      p.name[0].toUpperCase() + p.name.substring(1),
-                      style: GoogleFonts.fredoka(
-                        color: isSelected
-                            ? AppTheme.midnight
-                            : AppTheme.textPrimary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Level Selector
-            Text('Coaching Level',
-                style: GoogleFonts.fredoka(
-                    color: AppTheme.textPrimary, fontSize: 18)),
-            const SizedBox(height: 12),
-            Container(
-              decoration: BoxDecoration(
-                color: AppTheme.surface.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Slider(
-                value: CoachingLevel.values
-                    .indexOf(state.coachSettings.level)
-                    .toDouble(),
-                min: 0,
-                max: (CoachingLevel.values.length - 1).toDouble(),
-                divisions: CoachingLevel.values.length - 1,
-                activeColor: AppTheme.accentPurple,
-                onChanged: (val) {
-                  context.read<GameBloc>().add(GameUpdateCoachSettingsEvent(
-                        state.coachSettings
-                            .copyWith(level: CoachingLevel.values[val.toInt()]),
-                      ));
-                },
-              ),
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: CoachingLevel.values
-                  .map((l) => Text(
-                        l.name.toUpperCase(),
-                        style: GoogleFonts.jura(
-                            color: AppTheme.textMuted,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold),
-                      ))
-                  .toList(),
-            ),
-
-            const SizedBox(height: 32),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMoveHistoryCard(GameState state) {
-    return Container(
-      height: 220,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        gradient: AppTheme.cardGradient,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppTheme.skyBlue.withOpacity(0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Recent Moves',
-            style: GoogleFonts.fredoka(
-                color: AppTheme.skyBlue,
-                fontSize: 18,
-                fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 10),
-          Expanded(
-            child: MoveHistoryWidget(
-              moves: state.moveHistory,
-              currentFen: state.currentFEN,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPromotionOverlay(BuildContext context, GameState state) {
-    return DecorationOverlay(
-      child: PromotionDialog(
-        color: state.currentTurn,
-        onSelect: (type) {
-          context.read<GameBloc>().add(GameMakeMoveEvent(
-                state.promotionFrom!,
-                state.promotionTo!,
-                promotion: type,
-              ));
-        },
-      ),
-    );
-  }
-
-  Widget _buildGameOverOverlay(BuildContext context, GameState state) {
-    return GameOverOverlay(
-      result: state.result,
-      drawReason: state.drawReason,
-      playerColor: state.playerColor,
-      puzzle: state.puzzle,
-      gameMode: state.mode,
-      opponentName: state.opponentName,
-      moveCount: state.moveHistory.length,
-      accuracy: state.accuracy,
-      mistakes: state.mistakes,
-      blunders: state.blunders,
-      xpGained: state.xpGained,
-      analysisMessage: state.analysisMessage,
-      evalHistory: state.evalHistory,
-      eloChange: state.eloChange,
-      currentElo: 1200, // Will be updated from user model
-      bestMoves: state.bestMoves,
-      onPlayAgain: () {
-        if (state.mode == GameMode.puzzle) {
-          context.read<GameBloc>().add(const GamePuzzleNextEvent());
-        } else {
-          context.read<GameBloc>().add(GameStartEvent(widget.config));
-        }
-      },
-      onGoHome: () => context.go('/home'),
-      onShare: () => _sharePgn(
-        context.read<GameBloc>().engine.toPGN(),
-        'Check out my chess game results!',
-        'Chess Master Results',
-      ),
-    );
-  }
-
-  Future<void> _sharePgn(String pgn, String intro, String subject) {
-    return SharePlus.instance.share(
-      ShareParams(
-        text:
-            '$intro\n\n$pgn\n\n🔥 Think you can beat me? Play Chess Master now:\nhttps://play.google.com/store/apps/details?id=com.chessmaster.app',
-        subject: subject,
-      ),
-    );
-  }
-
-  Widget _buildConfetti() {
-    return Align(
-      alignment: Alignment.topCenter,
-      child: ConfettiWidget(
-        confettiController: _confettiController,
-        blastDirectionality: BlastDirectionality.explosive,
-        colors: const [
-          AppTheme.goldPrimary,
-          AppTheme.accentCyan,
-          AppTheme.accentPurple,
-          AppTheme.accentGreen,
-        ],
-        numberOfParticles: 40,
-        gravity: 0.2,
-      ),
-    );
-  }
-
-  Widget _buildCheckAlert(GameState state, bool minimalMotion) {
-    if (minimalMotion) {
-      return Positioned(
-        top: 100,
-        left: 0,
-        right: 0,
-        child: IgnorePointer(
-          child: Center(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-              decoration: BoxDecoration(
-                color: AppTheme.accentRed.withOpacity(0.95),
-                borderRadius: BorderRadius.circular(28),
-                boxShadow: [
-                  BoxShadow(
-                      color: AppTheme.accentRed.withOpacity(0.5),
-                      blurRadius: 24,
-                      spreadRadius: 4),
-                ],
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.warning_rounded,
-                      color: Colors.white, size: 24),
-                  const SizedBox(width: 10),
-                  Text('⚠️ CHECK!',
-                      style: GoogleFonts.fredoka(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 20,
-                      )),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-
-    // Persistent blinking until check is resolved
-    return Positioned(
-      top: 100,
-      left: 0,
-      right: 0,
-      child: IgnorePointer(
-        child: Center(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-            decoration: BoxDecoration(
-              color: AppTheme.accentRed.withOpacity(0.95),
-              borderRadius: BorderRadius.circular(28),
-              boxShadow: [
-                BoxShadow(
-                    color: AppTheme.accentRed.withOpacity(0.5),
-                    blurRadius: 24,
-                    spreadRadius: 4),
-              ],
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.warning_rounded,
-                    color: Colors.white, size: 24),
-                const SizedBox(width: 10),
-                Text('⚠️ CHECK!',
-                    style: GoogleFonts.fredoka(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 20,
-                    )),
-              ],
-            ),
-          )
-              .animate(onPlay: (c) => c.repeat(reverse: true))
-              .fadeIn(duration: 400.ms)
-              .then()
-              .fadeOut(duration: 400.ms),
-        ),
-      ),
-    );
-  }
 
   Widget _buildAIMoveSourceOverlay(GameState state) {
     final history = state.aiMoveSourceHistory;
@@ -1961,7 +1154,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           constraints: const BoxConstraints(maxWidth: 180),
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.7),
+            color: Colors.black.withValues(alpha: 0.7),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: Colors.white24),
           ),
@@ -2033,7 +1226,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             OutlinedButton(
               onPressed: () => Navigator.pop(ctx, 'quit_no_save'),
               style: OutlinedButton.styleFrom(
-                side: BorderSide(color: AppTheme.textMuted.withOpacity(0.35)),
+                side: BorderSide(color: AppTheme.textMuted.withValues(alpha: 0.35)),
               ),
               child: Text('Quit Without Save',
                   style: GoogleFonts.fredoka(color: AppTheme.textSecondary)),
@@ -2197,7 +1390,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     return Positioned.fill(
       child: Stack(
         children: [
-          Container(color: Colors.black.withOpacity(0.4)),
+          Container(color: Colors.black.withValues(alpha: 0.4)),
           Center(
             child: Container(
               width: 300,
@@ -2206,7 +1399,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                 color: AppTheme.navyCard,
                 borderRadius: BorderRadius.circular(24),
                 border:
-                    Border.all(color: AppTheme.goldPrimary.withOpacity(0.5)),
+                    Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.5)),
                 boxShadow: [
                   BoxShadow(
                       color: Colors.black,

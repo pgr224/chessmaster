@@ -222,7 +222,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   gradient: AppTheme.rainbowGradient,
                   boxShadow: [
                     BoxShadow(
-                      color: AppTheme.goldPrimary.withOpacity(0.4),
+                      color: AppTheme.goldPrimary.withValues(alpha: 0.4),
                       blurRadius: 16,
                       spreadRadius: 2,
                     ),
@@ -252,9 +252,9 @@ class _HomeScreenState extends State<HomeScreen> {
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: AppTheme.navyCard.withOpacity(0.6),
+        color: AppTheme.navyCard.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
       child: Column(
         children: [
@@ -309,7 +309,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 height: 8,
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.1),
+                  color: Colors.white.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
@@ -324,7 +324,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   borderRadius: BorderRadius.circular(10),
                   boxShadow: [
                     BoxShadow(
-                      color: AppTheme.goldPrimary.withOpacity(0.3),
+                      color: AppTheme.goldPrimary.withValues(alpha: 0.3),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -345,7 +345,7 @@ class _HomeScreenState extends State<HomeScreen> {
       decoration: BoxDecoration(
         gradient: AppTheme.cardGradient,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppTheme.goldPrimary.withOpacity(0.25)),
+        border: Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.25)),
         boxShadow: AppTheme.cardShadow,
       ),
       child: Row(
@@ -376,9 +376,9 @@ class _HomeScreenState extends State<HomeScreen> {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.accentRed.withOpacity(0.15),
+        color: AppTheme.accentRed.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.accentRed.withOpacity(0.5)),
+        border: Border.all(color: AppTheme.accentRed.withValues(alpha: 0.5)),
       ),
       child: Row(
         children: [
@@ -401,7 +401,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Text(
                   'Your XP is critically low. Play Online Multiplayer mode and kindly request XP donations from other players to recover!',
                   style: GoogleFonts.baloo2(
-                    color: AppTheme.textPrimary.withOpacity(0.9),
+                    color: AppTheme.textPrimary.withValues(alpha: 0.9),
                     fontSize: 14,
                     height: 1.2,
                   ),
@@ -440,7 +440,7 @@ class _HomeScreenState extends State<HomeScreen> {
             end: Alignment.bottomCenter,
             colors: [
               Colors.transparent,
-              AppTheme.textMuted.withOpacity(0.3),
+              AppTheme.textMuted.withValues(alpha: 0.3),
               Colors.transparent
             ],
           ),
@@ -482,10 +482,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppTheme.goldPrimary.withOpacity(0.1),
+                    color: AppTheme.goldPrimary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: AppTheme.goldPrimary.withOpacity(0.3),
+                      color: AppTheme.goldPrimary.withValues(alpha: 0.3),
                     ),
                   ),
                   child: const Row(
@@ -610,15 +610,15 @@ class _HomeScreenState extends State<HomeScreen> {
         decoration: BoxDecoration(
           gradient: AppTheme.cardGradient,
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: Colors.white.withOpacity(0.06)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
           boxShadow: [
             BoxShadow(
-              color: shadowColor.withOpacity(0.15),
+              color: shadowColor.withValues(alpha: 0.15),
               blurRadius: 20,
               offset: const Offset(0, 6),
             ),
             BoxShadow(
-              color: Colors.black.withOpacity(0.2),
+              color: Colors.black.withValues(alpha: 0.2),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -629,7 +629,7 @@ class _HomeScreenState extends State<HomeScreen> {
           child: InkWell(
             onTap: onTap,
             borderRadius: BorderRadius.circular(24),
-            splashColor: shadowColor.withOpacity(0.1),
+            splashColor: shadowColor.withValues(alpha: 0.1),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
               child: Row(
@@ -643,7 +643,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
-                          color: shadowColor.withOpacity(0.3),
+                          color: shadowColor.withValues(alpha: 0.3),
                           blurRadius: 12,
                           offset: const Offset(0, 4),
                         ),
@@ -677,7 +677,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(
-                      color: shadowColor.withOpacity(0.15),
+                      color: shadowColor.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(Icons.arrow_forward_ios_rounded,
@@ -703,9 +703,9 @@ class _HomeScreenState extends State<HomeScreen> {
           colors: [Color(0xFF2D1B69), Color(0xFF1A1A40)],
         ),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppTheme.lavender.withOpacity(0.4)),
+        border: Border.all(color: AppTheme.lavender.withValues(alpha: 0.4)),
         boxShadow: [
-          BoxShadow(color: AppTheme.lavender.withOpacity(0.15), blurRadius: 20),
+          BoxShadow(color: AppTheme.lavender.withValues(alpha: 0.15), blurRadius: 20),
         ],
       ),
       child: Row(
@@ -783,9 +783,9 @@ class _HomeScreenState extends State<HomeScreen> {
             height: 110,
             margin: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(
-              color: AppTheme.navyCard.withOpacity(0.5),
+              color: AppTheme.navyCard.withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.white.withOpacity(0.05)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
             ),
             child:
                 const Center(child: CircularProgressIndicator(strokeWidth: 2)),
@@ -801,9 +801,9 @@ class _HomeScreenState extends State<HomeScreen> {
           height: 152,
           margin: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
-            color: AppTheme.navyCard.withOpacity(0.5),
+            color: AppTheme.navyCard.withValues(alpha: 0.5),
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: Colors.white.withOpacity(0.05)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
           ),
           child: ListView.separated(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -855,9 +855,9 @@ class _HomeScreenState extends State<HomeScreen> {
       height: 110,
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: AppTheme.navyCard.withOpacity(0.5),
+        color: AppTheme.navyCard.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
       child: Center(
         child: Column(
@@ -917,7 +917,7 @@ class _HomeScreenState extends State<HomeScreen> {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-              color: AppTheme.goldPrimary.withOpacity(0.3),
+              color: AppTheme.goldPrimary.withValues(alpha: 0.3),
               blurRadius: 15,
               offset: const Offset(0, 5)),
         ],
@@ -938,7 +938,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         letterSpacing: 1.2)),
                 Text('Your last game is waiting...',
                     style: GoogleFonts.baloo2(
-                        color: AppTheme.midnight.withOpacity(0.8),
+                        color: AppTheme.midnight.withValues(alpha: 0.8),
                         fontSize: 16,
                         fontWeight: FontWeight.w600)),
               ],

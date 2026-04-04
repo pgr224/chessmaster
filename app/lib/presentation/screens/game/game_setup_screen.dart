@@ -21,7 +21,6 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
   Color _whitePieceColor = Colors.white;
   Color _blackPieceColor = Colors.black;
   String _boardTheme = 'classic';
-  bool _hintsEnabled = true;
   int? _timeControl;
   bool _loadedThemePrefs = false;
 
@@ -106,7 +105,7 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(22)),
                           elevation: 10,
-                          shadowColor: AppTheme.accentCyan.withOpacity(0.5),
+                          shadowColor: AppTheme.accentCyan.withValues(alpha: 0.5),
                         ),
                         icon: const Icon(Icons.play_arrow_rounded, size: 34),
                         label: Text(
@@ -135,7 +134,7 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
       decoration: BoxDecoration(
         gradient: AppTheme.cardGradient,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
         boxShadow: AppTheme.cardShadow,
       ),
       child: Column(
@@ -167,8 +166,8 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
             decoration: BoxDecoration(
               color: isSelected
-                  ? AppTheme.goldPrimary.withOpacity(0.18)
-                  : AppTheme.surface.withOpacity(0.5),
+                  ? AppTheme.goldPrimary.withValues(alpha: 0.18)
+                  : AppTheme.surface.withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
                 color: isSelected ? AppTheme.goldPrimary : Colors.transparent,
@@ -221,8 +220,8 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
                 height: 88,
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? AppTheme.goldPrimary.withOpacity(0.18)
-                      : AppTheme.surface.withOpacity(0.5),
+                      ? AppTheme.goldPrimary.withValues(alpha: 0.18)
+                      : AppTheme.surface.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
                     color:
@@ -262,9 +261,9 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppTheme.surface.withOpacity(0.45),
+        color: AppTheme.surface.withValues(alpha: 0.45),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.goldPrimary.withOpacity(0.2)),
+        border: Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -322,9 +321,9 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
         height: 64,
         padding: const EdgeInsets.symmetric(horizontal: 8),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.22),
+          color: color.withValues(alpha: 0.22),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: color.withOpacity(0.9), width: 2),
+          border: Border.all(color: color.withValues(alpha: 0.9), width: 2),
         ),
         child: Center(
           child: Text(
@@ -443,7 +442,7 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             decoration: BoxDecoration(
               color: isSelected
-                  ? AppTheme.goldPrimary.withOpacity(0.2)
+                  ? AppTheme.goldPrimary.withValues(alpha: 0.2)
                   : AppTheme.surface,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(

@@ -35,7 +35,7 @@ class CapturedPiecesWidget extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: AppTheme.surface.withOpacity(0.4),
+                color: AppTheme.surface.withValues(alpha: 0.4),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
@@ -47,7 +47,7 @@ class CapturedPiecesWidget extends StatelessWidget {
                           fontSize: 18,
                           color: color == PieceColor.white
                               ? Colors.white
-                              : AppTheme.textPrimary.withOpacity(0.9),
+                              : AppTheme.textPrimary.withValues(alpha: 0.9),
                           shadows: const [
                             Shadow(
                               color: Colors.black26,
@@ -72,7 +72,7 @@ class CapturedPiecesWidget extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppTheme.accentCyan.withOpacity(0.15),
+                  color: AppTheme.accentCyan.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(

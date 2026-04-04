@@ -13,6 +13,7 @@ import 'native_engine_bridge_stub.dart'
     if (dart.library.io) 'native_engine_bridge.dart'
     if (dart.library.js_interop) 'js_engine_bridge.dart' as js_bridge;
 
+import '../../core/services/logging_service.dart';
 import 'personality_engine.dart';
 import 'candidate_model.dart';
 
@@ -216,7 +217,7 @@ class AIEngineController {
 
       return move;
     } catch (e) {
-      print('[SmartAI] Error: $e');
+      LoggingService.error('[SmartAI] Error', e);
       return engine != null ? await fallbackMove(fen, engine: engine) : null;
     }
   }

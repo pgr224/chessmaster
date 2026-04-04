@@ -2,6 +2,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:dio/dio.dart';
+import '../../../core/services/logging_service.dart';
 
 abstract class SettingsEvent extends Equatable {
   const SettingsEvent();
@@ -214,7 +215,7 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
             'enabled': e.enabled,
           });
         } catch (e) {
-          print('Failed to sync notification settings: $e');
+          LoggingService.error('Failed to sync notification settings', e);
         }
       }
     });

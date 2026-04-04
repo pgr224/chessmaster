@@ -57,12 +57,12 @@ class _ThinkingOverlayWidgetState extends State<ThinkingOverlayWidget> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.7),
+        color: Colors.black.withValues(alpha: 0.7),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.skyBlue.withOpacity(0.3)),
+        border: Border.all(color: AppTheme.skyBlue.withValues(alpha: 0.3)),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.skyBlue.withOpacity(0.2),
+            color: AppTheme.skyBlue.withValues(alpha: 0.2),
             blurRadius: 10,
             spreadRadius: 2,
           )
@@ -113,12 +113,12 @@ class _ThinkingOverlayWidgetState extends State<ThinkingOverlayWidget> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: AppTheme.midnight.withOpacity(0.8),
+        color: AppTheme.midnight.withValues(alpha: 0.8),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.goldPrimary.withOpacity(0.2)),
+        border: Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.2)),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.goldPrimary.withOpacity(0.1),
+            color: AppTheme.goldPrimary.withValues(alpha: 0.1),
             blurRadius: 4,
           )
         ],

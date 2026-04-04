@@ -77,7 +77,7 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.5),
+                    color: Colors.black.withValues(alpha: 0.5),
                     blurRadius: 24,
                     offset: const Offset(0, 12),
                   ),
@@ -146,12 +146,12 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
         if (widget.hintMove != null) ...[
           _highlight(widget.hintMove!.from, sqSize, AppTheme.hintSq),
           _highlight(
-              widget.hintMove!.to, sqSize, AppTheme.hintSq.withOpacity(0.9)),
+              widget.hintMove!.to, sqSize, AppTheme.hintSq.withValues(alpha: 0.9)),
         ],
         // Selected piece
         if (widget.selectedSquare != null)
           _highlight(widget.selectedSquare!, sqSize,
-              AppTheme.selectedSq.withOpacity(0.7)),
+              AppTheme.selectedSq.withValues(alpha: 0.7)),
         // Legal moves
         ...widget.legalMoves.map((m) => _legalMoveIndicator(m, sqSize)),
         // Check highlight
@@ -164,9 +164,9 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
         // Pre Move Glow
         if (widget.preMove != null) ...[
           _highlight(
-              widget.preMove!.from, sqSize, Colors.redAccent.withOpacity(0.6)),
+              widget.preMove!.from, sqSize, Colors.redAccent.withValues(alpha: 0.6)),
           _highlight(
-              widget.preMove!.to, sqSize, Colors.redAccent.withOpacity(0.6)),
+              widget.preMove!.to, sqSize, Colors.redAccent.withValues(alpha: 0.6)),
         ],
       ],
     );
@@ -192,10 +192,10 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
       height: sqSize,
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.green.withOpacity(0.3),
+          color: Colors.green.withValues(alpha: 0.3),
           boxShadow: [
             BoxShadow(
-              color: Colors.greenAccent.withOpacity(0.5),
+              color: Colors.greenAccent.withValues(alpha: 0.5),
               blurRadius: 15,
               spreadRadius: 2,
             ),
@@ -267,11 +267,11 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            color: Colors.redAccent.withOpacity(0.9),
+            color: Colors.redAccent.withValues(alpha: 0.9),
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.3),
+                color: Colors.black.withValues(alpha: 0.3),
                 blurRadius: 8,
                 offset: const Offset(0, 4),
               ),
@@ -373,7 +373,7 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
   Widget _buildCoordinates(double sqSize) {
     final themeData = AppTheme.boardThemes[widget.boardTheme] ??
         AppTheme.boardThemes['classic']!;
-    final notationColor = themeData.notation.withOpacity(0.8);
+    final notationColor = themeData.notation.withValues(alpha: 0.8);
 
     return Stack(
       children: [
@@ -418,7 +418,7 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
   Widget _buildSquareLabels(double sqSize) {
     final themeData = AppTheme.boardThemes[widget.boardTheme] ??
         AppTheme.boardThemes['classic']!;
-    final notationColor = themeData.notation.withOpacity(0.35); // Subtle
+    final notationColor = themeData.notation.withValues(alpha: 0.35); // Subtle
 
     return Positioned.fill(
       child: Stack(

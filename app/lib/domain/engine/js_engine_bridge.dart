@@ -1,6 +1,7 @@
 import 'dart:js_interop';
 import 'dart:js_interop_unsafe';
 import 'candidate_model.dart';
+import '../../core/services/logging_service.dart';
 
 @JS('ChessEngineService')
 extension type _JSEngineService._(JSObject _) {
@@ -29,7 +30,7 @@ _JSEngineService? _getService() {
 void jsEngineInit(String mode, String difficulty) {
   final svc = _getService();
   if (svc == null) {
-    print('[JSBridge] ChessEngineService not available');
+    LoggingService.warn('[JSBridge] ChessEngineService not available');
     return;
   }
   svc.initEngine(mode.toJS, difficulty.toJS);
@@ -69,7 +70,7 @@ Future<Map<String, dynamic>?> jsEngineGetBestMove(String fen,
       return {'move': move, 'candidates': candidates};
     }
   } catch (e) {
-    print('[JSBridge] getBestMove error: $e');
+    LoggingService.error('[JSBridge] getBestMove error', e);
   }
   return null;
 }

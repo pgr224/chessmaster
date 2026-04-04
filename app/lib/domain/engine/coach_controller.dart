@@ -834,108 +834,108 @@ class CoachController {
     // ── BEST / BRILLIANT — by personality ──
     final bestPool = switch (pers) {
       CoachPersonality.friendly => [
-        "Your move $f→$t is considered `$1% accurate! You're on the correct path — keep it up, champion! 🎯✨",
-        "Incredible! Your $p to $t is exactly what the engine recommends. You are among the top `$1% of moves here! Now you play like a real chess master! 👑🔥",
-        "This move makes me admire you! `$1% accuracy — you found the strongest continuation with your $p. The engine is impressed! 🌟🏆",
-        "Wow! Your $p move to $t is top-tier! `$1% accuracy puts you among the best players for this position. Beautiful vision! I'm so proud of you! 💪⚡",
-        "Perfect choice, friend! $f→$t ranked in the top `$1% of all possible moves. You're seeing the board like a pro! Keep having fun! 🎓✨",
-        "Flawless! Your $p to $t is calculated at `$1% accuracy. You maintained the initiative perfectly — let's keep this energy going! 🏅🔥",
+        "Your move $f→$t is considered $a% accurate! You're on the correct path — keep it up, champion! 🎯✨",
+        "Incredible! Your $p to $t is exactly what the engine recommends. You are among the top $a% of moves here! Now you play like a real chess master! 👑🔥",
+        "This move makes me admire you! $a% accuracy — you found the strongest continuation with your $p. The engine is impressed! 🌟🏆",
+        "Wow! Your $p move to $t is top-tier! $a% accuracy puts you among the best players for this position. Beautiful vision! I'm so proud of you! 💪⚡",
+        "Perfect choice, friend! $f→$t ranked in the top $a% of all possible moves. You're seeing the board like a pro! Keep having fun! 🎓✨",
+        "Flawless! Your $p to $t is calculated at $a% accuracy. You maintained the initiative perfectly — let's keep this energy going! 🏅🔥",
       ],
       CoachPersonality.strict => [
-        "Correct. Your $p to $t measures `$1% accuracy — the optimal move. Precision maintained. ✓",
-        "Exact. $f→$t is the engine's top recommendation. You are in the top `$1% here. No wasted calculation. ⚙️",
-        "Analysis confirms: `$1% accuracy. Your $p placement at $t is mathematically superior. Continue at this standard. 📐",
-        "Precisely executed. $f→$t shows `$1% accuracy — top `$1% of ${ctx.totalMoves} legal moves. This is the expected level. ✓✓",
-        "Your $p move to $t is calculated at `$1% accuracy. The engine confirms this was the only correct continuation. Maintain this discipline. 🎯",
+        "Correct. Your $p to $t measures $a% accuracy — the optimal move. Precision maintained. ✓",
+        "Exact. $f→$t is the engine's top recommendation. You are in the top $a% here. No wasted calculation. ⚙️",
+        "Analysis confirms: $a% accuracy. Your $p placement at $t is mathematically superior. Continue at this standard. 📐",
+        "Precisely executed. $f→$t shows $a% accuracy — top $a% of ${ctx.totalMoves} legal moves. This is the expected level. ✓✓",
+        "Your $p move to $t is calculated at $a% accuracy. The engine confirms this was the only correct continuation. Maintain this discipline. 🎯",
       ],
       CoachPersonality.motivational => [
-        "LET'S GO!! Your move $f→$t is `$1% accurate! You are among the top `$1% — you're UNSTOPPABLE! Keep crushing it! 🔥🔥🔥",
-        "INCREDIBLE!! Your $p to $t is exactly what the engine picks! `$1% accuracy — you're playing like a GRANDMASTER! Believe in yourself! 💪👑",
-        "YES YES YES! This $p move to $t makes me admire you! `$1% accuracy — you're on FIRE! Nothing can stop you now! 🚀✨",
-        "CHAMPION MOVE! $f→$t ranked top `$1% — that's `$1% accuracy! You're dominating this board! Keep pushing forward! 🏆⚡",
-        "FLAWLESS EXECUTION! Your $p to $t is pure greatness — `$1% accurate! You've got the heart of a champion! NEVER give up! 🦅🔥",
+        "LET'S GO!! Your move $f→$t is $a% accurate! You are among the top $a% — you're UNSTOPPABLE! Keep crushing it! 🔥🔥🔥",
+        "INCREDIBLE!! Your $p to $t is exactly what the engine picks! $a% accuracy — you're playing like a GRANDMASTER! Believe in yourself! 💪👑",
+        "YES YES YES! This $p move to $t makes me admire you! $a% accuracy — you're on FIRE! Nothing can stop you now! 🚀✨",
+        "CHAMPION MOVE! $f→$t ranked top $a% — that's $a% accuracy! You're dominating this board! Keep pushing forward! 🏆⚡",
+        "FLAWLESS EXECUTION! Your $p to $t is pure greatness — $a% accurate! You've got the heart of a champion! NEVER give up! 🦅🔥",
       ],
     };
 
     // ── GOOD — by personality ──
     final goodPool = switch (pers) {
       CoachPersonality.friendly => [
-        "Solid move! Your $p to $t is rated `$1% accurate — you're building a strong position. There was a slightly sharper option, but your instincts are good! 👍📈",
-        "Good thinking with $f→$t! At `$1% accuracy, you're heading in the right direction. You are among the top `$1% for that move — keep developing! 🔥♟️",
-        "Nice continuation! Your analysis strength shows `$1% accuracy. The engine sees a marginal improvement, but your plan is coming together beautifully! 🧩🚀",
-        "Well played! $f→$t puts you in the top `$1% of moves. That's a sensible choice — with a small tweak you'd be at 100%! 📊✨",
+        "Solid move! Your $p to $t is rated $a% accurate — you're building a strong position. There was a slightly sharper option, but your instincts are good! 👍📈",
+        "Good thinking with $f→$t! At $a% accuracy, you're heading in the right direction. You are among the top $a% for that move — keep developing! 🔥♟️",
+        "Nice continuation! Your analysis strength shows $a% accuracy. The engine sees a marginal improvement, but your plan is coming together beautifully! 🧩🚀",
+        "Well played! $f→$t puts you in the top $a% of moves. That's a sensible choice — with a small tweak you'd be at 100%! 📊✨",
       ],
       CoachPersonality.strict => [
-        "Acceptable. Your $p to $t scores `$1% accuracy — top `$1% of ${ctx.totalMoves} moves. A more precise option existed, but the position remains stable. ✓",
-        "Standard play. $f→$t at `$1% accuracy is reasonable, though sub-optimal by $cp centipawns. Aim for the engine's first line next time. ⚙️",
-        "Functional. Your $p to $t holds at `$1% accuracy. The deviation from optimal is $cp points — within acceptable tolerance for now. 📐",
+        "Acceptable. Your $p to $t scores $a% accuracy — top $a% of ${ctx.totalMoves} moves. A more precise option existed, but the position remains stable. ✓",
+        "Standard play. $f→$t at $a% accuracy is reasonable, though sub-optimal by $cp centipawns. Aim for the engine's first line next time. ⚙️",
+        "Functional. Your $p to $t holds at $a% accuracy. The deviation from optimal is $cp points — within acceptable tolerance for now. 📐",
       ],
       CoachPersonality.motivational => [
-        "Good move, warrior! Your $p to $t hits `$1% accuracy — you're building momentum! You are among the top `$1% — keep pushing for perfection! 💪📈",
-        "Nice work with $f→$t! `$1% accuracy shows real progress! There's an even sharper move out there — I KNOW you can find it next time! 🔥🚀",
-        "You're growing stronger! $f→$t puts you in the top `$1% — that `$1% accuracy is solid! Every game makes you better! Keep believing! 🌟💪",
+        "Good move, warrior! Your $p to $t hits $a% accuracy — you're building momentum! You are among the top $a% — keep pushing for perfection! 💪📈",
+        "Nice work with $f→$t! $a% accuracy shows real progress! There's an even sharper move out there — I KNOW you can find it next time! 🔥🚀",
+        "You're growing stronger! $f→$t puts you in the top $a% — that $a% accuracy is solid! Every game makes you better! Keep believing! 🌟💪",
       ],
     };
 
     // ── MEDIUM (Inaccuracy) — by personality ──
     final mediumPool = switch (pers) {
       CoachPersonality.friendly => [
-        "Hmm, your $p to $t is rated `$1% accurate. I think there might be something stronger — you can think of an alternative move here! Would you like to change your mind? 🤔💡",
-        "Your move $f→$t is in the top `$1% of choices, but I see a sharper continuation. I may suggest you explore other options, if you like! The engine spotted a hidden gem 💎🔍",
-        "Not bad, but your analysis strength is at `$1%. A small tweak would take you to the top! If you undo this move, I can give you a better suggestion. What do you think? 🛤️🔧",
-        "Your instinct with $p to $t is reasonable, but at `$1% accuracy the execution could be sharper. There was a move scoring about $cp points higher — want to try again? 🎯📚",
-        "I see what you're going for with $f→$t! But the engine rates this at `$1% accuracy. Consider taking it back — I'd love to show you an even better move! Would you like to change your mind? 🧐✨",
+        "Hmm, your $p to $t is rated $a% accurate. I think there might be something stronger — you can think of an alternative move here! Would you like to change your mind? 🤔💡",
+        "Your move $f→$t is in the top $a% of choices, but I see a sharper continuation. I may suggest you explore other options, if you like! The engine spotted a hidden gem 💎🔍",
+        "Not bad, but your analysis strength is at $a%. A small tweak would take you to the top! If you undo this move, I can give you a better suggestion. What do you think? 🛤️🔧",
+        "Your instinct with $p to $t is reasonable, but at $a% accuracy the execution could be sharper. There was a move scoring about $cp points higher — want to try again? 🎯📚",
+        "I see what you're going for with $f→$t! But the engine rates this at $a% accuracy. Consider taking it back — I'd love to show you an even better move! Would you like to change your mind? 🧐✨",
       ],
       CoachPersonality.strict => [
-        "Suboptimal. Your $p to $t scores only `$1% accuracy — that's a $cp point deviation from the engine's best line. You should undo and recalculate. ⚠️",
-        "Inaccurate. $f→$t ranks in the top `$1% but misses the critical line by $cp centipawns. Undo recommended. Reconsider the position. 📊",
-        "Below standard. Your analysis at `$1% accuracy shows a $cp point gap. The engine's preferred continuation is significantly stronger. If you undo, I will show you the correct path. ⚙️",
-        "Imprecise. Your $p to $t at `$1% accuracy falls short of the required standard. The optimal line scores $cp points higher. Recalculate and try again. 📐",
+        "Suboptimal. Your $p to $t scores only $a% accuracy — that's a $cp point deviation from the engine's best line. You should undo and recalculate. ⚠️",
+        "Inaccurate. $f→$t ranks in the top $a% but misses the critical line by $cp centipawns. Undo recommended. Reconsider the position. 📊",
+        "Below standard. Your analysis at $a% accuracy shows a $cp point gap. The engine's preferred continuation is significantly stronger. If you undo, I will show you the correct path. ⚙️",
+        "Imprecise. Your $p to $t at $a% accuracy falls short of the required standard. The optimal line scores $cp points higher. Recalculate and try again. 📐",
       ],
       CoachPersonality.motivational => [
-        "Hey, don't settle! Your $p to $t scores `$1% — you've got ${100 - ctx.accuracy.toInt()}% more potential to unlock! Would you like to change your mind? I KNOW you can find the best move! 💪🔍",
-        "Close, but you can do BETTER! $f→$t is at `$1% accuracy — there's a move $cp points stronger waiting for you! If you undo, I'll help you find it! Let's GO! 🔥💡",
-        "Good effort, but I believe in you MORE! Your $p to $t is in the top `$1%, but there's a hidden gem here. Undo and try again — you've got the skills to nail it! 🚀🎯",
-        "Don't stop reaching higher! `$1% accuracy is decent, but you're capable of 100%! If you undo this move, I can give you a better suggestion. Let's find it TOGETHER! 💪✨",
+        "Hey, don't settle! Your $p to $t scores $a% — you've got ${100 - ctx.accuracy.toInt()}% more potential to unlock! Would you like to change your mind? I KNOW you can find the best move! 💪🔍",
+        "Close, but you can do BETTER! $f→$t is at $a% accuracy — there's a move $cp points stronger waiting for you! If you undo, I'll help you find it! Let's GO! 🔥💡",
+        "Good effort, but I believe in you MORE! Your $p to $t is in the top $a%, but there's a hidden gem here. Undo and try again — you've got the skills to nail it! 🚀🎯",
+        "Don't stop reaching higher! $a% accuracy is decent, but you're capable of 100%! If you undo this move, I can give you a better suggestion. Let's find it TOGETHER! 💪✨",
       ],
     };
 
     // ── MISTAKE — by personality ──
     final mistakePool = switch (pers) {
       CoachPersonality.friendly => [
-        "Oops! Your $p to $t is only `$1% accurate — that's below where you want to be. You gave up about $cp points of advantage. If you undo this move, I can give you a better suggestion! 🤝⚠️",
-        "Watch out! $f→$t ranks in the bottom `$1% of moves here. I think this position called for something different. Would you like to change your mind? Try undoing and I'll guide you! 🧠💡",
-        "Your move scores `$1% accuracy — that weakens your position noticeably. The engine sees a much stronger option. If you undo, I can show you the top move that scores ~$cp points better! 📖🔄",
-        "Not quite! Your $p to $t missed a stronger continuation. At `$1% accuracy, there's room to grow. But don't worry — mistakes are how we become better players! Want to try again? 🌱🔑",
+        "Oops! Your $p to $t is only $a% accurate — that's below where you want to be. You gave up about $cp points of advantage. If you undo this move, I can give you a better suggestion! 🤝⚠️",
+        "Watch out! $f→$t ranks in the bottom $a% of moves here. I think this position called for something different. Would you like to change your mind? Try undoing and I'll guide you! 🧠💡",
+        "Your move scores $a% accuracy — that weakens your position noticeably. The engine sees a much stronger option. If you undo, I can show you the top move that scores ~$cp points better! 📖🔄",
+        "Not quite! Your $p to $t missed a stronger continuation. At $a% accuracy, there's room to grow. But don't worry — mistakes are how we become better players! Want to try again? 🌱🔑",
       ],
       CoachPersonality.strict => [
-        "Error. Your $p to $t scores only `$1% accuracy — bottom `$1% of ${ctx.totalMoves} legal moves. That's a $cp point loss. Undo immediately and recalculate. ❌",
-        "Deficient. $f→$t is a significant deviation from correct play. `$1% accuracy is unacceptable at this stage. The engine's line is $cp points superior. Undo and correct. ⚠️",
-        "Tactical miscalculation detected. Your $p to $t drops `$1% accuracy — ranked #${ctx.moveRank} of ${ctx.totalMoves}. Undo this move and apply the checks-captures-threats framework. 📊",
+        "Error. Your $p to $t scores only $a% accuracy — bottom $a% of ${ctx.totalMoves} legal moves. That's a $cp point loss. Undo immediately and recalculate. ❌",
+        "Deficient. $f→$t is a significant deviation from correct play. $a% accuracy is unacceptable at this stage. The engine's line is $cp points superior. Undo and correct. ⚠️",
+        "Tactical miscalculation detected. Your $p to $t drops $a% accuracy — ranked #${ctx.moveRank} of ${ctx.totalMoves}. Undo this move and apply the checks-captures-threats framework. 📊",
       ],
       CoachPersonality.motivational => [
-        "Hey, that's okay! Your $p to $t scores `$1%, but EVERY mistake is a lesson! You gave up $cp points — but if you undo, I'll help you find the STRONGEST move! You've got this! 💪🌱",
-        "Don't let this get you down! $f→$t is in the bottom `$1%, but champions learn from setbacks! Would you like to change your mind? Undo and show the board who's boss! 🔥🔄",
-        "Shake it off! `$1% accuracy means there's a $cp point opportunity waiting! If you undo this move, I can give you a better suggestion! Every grandmaster has made mistakes — it's how you BOUNCE BACK! 🚀💡",
+        "Hey, that's okay! Your $p to $t scores $a%, but EVERY mistake is a lesson! You gave up $cp points — but if you undo, I'll help you find the STRONGEST move! You've got this! 💪🌱",
+        "Don't let this get you down! $f→$t is in the bottom $a%, but champions learn from setbacks! Would you like to change your mind? Undo and show the board who's boss! 🔥🔄",
+        "Shake it off! $a% accuracy means there's a $cp point opportunity waiting! If you undo this move, I can give you a better suggestion! Every grandmaster has made mistakes — it's how you BOUNCE BACK! 🚀💡",
       ],
     };
 
     // ── BLUNDER — by personality ──
     final blunderPool = switch (pers) {
       CoachPersonality.friendly => [
-        "Oh no! Your $p to $t is a serious mistake — only `$1% accurate! That's a ~$cp point swing against you. I strongly recommend undoing this move — let me show you why and suggest a better path! ❌🔥",
-        "Wait! $f→$t loses a massive amount of advantage! At `$1% accuracy, this ranks in the bottom `$1% of all moves. If you undo this move, I can give you a much better suggestion! Think again! 🚨💡",
-        "Alert! Your $p to $t is a critical error — the engine rates it at only `$1%. Please consider undoing! Remember: always check for checks, captures, and threats before committing. I'm here to help you find the best path! 📚❌🧠",
-        "Big trouble! That move changes everything — and not in a good way. `$1% accuracy means there's a ~$cp point gap from the best move. Would you like to change your mind? If you undo, I'll guide you to the strongest continuation! 🛑🎓",
+        "Oh no! Your $p to $t is a serious mistake — only $a% accurate! That's a ~$cp point swing against you. I strongly recommend undoing this move — let me show you why and suggest a better path! ❌🔥",
+        "Wait! $f→$t loses a massive amount of advantage! At $a% accuracy, this ranks in the bottom $a% of all moves. If you undo this move, I can give you a much better suggestion! Think again! 🚨💡",
+        "Alert! Your $p to $t is a critical error — the engine rates it at only $a%. Please consider undoing! Remember: always check for checks, captures, and threats before committing. I'm here to help you find the best path! 📚❌🧠",
+        "Big trouble! That move changes everything — and not in a good way. $a% accuracy means there's a ~$cp point gap from the best move. Would you like to change your mind? If you undo, I'll guide you to the strongest continuation! 🛑🎓",
       ],
       CoachPersonality.strict => [
-        "Critical failure. Your $p to $t scores `$1% — bottom `$1% of ${ctx.totalMoves} moves. A $cp point catastrophe. Undo immediately. This is exactly the kind of oversight that loses games. ❌",
-        "Unacceptable. $f→$t at `$1% accuracy constitutes a blunder — $cp points lost. Ranked #${ctx.moveRank} of ${ctx.totalMoves}. Undo now and apply rigorous calculation before committing. 🚨",
-        "Severe error. Your $p to $t is a $cp point blunder at `$1% accuracy. The position demands ${ctx.bestMoveUci}. Undo, recalculate from scratch, and do not move until you have verified all opponent replies. ⚠️📊",
+        "Critical failure. Your $p to $t scores $a% — bottom $a% of ${ctx.totalMoves} moves. A $cp point catastrophe. Undo immediately. This is exactly the kind of oversight that loses games. ❌",
+        "Unacceptable. $f→$t at $a% accuracy constitutes a blunder — $cp points lost. Ranked #${ctx.moveRank} of ${ctx.totalMoves}. Undo now and apply rigorous calculation before committing. 🚨",
+        "Severe error. Your $p to $t is a $cp point blunder at $a% accuracy. The position demands ${ctx.bestMoveUci}. Undo, recalculate from scratch, and do not move until you have verified all opponent replies. ⚠️📊",
       ],
       CoachPersonality.motivational => [
-        "HEY! Don't panic! Your $p to $t is only `$1% accurate — a $cp point swing — but this is WHERE CHAMPIONS ARE MADE! Undo this move and I'll help you find the BEST path! You can do this! 💪🔥",
-        "WHOA! $f→$t is in the bottom `$1% — but listen: EVERY grandmaster has blundered! `$1% accuracy NOW, but 100% NEXT TIME! If you undo, I can give you a much better suggestion! BELIEVE in yourself! 🚀❌",
+        "HEY! Don't panic! Your $p to $t is only $a% accurate — a $cp point swing — but this is WHERE CHAMPIONS ARE MADE! Undo this move and I'll help you find the BEST path! You can do this! 💪🔥",
+        "WHOA! $f→$t is in the bottom $a% — but listen: EVERY grandmaster has blundered! $a% accuracy NOW, but 100% NEXT TIME! If you undo, I can give you a much better suggestion! BELIEVE in yourself! 🚀❌",
         "Big moment! This $cp point mistake is your biggest learning opportunity TODAY! Undo your $p to $t and let's find the STRONGEST move together! Failures are just stepping stones to GREATNESS! 🏆🌟",
       ],
     };
@@ -964,8 +964,8 @@ class CoachController {
     final bot = 100 - ctx.rankPercentile;
     final bm = ctx.bestMoveUci;
     final pers = ctx.personality;
-    final stats = '📊 Analysis: `$1% accuracy · Top ${ctx.rankPercentile}% · Rank #${ctx.moveRank} of ${ctx.totalMoves}';
-    final statsBot = '📊 Analysis: `$1% accuracy · Bottom `$1% · Rank #${ctx.moveRank} of ${ctx.totalMoves}';
+    final stats = '📊 Analysis: $a% accuracy · Top ${ctx.rankPercentile}% · Rank #${ctx.moveRank} of ${ctx.totalMoves}';
+    final statsBot = '📊 Analysis: $a% accuracy · Bottom $a% · Rank #${ctx.moveRank} of ${ctx.totalMoves}';
 
     // ── BEST / BRILLIANT ──
     if (classification == MoveClassification.best ||
@@ -1009,7 +1009,7 @@ class CoachController {
         ],
         CoachPersonality.motivational => [
           '$stats\n\nGreat foundation! Your $p to $pTo is SOLID — but I know you can find the ABSOLUTE BEST! The engine sees $bm (to $bTo) scoring $cp points sharper. You\'re SO close to perfection — next time, scan one more candidate and you\'ll nail it! 💪✨',
-          '$stats\n\nNice work! `$1% accuracy proves you\'re on the right path! The ultimate move was $bm — just $cp points sharper. You\'re building the skills to find it next time — NEVER stop reaching higher! 🚀📈',
+          '$stats\n\nNice work! $a% accuracy proves you\'re on the right path! The ultimate move was $bm — just $cp points sharper. You\'re building the skills to find it next time — NEVER stop reaching higher! 🚀📈',
         ],
       };
       return pool[r.nextInt(pool.length)];
@@ -1027,16 +1027,16 @@ class CoachController {
       final pool = switch (pers) {
         CoachPersonality.friendly => [
           'The engine suggests $bm ($p to $bTo) — it gives you about $cp more points of advantage and a stronger grip on the position. Your move to $pTo isn\'t bad, but playing to $bTo creates more threats and keeps the initiative firmly yours.',
-          'A move like $bm would rank higher because it controls more key squares and keeps the pressure on. Your current move is at `$1% accuracy — with a small adjustment you could be at near-100%! Tip: Before committing, always ask "Does this move improve my worst-placed piece?"',
+          'A move like $bm would rank higher because it controls more key squares and keeps the pressure on. Your current move is at $a% accuracy — with a small adjustment you could be at near-100%! Tip: Before committing, always ask "Does this move improve my worst-placed piece?"',
           'The engine\'s preferred move $bm scores about $cp points better. Small edges like these compound over a game. Look at $bTo — it creates more threats and restricts your opponent\'s options.',
         ],
         CoachPersonality.strict => [
-          'The correct move was $bm (to $bTo), scoring $cp centipawns higher. Your $p to $pTo at `$1% accuracy fails to address the critical tactical requirement. Undo, recalculate using the checks-captures-threats hierarchy, and execute the strongest line.',
+          'The correct move was $bm (to $bTo), scoring $cp centipawns higher. Your $p to $pTo at $a% accuracy fails to address the critical tactical requirement. Undo, recalculate using the checks-captures-threats hierarchy, and execute the strongest line.',
           'Deviation of $cp centipawns from optimal. The engine demands $bm — your $p to $pTo does not sufficiently contest the key squares. Reconsider the position from scratch and verify all candidate moves before committing.',
         ],
         CoachPersonality.motivational => [
           'You\'re SO close to greatness! The engine sees $bm (to $bTo) — $cp points stronger — and I KNOW you can find moves like that! Your $p to $pTo shows good instinct, it just needs a small push to perfection! You\'ve got the talent — trust it! 💪',
-          'Don\'t settle! The engine\'s best move $bm scores about $cp points sharper than your $p to $pTo. But here\'s the thing — the fact that you\'re at `$1% accuracy means you\'re ALREADY thinking correctly! One more level of calculation and you\'ll be UNSTOPPABLE! 🔥',
+          'Don\'t settle! The engine\'s best move $bm scores about $cp points sharper than your $p to $pTo. But here\'s the thing — the fact that you\'re at $a% accuracy means you\'re ALREADY thinking correctly! One more level of calculation and you\'ll be UNSTOPPABLE! 🔥',
         ],
       };
       parts.add(pool[r.nextInt(pool.length)]);

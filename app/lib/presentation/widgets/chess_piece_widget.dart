@@ -83,7 +83,7 @@ class ChessPieceWidget extends StatelessWidget {
     if (shape == 'iconic' || shape == 'artwork') {
       final colorStr = isWhite ? 'white' : 'black';
       final typeStr = piece.type.name.toLowerCase();
-      path = 'assets/pieces/$shape/`$1_$typeStr.svg';
+      path = 'assets/pieces/$shape/${colorStr}_${typeStr}.svg';
     } else {
       // Pychess logic
       final colorStr = isWhite ? 'w' : 'b';
@@ -203,7 +203,7 @@ class ChessPiecePainter extends CustomPainter {
       case 'neon':
         // Inner glow
         final glowPaint = Paint()
-          ..color = color.withOpacity(0.5)
+          ..color = color.withValues(alpha: 0.5)
           ..maskFilter = MaskFilter.blur(BlurStyle.normal, size.width * 0.1);
         canvas.drawPath(path, glowPaint);
 
@@ -214,7 +214,7 @@ class ChessPiecePainter extends CustomPainter {
         canvas.drawPath(path, strokePaint);
 
         // Base thin bright center
-        paint.color = Colors.white.withOpacity(0.8);
+        paint.color = Colors.white.withValues(alpha: 0.8);
         canvas.drawPath(path, paint);
         break;
 
@@ -241,20 +241,20 @@ class ChessPiecePainter extends CustomPainter {
         canvas.drawPath(
             highlightPath,
             Paint()
-              ..color = Colors.white.withOpacity(0.3)
+              ..color = Colors.white.withValues(alpha: 0.3)
               ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5));
         break;
 
       case 'glass':
-        paint.color = color.withOpacity(0.3);
+        paint.color = color.withValues(alpha: 0.3);
         canvas.drawPath(path, paint);
 
-        strokePaint.color = Colors.white.withOpacity(0.5);
+        strokePaint.color = Colors.white.withValues(alpha: 0.5);
         canvas.drawPath(path, strokePaint);
 
         // Refraction highlights
         final highlightPaint = Paint()
-          ..color = Colors.white.withOpacity(0.4);
+          ..color = Colors.white.withValues(alpha: 0.4);
         canvas.drawCircle(Offset(size.width * 0.4, size.height * 0.35),
             size.width * 0.1, highlightPaint);
         break;
@@ -295,7 +295,7 @@ class ChessPiecePainter extends CustomPainter {
       default:
         // Default shaded look
         final gradient = RadialGradient(
-          colors: [color.withOpacity(0.8), color],
+          colors: [color.withValues(alpha: 0.8), color],
           center: const Alignment(-0.3, -0.3),
         );
         paint.shader = gradient.createShader(Offset.zero & size);

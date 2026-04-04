@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/mission_model.dart';
 import '../repositories/auth_repository.dart';
+import '../../core/services/logging_service.dart';
 
 class MissionService {
   final SharedPreferences _prefs;
@@ -72,7 +73,7 @@ class MissionService {
       await _prefs.setString(
           _bountyExpiryKey, _bountyExpiry!.toIso8601String());
     } catch (e) {
-      print('Bounty rotation failed: $e');
+      LoggingService.error('Bounty rotation failed', e);
     }
   }
 

@@ -155,6 +155,11 @@ class MpSendXpBroadcastEvent extends MultiplayerEvent {
   const MpSendXpBroadcastEvent(this.amount);
 }
 
+class MpSetXpBroadcastRequestsEvent extends MultiplayerEvent {
+  final List<Map<String, dynamic>> requests;
+  const MpSetXpBroadcastRequestsEvent(this.requests);
+}
+
 // STATE
 enum MultiplayerStatus { disconnected, inLobby, matchmaking, inGame, gameOver }
 
@@ -455,6 +460,9 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
 
     on<MpSendXpBroadcastEvent>((event, emit) {
       _service.sendXpBroadcast(event.amount);
+    });
+    on<MpSetXpBroadcastRequestsEvent>((event, emit) {
+      emit(state.copyWith(xpBroadcastRequests: event.requests));
     });
     // MpTimerSyncEvent already registered above at line ~287
   }

@@ -4,6 +4,11 @@ import { v4 as uuidv4 } from 'uuid'
 
 export const pushRoutes = new Hono<{ Bindings: Env }>()
 
+// Public VAPID key for web push subscription bootstrap
+pushRoutes.get('/vapid-public-key', async (c) => {
+  return c.json({ publicKey: c.env.VAPID_PUBLIC_KEY })
+})
+
 // Subscribe to push notifications
 pushRoutes.post('/subscribe', async (c) => {
   const { userId, subscription, deviceId } = await c.req.json()

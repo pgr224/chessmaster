@@ -271,7 +271,7 @@ class LearnScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-              color: AppTheme.goldPrimary.withOpacity(0.35),
+              color: AppTheme.goldPrimary.withValues(alpha: 0.35),
               blurRadius: 24,
               offset: const Offset(0, 10)),
         ],
@@ -282,7 +282,7 @@ class LearnScreen extends StatelessWidget {
             right: -10,
             bottom: -10,
             child: Icon(Icons.star_rounded,
-                size: 120, color: Colors.white.withOpacity(0.15)),
+                size: 120, color: Colors.white.withValues(alpha: 0.15)),
           ),
           Padding(
             padding: const EdgeInsets.all(26),
@@ -308,7 +308,7 @@ class LearnScreen extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text('45 min · Intermediate · GM-level analysis',
                     style: GoogleFonts.baloo2(
-                      color: AppTheme.midnight.withOpacity(0.7),
+                      color: AppTheme.midnight.withValues(alpha: 0.7),
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                     )),
@@ -360,10 +360,10 @@ class LearnScreen extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: AppTheme.cardGradient,
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: cat.color.withOpacity(0.2)),
+          border: Border.all(color: cat.color.withValues(alpha: 0.2)),
           boxShadow: [
             BoxShadow(
-                color: cat.color.withOpacity(0.1),
+                color: cat.color.withValues(alpha: 0.1),
                 blurRadius: 14,
                 offset: const Offset(0, 4))
           ],
@@ -374,7 +374,7 @@ class LearnScreen extends StatelessWidget {
               width: 54,
               height: 54,
               decoration: BoxDecoration(
-                  color: cat.color.withOpacity(0.15),
+                  color: cat.color.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(16)),
               child: Center(
                   child: Text(cat.emoji, style: const TextStyle(fontSize: 26))),
@@ -421,7 +421,7 @@ class LearnScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(label,
@@ -438,7 +438,7 @@ class LearnScreen extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: AppTheme.cardGradient,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppTheme.goldPrimary.withOpacity(0.15)),
+        border: Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.15)),
       ),
       child: Column(
         children: [
@@ -474,7 +474,7 @@ class LearnScreen extends StatelessWidget {
       onTap: () => context.push('/learn/week/${plan.week}'),
       child: Container(
         decoration: BoxDecoration(
-          color: isEven ? Colors.white.withOpacity(0.02) : Colors.transparent,
+          color: isEven ? Colors.white.withValues(alpha: 0.02) : Colors.transparent,
           borderRadius: isLast
               ? const BorderRadius.only(
                   bottomLeft: Radius.circular(24),
@@ -490,7 +490,7 @@ class LearnScreen extends StatelessWidget {
               width: 34,
               height: 34,
               decoration: BoxDecoration(
-                color: AppTheme.goldPrimary.withOpacity(0.15),
+                color: AppTheme.goldPrimary.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
               child: Center(
@@ -526,7 +526,7 @@ class LearnScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: AppTheme.accentCyan.withOpacity(0.12),
+                color: AppTheme.accentCyan.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(plan.time,
@@ -590,7 +590,7 @@ class LearnScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 gradient: AppTheme.cardGradient,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: color.withOpacity(0.3)),
+                border: Border.all(color: color.withValues(alpha: 0.3)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -606,7 +606,7 @@ class LearnScreen extends StatelessWidget {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
-                      color: color.withOpacity(0.12),
+                      color: color.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(diff,
@@ -655,7 +655,7 @@ class LearnScreen extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: AppTheme.cardGradient,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: AppTheme.skyBlue.withOpacity(0.15)),
+          border: Border.all(color: AppTheme.skyBlue.withValues(alpha: 0.15)),
         ),
         child: Row(
           children: [
@@ -706,7 +706,7 @@ class LearnScreen extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: AppTheme.cardGradient,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppTheme.accentPurple.withOpacity(0.2)),
+        border: Border.all(color: AppTheme.accentPurple.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -735,9 +735,9 @@ class LearnScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: AppTheme.goldPrimary.withOpacity(0.08),
+              color: AppTheme.goldPrimary.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppTheme.goldPrimary.withOpacity(0.2)),
+              border: Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.2)),
             ),
             child: Row(
               children: [

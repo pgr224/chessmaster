@@ -129,21 +129,24 @@ class AIEngine {
 
   static _SearchResult _search(ChessEngine engine, int depth, int alpha,
       int beta, DateTime startTime, Duration timeout) {
-    if (depth == 0)
+    if (depth == 0) {
       return _SearchResult(
           score: _quiescence(engine, alpha, beta, startTime, timeout));
+    }
 
     final fen = engine.toFEN();
     if (_tt.containsKey(fen)) {
       final entry = _tt[fen]!;
-      if (entry.depth >= depth)
+      if (entry.depth >= depth) {
         return _SearchResult(score: entry.score, move: entry.bestMove);
+      }
     }
 
     final moves = engine.allLegalMoves();
     if (moves.isEmpty) {
-      if (engine.status == GameStatus.checkmate)
+      if (engine.status == GameStatus.checkmate) {
         return _SearchResult(score: -100000 - depth);
+      }
       return _SearchResult(score: 0);
     }
 
@@ -191,7 +194,9 @@ class AIEngine {
         engine.allLegalMoves().where((m) => m.capturedPiece != null).toList();
     for (final move in moves) {
       if (DateTime.now().difference(startTime).inMilliseconds >
-          timeout.inMilliseconds) break;
+          timeout.inMilliseconds) {
+        break;
+      }
       engine.applyMoveInternal(move);
       final score = -_quiescence(engine, -beta, -alpha, startTime, timeout);
       engine.undoMove();

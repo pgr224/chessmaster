@@ -17,16 +17,22 @@ self.addEventListener('push', function(event) {
   }
 
   const title = data.title || '♟️ New Match Invite!';
+  const isXpRequest = data?.data?.type === 'XP_DIRECT_REQUEST';
   const options = {
     body: data.body || 'Someone challenged you to a game!',
     icon: 'icons/Icon-192.png',
     badge: 'icons/Icon-192.png',
     vibrate: [200, 100, 200],
     data: data.data || {},
-    actions: [
-      { action: 'accept', title: '⚔️ Accept Invite' },
-      { action: 'close', title: 'Dismiss' }
-    ]
+    actions: isXpRequest
+      ? [
+          { action: 'accept_xp', title: 'Donate Now' },
+          { action: 'reject_xp', title: 'Reject' }
+        ]
+      : [
+          { action: 'accept', title: '⚔️ Accept Invite' },
+          { action: 'close', title: 'Dismiss' }
+        ]
   };
 
   event.waitUntil(
@@ -42,12 +48,24 @@ self.addEventListener('notificationclick', function(event) {
 
   if (data.type === 'CHALLENGE_RECEIVED' && data.challengeId) {
     // Redirect to the Lobby with the challenge ID as a query param
-    targetUrl = `/?accept_challenge=${data.challengeId}`;
+    targetUrl = `/lobby?accept_challenge=${data.challengeId}`;
+  }
+
+  if (data.type === 'XP_DIRECT_REQUEST' && data.requestId) {
+    targetUrl = `/lobby?xp_request_id=${data.requestId}`;
   }
 
   if (event.action === 'accept') {
      // User specifically clicked "Accept"
      targetUrl += '&auto_accept=true';
+  }
+
+  if (event.action === 'accept_xp') {
+    targetUrl += '&auto_accept_xp=true';
+  }
+
+  if (event.action === 'reject_xp') {
+    targetUrl += '&auto_reject_xp=true';
   }
 
   event.waitUntil(

@@ -515,7 +515,7 @@ class _WeekScreenState extends State<WeekScreen> {
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                AppTheme.goldPrimary.withOpacity(0.4),
+                AppTheme.goldPrimary.withValues(alpha: 0.4),
                 AppTheme.midnight
               ],
               begin: Alignment.topCenter,
@@ -553,7 +553,7 @@ class _WeekScreenState extends State<WeekScreen> {
       decoration: BoxDecoration(
         gradient: AppTheme.cardGradient,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.goldPrimary.withOpacity(0.2)),
+        border: Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.2)),
       ),
       child: Column(children: [
         Row(children: [
@@ -589,7 +589,7 @@ class _WeekScreenState extends State<WeekScreen> {
       decoration: BoxDecoration(
         gradient: AppTheme.cardGradient,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.accentPurple.withOpacity(0.2)),
+        border: Border.all(color: AppTheme.accentPurple.withValues(alpha: 0.2)),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
@@ -637,8 +637,8 @@ class _WeekScreenState extends State<WeekScreen> {
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(
                     color: _completed[i]
-                        ? AppTheme.accentGreen.withOpacity(0.4)
-                        : Colors.white.withOpacity(0.05)),
+                        ? AppTheme.accentGreen.withValues(alpha: 0.4)
+                        : Colors.white.withValues(alpha: 0.05)),
               ),
               child: Row(children: [
                 Icon(
@@ -687,14 +687,14 @@ class _WeekScreenState extends State<WeekScreen> {
               decoration: BoxDecoration(
                 gradient: AppTheme.cardGradient,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppTheme.skyBlue.withOpacity(0.15)),
+                border: Border.all(color: AppTheme.skyBlue.withValues(alpha: 0.15)),
               ),
               child: Row(children: [
                 Container(
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: AppTheme.skyBlue.withOpacity(0.12),
+                    color: AppTheme.skyBlue.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Center(
@@ -778,7 +778,7 @@ class _WeekScreenState extends State<WeekScreen> {
                 decoration: BoxDecoration(
                   gradient: AppTheme.cardGradient,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppTheme.skyBlue.withOpacity(0.15)),
+                  border: Border.all(color: AppTheme.skyBlue.withValues(alpha: 0.15)),
                 ),
                 child: Row(children: [
                   const Icon(Icons.open_in_new_rounded,

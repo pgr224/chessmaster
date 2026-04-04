@@ -23,7 +23,7 @@ class HintButtonWidget extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
           color: isEnabled
-              ? AppTheme.goldPrimary.withOpacity(0.1)
+              ? AppTheme.goldPrimary.withValues(alpha: 0.1)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),

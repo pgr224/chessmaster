@@ -24,7 +24,7 @@ class PromotionDialog extends StatelessWidget {
     ];
 
     return Container(
-      color: Colors.black.withOpacity(0.82),
+      color: Colors.black.withValues(alpha: 0.82),
       child: Center(
         child: Container(
           margin: const EdgeInsets.symmetric(horizontal: 24),
@@ -33,10 +33,10 @@ class PromotionDialog extends StatelessWidget {
             gradient: AppTheme.cardGradient,
             borderRadius: BorderRadius.circular(32),
             border: Border.all(
-                color: AppTheme.goldPrimary.withOpacity(0.6), width: 2),
+                color: AppTheme.goldPrimary.withValues(alpha: 0.6), width: 2),
             boxShadow: [
               BoxShadow(
-                  color: AppTheme.goldPrimary.withOpacity(0.25),
+                  color: AppTheme.goldPrimary.withValues(alpha: 0.25),
                   blurRadius: 40,
                   spreadRadius: 4),
             ],
@@ -96,10 +96,10 @@ class PromotionDialog extends StatelessWidget {
             end: Alignment.bottomCenter,
           ),
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: AppTheme.goldPrimary.withOpacity(0.2)),
+          border: Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.2)),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withOpacity(0.2),
+                color: Colors.black.withValues(alpha: 0.2),
                 blurRadius: 8,
                 offset: const Offset(0, 4)),
           ],

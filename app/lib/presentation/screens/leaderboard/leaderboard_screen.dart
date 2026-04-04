@@ -180,8 +180,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? color.withOpacity(0.2)
-                      : AppTheme.surface.withOpacity(0.4),
+                      ? color.withValues(alpha: 0.2)
+                      : AppTheme.surface.withValues(alpha: 0.4),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                       color: isSelected ? color : Colors.transparent, width: 2),
@@ -215,7 +215,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-              color: AppTheme.goldPrimary.withOpacity(0.3),
+              color: AppTheme.goldPrimary.withValues(alpha: 0.3),
               blurRadius: 12,
               offset: const Offset(0, 4))
         ],
@@ -273,15 +273,21 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
             onPressed: () async {
               Navigator.pop(ctx);
               final authRepo = di.sl<AuthRepository>();
-              final success = await authRepo.requestXP(amount: 100);
-              if (!context.mounted) return;
-              if (success) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                    content: Text(
-                        'XP Request broadcasted! If accepted, you will recive XP.')));
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                    content: Text('Failed to broadcast request.')));
+              try {
+                final success = await authRepo.requestXP(amount: 100);
+                if (!context.mounted) return;
+                if (success) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                      content: Text(
+                          'XP Request broadcasted! If accepted, you will recive XP.')));
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                      content: Text('Failed to broadcast request.')));
+                }
+              } catch (e) {
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to broadcast request: $e')));
               }
             },
             child: const Text('Request 100 XP',
@@ -378,15 +384,15 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
         decoration: BoxDecoration(
           gradient: isMe
               ? LinearGradient(colors: [
-                  AppTheme.goldPrimary.withOpacity(0.12),
-                  AppTheme.goldPrimary.withOpacity(0.04)
+                  AppTheme.goldPrimary.withValues(alpha: 0.12),
+                  AppTheme.goldPrimary.withValues(alpha: 0.04)
                 ])
               : AppTheme.cardGradient,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
               color: isMe
-                  ? AppTheme.goldPrimary.withOpacity(0.4)
-                  : Colors.white.withOpacity(0.05),
+                  ? AppTheme.goldPrimary.withValues(alpha: 0.4)
+                  : Colors.white.withValues(alpha: 0.05),
               width: isMe ? 2 : 1),
         ),
         child: Row(
@@ -411,7 +417,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
               children: [
                 CircleAvatar(
                   radius: 22,
-                  backgroundColor: AppTheme.goldPrimary.withOpacity(0.12),
+                  backgroundColor: AppTheme.goldPrimary.withValues(alpha: 0.12),
                   child: Text(
                     entry.username.isNotEmpty
                         ? entry.username[0].toUpperCase()
@@ -465,7 +471,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                              color: AppTheme.goldPrimary.withOpacity(0.2),
+                              color: AppTheme.goldPrimary.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(6)),
                           child: Text('YOU',
                               style: GoogleFonts.fredoka(
@@ -499,7 +505,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: AppTheme.goldPrimary.withOpacity(0.1),
+                    color: AppTheme.goldPrimary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                     border: entry.id == _bountyUserId
                         ? Border.all(color: AppTheme.goldPrimary, width: 1.5)

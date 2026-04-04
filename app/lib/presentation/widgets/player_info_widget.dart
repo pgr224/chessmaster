@@ -3,7 +3,6 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../domain/engine/chess_engine.dart';
-import './animated_robot_coach.dart';
 
 class PlayerInfoWidget extends StatelessWidget {
   final String name;
@@ -33,19 +32,19 @@ class PlayerInfoWidget extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: isActive
-            ? AppTheme.surface.withOpacity(0.95)
-            : AppTheme.navyCard.withOpacity(0.5),
+            ? AppTheme.surface.withValues(alpha: 0.95)
+            : AppTheme.navyCard.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isActive
-              ? AppTheme.goldPrimary.withOpacity(0.8)
+              ? AppTheme.goldPrimary.withValues(alpha: 0.8)
               : Colors.transparent,
           width: 1.5,
         ),
         boxShadow: isActive
             ? [
                 BoxShadow(
-                    color: AppTheme.goldPrimary.withOpacity(0.1), blurRadius: 8)
+                    color: AppTheme.goldPrimary.withValues(alpha: 0.1), blurRadius: 8)
               ]
             : null,
       ),
@@ -66,7 +65,7 @@ class PlayerInfoWidget extends StatelessWidget {
                                 : (color == PieceColor.white
                                     ? Colors.white70
                                     : Colors.black54))
-                            .withOpacity(0.3),
+                            .withValues(alpha: 0.3),
                         blurRadius: 8,
                         spreadRadius: 1,
                       )

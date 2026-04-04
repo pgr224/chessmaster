@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:dio/dio.dart';
 import '../models/puzzle_model.dart';
+import '../../core/services/logging_service.dart';
 
 class PuzzleRepository {
   final Dio _dio = Dio();
@@ -13,7 +14,7 @@ class PuzzleRepository {
         return _mapLichessPuzzle(response.data);
       }
     } catch (e) {
-      print('[PuzzleRepository] Failed to fetch daily puzzle: $e');
+      LoggingService.error('[PuzzleRepository] Failed to fetch daily puzzle', e);
     }
     return _getFallbackPuzzle(1200);
   }
@@ -29,7 +30,7 @@ class PuzzleRepository {
         return _mapLichessPuzzle(response.data);
       }
     } catch (e) {
-      print('[PuzzleRepository] Failed to fetch adaptive puzzle: $e');
+      LoggingService.error('[PuzzleRepository] Failed to fetch adaptive puzzle', e);
     }
     return _getFallbackPuzzle(userPuzzleRating);
   }

@@ -81,7 +81,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
                           gradient: AppTheme.cardGradient,
                           borderRadius: BorderRadius.circular(24),
                           border: Border.all(
-                              color: AppTheme.goldPrimary.withOpacity(0.25)),
+                              color: AppTheme.goldPrimary.withValues(alpha: 0.25)),
                           boxShadow: AppTheme.cardShadow,
                         ),
                         child: Column(
@@ -108,7 +108,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
                               borderRadius: BorderRadius.circular(6),
                               child: LinearProgressIndicator(
                                 value: unlocked / total,
-                                backgroundColor: Colors.white.withOpacity(0.05),
+                                backgroundColor: Colors.white.withValues(alpha: 0.05),
                                 valueColor: const AlwaysStoppedAnimation(
                                     AppTheme.goldPrimary),
                                 minHeight: 8,
@@ -185,13 +185,13 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
             fontWeight: FontWeight.w600,
           ),
         ),
-        backgroundColor: AppTheme.surface.withOpacity(0.5),
+        backgroundColor: AppTheme.surface.withValues(alpha: 0.5),
         selectedColor: AppTheme.goldPrimary,
         checkmarkColor: AppTheme.midnight,
         side: BorderSide(
           color: isSelected
               ? AppTheme.goldPrimary
-              : Colors.white.withOpacity(0.06),
+              : Colors.white.withValues(alpha: 0.06),
         ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -222,7 +222,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
             end: Alignment.bottomCenter,
             colors: [
               Colors.transparent,
-              AppTheme.textMuted.withOpacity(0.3),
+              AppTheme.textMuted.withValues(alpha: 0.3),
               Colors.transparent
             ],
           ),
@@ -250,22 +250,22 @@ class _AchievementCard extends StatelessWidget {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  AppTheme.goldPrimary.withOpacity(0.15),
-                  AppTheme.navyCard.withOpacity(0.9),
+                  AppTheme.goldPrimary.withValues(alpha: 0.15),
+                  AppTheme.navyCard.withValues(alpha: 0.9),
                 ],
               )
             : AppTheme.cardGradient,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: isUnlocked
-              ? AppTheme.goldPrimary.withOpacity(0.4)
-              : Colors.white.withOpacity(0.05),
+              ? AppTheme.goldPrimary.withValues(alpha: 0.4)
+              : Colors.white.withValues(alpha: 0.05),
           width: isUnlocked ? 2 : 1,
         ),
         boxShadow: isUnlocked
             ? [
                 BoxShadow(
-                  color: AppTheme.goldPrimary.withOpacity(0.15),
+                  color: AppTheme.goldPrimary.withValues(alpha: 0.15),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
@@ -284,8 +284,8 @@ class _AchievementCard extends StatelessWidget {
                 height: 48,
                 decoration: BoxDecoration(
                   color: isUnlocked
-                      ? AppTheme.goldPrimary.withOpacity(0.15)
-                      : AppTheme.surface.withOpacity(0.5),
+                      ? AppTheme.goldPrimary.withValues(alpha: 0.15)
+                      : AppTheme.surface.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Center(
@@ -293,7 +293,7 @@ class _AchievementCard extends StatelessWidget {
                     achievement.icon,
                     style: TextStyle(
                       fontSize: 26,
-                      color: isUnlocked ? null : Colors.white.withOpacity(0.3),
+                      color: isUnlocked ? null : Colors.white.withValues(alpha: 0.3),
                     ),
                   ),
                 ),
@@ -303,7 +303,7 @@ class _AchievementCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   color:
                       (isUnlocked ? AppTheme.goldPrimary : AppTheme.textMuted)
-                          .withOpacity(0.1),
+                          .withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -349,9 +349,9 @@ class _AchievementCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(4),
               child: LinearProgressIndicator(
                 value: achievement.progressPercent,
-                backgroundColor: Colors.white.withOpacity(0.05),
+                backgroundColor: Colors.white.withValues(alpha: 0.05),
                 valueColor: AlwaysStoppedAnimation(
-                  AppTheme.accentCyan.withOpacity(0.7),
+                  AppTheme.accentCyan.withValues(alpha: 0.7),
                 ),
                 minHeight: 4,
               ),

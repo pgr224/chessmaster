@@ -615,12 +615,6 @@ class ChessEngine {
     }
   }
 
-  void _resetCastlingRights() {
-    _whiteKingsideCastle = true;
-    _whiteQueensideCastle = true;
-    _blackKingsideCastle = true;
-    _blackQueensideCastle = true;
-  }
 
   // ═══════════════════════════════════════════
   // STATUS CHECKS
@@ -829,17 +823,6 @@ class ChessEngine {
     return false;
   }
 
-  Square _findKing(PieceColor color) {
-    for (int r = 0; r < 8; r++) {
-      for (int f = 0; f < 8; f++) {
-        final p = _board[r][f];
-        if (p != null && p.type == PieceType.king && p.color == color) {
-          return Square(f, r);
-        }
-      }
-    }
-    throw StateError('King not found');
-  }
 
   PieceColor _opponent(PieceColor color) =>
       color == PieceColor.white ? PieceColor.black : PieceColor.white;

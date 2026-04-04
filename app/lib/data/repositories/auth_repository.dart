@@ -379,8 +379,8 @@ class AuthRepository {
     } catch (_) {}
   }
 
-  Future<bool> donateXP(
-      {required String recipientId, required int amount}) async {
+    Future<bool> donateXP(
+      {required String recipientId, required int amount, int? requestId}) async {
     try {
       final user = await getCurrentUser();
       if (user == null) return false;
@@ -403,7 +403,11 @@ class AuthRepository {
 
       final response = await _dio.post(
         '/api/profile/xp/transfer',
-        data: {'recipientId': recipientId, 'amount': amount},
+        data: {
+          'recipientId': recipientId,
+          'amount': amount,
+          if (requestId != null) 'requestId': requestId,
+        },
       );
 
       if (response.statusCode == 200 && response.data['success'] == true) {
@@ -482,8 +486,90 @@ class AuthRepository {
       return response.statusCode == 200 && response.data['success'] == true;
     } catch (e) {
       print('Failed to request XP: $e');
+      rethrow;
     }
-    return false;
+  }
+
+  Future<bool> requestXPFromFriend(
+      {required String friendUserId, required int amount}) async {
+    try {
+      final response = await _dio.post(
+        '/api/profile/xp/request',
+        data: {
+          'amount': amount,
+          'targetUserId': friendUserId,
+        },
+      );
+      return response.statusCode == 200 && response.data['success'] == true;
+    } catch (e) {
+      print('Failed to send direct XP request: $e');
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>?> getXpRequestById(int requestId) async {
+    try {
+      final response = await _dio.get('/api/profile/xp/request/$requestId');
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        return Map<String, dynamic>.from(response.data['request'] as Map);
+      }
+    } catch (e) {
+      print('Failed to fetch XP request: $e');
+    }
+    return null;
+  }
+
+  Future<bool> respondToXpRequest(
+      {required int requestId, required String action}) async {
+    try {
+      final response = await _dio.post(
+        '/api/profile/xp/request/$requestId/respond',
+        data: {'action': action},
+      );
+      return response.statusCode == 200 && response.data['success'] == true;
+    } catch (e) {
+      print('Failed to respond to XP request: $e');
+      rethrow;
+    }
+  }
+
+  Future<bool> sendFriendRequest({required String friendUserId}) async {
+    try {
+      final response = await _dio.post(
+        '/api/profile/xp/friends/request',
+        data: {'friendUserId': friendUserId},
+      );
+      return response.statusCode == 200 && response.data['success'] == true;
+    } catch (e) {
+      print('Failed to send friend request: $e');
+      rethrow;
+    }
+  }
+
+  Future<bool> respondToFriendRequest(
+      {required String friendUserId, required String action}) async {
+    try {
+      final response = await _dio.post(
+        '/api/profile/xp/friends/$friendUserId/respond',
+        data: {'action': action},
+      );
+      return response.statusCode == 200 && response.data['success'] == true;
+    } catch (e) {
+      print('Failed to respond to friend request: $e');
+      rethrow;
+    }
+  }
+
+  Future<List<dynamic>> getFriends() async {
+    try {
+      final response = await _dio.get('/api/profile/xp/friends');
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        return response.data['friends'] as List<dynamic>;
+      }
+    } catch (e) {
+      print('Failed to fetch friends: $e');
+    }
+    return [];
   }
 
   UserModel _resolveRegisteredUser({

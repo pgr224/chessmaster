@@ -43,9 +43,108 @@
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js', { scope: '/' })
-          .then(reg => console.log('✅ Service Worker Registered:', reg.scope))
+          .then(async reg => {
+            console.log('✅ Service Worker Registered:', reg.scope);
+            await initPushBootstrap(reg);
+          })
           .catch(err => console.log('❌ Service Worker Registration Fail:', err));
       });
+    }
+
+    async function initPushBootstrap(registration) {
+      if (!('PushManager' in window) || !('Notification' in window)) {
+        return;
+      }
+
+      if (Notification.permission === 'default') {
+        try {
+          await Notification.requestPermission();
+        } catch (_) {}
+      }
+
+      if (Notification.permission !== 'granted') {
+        return;
+      }
+
+      const token = readStoredValue('auth_token');
+      const userDataRaw = readStoredValue('user_data');
+      const userData = parsePossiblyEncodedJson(userDataRaw);
+      const userId = userData && userData.id ? userData.id : null;
+
+      if (!token || !userId) {
+        return;
+      }
+
+      const apiBase = 'https://chess-master-api.pp942920.workers.dev';
+
+      let vapidKey = null;
+      try {
+        const keyRes = await fetch(`${apiBase}/api/push/vapid-public-key`);
+        if (!keyRes.ok) return;
+        const keyJson = await keyRes.json();
+        vapidKey = keyJson.publicKey;
+      } catch (_) {
+        return;
+      }
+
+      if (!vapidKey) return;
+
+      try {
+        let sub = await registration.pushManager.getSubscription();
+        if (!sub) {
+          sub = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(vapidKey),
+          });
+        }
+
+        await fetch(`${apiBase}/api/push/subscribe`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            userId,
+            deviceId: 'web',
+            subscription: sub,
+          }),
+        });
+      } catch (e) {
+        console.log('Push bootstrap skipped:', e);
+      }
+    }
+
+    function readStoredValue(key) {
+      const direct = localStorage.getItem(key);
+      const flutter = localStorage.getItem(`flutter.${key}`);
+      return direct || flutter;
+    }
+
+    function parsePossiblyEncodedJson(raw) {
+      if (!raw) return null;
+      try {
+        const parsed = JSON.parse(raw);
+        if (typeof parsed === 'string') {
+          return JSON.parse(parsed);
+        }
+        return parsed;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    function urlBase64ToUint8Array(base64String) {
+      const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+      const base64 = (base64String + padding)
+        .replace(/-/g, '+')
+        .replace(/_/g, '/');
+      const rawData = window.atob(base64);
+      const outputArray = new Uint8Array(rawData.length);
+      for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+      }
+      return outputArray;
     }
   </script>
   <!--

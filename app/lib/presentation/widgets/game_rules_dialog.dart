@@ -38,9 +38,9 @@ class GameRulesDialog extends StatelessWidget {
           color: AppTheme.navyCard,
           borderRadius: BorderRadius.circular(32),
           border: Border.all(
-              color: AppTheme.goldPrimary.withOpacity(0.3), width: 2),
+              color: AppTheme.goldPrimary.withValues(alpha: 0.3), width: 2),
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 40),
+            BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 40),
           ],
         ),
         child: Column(
@@ -103,7 +103,7 @@ class GameRulesDialog extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
-          Icon(icon, color: AppTheme.goldPrimary.withOpacity(0.8), size: 18),
+          Icon(icon, color: AppTheme.goldPrimary.withValues(alpha: 0.8), size: 18),
           const SizedBox(width: 12),
           Expanded(
               child: Text(text,

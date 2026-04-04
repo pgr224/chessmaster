@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -10,11 +12,17 @@ import 'package:chess_master/presentation/blocs/multiplayer/multiplayer_bloc.dar
 class LobbyScreen extends StatefulWidget {
   final String? initialChallengeId;
   final bool autoAccept;
+  final String? initialXpRequestId;
+  final bool autoAcceptXp;
+  final bool autoRejectXp;
 
   const LobbyScreen({
     super.key,
     this.initialChallengeId,
     this.autoAccept = false,
+    this.initialXpRequestId,
+    this.autoAcceptXp = false,
+    this.autoRejectXp = false,
   });
 
   @override
@@ -23,6 +31,7 @@ class LobbyScreen extends StatefulWidget {
 
 class _LobbyScreenState extends State<LobbyScreen> {
   // Removed local selectedTime, now managed by MultiplayerBloc
+  Timer? _xpRequestsPoller;
 
   @override
   void initState() {
@@ -47,7 +56,23 @@ class _LobbyScreenState extends State<LobbyScreen> {
           // the deep-link is prioritized.
         }
       }
+
+      _refreshXpRequests();
+      _xpRequestsPoller = Timer.periodic(
+          const Duration(seconds: 20), (_) => _refreshXpRequests());
+
+      if (widget.initialXpRequestId != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _handleDeepLinkedXpRequest(widget.initialXpRequestId!);
+        });
+      }
     }
+  }
+
+  @override
+  void dispose() {
+    _xpRequestsPoller?.cancel();
+    super.dispose();
   }
 
   @override
@@ -159,7 +184,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       decoration: BoxDecoration(
         gradient: hasError ? AppTheme.errorGradient : AppTheme.cardGradient,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -174,7 +199,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 BoxShadow(
                   color:
                       (isConnected ? AppTheme.accentGreen : AppTheme.accentRed)
-                          .withOpacity(0.5),
+                          .withValues(alpha: 0.5),
                   blurRadius: 8,
                 ),
               ],
@@ -264,7 +289,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 18),
                   side:
-                      BorderSide(color: AppTheme.goldPrimary.withOpacity(0.5)),
+                      BorderSide(color: AppTheme.goldPrimary.withValues(alpha: 0.5)),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20)),
                 ),
@@ -303,9 +328,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.redAccent.withOpacity(0.15),
+          color: Colors.redAccent.withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: Colors.redAccent.withOpacity(0.4)),
+          border: Border.all(color: Colors.redAccent.withValues(alpha: 0.4)),
         ),
         child: Row(
           children: [
@@ -346,18 +371,33 @@ class _LobbyScreenState extends State<LobbyScreen> {
         backgroundColor: AppTheme.accentGreen,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
-      onPressed: () {
-        context.read<MultiplayerBloc>().add(const MpSendXpBroadcastEvent(500));
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('XP Broadcast Request Sent!')),
-        );
+      onPressed: () async {
+        try {
+          final ok =
+              await context.read<auth.AuthBloc>().authRepository.requestXP(
+                    amount: 500,
+                  );
+          if (!mounted) return;
+          if (ok) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('XP Broadcast Request Sent!')),
+            );
+            _refreshXpRequests();
+          }
+        } catch (e) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Could not send request: ${e.toString()}')),
+          );
+        }
       },
       child: Text('BROADCAST',
           style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
     );
   }
 
-  void _handleDonateXP(String userId, String username, int amount) {
+  void _handleDonateXP(String userId, String username, int amount,
+      [int? requestId]) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -377,17 +417,27 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 final success = await context
                     .read<auth.AuthBloc>()
                     .authRepository
-                    .donateXP(recipientId: userId, amount: amount);
-                if (!context.mounted) return;
+                  .donateXP(
+                    recipientId: userId,
+                    amount: amount,
+                    requestId: requestId);
+                
+                if (!mounted) {
+                  return;
+                }
+
                 if (success) {
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                       content: Text('Donated $amount XP to $username!')));
-                  // ignore: use_build_context_synchronously
+                  
                   context.read<auth.AuthBloc>().add(
                       auth.AuthCheckStatusEvent()); // Refresh local user XP
+                    _refreshXpRequests();
                 }
               } catch (e) {
-                // ignore: use_build_context_synchronously
+                if (!mounted) {
+                  return;
+                }
                 ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('Error: ${e.toString()}')));
               }
@@ -407,7 +457,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.goldPrimary.withOpacity(0.2),
+            color: AppTheme.goldPrimary.withValues(alpha: 0.2),
             blurRadius: 18,
             offset: const Offset(0, 8),
           ),
@@ -433,7 +483,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 Text(
                   'Quick match, direct 1v1 challenge, or send a tournament invite from the player list.',
                   style: GoogleFonts.baloo2(
-                    color: AppTheme.midnight.withOpacity(0.9),
+                    color: AppTheme.midnight.withValues(alpha: 0.9),
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ),
@@ -520,25 +570,25 @@ class _LobbyScreenState extends State<LobbyScreen> {
               gradient: isSelected
                   ? LinearGradient(
                       colors: [
-                        accentColor.withOpacity(0.15),
-                        accentColor.withOpacity(0.05)
+                        accentColor.withValues(alpha: 0.15),
+                        accentColor.withValues(alpha: 0.05)
                       ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     )
                   : null,
-              color: isSelected ? null : AppTheme.surface.withOpacity(0.6),
+              color: isSelected ? null : AppTheme.surface.withValues(alpha: 0.6),
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
                 color: isSelected
                     ? accentColor
-                    : AppTheme.textMuted.withOpacity(0.1),
+                    : AppTheme.textMuted.withValues(alpha: 0.1),
                 width: isSelected ? 2 : 1,
               ),
               boxShadow: isSelected
                   ? [
                       BoxShadow(
-                          color: accentColor.withOpacity(0.2),
+                          color: accentColor.withValues(alpha: 0.2),
                           blurRadius: 8,
                           offset: const Offset(0, 2))
                     ]
@@ -585,7 +635,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     style: GoogleFonts.baloo2(
                       color: isSelected
                           ? AppTheme.textSecondary
-                          : AppTheme.textMuted.withOpacity(0.7),
+                          : AppTheme.textMuted.withValues(alpha: 0.7),
                       fontSize: 9,
                       fontWeight: FontWeight.w500,
                       height: 1.2,
@@ -631,7 +681,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       decoration: BoxDecoration(
         gradient: AppTheme.cardGradient,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -693,7 +743,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppTheme.surface.withOpacity(0.8),
+        color: AppTheme.surface.withValues(alpha: 0.8),
         borderRadius: BorderRadius.circular(18),
       ),
       child: Row(
@@ -732,7 +782,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: (isAvailable ? AppTheme.accentCyan : AppTheme.textMuted)
-            .withOpacity(0.16),
+            .withValues(alpha: 0.16),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
@@ -774,7 +824,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           width: 56,
                           height: 6,
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.18),
+                            color: Colors.white.withValues(alpha: 0.18),
                             borderRadius: BorderRadius.circular(999),
                           ),
                         ),
@@ -905,7 +955,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       color: AppTheme.navyCard,
                       borderRadius: BorderRadius.circular(18),
                       border: Border.all(
-                          color: AppTheme.accentOrange.withOpacity(0.3)),
+                          color: AppTheme.accentOrange.withValues(alpha: 0.3)),
                     ),
                     child: Row(
                       children: [
@@ -938,7 +988,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           style: FilledButton.styleFrom(
                               backgroundColor: AppTheme.accentOrange),
                           onPressed: () => _handleDonateXP(
-                              req['userId'], req['username'], req['amount']),
+                            req['userId'], req['username'], req['amount'],
+                            req['id'] is int
+                              ? req['id'] as int
+                              : int.tryParse('${req['id']}')),
                           child: const Text('DONATE'),
                         ),
                       ],
@@ -959,7 +1012,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       decoration: BoxDecoration(
         gradient: AppTheme.cardGradient,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1046,7 +1099,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
         backgroundColor: AppTheme.goldPrimary,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
         elevation: 8,
-        shadowColor: AppTheme.goldPrimary.withOpacity(0.5),
+        shadowColor: AppTheme.goldPrimary.withValues(alpha: 0.5),
       ),
       onPressed: isReady
           ? () {
@@ -1124,5 +1177,108 @@ class _LobbyScreenState extends State<LobbyScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _refreshXpRequests() async {
+    final authState = context.read<auth.AuthBloc>().state;
+    if (authState is! auth.AuthAuthenticatedState) return;
+
+    final requests = await context
+        .read<auth.AuthBloc>()
+        .authRepository
+        .getActiveBroadcastRequests();
+    if (!mounted) return;
+
+    final normalized = requests
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList(growable: false);
+
+    context
+        .read<MultiplayerBloc>()
+        .add(MpSetXpBroadcastRequestsEvent(normalized));
+  }
+
+  Future<void> _handleDeepLinkedXpRequest(String requestIdRaw) async {
+    final requestId = int.tryParse(requestIdRaw);
+    if (requestId == null) return;
+
+    if (widget.autoAcceptXp) {
+      await _respondToXpRequest(requestId, 'accept');
+      return;
+    }
+
+    if (widget.autoRejectXp) {
+      await _respondToXpRequest(requestId, 'reject');
+      return;
+    }
+
+    final request = await context
+        .read<auth.AuthBloc>()
+        .authRepository
+        .getXpRequestById(requestId);
+
+    if (!mounted || request == null) return;
+
+    final requesterName = request['requester_username']?.toString() ?? 'Player';
+    final amount = (request['amount'] as num?)?.toInt() ?? 0;
+
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.navyCard,
+        title: Text('XP Help Request',
+            style: GoogleFonts.fredoka(color: AppTheme.textPrimary)),
+        content: Text(
+          '$requesterName requested $amount XP from you.',
+          style: GoogleFonts.baloo2(color: AppTheme.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await _respondToXpRequest(requestId, 'reject');
+            },
+            child: const Text('Reject'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await _respondToXpRequest(requestId, 'accept');
+            },
+            child: const Text('Accept'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _respondToXpRequest(int requestId, String action) async {
+    try {
+      final ok = await context
+          .read<auth.AuthBloc>()
+          .authRepository
+          .respondToXpRequest(requestId: requestId, action: action);
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(ok
+              ? (action == 'accept'
+                  ? 'XP request accepted.'
+                  : 'XP request rejected.')
+              : 'Could not process XP request.'),
+        ),
+      );
+      if (ok) {
+        context.read<auth.AuthBloc>().add(auth.AuthCheckStatusEvent());
+        _refreshXpRequests();
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not process request: ${e.toString()}')),
+      );
+    }
   }
 }
