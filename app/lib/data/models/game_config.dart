@@ -27,6 +27,7 @@ class GameConfig {
   final bool hintsEnabled;
   final int? timeControl; // total seconds per player (e.g. 600 for 10min)
   final int incrementSeconds; // seconds added per move (e.g. 5 for 10+5)
+  final String variantId;
   final String? activeGameId;
   final bool isPuzzleRush;
 
@@ -43,6 +44,7 @@ class GameConfig {
     this.hintsEnabled = false,
     this.timeControl,
     this.incrementSeconds = 0,
+    this.variantId = 'standard',
     this.activeGameId,
     this.isPuzzleRush = false,
   });

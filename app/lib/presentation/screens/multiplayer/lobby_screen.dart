@@ -7,8 +7,10 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/time_control.dart';
+import '../../../data/models/game_variant.dart';
 import 'package:chess_master/presentation/blocs/auth/auth_bloc.dart' as auth;
 import 'package:chess_master/presentation/blocs/multiplayer/multiplayer_bloc.dart';
+import 'package:chess_master/presentation/blocs/settings/settings_bloc.dart';
 
 class LobbyScreen extends StatefulWidget {
   final String? initialChallengeId;
@@ -33,6 +35,11 @@ class LobbyScreen extends StatefulWidget {
 class _LobbyScreenState extends State<LobbyScreen> {
   // Removed local selectedTime, now managed by MultiplayerBloc
   Timer? _xpRequestsPoller;
+  bool _notifyMe = true;
+  int _lastOnlineMilestone = 0;
+  MultiplayerStatus? _lastStatus;
+  int _lastXpRequestCount = 0;
+  final List<_OnlineEngagementItem> _engagementFeed = <_OnlineEngagementItem>[];
 
   @override
   void initState() {
@@ -84,6 +91,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
           previous.lobbyNotice != current.lobbyNotice ||
           previous.pendingTournamentId != current.pendingTournamentId,
       listener: (context, state) {
+        _handleEngagementMilestones(state);
+
         if (state.status == MultiplayerStatus.matchmaking) {
           context.push('/matchmaking');
         } else if (state.status == MultiplayerStatus.inGame &&
@@ -102,6 +111,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
               state.challengerId != null) {
             _showChallengeDialog(
                 context, state.lobbyNotice!, state.challengerId!);
+            _pushEngagementNotice(
+              title: 'New Challenge',
+              body: state.lobbyNotice!,
+              accent: AppTheme.accentCyan,
+            );
           } else {
             ScaffoldMessenger.of(context)
               ..hideCurrentSnackBar()
@@ -110,6 +124,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 onVisible: () =>
                     context.read<MultiplayerBloc>().add(MpClearNoticeEvent()),
               ));
+            _pushEngagementNotice(
+              title: 'Lobby Update',
+              body: state.lobbyNotice!,
+              accent: AppTheme.goldPrimary,
+            );
           }
         }
       },
@@ -279,6 +298,20 @@ class _LobbyScreenState extends State<LobbyScreen> {
             .animate()
             .fadeIn(delay: 200.ms)
             .slideY(),
+        const SizedBox(height: 20),
+        Text(
+          'Select Variant',
+          style: GoogleFonts.fredoka(
+            color: AppTheme.textPrimary,
+            fontSize: 24,
+            fontWeight: FontWeight.w700,
+          ),
+        ).animate().fadeIn(delay: 260.ms).slideY(),
+        const SizedBox(height: 14),
+        _buildVariantGrid(state, constraints.maxWidth)
+            .animate()
+            .fadeIn(delay: 320.ms)
+            .slideY(),
         const SizedBox(height: 18),
         if (!isWide) ...[
           _buildOnlinePlayersButton(state),
@@ -318,7 +351,201 @@ class _LobbyScreenState extends State<LobbyScreen> {
             ),
           ],
         ),
+        const SizedBox(height: 16),
+        _buildEngagementControls(),
+        const SizedBox(height: 10),
+        _buildEngagementFeed(),
       ],
+    );
+  }
+
+  void _handleEngagementMilestones(MultiplayerState state) {
+    if (_lastStatus != state.status) {
+      if (state.status == MultiplayerStatus.matchmaking) {
+        _pushEngagementNotice(
+          title: 'Matchmaking Started',
+          body: 'Searching for an opponent using ${state.selectedTimeControl}.',
+          accent: AppTheme.accentCyan,
+        );
+      } else if (_lastStatus == MultiplayerStatus.matchmaking &&
+          state.status == MultiplayerStatus.inLobby) {
+        _pushEngagementNotice(
+          title: 'Matchmaking Stopped',
+          body: 'You are back in the lobby queue screen.',
+          accent: AppTheme.textMuted,
+        );
+      }
+      _lastStatus = state.status;
+    }
+
+    final onlineMilestone = _onlineMilestone(state.onlineCount);
+    if (onlineMilestone > 0 && onlineMilestone > _lastOnlineMilestone) {
+      _lastOnlineMilestone = onlineMilestone;
+      _pushEngagementNotice(
+        title: 'Lobby Milestone',
+        body: '$onlineMilestone players are online right now.',
+        accent: AppTheme.accentGreen,
+      );
+    }
+
+    if (state.xpBroadcastRequests.length > _lastXpRequestCount) {
+      _pushEngagementNotice(
+        title: 'Community Alert',
+        body: 'New XP help request received in the lobby.',
+        accent: AppTheme.accentOrange,
+      );
+    }
+    _lastXpRequestCount = state.xpBroadcastRequests.length;
+  }
+
+  int _onlineMilestone(int onlineCount) {
+    if (onlineCount >= 100) return 100;
+    if (onlineCount >= 50) return 50;
+    if (onlineCount >= 25) return 25;
+    if (onlineCount >= 10) return 10;
+    return 0;
+  }
+
+  void _pushEngagementNotice({
+    required String title,
+    required String body,
+    required Color accent,
+  }) {
+    _engagementFeed.insert(
+      0,
+      _OnlineEngagementItem(
+        title: title,
+        body: body,
+        createdAt: DateTime.now(),
+        accent: accent,
+      ),
+    );
+    if (_engagementFeed.length > 8) {
+      _engagementFeed.removeLast();
+    }
+
+    if (!mounted) return;
+
+    final settings = context.read<SettingsBloc>().state;
+    final canNotify = settings.notificationsEnabled && _notifyMe;
+    if (canNotify) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(content: Text('$title • $body')),
+        );
+    }
+
+    setState(() {});
+  }
+
+  Widget _buildEngagementControls() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        gradient: AppTheme.cardGradient,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              'Engagement Alerts',
+              style: GoogleFonts.fredoka(
+                color: AppTheme.textPrimary,
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          Switch(
+            value: _notifyMe,
+            activeColor: AppTheme.accentGreen,
+            onChanged: (value) {
+              setState(() {
+                _notifyMe = value;
+              });
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEngagementFeed() {
+    if (_engagementFeed.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        gradient: AppTheme.cardGradient,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Online Milestones',
+            style: GoogleFonts.fredoka(
+              color: AppTheme.accentOrange,
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 10),
+          ..._engagementFeed.take(4).map((item) {
+            return Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+              decoration: BoxDecoration(
+                color: item.accent.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: item.accent.withValues(alpha: 0.26)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: item.accent,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item.title,
+                          style: GoogleFonts.fredoka(
+                            color: AppTheme.textPrimary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        Text(
+                          item.body,
+                          style: GoogleFonts.baloo2(
+                            color: AppTheme.textSecondary,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
     );
   }
 
@@ -637,6 +864,103 @@ class _LobbyScreenState extends State<LobbyScreen> {
           fontWeight: FontWeight.w600,
         ),
       ),
+    );
+  }
+
+  Widget _buildVariantGrid(MultiplayerState state, double width) {
+    final variants = GameVariantPreset.all;
+    final crossAxisCount = width < 520 ? 2 : 3;
+    final aspectRatio = width < 520 ? 2.0 : 2.35;
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: crossAxisCount,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
+        childAspectRatio: aspectRatio,
+      ),
+      itemCount: variants.length,
+      itemBuilder: (context, index) {
+        final variant = variants[index];
+        final isSelected = state.selectedVariantId == variant.id;
+
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: () => context
+                .read<MultiplayerBloc>()
+                .add(MpChangeSelectedVariantEvent(variant.id)),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 220),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? variant.color.withValues(alpha: 0.14)
+                    : AppTheme.surface.withValues(alpha: 0.55),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: isSelected
+                      ? variant.color
+                      : AppTheme.textMuted.withValues(alpha: 0.15),
+                  width: isSelected ? 2 : 1,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(variant.icon,
+                          size: 16,
+                          color:
+                              isSelected ? variant.color : AppTheme.textMuted),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          variant.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.fredoka(
+                            color: AppTheme.textPrimary,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${variant.subtitle} • ${variant.xpMultiplier.toStringAsFixed(2)}x XP',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.baloo2(
+                      color: isSelected ? variant.color : AppTheme.textMuted,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    variant.description,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.baloo2(
+                      color: AppTheme.textSecondary,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                      height: 1.15,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -1029,6 +1353,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                 .read<MultiplayerBloc>()
                                 .state
                                 .selectedTimeControl,
+                            variantId: context
+                                .read<MultiplayerBloc>()
+                                .state
+                                .selectedVariantId,
                           ),
                         )
                     : null,
@@ -1045,6 +1373,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                 .read<MultiplayerBloc>()
                                 .state
                                 .selectedTimeControl,
+                            variantId: context
+                                .read<MultiplayerBloc>()
+                                .state
+                                .selectedVariantId,
                           ),
                         )
                     : null,
@@ -1060,6 +1392,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
   Widget _buildPlayButton(MultiplayerState state) {
     final isReady = state.status == MultiplayerStatus.inLobby;
+    final selectedVariant = GameVariantPreset.fromId(state.selectedVariantId);
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
         padding: const EdgeInsets.symmetric(vertical: 20),
@@ -1074,12 +1407,25 @@ class _LobbyScreenState extends State<LobbyScreen> {
             }
           : null,
       child: isReady
-          ? Text('Find Match',
-              style: GoogleFonts.fredoka(
-                color: AppTheme.midnight,
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-              ))
+          ? Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Find Match',
+                    style: GoogleFonts.fredoka(
+                      color: AppTheme.midnight,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                    )),
+                Text(
+                  '${selectedVariant.name} • ${state.selectedTimeControl}',
+                  style: GoogleFonts.baloo2(
+                    color: AppTheme.midnight.withValues(alpha: 0.8),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            )
           : Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -1107,6 +1453,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final state = context.read<MultiplayerBloc>().state;
     final preset = TimeControlPreset.fromValue(
         state.challengerTimeControl ?? TimeControlPreset.defaultValue);
+    final variant = GameVariantPreset.fromId(state.challengerVariantId);
 
     showDialog(
       context: context,
@@ -1144,6 +1491,23 @@ class _LobbyScreenState extends State<LobbyScreen> {
             Text(preset.description,
                 style: GoogleFonts.baloo2(
                     color: AppTheme.textSecondary, fontSize: 14)),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Icon(variant.icon, size: 18, color: variant.color),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Variant: ${variant.name}',
+                    style: GoogleFonts.fredoka(
+                      color: variant.color,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
         actions: [
@@ -1349,4 +1713,18 @@ class _LobbyScreenState extends State<LobbyScreen> {
       );
     }
   }
+}
+
+class _OnlineEngagementItem {
+  final String title;
+  final String body;
+  final DateTime createdAt;
+  final Color accent;
+
+  const _OnlineEngagementItem({
+    required this.title,
+    required this.body,
+    required this.createdAt,
+    required this.accent,
+  });
 }

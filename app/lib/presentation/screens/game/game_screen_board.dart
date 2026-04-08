@@ -17,6 +17,10 @@ extension GameScreenBoard on _GameScreenState {
     }
 
     final minimalMotion = settings.moveAnimationSpeed == 'off';
+    final bool isUrgentClock =
+      ((state.whiteTimeMs > 0 && state.whiteTimeMs <= 10000) ||
+        (state.blackTimeMs > 0 && state.blackTimeMs <= 10000)) &&
+      !state.isGameOver;
 
     return ConstrainedBox(
       constraints: BoxConstraints.tightFor(width: dimension + 30, height: dimension),
@@ -40,32 +44,87 @@ extension GameScreenBoard on _GameScreenState {
               SizedBox(
                 width: dimension,
                 height: dimension,
-                child: ChessBoardWidget(
-                  board: state.board,
-                  perspective: perspective,
-                  selectedSquare: state.selectedSquare,
-                  legalMoves: settings.showLegalMoves ? state.legalMoves : const [],
-                  lastMove: state.moveHistory.isNotEmpty ? state.moveHistory.last : null,
-                  hintMove: state.hintMove,
-                  status: state.status,
-                  boardTheme: themeState.boardTheme,
-                  pieceShape: themeState.pieceShape,
-                  pieceStyle: themeState.pieceStyle,
-                  moveAnimationSpeed: settings.moveAnimationSpeed,
-                  showCoordinates: settings.showCoordinates,
-                  showSquareLabels: settings.showSquareLabels,
-                  whitePieceColor: state.whitePieceColor,
-                  blackPieceColor: state.blackPieceColor,
-                  currentTurn: state.currentTurn,
-                  lastUndoPenaltySquare: state.lastUndoPenaltySquare,
-                  onSquareTap: state.isGameOver
-                      ? null
-                      : (sq) {
-                          context.read<GameBloc>().add(GameSelectPieceEvent(sq));
-                        },
-                  isInteractive: state.mode == GameMode.multiplayer || !state.isAIThinking,
-                  lastCorrectMove: state.coachMove,
-                  preMove: state.preMove,
+                child: Builder(
+                  builder: (context) {
+                    Widget boardShell = AnimatedContainer(
+                      duration: 260.ms,
+                      curve: Curves.easeInOut,
+                      padding: const EdgeInsets.all(3),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: isUrgentClock
+                              ? AppTheme.accentRed.withValues(alpha: 0.65)
+                              : Colors.transparent,
+                          width: 2,
+                        ),
+                        boxShadow: isUrgentClock
+                            ? [
+                                BoxShadow(
+                                  color: AppTheme.accentRed.withValues(alpha: 0.22),
+                                  blurRadius: 16,
+                                  spreadRadius: 1.5,
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: ChessBoardWidget(
+                          board: state.board,
+                          perspective: perspective,
+                          selectedSquare: state.selectedSquare,
+                          legalMoves:
+                              settings.showLegalMoves ? state.legalMoves : const [],
+                          lastMove:
+                              state.moveHistory.isNotEmpty ? state.moveHistory.last : null,
+                          hintMove: state.hintMove,
+                          status: state.status,
+                          boardTheme: themeState.boardTheme,
+                          pieceShape: themeState.pieceShape,
+                          pieceStyle: themeState.pieceStyle,
+                          moveAnimationSpeed: settings.moveAnimationSpeed,
+                          showCoordinates: settings.showCoordinates,
+                          showSquareLabels: settings.showSquareLabels,
+                          whitePieceColor: state.whitePieceColor,
+                          blackPieceColor: state.blackPieceColor,
+                          currentTurn: state.currentTurn,
+                          lastUndoPenaltySquare: state.lastUndoPenaltySquare,
+                          onSquareTap: state.isGameOver
+                              ? null
+                              : (sq) {
+                                  context
+                                      .read<GameBloc>()
+                                      .add(GameSelectPieceEvent(sq));
+                                },
+                          isInteractive:
+                              state.mode == GameMode.multiplayer || !state.isAIThinking,
+                          lastCorrectMove: state.coachMove,
+                          preMove: state.preMove,
+                        ),
+                      ),
+                    );
+
+                    if (isUrgentClock && !minimalMotion) {
+                      boardShell = boardShell
+                          .animate(onPlay: (controller) => controller.repeat())
+                          .scaleXY(
+                            begin: 1.0,
+                            end: 1.008,
+                            duration: 650.ms,
+                            curve: Curves.easeInOut,
+                          )
+                          .then()
+                          .scaleXY(
+                            begin: 1.008,
+                            end: 1.0,
+                            duration: 650.ms,
+                            curve: Curves.easeInOut,
+                          );
+                    }
+
+                    return boardShell;
+                  },
                 ),
               ),
 

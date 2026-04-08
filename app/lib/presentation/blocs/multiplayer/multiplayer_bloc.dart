@@ -35,6 +35,7 @@ class MpGameFoundEvent extends MultiplayerEvent {
   final String opponentName;
   final String? mode;
   final String? timeControl;
+  final String? variantId;
   final String? opponentAvatarUrl;
   final String? opponentLocalAvatar;
 
@@ -44,6 +45,7 @@ class MpGameFoundEvent extends MultiplayerEvent {
     this.opponentName, {
     this.mode,
     this.timeControl,
+    this.variantId,
     this.opponentAvatarUrl,
     this.opponentLocalAvatar,
   });
@@ -91,10 +93,16 @@ class MpSendChallengeEvent extends MultiplayerEvent {
   final OnlineLobbyUser opponent;
   final ChallengeMode mode;
   final String timeControl;
+  final String variantId;
   const MpSendChallengeEvent(
-      {required this.opponent, required this.mode, required this.timeControl});
+      {
+      required this.opponent,
+      required this.mode,
+      required this.timeControl,
+      required this.variantId,
+      });
   @override
-  List<Object?> get props => [opponent, mode, timeControl];
+  List<Object?> get props => [opponent, mode, timeControl, variantId];
 }
 
 class MpAcceptChallengeEvent extends MultiplayerEvent {
@@ -119,8 +127,9 @@ class MpLobbyNoticeEvent extends MultiplayerEvent {
   final String? challengerId;
   final String? mode;
   final String? timeControl;
+  final String? variantId;
   const MpLobbyNoticeEvent(this.message,
-      {this.challengerId, this.mode, this.timeControl});
+      {this.challengerId, this.mode, this.timeControl, this.variantId});
 }
 
 class MpUndoEvent extends MultiplayerEvent {}
@@ -142,6 +151,11 @@ class MpGameSavedEvent extends MultiplayerEvent {}
 class MpChangeSelectedTimeEvent extends MultiplayerEvent {
   final String timeControl;
   const MpChangeSelectedTimeEvent(this.timeControl);
+}
+
+class MpChangeSelectedVariantEvent extends MultiplayerEvent {
+  final String variantId;
+  const MpChangeSelectedVariantEvent(this.variantId);
 }
 
 class MpXpBroadcastRequestEvent extends MultiplayerEvent {
@@ -207,6 +221,7 @@ class MultiplayerState extends Equatable {
   final String? opponentName;
   final String? mode;
   final String? timeControl;
+  final String? variantId;
   final List<ChatMessage> chatMessages;
   final String? lastMoveFrom;
   final String? lastMoveTo;
@@ -214,6 +229,8 @@ class MultiplayerState extends Equatable {
   final String? gameResult;
   final String? gameReason;
   final String? challengerTimeControl;
+  final String selectedVariantId;
+  final String? challengerVariantId;
   final String? opponentAvatarUrl;
   final String? opponentLocalAvatar;
   final String selectedTimeControl;
@@ -245,6 +262,7 @@ class MultiplayerState extends Equatable {
     this.opponentName,
     this.mode,
     this.timeControl,
+    this.variantId,
     this.chatMessages = const [],
     this.lastMoveFrom,
     this.lastMoveTo,
@@ -255,6 +273,8 @@ class MultiplayerState extends Equatable {
     this.challengerId,
     this.challengerMode,
     this.challengerTimeControl,
+    this.selectedVariantId = 'standard',
+    this.challengerVariantId,
     this.selectedTimeControl = '30+0',
     this.drawOfferPending = false,
     this.saveOfferPending = false,
@@ -283,6 +303,7 @@ class MultiplayerState extends Equatable {
     String? opponentName,
     String? mode,
     String? timeControl,
+    String? variantId,
     List<ChatMessage>? chatMessages,
     String? lastMoveFrom,
     String? lastMoveTo,
@@ -293,6 +314,8 @@ class MultiplayerState extends Equatable {
     String? challengerId,
     String? challengerMode,
     String? challengerTimeControl,
+    String? selectedVariantId,
+    String? challengerVariantId,
     String? selectedTimeControl,
     bool? drawOfferPending,
     bool? saveOfferPending,
@@ -320,6 +343,7 @@ class MultiplayerState extends Equatable {
       opponentName: opponentName ?? this.opponentName,
       mode: mode ?? this.mode,
       timeControl: timeControl ?? this.timeControl,
+      variantId: variantId ?? this.variantId,
       chatMessages: chatMessages ?? this.chatMessages,
       lastMoveFrom: lastMoveFrom ?? this.lastMoveFrom,
       lastMoveTo: lastMoveTo ?? this.lastMoveTo,
@@ -335,6 +359,8 @@ class MultiplayerState extends Equatable {
       challengerMode: challengerMode ?? this.challengerMode,
       challengerTimeControl:
           challengerTimeControl ?? this.challengerTimeControl,
+        selectedVariantId: selectedVariantId ?? this.selectedVariantId,
+        challengerVariantId: challengerVariantId ?? this.challengerVariantId,
       selectedTimeControl: selectedTimeControl ?? this.selectedTimeControl,
       drawOfferPending: drawOfferPending ?? this.drawOfferPending,
       saveOfferPending: saveOfferPending ?? this.saveOfferPending,
@@ -371,8 +397,12 @@ class MultiplayerState extends Equatable {
         lastMoveFrom,
         lastMoveTo,
         gameResult,
+        variantId,
+        selectedTimeControl,
         lobbyNotice,
         challengerId,
+        challengerVariantId,
+        selectedVariantId,
         drawOfferPending,
         saveOfferPending,
         connectionError,
@@ -442,7 +472,7 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
 
     on<MpSendChallengeEvent>((event, emit) {
       _service.sendChallenge(
-          event.opponent.id, event.mode.name, event.timeControl);
+        event.opponent.id, event.mode.name, event.timeControl, event.variantId);
       emit(state.copyWith(
           lobbyNotice: 'Challenge sent to ${event.opponent.name}!'));
     });
@@ -484,22 +514,33 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
           challengerId: event.challengerId,
           challengerMode: event.mode,
           challengerTimeControl: event.timeControl,
+          challengerVariantId: event.variantId,
         )));
     on<MpAcceptChallengeEvent>((event, emit) {
       if (state.challengerId != null) {
         _service.acceptChallenge(
             state.challengerId!,
             state.challengerMode ?? 'duel',
-            state.challengerTimeControl ?? '10+0');
+            state.challengerTimeControl ?? '10+0',
+            state.challengerVariantId ?? 'standard');
       } else {
-        _service.acceptChallenge(event.challengerId, 'duel', '10+0');
+        _service.acceptChallenge(event.challengerId, 'duel', '10+0', 'standard');
       }
-      emit(state.copyWith(lobbyNotice: null, challengerId: null));
+      emit(state.copyWith(
+        lobbyNotice: null,
+        challengerId: null,
+        challengerVariantId: '',
+      ));
     });
     on<MpChangeSelectedTimeEvent>((event, emit) =>
         emit(state.copyWith(selectedTimeControl: event.timeControl)));
-    on<MpClearNoticeEvent>((event, emit) =>
-        emit(state.copyWith(lobbyNotice: null, challengerId: null)));
+    on<MpChangeSelectedVariantEvent>((event, emit) =>
+        emit(state.copyWith(selectedVariantId: event.variantId)));
+    on<MpClearNoticeEvent>((event, emit) => emit(state.copyWith(
+        lobbyNotice: null,
+        challengerId: null,
+        challengerVariantId: '',
+      )));
 
     on<MpXpBroadcastRequestEvent>((event, emit) {
       final requests =
@@ -587,16 +628,18 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
           data['opponentName']?.toString() ?? 'Unknown',
           mode: data['mode']?.toString(),
           timeControl: data['timeControl']?.toString(),
+          variantId: data['variantId']?.toString() ?? data['variant']?.toString(),
           opponentAvatarUrl: data['opponentAvatarUrl']?.toString(),
           opponentLocalAvatar: data['opponentLocalAvatar']?.toString(),
         ));
       } else if (msgType == 'CHALLENGE_RECEIVED') {
         final d = data;
         add(MpLobbyNoticeEvent(
-          '${d['challengerName']?.toString() ?? 'Someone'} invited you to ${d['mode']?.toString() ?? 'a game'} (${d['timeControl']?.toString() ?? '5+0'})!',
+          '${d['challengerName']?.toString() ?? 'Someone'} invited you to ${d['mode']?.toString() ?? 'a game'} (${d['timeControl']?.toString() ?? '5+0'}) • ${(d['variantId']?.toString() ?? d['variant']?.toString() ?? 'standard')}',
           challengerId: d['challengerId']?.toString(),
           mode: d['mode']?.toString(),
           timeControl: d['timeControl']?.toString(),
+          variantId: d['variantId']?.toString() ?? d['variant']?.toString(),
         ));
       } else if (msgType == 'TOURNAMENT_CHALLENGE_RECEIVED') {
         final d = data;
@@ -628,7 +671,10 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
 
   void _onMatchmaking(
       MpStartMatchmakingEvent event, Emitter<MultiplayerState> emit) {
-    _service.findMatch(timeControl: state.selectedTimeControl);
+    _service.findMatch(
+      timeControl: state.selectedTimeControl,
+      variantId: state.selectedVariantId,
+    );
     emit(state.copyWith(status: MultiplayerStatus.matchmaking));
   }
 
@@ -644,6 +690,7 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
       event.gameId,
       event.color.name,
       timeControl: event.timeControl ?? state.selectedTimeControl,
+      variantId: event.variantId ?? state.selectedVariantId,
     );
     _gameSub?.cancel();
     _gameSub = _service.gameUpdates.listen((msg) {
@@ -723,6 +770,7 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
       opponentLocalAvatar: event.opponentLocalAvatar,
       mode: event.mode,
       timeControl: event.timeControl,
+      variantId: event.variantId,
     ));
   }
 

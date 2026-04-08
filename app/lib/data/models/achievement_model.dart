@@ -498,6 +498,203 @@ final List<Achievement> allAchievements = [
       points: 50,
       category: AchievementCategory.special,
       requiredCount: 7),
+
+  // ═════════════════════════════════════════
+  // 25 NEW MULTIPLAYER & ONLINE BADGES
+  // ═════════════════════════════════════════
+
+  // ── MULTIPLAYER EXCELLENCE (8) ──
+  const Achievement(
+      id: 'mp_matchmaker',
+      title: 'Matchmaker',
+      description: 'Win 5 online multiplayer games.',
+      icon: '🎲',
+      points: 30,
+      category: AchievementCategory.social,
+      requiredCount: 5),
+  const Achievement(
+      id: 'mp_ladder_climber',
+      title: 'Ladder Climber',
+      description: 'Reach 1500+ rating in multiplayer.',
+      icon: '📈',
+      points: 50,
+      category: AchievementCategory.mastery),
+  const Achievement(
+      id: 'mp_unstoppable_online',
+      title: 'Unstoppable Online',
+      description: 'Win 10 games in a row in multiplayer.',
+      icon: '🔥',
+      points: 100,
+      category: AchievementCategory.combat,
+      requiredCount: 10),
+  const Achievement(
+      id: 'mp_blitz_king',
+      title: 'Blitz King',
+      description: 'Reach 1600+ rating in blitz time control.',
+      icon: '👑',
+      points: 75,
+      category: AchievementCategory.speed),
+  const Achievement(
+      id: 'mp_rapid_master',
+      title: 'Rapid Master',
+      description: 'Reach 1700+ rating in rapid time control.',
+      icon: '⚜️',
+      points: 75,
+      category: AchievementCategory.mastery),
+  const Achievement(
+      id: 'mp_classical_scholar',
+      title: 'Classical Scholar',
+      description: 'Play and complete 5 classical games (30+ min).',
+      icon: '📖',
+      points: 60,
+      category: AchievementCategory.mastery,
+      requiredCount: 5),
+  const Achievement(
+      id: 'mp_tournament_victor',
+      title: 'Tournament Victor',
+      description: 'Win any online tournament.',
+      icon: '🏅',
+      points: 100,
+      category: AchievementCategory.social),
+  const Achievement(
+      id: 'mp_comeback_king',
+      title: 'Comeback King',
+      description: 'Win after being down 2+ points of material.',
+      icon: '💪',
+      points: 50,
+      category: AchievementCategory.combat),
+
+  // ── TIME CONTROL MASTERY (6) ──
+  const Achievement(
+      id: 'tc_bullet_fiend',
+      title: 'Bullet Fiend',
+      description: 'Win 20 bullet games.',
+      icon: '⚡',
+      points: 40,
+      category: AchievementCategory.speed,
+      requiredCount: 20),
+  const Achievement(
+      id: 'tc_blitz_warrior',
+      title: 'Blitz Warrior',
+      description: 'Win 30 blitz games.',
+      icon: '⚔️',
+      points: 50,
+      category: AchievementCategory.combat,
+      requiredCount: 30),
+  const Achievement(
+      id: 'tc_rapid_aficionado',
+      title: 'Rapid Aficionado',
+      description: 'Win 20 rapid games.',
+      icon: '🎯',
+      points: 50,
+      category: AchievementCategory.mastery,
+      requiredCount: 20),
+  const Achievement(
+      id: 'tc_rapid_specialist',
+      title: 'Rapid Specialist',
+      description: 'Win 50 rapid games.',
+      icon: '🎖️',
+      points: 100,
+      category: AchievementCategory.mastery,
+      requiredCount: 50),
+  const Achievement(
+      id: 'tc_time_management',
+      title: 'Time Management',
+      description: 'Win without using more than 60% of your time.',
+      icon: '⏱️',
+      points: 40,
+      category: AchievementCategory.strategy),
+  const Achievement(
+      id: 'tc_depth_over_speed',
+      title: 'Depth Over Speed',
+      description: 'Win a game with 50+ moves.',
+      icon: '♖',
+      points: 45,
+      category: AchievementCategory.endgame),
+
+  // ── CLUTCH PERFORMANCES (6) ──
+  const Achievement(
+      id: 'cp_fortress_defender',
+      title: 'Fortress Defender',
+      description: 'Win despite opponent having 2+ point advantage.',
+      icon: '🛡️',
+      points: 60,
+      category: AchievementCategory.strategy),
+  const Achievement(
+      id: 'cp_escape_artist',
+      title: 'Escape Artist',
+      description: 'Force a draw when facing certain defeat.',
+      icon: '🆘',
+      points: 50,
+      category: AchievementCategory.strategy),
+  const Achievement(
+      id: 'cp_finisher',
+      title: 'Finisher',
+      description: 'Win 5 games with checkmate (not on time).',
+      icon: '🎪',
+      points: 55,
+      category: AchievementCategory.combat,
+      requiredCount: 5),
+  const Achievement(
+      id: 'cp_precision_pressure',
+      title: 'Precision Under Pressure',
+      description: 'Maintain 80%+ accuracy while in time trouble.',
+      icon: '💎',
+      points: 70,
+      category: AchievementCategory.strategy),
+  const Achievement(
+      id: 'cp_sacrifice_master',
+      title: 'Sacrifice Master',
+      description: 'Win a game after intentional material sacrifice.',
+      icon: '💣',
+      points: 65,
+      category: AchievementCategory.combat),
+  const Achievement(
+      id: 'cp_promotion_victory',
+      title: 'Promotion Victory',
+      description: 'Win by promoting a pawn in multiplayer game.',
+      icon: '👸',
+      points: 55,
+      category: AchievementCategory.strategy),
+
+  // ── SOCIAL DOMINANCE (5) ──
+  const Achievement(
+      id: 'sd_rising_star',
+      title: 'Rising Star',
+      description: 'Win 3 games against rated higher players.',
+      icon: '⭐',
+      points: 50,
+      category: AchievementCategory.social,
+      requiredCount: 3),
+  const Achievement(
+      id: 'sd_humble_victor',
+      title: 'Humble Victor',
+      description: 'Beat 5 different opponents.',
+      icon: '🤝',
+      points: 40,
+      category: AchievementCategory.social,
+      requiredCount: 5),
+  const Achievement(
+      id: 'sd_revenge_master',
+      title: 'Revenge Master',
+      description: 'Beat same opponent twice in a row.',
+      icon: '🎯',
+      points: 35,
+      category: AchievementCategory.combat),
+  const Achievement(
+      id: 'sd_tournament_dominator',
+      title: 'Tournament Dominator',
+      description: 'Win tournament with 100% score (no draws).',
+      icon: '🏆',
+      points: 150,
+      category: AchievementCategory.social),
+  const Achievement(
+      id: 'sd_legendary_status',
+      title: 'Legendary Status',
+      description: 'Accumulate 500+ achievement points.',
+      icon: '🌟',
+      points: 200,
+      category: AchievementCategory.special),
 ];
 
 // Helper to get achievements by category

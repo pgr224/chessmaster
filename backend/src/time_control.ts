@@ -1,71 +1,107 @@
 export type TimeControlCategory = 'bullet' | 'blitz' | 'rapid' | 'classical' | 'unknown'
 
-export const DEFAULT_TIME_CONTROL = '10+0'
+export const DEFAULT_TIME_CONTROL = '5+3'
 
 export const STANDARD_TIME_CONTROLS = [
+  // ── BULLET ──
   '1+0',
+  '1+1',
   '2+1',
+  // ── BLITZ ──
   '3+0',
   '3+2',
   '5+0',
   '5+3',
+  '5+5',
   '10+0',
+  // ── RAPID ──
   '10+5',
   '10+10',
   '15+0',
   '15+10',
+  '20+10',
+  '25+10',
+  // ── CLASSICAL ──
   '30+0',
+  '60+30',
 ] as const
 
 export const TIME_CONTROL_LABELS: Record<typeof STANDARD_TIME_CONTROLS[number], string> = {
-  '1+0': 'Bullet',
+  // ── BULLET ──
+  '1+0': 'Hyperblitz',
+  '1+1': 'Bullet',
   '2+1': 'Bullet',
+  // ── BLITZ ──
   '3+0': 'Blitz',
   '3+2': 'Blitz',
   '5+0': 'Blitz',
   '5+3': 'Blitz',
-  '10+0': 'Rapid',
+  '5+5': 'Blitz',
+  '10+0': 'Blitz',
+  // ── RAPID ──
   '10+5': 'Rapid',
   '10+10': 'Rapid',
   '15+0': 'Rapid',
   '15+10': 'Rapid',
+  '20+10': 'Rapid',
+  '25+10': 'Rapid',
+  // ── CLASSICAL ──
   '30+0': 'Classical',
+  '60+30': 'Classical',
 }
 
 export const TIME_CONTROL_DESCRIPTIONS: Record<
   typeof STANDARD_TIME_CONTROLS[number],
   string
 > = {
-  '1+0': 'Fast action with 1 minute per side.',
-  '2+1': 'Very quick with a small increment.',
-  '3+0': 'Classic online blitz.',
-  '3+2': 'Blitz with a small increment.',
-  '5+0': 'Standard blitz game.',
-  '5+3': 'Tactical blitz with increment.',
-  '10+0': 'Speedy rapid play without increment.',
-  '10+5': 'Balanced rapid with 5s increment.',
-  '10+10': 'Long rapid with comfortable increment.',
-  '15+0': 'Long rapid for deeper strategy.',
-  '15+10': 'Popular rapid with increment.',
-  '30+0': 'Classical online tempo for thoughtful play.',
+  // ── BULLET ──
+  '1+0': '⚡ Ultra-fast lightning chess | Pure reflex test',
+  '1+1': '🚀 Bullet with 1-second buffer | Skill vs speed',
+  '2+1': '💨 Very quick with perfect increment | Popular online',
+  // ── BLITZ ──
+  '3+0': '🎲 Classic online blitz | Maximum tempo pressure',
+  '3+2': '⚡ Most popular blitz | Speed + small safety net',
+  '5+0': '🔥 Standard blitz game | Fast tactical play',
+  '5+3': '✨ Tactical blitz with increment | Balanced intensity',
+  '5+5': '🎯 Comfortable blitz | Tournament standard',
+  '10+0': '🌋 Long blitz | Deeper strategy possible',
+  // ── RAPID ──
+  '10+5': '🎖️ Popular rapid format | Balanced time/increment',
+  '10+10': '🏅 Extended rapid | Plenty of thinking time',
+  '15+0': '♖ No-increment rapid | Skill depth test',
+  '15+10': '👑 FIDE rapid standard | Serious tournament play',
+  '20+10': '⚜️ Club championship | Strong players preferred',
+  '25+10': '🏆 International rapid | Premium experience',
+  // ── CLASSICAL ──
+  '30+0': '📖 Classical online | Deep analytical play',
+  '60+30': '♕ Grandmaster-style | Maximum depth & precision',
 }
 
 export const TIME_CONTROL_CATEGORIES: Record<
   typeof STANDARD_TIME_CONTROLS[number],
   TimeControlCategory
 > = {
+  // ── BULLET ──
   '1+0': 'bullet',
+  '1+1': 'bullet',
   '2+1': 'bullet',
+  // ── BLITZ ──
   '3+0': 'blitz',
   '3+2': 'blitz',
   '5+0': 'blitz',
   '5+3': 'blitz',
-  '10+0': 'rapid',
+  '5+5': 'blitz',
+  '10+0': 'blitz',
+  // ── RAPID ──
   '10+5': 'rapid',
   '10+10': 'rapid',
   '15+0': 'rapid',
   '15+10': 'rapid',
+  '20+10': 'rapid',
+  '25+10': 'rapid',
+  // ── CLASSICAL ──
   '30+0': 'classical',
+  '60+30': 'classical',
 }
 
 export function normalizeTimeControl(timeControl: string): string {

@@ -87,9 +87,11 @@ class _TimerWidgetState extends State<TimerWidget> {
   }
 
   Color _getTimerColor(double seconds) {
+    if (!widget.isActive) return AppTheme.textMuted;
     if (seconds < 5) return AppTheme.accentRed;
-    if (seconds < 15) return Colors.orangeAccent;
-    return widget.isActive ? AppTheme.goldPrimary : AppTheme.textMuted;
+    if (seconds < 10) return Colors.deepOrangeAccent;
+    if (seconds < 20) return AppTheme.accentCyan;
+    return AppTheme.accentGreen;
   }
 
   @override
@@ -98,52 +100,72 @@ class _TimerWidgetState extends State<TimerWidget> {
     final color = _getTimerColor(_currentTime);
     final isCritical = _currentTime < 5 && widget.isActive;
     final isWarning = _currentTime < 10 && widget.isActive;
+    final isUrgent = _currentTime < 20 && widget.isActive;
 
     Widget content = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         color: widget.isActive
             ? AppTheme.navyCard.withValues(alpha: 0.95)
             : Colors.black.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: widget.isActive ? color.withValues(alpha: 0.6) : Colors.transparent,
+          color: widget.isActive ? color.withValues(alpha: 0.75) : Colors.transparent,
           width: 2,
         ),
         boxShadow: widget.isActive
             ? [
                 BoxShadow(
-                  color: color.withValues(alpha: 0.3),
-                  blurRadius: 12,
-                  spreadRadius: 2,
+                  color: color.withValues(alpha: isUrgent ? 0.25 : 0.15),
+                  blurRadius: isUrgent ? 18 : 10,
+                  spreadRadius: isUrgent ? 3 : 1,
                 )
               ]
             : null,
       ),
-      child: Row(
+      child: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            Icons.timer_outlined,
-            size: 14,
-            color: color.withValues(alpha: 0.7),
-          ),
-          const SizedBox(width: 10),
-          Text(
-            timeStr,
-            style: GoogleFonts.shareTechMono(
-              color: color,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.5,
+          if (widget.label.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text(
+                widget.label.toUpperCase(),
+                style: GoogleFonts.baloo2(
+                  color: AppTheme.textMuted,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.2,
+                ),
+              ),
             ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.timer_outlined,
+                size: 16,
+                color: color.withValues(alpha: 0.85),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                timeStr,
+                style: GoogleFonts.shareTechMono(
+                  color: color,
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.5,
+                ),
+              ),
+              if (isWarning) ...[
+                const SizedBox(width: 8),
+                Text('⚡', style: const TextStyle(fontSize: 18))
+                    .animate(onPlay: (c) => c.repeat())
+                    .shake(hz: 3, curve: Curves.easeInOut),
+              ]
+            ],
           ),
-          if (isWarning) ...[
-            const SizedBox(width: 8),
-            Text("⚡", style: const TextStyle(fontSize: 16))
-                .animate(onPlay: (c) => c.repeat())
-                .shake(hz: 3, curve: Curves.easeInOut),
-          ]
         ],
       ),
     );
@@ -152,10 +174,10 @@ class _TimerWidgetState extends State<TimerWidget> {
       return content
           .animate(onPlay: (c) => c.repeat())
           .scaleXY(
-              begin: 1.0, end: 1.05, duration: 400.ms, curve: Curves.easeInOut)
+              begin: 1.0, end: 1.06, duration: 350.ms, curve: Curves.easeInOut)
           .then()
           .scaleXY(
-              begin: 1.05, end: 1.0, duration: 400.ms, curve: Curves.easeInOut)
+              begin: 1.06, end: 1.0, duration: 350.ms, curve: Curves.easeInOut)
           .shimmer(color: Colors.white24);
     }
 

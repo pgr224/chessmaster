@@ -6,6 +6,10 @@ class TournamentPlayer {
   final int wins;
   final int losses;
   final int draws;
+  final double accuracy;
+  final int averageOpponentRating;
+  final int longestWinStreak;
+  final int ratingChange;
 
   const TournamentPlayer({
     required this.id,
@@ -15,6 +19,10 @@ class TournamentPlayer {
     required this.wins,
     required this.losses,
     required this.draws,
+    this.accuracy = 0,
+    this.averageOpponentRating = 0,
+    this.longestWinStreak = 0,
+    this.ratingChange = 0,
   });
 
   factory TournamentPlayer.fromJson(Map<String, dynamic> json) {
@@ -28,6 +36,17 @@ class TournamentPlayer {
       wins: (json['wins'] as num?)?.toInt() ?? 0,
       losses: (json['losses'] as num?)?.toInt() ?? 0,
       draws: (json['draws'] as num?)?.toInt() ?? 0,
+        accuracy: (json['accuracy'] as num?)?.toDouble() ?? 0,
+        averageOpponentRating:
+          (json['averageOpponentRating'] as num?)?.toInt() ??
+            (json['average_opponent_rating'] as num?)?.toInt() ??
+            0,
+        longestWinStreak: (json['longestWinStreak'] as num?)?.toInt() ??
+          (json['longest_win_streak'] as num?)?.toInt() ??
+          0,
+        ratingChange: (json['ratingChange'] as num?)?.toInt() ??
+          (json['rating_change'] as num?)?.toInt() ??
+          0,
     );
   }
 
@@ -39,6 +58,10 @@ class TournamentPlayer {
         'wins': wins,
         'losses': losses,
         'draws': draws,
+        'accuracy': accuracy,
+        'averageOpponentRating': averageOpponentRating,
+        'longestWinStreak': longestWinStreak,
+        'ratingChange': ratingChange,
       };
 }
 
@@ -80,6 +103,14 @@ class TournamentPairing {
   final TournamentPlayer player2;
   final String player1Color; // 'white' | 'black'
   final String player2Color;
+  final int moveCount;
+  final int captureCount;
+  final double evalSwing;
+  final double whiteAccuracy;
+  final double blackAccuracy;
+  final int whiteTimeUsed;
+  final int blackTimeUsed;
+  final String status;
 
   const TournamentPairing({
     required this.gameId,
@@ -87,6 +118,14 @@ class TournamentPairing {
     required this.player2,
     required this.player1Color,
     required this.player2Color,
+    this.moveCount = 0,
+    this.captureCount = 0,
+    this.evalSwing = 0,
+    this.whiteAccuracy = 0,
+    this.blackAccuracy = 0,
+    this.whiteTimeUsed = 0,
+    this.blackTimeUsed = 0,
+    this.status = 'pending',
   });
 
   factory TournamentPairing.fromJson(Map<String, dynamic> json) {
@@ -98,6 +137,28 @@ class TournamentPairing {
       player2: TournamentPlayer.fromJson(p2),
       player1Color: p1['color'] as String? ?? 'white',
       player2Color: p2['color'] as String? ?? 'black',
+        moveCount: (json['moveCount'] as num?)?.toInt() ??
+          (json['move_count'] as num?)?.toInt() ??
+          0,
+        captureCount: (json['captureCount'] as num?)?.toInt() ??
+          (json['capture_count'] as num?)?.toInt() ??
+          0,
+        evalSwing: (json['evalSwing'] as num?)?.toDouble() ??
+          (json['eval_swing'] as num?)?.toDouble() ??
+          0,
+        whiteAccuracy: (json['whiteAccuracy'] as num?)?.toDouble() ??
+          (json['white_accuracy'] as num?)?.toDouble() ??
+          0,
+        blackAccuracy: (json['blackAccuracy'] as num?)?.toDouble() ??
+          (json['black_accuracy'] as num?)?.toDouble() ??
+          0,
+        whiteTimeUsed: (json['whiteTimeUsed'] as num?)?.toInt() ??
+          (json['timeUsed']?['white'] as num?)?.toInt() ??
+          0,
+        blackTimeUsed: (json['blackTimeUsed'] as num?)?.toInt() ??
+          (json['timeUsed']?['black'] as num?)?.toInt() ??
+          0,
+        status: json['status'] as String? ?? 'pending',
     );
   }
 }

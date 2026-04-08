@@ -87,12 +87,13 @@ class MultiplayerService {
   }
 
   /// Start matchmaking
-  void findMatch({String? timeControl}) {
+  void findMatch({String? timeControl, String variantId = 'standard'}) {
     _lobbyChannel?.sink.add(jsonEncode({
       'type': 'FIND_MATCH',
       'timeControl': (timeControl == null || timeControl.isEmpty)
           ? '10+0'
           : timeControl,
+      'variantId': variantId,
     }));
   }
 
@@ -102,12 +103,12 @@ class MultiplayerService {
   }
 
   /// Connect to a specific game room
-  Future<void> joinRoom(String gameId, String color,
-      {String timeControl = '10+0'}) async {
+    Future<void> joinRoom(String gameId, String color,
+      {String timeControl = '10+0', String variantId = 'standard'}) async {
     final baseUrl =
         dotenv.env['WS_URL'] ?? 'wss://chess-master-api.pp942920.workers.dev';
     final url =
-        '$baseUrl/multiplayer/game/$gameId?userId=$_userId&username=$_username&color=$color&timeControl=${Uri.encodeComponent(timeControl)}&gameId=$gameId';
+      '$baseUrl/multiplayer/game/$gameId?userId=$_userId&username=$_username&color=$color&timeControl=${Uri.encodeComponent(timeControl)}&variantId=${Uri.encodeComponent(variantId)}&gameId=$gameId';
 
     try {
       await _gameChannel?.sink.close();
@@ -148,22 +149,26 @@ class MultiplayerService {
   }
 
   /// Send a direct challenge to another player in the lobby
-  void sendChallenge(String opponentId, String mode, String timeControl) {
+  void sendChallenge(
+      String opponentId, String mode, String timeControl, String variantId) {
     _lobbyChannel?.sink.add(jsonEncode({
       'type': 'CHALLENGE',
       'opponentId': opponentId,
       'mode': mode,
       'timeControl': timeControl,
+      'variantId': variantId,
     }));
   }
 
   /// Accept a direct challenge from another player
-  void acceptChallenge(String challengerId, String mode, String timeControl) {
+  void acceptChallenge(
+      String challengerId, String mode, String timeControl, String variantId) {
     _lobbyChannel?.sink.add(jsonEncode({
       'type': 'CHALLENGE_ACCEPTED',
       'challengerId': challengerId,
       'mode': mode,
       'timeControl': timeControl,
+      'variantId': variantId,
     }));
   }
 

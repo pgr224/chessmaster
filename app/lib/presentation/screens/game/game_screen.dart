@@ -598,6 +598,37 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     ).animate().fadeIn().slideY(begin: 0.15);
   }
 
+  Widget _buildClockPanel(BuildContext context, GameState state) {
+    final showClock = state.whiteTimeMs > 0 || state.blackTimeMs > 0;
+    if (!showClock) return const SizedBox.shrink();
+
+    final isWhiteActive = state.currentTurn == PieceColor.white && state.clockRunning;
+    final isBlackActive = state.currentTurn == PieceColor.black && state.clockRunning;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      child: Row(
+        children: [
+          Expanded(
+            child: TimerWidget(
+              timeInSeconds: state.whiteTimeMs / 1000,
+              isActive: isWhiteActive,
+              label: 'White',
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: TimerWidget(
+              timeInSeconds: state.blackTimeMs / 1000,
+              isActive: isBlackActive,
+              label: 'Black',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildBackground() {
     final bgTheme = context.watch<SettingsBloc>().state.backgroundTheme;
     return Container(
@@ -743,6 +774,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               children: [
                 _buildOpponentInfo(state),
                 _buildCapturedPieces(state, PieceColor.black),
+                _buildClockPanel(context, state),
                 Expanded(
                   child: Center(
                     child: _buildBoardFrame(
@@ -1097,6 +1129,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             child: Column(
               children: [
                 _buildTopBar(context, state),
+                _buildClockPanel(context, state),
                 const SizedBox(height: 8),
                 Expanded(
                   child: Center(
