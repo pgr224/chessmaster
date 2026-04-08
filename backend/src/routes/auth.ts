@@ -142,7 +142,10 @@ auth.post('/login', async (c) => {
     return c.json({ token, userId: user.id, username: user.username, user: profile })
   } catch (err) {
     console.error('Error during login:', err)
-    return c.json({ error: 'Login failed' }, 500)
+    const errorMessage = err instanceof Error ? err.message : String(err)
+    const errorStack = err instanceof Error ? err.stack : undefined
+    console.error('Stack:', errorStack)
+    return c.json({ error: 'Login failed', details: errorMessage }, 500)
   }
 })
 

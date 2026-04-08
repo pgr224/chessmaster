@@ -592,48 +592,60 @@ profileRoutes.get('/:id', async (c) => {
 })
 
 export async function getFullProfile(c: any, userId: string) {
-  const { results: userRes } = await c.env.DB.prepare(
-    'SELECT id, username, avatar_url, is_ghibli, local_avatar, username_changes, xp, created_at FROM users WHERE id = ?'
-  ).bind(userId).all()
+  try {
+    const { results: userRes } = await c.env.DB.prepare(
+      'SELECT id, username, avatar_url, is_ghibli, local_avatar, username_changes, xp, created_at FROM users WHERE id = ?'
+    ).bind(userId).all()
 
-  if (!userRes.length) {
-    return c.json({ error: 'User not found' }, 404)
+    if (!userRes.length) {
+      return c.json({ error: 'User not found' }, 404)
+    }
+
+    // Ensure user_stats exists
+    await c.env.DB.prepare(
+      'INSERT OR IGNORE INTO user_stats (user_id) VALUES (?)'
+    ).bind(userId).run()
+
+    const { results: statsRes } = await c.env.DB.prepare(
+      'SELECT * FROM user_stats WHERE user_id = ?'
+    ).bind(userId).all()
+
+    // Fetch recent 5 games
+    const { results: gamesRes } = await c.env.DB.prepare(`
+      SELECT 
+        g.id,
+        g.created_at as date,
+        CASE 
+          WHEN g.mode = 'singlePlayer' THEN 'AI Master'
+          WHEN g.white_user_id = ? THEN COALESCE((SELECT username FROM users WHERE id = g.black_user_id), 'Guest')
+          ELSE COALESCE((SELECT username FROM users WHERE id = g.white_user_id), 'Guest')
+        END as opponent,
+        CASE 
+          WHEN g.result = 'draw' THEN 'Draw'
+          WHEN (g.white_user_id = ? AND g.result = 'white') OR (g.black_user_id = ? AND g.result = 'black') THEN 'Won'
+          ELSE 'Lost'
+        END as result,
+        g.mode,
+        g.move_count as moves
+      FROM games g
+      WHERE (g.white_user_id = ? OR g.black_user_id = ?) AND g.status = 'completed'
+      ORDER BY g.created_at DESC
+      LIMIT 5
+    `).bind(userId, userId, userId, userId, userId).all()
+
+    const profile = {
+      ...userRes[0],
+      stats: statsRes[0] || {},
+      recent_games: gamesRes || []
+    }
+
+    return c.json(profile)
+  } catch (err) {
+    console.error('Error in getFullProfile:', err)
+    const errorStack = err instanceof Error ? err.stack : undefined
+    console.error('Stack:', errorStack)
+    throw err
   }
-
-  const { results: statsRes } = await c.env.DB.prepare(
-    'SELECT * FROM user_stats WHERE user_id = ?'
-  ).bind(userId).all()
-
-  // Fetch recent 5 games
-  const { results: gamesRes } = await c.env.DB.prepare(`
-    SELECT 
-      g.id,
-      g.created_at as date,
-      CASE 
-        WHEN g.mode = 'singlePlayer' THEN 'AI Master'
-        WHEN g.white_user_id = ? THEN COALESCE((SELECT username FROM users WHERE id = g.black_user_id), 'Guest')
-        ELSE COALESCE((SELECT username FROM users WHERE id = g.white_user_id), 'Guest')
-      END as opponent,
-      CASE 
-        WHEN g.result = 'draw' THEN 'Draw'
-        WHEN (g.white_user_id = ? AND g.result = 'white') OR (g.black_user_id = ? AND g.result = 'black') THEN 'Won'
-        ELSE 'Lost'
-      END as result,
-      g.mode,
-      g.move_count as moves
-    FROM games g
-    WHERE (g.white_user_id = ? OR g.black_user_id = ?) AND g.status = 'completed'
-    ORDER BY g.created_at DESC
-    LIMIT 5
-  `).bind(userId, userId, userId, userId, userId).all()
-
-  const profile = {
-    ...userRes[0],
-    stats: statsRes[0] || {},
-    recent_games: gamesRes || []
-  }
-
-  return c.json(profile)
 }
 
 export { profileRoutes }
