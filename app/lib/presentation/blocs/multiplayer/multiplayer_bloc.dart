@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../data/models/multiplayer_models.dart';
+import '../../../data/models/xp_rules.dart';
 import '../../../data/services/multiplayer_service.dart';
 import '../../../domain/engine/chess_engine.dart';
 
@@ -452,30 +453,23 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
       emit(const MultiplayerState());
     });
     on<MpGameOverEvent>((event, emit) {
-      int xp = 0;
+      // Use standardized XP rules: +100 win, +30 draw, -20 loss
+      // (aligned with profile settings rules)
       final isWin = (event.result == 'white' &&
               state.playerColor == PieceColor.white) ||
           (event.result == 'black' && state.playerColor == PieceColor.black);
       final isLoss = (event.result == 'white' &&
               state.playerColor == PieceColor.black) ||
           (event.result == 'black' && state.playerColor == PieceColor.white);
+      final isDraw = event.result == 'draw';
 
+      int xp = 0;
       if (isWin) {
-        if (event.reason == 'checkmate') {
-          xp = 100;
-        } else if (event.reason == 'timeout') {
-          xp = 50;
-        } else {
-          xp = 30; // default win
-        }
+        xp = calculateMultiplayerXP('win');
       } else if (isLoss) {
-        if (event.reason == 'resign') {
-          xp = -50;
-        } else {
-          xp = -20;
-        }
-      } else {
-        xp = 0; // draw
+        xp = calculateMultiplayerXP('loss');
+      } else if (isDraw) {
+        xp = calculateMultiplayerXP('draw');
       }
 
       emit(state.copyWith(

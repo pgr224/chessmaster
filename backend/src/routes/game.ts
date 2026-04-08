@@ -293,16 +293,24 @@ async function updateXP(db: D1Database, gameRow: Record<string, unknown>, result
     .bind(gameRow.black_user_id).first<{ xp: number }>()
   if (!white || !black) return
 
-  // XP logic: +20 for win, +10 for draw, +5 for loss (standard additive XP)
-  // Or do you want to keep ELO formula for "XP"? 
-  // User said "replace elo with xp", usually XP is just progression.
-  // But let's keep the formula for now, but usually XP doesn't go DOWN.
-  // I'll change it to be additive.
-  const scoreW = result === 'white' ? 20 : result === 'draw' ? 10 : 5
-  const scoreB = result === 'black' ? 20 : result === 'draw' ? 10 : 5
-  
-  const newWhite = white.xp + scoreW
-  const newBlack = black.xp + scoreB
+  // Use standardized XP rules from profile (Multiplayer: +100 win, +30 draw, -20 loss)
+  let scoreW: number
+  let scoreB: number
+
+  if (result === 'draw') {
+    scoreW = calculateMultiplayerXP('draw')
+    scoreB = calculateMultiplayerXP('draw')
+  } else if (result === 'white') {
+    scoreW = calculateMultiplayerXP('win')
+    scoreB = calculateMultiplayerXP('loss')
+  } else {
+    // result === 'black'
+    scoreW = calculateMultiplayerXP('loss')
+    scoreB = calculateMultiplayerXP('win')
+  }
+
+  const newWhite = Math.max(0, white.xp + scoreW)
+  const newBlack = Math.max(0, black.xp + scoreB)
   const now = new Date().toISOString()
 
   await db.prepare('UPDATE users SET xp = ? WHERE id = ?').bind(newWhite, gameRow.white_user_id).run()

@@ -1,5 +1,6 @@
 import type { Env } from './index'
 import { normalizeTimeControl, DEFAULT_TIME_CONTROL } from './time_control'
+import { XP_RULES } from './xp_rules'
 
 interface TournamentPlayer {
   id: string
@@ -252,13 +253,15 @@ export class TournamentRoom implements DurableObject {
     const standings = this._standings()
     const winner = standings[0]
 
-    // XP / ELO deltas per plan: Win=+100, Draw=+30, Loss=-20, bonus +200 for overall winner
+    // XP calculation per standardized rules: Win=+100, Draw=+30, Loss=-20, bonus +200 for overall winner
     const xpDeltas: Record<string, number> = {}
     const eloDeltas: Record<string, number> = {}
     for (const p of this.tournament.players) {
-      const xpBase = (p.wins * 100) + (p.draws * 30) + (p.losses * -20)
+      const xpBase = (p.wins * XP_RULES.multiplayer.win) + 
+                     (p.draws * XP_RULES.multiplayer.draw) + 
+                     (p.losses * XP_RULES.multiplayer.loss)
       const streakMultiplier = 1 + Math.min(p.wins, 5) * 0.2
-      xpDeltas[p.id] = Math.round(xpBase * streakMultiplier) + (p.id === winner?.id ? 200 : 0)
+      xpDeltas[p.id] = Math.round(xpBase * streakMultiplier) + (p.id === winner?.id ? XP_RULES.tournament.tournamentWinBonus : 0)
       eloDeltas[p.id] = (p.wins * 20) + (p.draws * 5) + (p.losses * -15)
     }
 
