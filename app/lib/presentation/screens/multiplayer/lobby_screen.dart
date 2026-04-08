@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/time_control.dart';
 import '../../../data/models/game_variant.dart';
+import '../../utils/engagement_notifier.dart';
 import 'package:chess_master/presentation/blocs/auth/auth_bloc.dart' as auth;
 import 'package:chess_master/presentation/blocs/multiplayer/multiplayer_bloc.dart';
 import 'package:chess_master/presentation/blocs/settings/settings_bloc.dart';
@@ -35,11 +36,10 @@ class LobbyScreen extends StatefulWidget {
 class _LobbyScreenState extends State<LobbyScreen> {
   // Removed local selectedTime, now managed by MultiplayerBloc
   Timer? _xpRequestsPoller;
-  bool _notifyMe = true;
+  final EngagementNotifier _engagement = EngagementNotifier(maxItems: 8);
   int _lastOnlineMilestone = 0;
   MultiplayerStatus? _lastStatus;
   int _lastXpRequestCount = 0;
-  final List<_OnlineEngagementItem> _engagementFeed = <_OnlineEngagementItem>[];
 
   @override
   void initState() {
@@ -411,30 +411,16 @@ class _LobbyScreenState extends State<LobbyScreen> {
     required String body,
     required Color accent,
   }) {
-    _engagementFeed.insert(
-      0,
-      _OnlineEngagementItem(
-        title: title,
-        body: body,
-        createdAt: DateTime.now(),
-        accent: accent,
-      ),
-    );
-    if (_engagementFeed.length > 8) {
-      _engagementFeed.removeLast();
-    }
-
     if (!mounted) return;
 
-    final settings = context.read<SettingsBloc>().state;
-    final canNotify = settings.notificationsEnabled && _notifyMe;
-    if (canNotify) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(content: Text('$title • $body')),
-        );
-    }
+    _engagement.push(
+      context: context,
+      globalNotificationsEnabled:
+          context.read<SettingsBloc>().state.notificationsEnabled,
+      title: title,
+      body: body,
+      accent: accent,
+    );
 
     setState(() {});
   }
@@ -460,11 +446,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
             ),
           ),
           Switch(
-            value: _notifyMe,
+            value: _engagement.notifyEnabled,
             activeColor: AppTheme.accentGreen,
             onChanged: (value) {
               setState(() {
-                _notifyMe = value;
+                _engagement.setNotifyEnabled(value);
               });
             },
           ),
@@ -474,7 +460,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
   }
 
   Widget _buildEngagementFeed() {
-    if (_engagementFeed.isEmpty) {
+    if (_engagement.feed.isEmpty) {
       return const SizedBox.shrink();
     }
 
@@ -497,7 +483,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
             ),
           ),
           const SizedBox(height: 10),
-          ..._engagementFeed.take(4).map((item) {
+          ..._engagement.feed.take(4).map((item) {
             return Container(
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
@@ -1713,18 +1699,4 @@ class _LobbyScreenState extends State<LobbyScreen> {
       );
     }
   }
-}
-
-class _OnlineEngagementItem {
-  final String title;
-  final String body;
-  final DateTime createdAt;
-  final Color accent;
-
-  const _OnlineEngagementItem({
-    required this.title,
-    required this.body,
-    required this.createdAt,
-    required this.accent,
-  });
 }

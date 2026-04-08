@@ -12,6 +12,7 @@ import '../../../data/models/tournament_model.dart';
 import '../../blocs/auth/auth_bloc.dart';
 import '../../blocs/settings/settings_bloc.dart';
 import '../../blocs/tournament/tournament_bloc.dart';
+import '../../utils/engagement_notifier.dart';
 
 /// Enhanced Tournament HQ screen with spotlight, podium, analytics,
 /// engagement feed, and social actions.
@@ -28,8 +29,7 @@ class _TournamentLobbyScreenState extends State<TournamentLobbyScreen> {
   int _lastRoundNotified = -1;
   int _lastKnownRank = -1;
   String? _lastEngagementText;
-  bool _notifyMe = true;
-  final List<_EngagementFeedItem> _feed = <_EngagementFeedItem>[];
+  final EngagementNotifier _engagement = EngagementNotifier(maxItems: 8);
   final List<TournamentPairing> _pairingHistory = <TournamentPairing>[];
 
   @override
@@ -147,7 +147,7 @@ class _TournamentLobbyScreenState extends State<TournamentLobbyScreen> {
 
   void _handleEngagementNotifications(TournamentState ts) {
     final notificationsEnabled =
-        context.read<SettingsBloc>().state.notificationsEnabled && _notifyMe;
+        context.read<SettingsBloc>().state.notificationsEnabled;
 
     if (ts.currentRound > 0 && ts.currentRound != _lastRoundNotified) {
       _lastRoundNotified = ts.currentRound;
@@ -189,33 +189,17 @@ class _TournamentLobbyScreenState extends State<TournamentLobbyScreen> {
     required bool notificationsEnabled,
     required Color accent,
   }) {
-    _feed.insert(
-      0,
-      _EngagementFeedItem(
-        title: title,
-        body: body,
-        createdAt: DateTime.now(),
-        accent: accent,
-      ),
-    );
-    if (_feed.length > 8) {
-      _feed.removeLast();
-    }
-
     if (!mounted) {
       return;
     }
 
-    if (notificationsEnabled) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            content: Text('$title • $body'),
-            duration: const Duration(seconds: 3),
-          ),
-        );
-    }
+    _engagement.push(
+      context: context,
+      globalNotificationsEnabled: notificationsEnabled,
+      title: title,
+      body: body,
+      accent: accent,
+    );
 
     setState(() {});
   }
@@ -1059,19 +1043,27 @@ class _TournamentLobbyScreenState extends State<TournamentLobbyScreen> {
               OutlinedButton.icon(
                 onPressed: () {
                   setState(() {
-                    _notifyMe = !_notifyMe;
+                    _engagement.toggleNotify();
                   });
                   _notify(
-                    title: _notifyMe ? 'Notifications On' : 'Notifications Off',
-                    body: _notifyMe
+                    title: _engagement.notifyEnabled
+                        ? 'Notifications On'
+                        : 'Notifications Off',
+                    body: _engagement.notifyEnabled
                         ? 'You will receive tournament engagement alerts.'
                         : 'In-app tournament alerts are muted.',
                     notificationsEnabled: false,
-                    accent: _notifyMe ? AppTheme.accentGreen : AppTheme.textMuted,
+                    accent: _engagement.notifyEnabled
+                        ? AppTheme.accentGreen
+                        : AppTheme.textMuted,
                   );
                 },
-                icon: Icon(_notifyMe ? Icons.notifications_active : Icons.notifications_off),
-                label: Text(_notifyMe ? 'Notify Me: ON' : 'Notify Me: OFF'),
+                icon: Icon(_engagement.notifyEnabled
+                    ? Icons.notifications_active
+                    : Icons.notifications_off),
+                label: Text(_engagement.notifyEnabled
+                    ? 'Notify Me: ON'
+                    : 'Notify Me: OFF'),
               ),
             ],
           ),
@@ -1081,7 +1073,7 @@ class _TournamentLobbyScreenState extends State<TournamentLobbyScreen> {
   }
 
   Widget _buildNotificationFeed() {
-    if (_feed.isEmpty) {
+    if (_engagement.feed.isEmpty) {
       return const SizedBox.shrink();
     }
 
@@ -1105,7 +1097,7 @@ class _TournamentLobbyScreenState extends State<TournamentLobbyScreen> {
             ),
           ),
           const SizedBox(height: 10),
-          ..._feed.take(4).map(
+              ..._engagement.feed.take(4).map(
                 (item) => Container(
                   margin: const EdgeInsets.only(bottom: 8),
                   padding: const EdgeInsets.all(10),
@@ -1149,7 +1141,7 @@ class _TournamentLobbyScreenState extends State<TournamentLobbyScreen> {
                         ),
                       ),
                       Text(
-                        _timeAgo(item.createdAt),
+                        _engagement.timeAgo(item.createdAt),
                         style: GoogleFonts.baloo2(
                           color: AppTheme.textMuted,
                           fontSize: 10,
@@ -1262,17 +1254,6 @@ class _TournamentLobbyScreenState extends State<TournamentLobbyScreen> {
     return sum / opponents.length;
   }
 
-  String _timeAgo(DateTime time) {
-    final diff = DateTime.now().difference(time);
-    if (diff.inSeconds < 60) {
-      return '${diff.inSeconds}s';
-    }
-    if (diff.inMinutes < 60) {
-      return '${diff.inMinutes}m';
-    }
-    return '${diff.inHours}h';
-  }
-
   void _joinMatch(BuildContext context, String gameId, TournamentPairing pair) {
     String color = 'white';
     if (pair.player1.id == _myUserId) {
@@ -1284,20 +1265,6 @@ class _TournamentLobbyScreenState extends State<TournamentLobbyScreen> {
     context.push('/room/$gameId');
     debugPrint('[TournamentLobby] playing as $color');
   }
-}
-
-class _EngagementFeedItem {
-  final String title;
-  final String body;
-  final DateTime createdAt;
-  final Color accent;
-
-  const _EngagementFeedItem({
-    required this.title,
-    required this.body,
-    required this.createdAt,
-    required this.accent,
-  });
 }
 
 enum _PairingKind { completed, live }
