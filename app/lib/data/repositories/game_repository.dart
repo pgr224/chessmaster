@@ -63,11 +63,37 @@ class GameRepository {
     try {
       await _dio.post('/api/game/create', data: {
         'gameId': id,
-        'mode': game.mode,
+        'mode': _normalizeModeForServer(game.mode),
         'initialFen': game.fen,
       });
     } catch (e) {
       print('[GameRepository] Server sync failed (create): $e');
+    }
+  }
+
+  String _normalizeModeForServer(String mode) {
+    final value = mode.trim().toLowerCase();
+    switch (value) {
+      case 'singleplayer':
+      case 'single_player':
+      case 'singleplayermode':
+        return 'singlePlayer';
+      case 'twoplayer':
+      case 'two_player':
+      case 'local':
+        return 'twoPlayer';
+      case 'multiplayer':
+        return 'multiplayer';
+      case 'tournament':
+        return 'tournament';
+      case 'tutorial':
+        return 'tutorial';
+      case 'puzzle':
+        return 'puzzle';
+      case 'practice':
+        return 'practice';
+      default:
+        return 'singlePlayer';
     }
   }
 

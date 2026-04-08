@@ -266,45 +266,48 @@ profileRoutes.post('/xp/transfer', async (c) => {
 
 // Request XP from network (broadcast or direct friend request)
 profileRoutes.post('/xp/request', async (c) => {
-  await ensureXpSocialTables(c)
-  await expireStaleRequests(c)
-
-  const userId = c.get('user').sub
-  const username = c.get('user').username || 'Someone'
-  const { amount, targetUserId } = await c.req.json() as { amount: number, targetUserId?: string }
-
-  if (!Number.isFinite(amount) || amount <= 0) {
-    return c.json({ error: 'Invalid amount' }, 400)
-  }
-
-  const normalizedAmount = Math.floor(amount)
-  const requestType = targetUserId ? 'direct' : 'broadcast'
-
-  const { results: existingOpen } = await c.env.DB.prepare(`
-    SELECT id FROM xp_requests_v2 WHERE requester_id = ? AND status = 'open' LIMIT 1
-  `).bind(userId).all()
-  if (existingOpen.length) {
-    return c.json({ error: 'You already have an open XP request' }, 409)
-  }
-
-  if (requestType === 'direct') {
-    if (!targetUserId || targetUserId === userId) {
-      return c.json({ error: 'Invalid target user' }, 400)
-    }
-
-    const [a, b] = pairUsers(userId, targetUserId)
-    const { results: friendship } = await c.env.DB.prepare(`
-      SELECT status FROM xp_friendships WHERE user_a = ? AND user_b = ? LIMIT 1
-    `).bind(a, b).all()
-
-    if (!friendship.length || friendship[0].status !== 'accepted') {
-      return c.json({ error: 'Direct XP request requires an accepted friendship' }, 403)
-    }
-  }
-
-  const expiryMinutes = requestType === 'direct' ? 24 * 60 : 10
-  
   try {
+    await ensureXpSocialTables(c)
+    await expireStaleRequests(c)
+
+    const userId = c.get('user').sub
+    const usernameRow = await c.env.DB.prepare('SELECT username FROM users WHERE id = ?')
+      .bind(userId)
+      .first<{ username: string }>()
+    const username = usernameRow?.username ?? 'Someone'
+    const { amount, targetUserId } = await c.req.json() as { amount: number, targetUserId?: string }
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return c.json({ error: 'Invalid amount' }, 400)
+    }
+
+    const normalizedAmount = Math.floor(amount)
+    const requestType = targetUserId ? 'direct' : 'broadcast'
+
+    const { results: existingOpen } = await c.env.DB.prepare(`
+      SELECT id FROM xp_requests_v2 WHERE requester_id = ? AND status = 'open' LIMIT 1
+    `).bind(userId).all()
+    if (existingOpen.length) {
+      return c.json({ error: 'You already have an open XP request' }, 409)
+    }
+
+    if (requestType === 'direct') {
+      if (!targetUserId || targetUserId === userId) {
+        return c.json({ error: 'Invalid target user' }, 400)
+      }
+
+      const [a, b] = pairUsers(userId, targetUserId)
+      const { results: friendship } = await c.env.DB.prepare(`
+        SELECT status FROM xp_friendships WHERE user_a = ? AND user_b = ? LIMIT 1
+      `).bind(a, b).all()
+
+      if (!friendship.length || friendship[0].status !== 'accepted') {
+        return c.json({ error: 'Direct XP request requires an accepted friendship' }, 403)
+      }
+    }
+
+    const expiryMinutes = requestType === 'direct' ? 24 * 60 : 10
+    
     const insert = await c.env.DB.prepare(`
       INSERT INTO xp_requests_v2 (requester_id, target_user_id, amount, request_type, status, expires_at)
       VALUES (?, ?, ?, ?, 'open', datetime('now', '+' || ? || ' minutes'))
@@ -337,7 +340,8 @@ profileRoutes.post('/xp/request', async (c) => {
       }
     })
   } catch (err: any) {
-     return c.json({ error: err.message }, 500)
+    console.error('XP request error:', err)
+    return c.json({ error: err.message || 'Internal server error' }, 500)
   }
 })
 
@@ -428,7 +432,10 @@ profileRoutes.post('/xp/request/:id/respond', async (c) => {
   await expireStaleRequests(c)
 
   const responderId = c.get('user').sub
-  const responderName = c.get('user').username || 'A player'
+  const responderRow = await c.env.DB.prepare('SELECT username FROM users WHERE id = ?')
+    .bind(responderId)
+    .first<{ username: string }>()
+  const responderName = responderRow?.username ?? 'A player'
   const requestId = Number(c.req.param('id'))
   const { action } = await c.req.json() as { action: 'accept' | 'reject' }
 

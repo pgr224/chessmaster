@@ -8,11 +8,30 @@ class NativeLeela {
   Completer<String?>? _moveCompleter;
 
   Future<void> init() async {
-    // No-op fallback while native LC0 dependency is unavailable on Android.
+    // TODO: Initialize Leela Chess Zero engine
+    // For now, use Stockfish as fallback for analysis
   }
 
   Future<String?> getBestMove(String fen, int nodes) async {
-    return null;
+    // TODO: Implement Leela move generation
+    return null; // Fallback to Stockfish
+  }
+
+  // NEW: Background analysis for player style
+  Future<Map<String, dynamic>> analyzePlayerStyle(String fen, List<String> recentMoves) async {
+    // TODO: Use Leela to analyze position and infer player tendencies
+    // For now, return mock analysis based on move patterns
+
+    // Simple heuristic analysis
+    bool aggressive = recentMoves.any((m) => m.contains('+') || m.contains('#'));
+    bool defensive = recentMoves.length > 5 && !aggressive;
+    bool positional = !aggressive && !defensive;
+
+    return {
+      'style': aggressive ? 'aggressive' : defensive ? 'defensive' : 'positional',
+      'confidence': 0.7,
+      'suggested_personality': aggressive ? 'aggressive' : 'defensive',
+    };
   }
 
   void stop() {

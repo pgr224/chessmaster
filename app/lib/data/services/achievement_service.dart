@@ -172,11 +172,17 @@ class AchievementService {
     if (state.capturedWhite.isNotEmpty || state.capturedBlack.isNotEmpty) {
       unlockAchievement('first_capture');
     }
-    final checkString = state.moveHistory.map((m) => m.toAlgebraic()).join(' ');
-    if (checkString.contains('+') || checkString.contains('#')) {
+    final playerMoves = state.moveHistory.asMap().entries
+        .where((entry) => _isPlayerMove(entry.key, state.playerColor))
+        .map((entry) => entry.value)
+        .toList();
+    final playerNotation = playerMoves
+        .map((m) => m.algebraic ?? m.toAlgebraic())
+        .join(' ');
+    if (playerNotation.contains('+') || playerNotation.contains('#')) {
       unlockAchievement('first_check');
     }
-    if (checkString.contains('O-O') || checkString.contains('O-O-O')) {
+    if (playerMoves.any((m) => m.isCastle)) {
       unlockAchievement('first_castle');
     }
     updateProgress('play_5_games', stats.gamesPlayed);
@@ -192,6 +198,20 @@ class AchievementService {
       unlockAchievement('use_hint');
     }
     // first_undo is evaluated on actual undo, or if they have undos locally
+
+    final isPlayerWin = (state.result == GameResult.whiteWins &&
+            state.playerColor == PieceColor.white) ||
+        (state.result == GameResult.blackWins &&
+            state.playerColor == PieceColor.black);
+
+    if (isPlayerWin) {
+      final playerLostQueen = state.playerColor == PieceColor.white
+          ? state.capturedWhite.any((p) => p.type == PieceType.queen)
+          : state.capturedBlack.any((p) => p.type == PieceType.queen);
+      if (playerLostQueen) {
+        unlockAchievement('queen_sacrifice');
+      }
+    }
 
     // Combat
     updateProgress('win_10', stats.wins);
@@ -218,11 +238,6 @@ class AchievementService {
     }
 
     // Beating AIs
-    final isPlayerWin = (state.result == GameResult.whiteWins &&
-            state.playerColor == PieceColor.white) ||
-        (state.result == GameResult.blackWins &&
-            state.playerColor == PieceColor.black);
-
     if (isPlayerWin && state.mode == GameMode.singlePlayer) {
       // Player won!
       if (state.aiDifficulty == AIDifficulty.basic) {
@@ -322,6 +337,12 @@ class AchievementService {
     if (state.isPuzzleRush) {
       unlockAchievement('puzzle_rush_survive');
     }
+  }
+
+  bool _isPlayerMove(int moveIndex, PieceColor? playerColor) {
+    if (playerColor == null) return true;
+    final isWhiteMove = moveIndex % 2 == 0;
+    return (playerColor == PieceColor.white) == isWhiteMove;
   }
 
   void evaluateSpecialActions(String action) {

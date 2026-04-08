@@ -37,6 +37,15 @@ game.post('/create', async (c) => {
 
   const userId = user.sub || user.id || null
   if (!userId) return c.json({ error: 'User ID missing from token' }, 401)
+
+  // Prevent foreign-key insert failures from surfacing as 500 by validating
+  // that the authenticated user still exists in the users table.
+  const userRow = await c.env.DB.prepare('SELECT id FROM users WHERE id = ?')
+    .bind(userId)
+    .first<{ id: string }>()
+  if (!userRow?.id) {
+    return c.json({ error: 'Authenticated user not found. Please login again.' }, 401)
+  }
   
   const resolvedColor = color === 'random' ? (Math.random() > 0.5 ? 'white' : 'black') : color
   
@@ -64,12 +73,32 @@ game.post('/create', async (c) => {
       now, now
     ).run()
 
-    // If it was ignored (already exists), we don't return 500, we just proceed.
-    // If there was a real failure (not a duplicate), the exception will be caught below.
     return c.json({ gameId, whiteId, blackId, color: resolvedColor }, 201)
   } catch (err: any) {
-    console.error('Game creation error:', err)
-    return c.json({ error: 'Failed to create game', details: err.message, stack: err.stack }, 500)
+    console.error('Game creation primary insert failed, trying fallback:', err)
+    try {
+      await c.env.DB.prepare(`
+        INSERT OR IGNORE INTO games (id, white_user_id, black_user_id, mode, time_control, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).bind(
+        gameId,
+        whiteId,
+        blackId,
+        dbMode,
+        timeControl ?? null,
+        now,
+        now
+      ).run()
+
+      return c.json({ gameId, whiteId, blackId, color: resolvedColor }, 201)
+    } catch (fallbackErr: any) {
+      console.error('Game creation fallback insert failed:', fallbackErr)
+      const msg = fallbackErr?.message?.toString() ?? ''
+      if (msg.toLowerCase().includes('foreign key')) {
+        return c.json({ error: 'Game create failed due to invalid player reference. Please login again.' }, 401)
+      }
+      return c.json({ error: 'Failed to create game', details: fallbackErr.message, stack: fallbackErr.stack }, 500)
+    }
   }
 })
 

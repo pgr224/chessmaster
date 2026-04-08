@@ -565,11 +565,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
         final isSelected = state.selectedTimeControl == item['time'];
         final accentColor = item['color'] as Color;
 
-        return GestureDetector(
-          onTap: () => context
-              .read<MultiplayerBloc>()
-              .add(MpChangeSelectedTimeEvent(item['time'] as String)),
-          child: AnimatedContainer(
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: () => context
+                .read<MultiplayerBloc>()
+                .add(MpChangeSelectedTimeEvent(item['time'] as String)),
+            child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             decoration: BoxDecoration(
               gradient: isSelected
@@ -599,57 +602,58 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     ]
                   : null,
             ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Icon
-                  Icon(
-                    item['icon'] as IconData,
-                    color: isSelected ? accentColor : AppTheme.textMuted,
-                    size: 18,
-                  ),
-                  // Time control
-                  Column(
-                    children: [
-                      Text(
-                        item['time'] as String,
-                        style: GoogleFonts.fredoka(
-                          color: isSelected
-                              ? AppTheme.textPrimary
-                              : AppTheme.textSecondary,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        item['label'] as String,
-                        style: GoogleFonts.baloo2(
-                          color: isSelected ? accentColor : AppTheme.textMuted,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                  // Info text - smaller and subtle
-                  Text(
-                    item['info'] as String,
-                    style: GoogleFonts.baloo2(
-                      color: isSelected
-                          ? AppTheme.textSecondary
-                          : AppTheme.textMuted.withValues(alpha: 0.7),
-                      fontSize: 9,
-                      fontWeight: FontWeight.w500,
-                      height: 1.2,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Icon
+                    Icon(
+                      item['icon'] as IconData,
+                      color: isSelected ? accentColor : AppTheme.textMuted,
+                      size: 18,
                     ),
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
+                    // Time control
+                    Column(
+                      children: [
+                        Text(
+                          item['time'] as String,
+                          style: GoogleFonts.fredoka(
+                            color: isSelected
+                                ? AppTheme.textPrimary
+                                : AppTheme.textSecondary,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          item['label'] as String,
+                          style: GoogleFonts.baloo2(
+                            color: isSelected ? accentColor : AppTheme.textMuted,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                    // Info text - smaller and subtle
+                    Text(
+                      item['info'] as String,
+                      style: GoogleFonts.baloo2(
+                        color: isSelected
+                            ? AppTheme.textSecondary
+                            : AppTheme.textMuted.withValues(alpha: 0.7),
+                        fontSize: 9,
+                        fontWeight: FontWeight.w500,
+                        height: 1.2,
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

@@ -556,11 +556,15 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
         rating: event.rating);
     _lobbySub?.cancel();
     _lobbySub = _service.lobbyUpdates.listen((msg) {
-      if (msg['type'] == 'LOBBY_UPDATE') {
-        final playersRaw = msg['data']['players'] as List?;
-        final list =
-            playersRaw?.where((p) => (p as Map)['id'] != _myUserId).map((p) {
-                  final player = p as Map;
+      final msgType = msg['type']?.toString();
+      final data = _asMap(msg['data']);
+
+      if (msgType == 'LOBBY_UPDATE') {
+        final playersRaw = (data['players'] is List) ? data['players'] as List : null;
+        final list = playersRaw
+                ?.whereType<Map>()
+                .where((player) => player['id']?.toString() != _myUserId)
+                .map((player) {
                   return OnlineLobbyUser(
                     id: player['id']?.toString() ?? '',
                     name: player['name']?.toString() ?? 'Unknown',
@@ -574,14 +578,13 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
                         : (player['status'] == 'idle' ? 'Ready!' : 'Playing'),
                   );
                 }).toList() ??
-                <OnlineLobbyUser>[];
+              <OnlineLobbyUser>[];
         add(MpLobbyUpdateEvent(
-          msg['data']['onlinePlayers'] as int? ?? 0,
-          msg['data']['searchingPlayers'] as int? ?? 0,
+          _toInt(data['onlinePlayers']),
+          _toInt(data['searchingPlayers']),
           list,
         ));
-      } else if (msg['type'] == 'MATCH_FOUND') {
-        final data = msg['data'] as Map;
+      } else if (msgType == 'MATCH_FOUND') {
         add(MpGameFoundEvent(
           data['gameId']?.toString() ?? '',
           (data['color']?.toString() == 'black')
@@ -593,31 +596,31 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
           opponentAvatarUrl: data['opponentAvatarUrl']?.toString(),
           opponentLocalAvatar: data['opponentLocalAvatar']?.toString(),
         ));
-      } else if (msg['type'] == 'CHALLENGE_RECEIVED') {
-        final d = msg['data'] as Map;
+      } else if (msgType == 'CHALLENGE_RECEIVED') {
+        final d = data;
         add(MpLobbyNoticeEvent(
           '${d['challengerName']?.toString() ?? 'Someone'} invited you to ${d['mode']?.toString() ?? 'a game'} (${d['timeControl']?.toString() ?? '5+0'})!',
           challengerId: d['challengerId']?.toString(),
           mode: d['mode']?.toString(),
           timeControl: d['timeControl']?.toString(),
         ));
-      } else if (msg['type'] == 'TOURNAMENT_CHALLENGE_RECEIVED') {
-        final d = msg['data'] as Map;
+      } else if (msgType == 'TOURNAMENT_CHALLENGE_RECEIVED') {
+        final d = data;
         add(MpTournamentChallengeReceivedEvent(
           challengerId: d['challengerId']?.toString() ?? '',
           challengerName: d['challengerName']?.toString() ?? 'Someone',
           tournamentId: d['tournamentId']?.toString() ?? '',
-          totalRounds: (d['totalRounds'] as num?)?.toInt() ?? 3,
+          totalRounds: _toInt(d['totalRounds'], fallback: 3),
           timeControl: d['timeControl']?.toString() ?? '10+0',
         ));
-      } else if (msg['type'] == 'XP_BROADCAST') {
-        final d = msg['data'] as Map;
+      } else if (msgType == 'XP_BROADCAST') {
+        final d = data;
         add(MpXpBroadcastRequestEvent(
           d['userId']?.toString() ?? '',
           d['username']?.toString() ?? 'Someone',
-          (d['amount'] as num?)?.toInt() ?? 0,
+          _toInt(d['amount']),
         ));
-      } else if (msg['type'] == 'CONNECTION_LOST') {
+      } else if (msgType == 'CONNECTION_LOST') {
         add(MpLobbyNoticeEvent('Connection lost. Please check your internet.'));
       }
     }, onError: (err) {
@@ -631,7 +634,7 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
 
   void _onMatchmaking(
       MpStartMatchmakingEvent event, Emitter<MultiplayerState> emit) {
-    _service.findMatch();
+    _service.findMatch(timeControl: state.selectedTimeControl);
     emit(state.copyWith(status: MultiplayerStatus.matchmaking));
   }
 
@@ -647,48 +650,50 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
     _gameSub?.cancel();
     _gameSub = _service.gameUpdates.listen((msg) {
       final msgType = msg['type']?.toString();
+      final data = _asMap(msg['data']);
       switch (msgType) {
         case 'MOVE_UPDATE':
-          if (msg['data']['undo'] == true) {
+          if (data['undo'] == true) {
             add(MpOpponentUndoEvent());
           } else {
-            add(MpOpponentMoveEvent(
-                msg['data'] as Map<String, dynamic>? ?? {}));
+            final senderId = data['userId']?.toString();
+            if (senderId != null && senderId == _myUserId) {
+              break;
+            }
+            add(MpOpponentMoveEvent(data));
             // Update timers immediately from move update to prevent visual skip
-            if (msg['data']['whiteTime'] != null) {
+            if (data['whiteTime'] != null) {
               add(MpTimerSyncEvent(
-                (msg['data']['whiteTime'] as num).toDouble(),
-                (msg['data']['blackTime'] as num).toDouble(),
+                _toDouble(data['whiteTime']),
+                _toDouble(data['blackTime']),
               ));
             }
           }
           break;
         case 'TIMER_SYNC':
           add(MpTimerSyncEvent(
-            (msg['data']['whiteTime'] as num).toDouble(),
-            (msg['data']['blackTime'] as num).toDouble(),
+            _toDouble(data['whiteTime']),
+            _toDouble(data['blackTime']),
           ));
           break;
         case 'CHAT':
-          final chatData = msg['data'] as Map?;
-          if (chatData != null) {
-            add(MpChatReceivedEvent(ChatMessage(
-              userId: chatData['userId']?.toString() ?? '',
-              username: chatData['username']?.toString() ?? 'Unknown',
-              message:
-                  '${chatData['message']?.toString() ?? ''} ${chatData['emoji']?.toString() ?? ''}',
-              timestamp: DateTime.fromMillisecondsSinceEpoch(
-                  chatData['ts'] as int? ??
-                      DateTime.now().millisecondsSinceEpoch),
-              isMe: chatData['userId']?.toString() == _myUserId,
-            )));
-          }
+          final chatData = data;
+          add(MpChatReceivedEvent(ChatMessage(
+            userId: chatData['userId']?.toString() ?? '',
+            username: chatData['username']?.toString() ?? 'Unknown',
+            message:
+                '${chatData['message']?.toString() ?? ''} ${chatData['emoji']?.toString() ?? ''}',
+            timestamp: DateTime.fromMillisecondsSinceEpoch(
+                _toInt(chatData['ts'],
+                    fallback: DateTime.now().millisecondsSinceEpoch)),
+            isMe: chatData['userId']?.toString() == _myUserId,
+          )));
           break;
         case 'GAME_OVER':
-          final gameOverData = msg['data'] as Map?;
+          final gameOverData = data;
           add(MpGameOverEvent(
-            gameOverData?['result']?.toString() ?? 'draw',
-            gameOverData?['reason']?.toString() ?? 'unknown',
+            gameOverData['result']?.toString() ?? 'draw',
+            gameOverData['reason']?.toString() ?? 'unknown',
           ));
           break;
         case 'DRAW_OFFER':
@@ -766,5 +771,25 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
     _gameSub?.cancel();
     _service.dispose();
     return super.close();
+  }
+
+  Map<String, dynamic> _asMap(dynamic value) {
+    if (value is Map<String, dynamic>) return value;
+    if (value is Map) {
+      return value.map((k, v) => MapEntry(k.toString(), v));
+    }
+    return const <String, dynamic>{};
+  }
+
+  int _toInt(dynamic value, {int fallback = 0}) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? fallback;
+  }
+
+  double _toDouble(dynamic value, {double fallback = 0}) {
+    if (value is double) return value;
+    if (value is num) return value.toDouble();
+    return double.tryParse(value?.toString() ?? '') ?? fallback;
   }
 }

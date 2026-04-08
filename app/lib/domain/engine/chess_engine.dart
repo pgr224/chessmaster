@@ -262,12 +262,12 @@ class ChessEngine {
         .firstOrNull;
     if (legalMove == null) return false;
 
-    // Generate algebraic representation for the UI
     final piece = pieceAt(legalMove.from)!;
-    legalMove.algebraic = _buildAlgebraic(legalMove, piece);
-
     applyMoveInternal(legalMove);
     _updateStatus();
+
+    // Generate algebraic representation for the UI after status is updated
+    legalMove.algebraic = _buildAlgebraic(legalMove, piece);
     return true;
   }
 
@@ -847,6 +847,13 @@ class ChessEngine {
       buf.write(
           '=${ChessPiece(type: move.promotion!, color: piece.color).toFEN().toUpperCase()}');
     }
+
+    if (_status == GameStatus.checkmate) {
+      buf.write('#');
+    } else if (_status == GameStatus.check) {
+      buf.write('+');
+    }
+
     return buf.toString();
   }
 

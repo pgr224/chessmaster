@@ -76,25 +76,35 @@ auth.post('/register', async (c) => {
   const userId = uuidv4()
   const now = new Date().toISOString()
 
-  // Create user
-  await db.prepare(`
-    INSERT INTO users (id, username, device_id, device_model, avatar_url, is_ghibli, local_avatar, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).bind(userId, username, deviceId, deviceModel ?? null, avatarUrl ?? null, isGhibli ? 1 : 0, localAvatar ?? null, now, now).run()
+  try {
+    // Create user
+    await db.prepare(`
+      INSERT INTO users (id, username, device_id, device_model, avatar_url, is_ghibli, local_avatar, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(userId, username, deviceId, deviceModel ?? null, avatarUrl ?? null, isGhibli ? 1 : 0, localAvatar ?? null, now, now).run()
 
-  // Create stats record
-  await db.prepare(
-    'INSERT INTO user_stats (user_id) VALUES (?)'
-  ).bind(userId).run()
+    // Create stats record
+    await db.prepare(
+      'INSERT INTO user_stats (user_id) VALUES (?)'
+    ).bind(userId).run()
+  } catch (err) {
+    console.error('Error creating user:', err)
+    return c.json({ error: 'Failed to create user account' }, 500)
+  }
 
-  const token = await sign(
-    { sub: userId, username, deviceId, exp: Math.floor(Date.now() / 1000) + 86400 * 30 },
-    c.env.JWT_SECRET
-  )
+  try {
+    const token = await sign(
+      { sub: userId, username, deviceId, exp: Math.floor(Date.now() / 1000) + 86400 * 30 },
+      c.env.JWT_SECRET
+    )
 
-  const profileRes = await getFullProfile(c, userId)
-  const profile = await profileRes.json()
-  return c.json({ token, userId, username, user: profile }, 201)
+    const profileRes = await getFullProfile(c, userId)
+    const profile = await profileRes.json()
+    return c.json({ token, userId, username, user: profile }, 201)
+  } catch (err) {
+    console.error('Error finalizing registration:', err)
+    return c.json({ error: 'Registration failed during token generation' }, 500)
+  }
 })
 
 // ────────────────────────────────────────
@@ -107,28 +117,33 @@ auth.post('/login', async (c) => {
     return c.json({ error: 'Validation failed' }, 400)
   }
 
-  const user = await c.env.DB.prepare(
-    'SELECT id, username FROM users WHERE device_id = ?'
-  ).bind(parsed.data.deviceId).first<{ id: string; username: string }>()
+  try {
+    const user = await c.env.DB.prepare(
+      'SELECT id, username FROM users WHERE device_id = ?'
+    ).bind(parsed.data.deviceId).first<{ id: string; username: string }>()
 
-  if (!user) {
-    return c.json({ error: 'Device not registered' }, 404)
+    if (!user) {
+      return c.json({ error: 'Device not registered' }, 404)
+    }
+
+    const token = await sign(
+      { sub: user.id, username: user.username, deviceId: parsed.data.deviceId,
+        exp: Math.floor(Date.now() / 1000) + 86400 * 30 },
+      c.env.JWT_SECRET
+    )
+
+    // Update online status
+    await c.env.DB.prepare(
+      'UPDATE users SET is_online = 1, last_seen = ? WHERE id = ?'
+    ).bind(new Date().toISOString(), user.id).run()
+
+    const profileRes = await getFullProfile(c, user.id)
+    const profile = await profileRes.json()
+    return c.json({ token, userId: user.id, username: user.username, user: profile })
+  } catch (err) {
+    console.error('Error during login:', err)
+    return c.json({ error: 'Login failed' }, 500)
   }
-
-  const token = await sign(
-    { sub: user.id, username: user.username, deviceId: parsed.data.deviceId,
-      exp: Math.floor(Date.now() / 1000) + 86400 * 30 },
-    c.env.JWT_SECRET
-  )
-
-  // Update online status
-  await c.env.DB.prepare(
-    'UPDATE users SET is_online = 1, last_seen = ? WHERE id = ?'
-  ).bind(new Date().toISOString(), user.id).run()
-
-  const profileRes = await getFullProfile(c, user.id)
-  const profile = await profileRes.json()
-  return c.json({ token, userId: user.id, username: user.username, user: profile })
 })
 
 // ────────────────────────────────────────
@@ -142,12 +157,24 @@ auth.post('/refresh', async (c) => {
 
   try {
     const payload = await verify(authHeader.slice(7), c.env.JWT_SECRET, 'HS256')
+    const userId = payload.sub?.toString()
+    if (!userId) return c.json({ error: 'Invalid token payload' }, 401)
+
+    const user = await c.env.DB.prepare('SELECT username FROM users WHERE id = ?')
+      .bind(userId)
+      .first<{ username: string }>()
+    if (!user?.username) return c.json({ error: 'User not found' }, 401)
+
     const newToken = await sign(
-      { sub: payload.sub, username: payload.username, deviceId: payload.deviceId,
-        exp: Math.floor(Date.now() / 1000) + 86400 * 30 },
+      {
+        sub: userId,
+        username: user.username,
+        deviceId: payload.deviceId,
+        exp: Math.floor(Date.now() / 1000) + 86400 * 30,
+      },
       c.env.JWT_SECRET
     )
-    return c.json({ token: newToken })
+    return c.json({ token: newToken, username: user.username })
   } catch {
     return c.json({ error: 'Invalid token' }, 401)
   }

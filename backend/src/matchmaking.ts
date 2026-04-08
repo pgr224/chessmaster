@@ -2,6 +2,7 @@ export interface QueuedPlayer {
   id: string;
   username: string;
   rating: number;
+  timeControl: string;
   joinedAt: number;
   socket: WebSocket;
 }
@@ -42,7 +43,8 @@ export class Matchmaker {
         if (used.has(p2.id)) continue;
 
         const ratingDiff = Math.abs(p1.rating - p2.rating);
-        if (ratingDiff <= range) {
+        const sameTimeControl = p1.timeControl === p2.timeControl;
+        if (ratingDiff <= range && sameTimeControl) {
           matches.push([p1, p2]);
           used.add(p1.id);
           used.add(p2.id);

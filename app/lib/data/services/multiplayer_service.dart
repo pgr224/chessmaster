@@ -66,7 +66,8 @@ class MultiplayerService {
 
     _lobbyChannel = WebSocketChannel.connect(Uri.parse(url));
     _lobbyChannel!.stream.listen((msg) {
-      final data = jsonDecode(msg) as Map<String, dynamic>;
+      final data = _decodeMessage(msg);
+      if (data == null) return;
       if (!(_lobbyStreamCtrl?.isClosed ?? true)) {
         _lobbyStreamCtrl!.add(data);
       }
@@ -86,8 +87,13 @@ class MultiplayerService {
   }
 
   /// Start matchmaking
-  void findMatch() {
-    _lobbyChannel?.sink.add(jsonEncode({'type': 'FIND_MATCH'}));
+  void findMatch({String? timeControl}) {
+    _lobbyChannel?.sink.add(jsonEncode({
+      'type': 'FIND_MATCH',
+      'timeControl': (timeControl == null || timeControl.isEmpty)
+          ? '10+0'
+          : timeControl,
+    }));
   }
 
   /// Cancel matchmaking
@@ -109,7 +115,8 @@ class MultiplayerService {
 
     _gameChannel = WebSocketChannel.connect(Uri.parse(url));
     _gameChannel!.stream.listen((msg) {
-      final data = jsonDecode(msg) as Map<String, dynamic>;
+      final data = _decodeMessage(msg);
+      if (data == null) return;
       if (!(_gameStreamCtrl?.isClosed ?? true)) {
         _gameStreamCtrl!.add(data);
       }
@@ -276,7 +283,8 @@ class MultiplayerService {
     _tournamentChannel = WebSocketChannel.connect(uri);
     _tournamentChannel!.stream.listen(
       (msg) {
-        final data = jsonDecode(msg) as Map<String, dynamic>;
+        final data = _decodeMessage(msg);
+        if (data == null) return;
         if (!(_tournamentStreamCtrl?.isClosed ?? true)) {
           _tournamentStreamCtrl!.add(data);
         }
@@ -362,5 +370,18 @@ class MultiplayerService {
     _lobbyStreamCtrl = null;
     _gameStreamCtrl = null;
     _tournamentStreamCtrl = null;
+  }
+
+  Map<String, dynamic>? _decodeMessage(dynamic msg) {
+    try {
+      final decoded = jsonDecode(msg.toString());
+      if (decoded is Map<String, dynamic>) return decoded;
+      if (decoded is Map) {
+        return decoded.map((k, v) => MapEntry(k.toString(), v));
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
   }
 }

@@ -67,7 +67,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     // Sync initial settings
     final settings = context.read<SettingsBloc>().state;
     context.read<GameBloc>().add(GameUpdateSettingsEvent(
-          confirmMoves: settings.confirmMoves,
+          confirmMoves:
+              widget.config.mode == GameMode.multiplayer ? false : settings.confirmMoves,
           autoQueen: settings.autoQueen,
         ));
 
@@ -234,7 +235,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                       _buildConfirmMoveOverlay(state),
                     if (_showMoves) _buildMoveHistoryOverlay(state),
                     if (state.isPuzzleRush) _buildPuzzleRushOverlay(state),
-                    if (state.showMiniLesson && state.coachFeedback == null)
+                    if (state.showMiniLesson && state.coachFeedback == null && state.mode != GameMode.multiplayer)
                       _buildMiniLessonOverlay(context, state),
                     // Only show floating chat on mobile/compact, wide layout has sidebar chat
                     // Universal floating chat window (all layouts)
@@ -249,6 +250,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                             state.mode == GameMode.practice) &&
                         state.aiMoveSourceHistory.isNotEmpty)
                       _buildAIMoveSourceOverlay(state),
+                    if (kDebugMode) _buildDebugFullscreenPaintMarker(),
                   ],
                 );
               },
@@ -1472,6 +1474,55 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       ),
     );
   }
+
+  // Temporary debug marker: helps detect whether a true fullscreen layer
+  // is being painted above this screen at runtime.
+  Widget _buildDebugFullscreenPaintMarker() {
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: CustomPaint(
+          painter: _DebugFullscreenMarkerPainter(),
+        ),
+      ),
+    );
+  }
+}
+
+class _DebugFullscreenMarkerPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    const marker = Color(0xFFFF00FF);
+
+    final borderPaint = Paint()
+      ..color = marker.withValues(alpha: 0.85)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+
+    final cornerPaint = Paint()
+      ..color = marker.withValues(alpha: 0.95)
+      ..style = PaintingStyle.fill;
+
+    // Border marker around the full game viewport.
+    canvas.drawRect(Offset.zero & size, borderPaint);
+
+    const corner = 14.0;
+    canvas.drawRect(const Rect.fromLTWH(0, 0, corner, corner), cornerPaint);
+    canvas.drawRect(
+      Rect.fromLTWH(size.width - corner, 0, corner, corner),
+      cornerPaint,
+    );
+    canvas.drawRect(
+      Rect.fromLTWH(0, size.height - corner, corner, corner),
+      cornerPaint,
+    );
+    canvas.drawRect(
+      Rect.fromLTWH(size.width - corner, size.height - corner, corner, corner),
+      cornerPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class DecorationOverlay extends StatelessWidget {

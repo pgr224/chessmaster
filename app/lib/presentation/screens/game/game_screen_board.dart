@@ -82,7 +82,11 @@ extension GameScreenBoard on _GameScreenState {
                 ),
 
               // AI COACH TALKING WINDOW
-              if ((state.isAIThinking && state.mode != GameMode.practice && state.mode != GameMode.multiplayer) || state.coachFeedback != null || state.activeHint != null)
+              // Disabled in multiplayer to avoid hint/coach overlays during online play.
+              if (state.mode != GameMode.multiplayer &&
+                  ((state.isAIThinking && state.mode != GameMode.practice) ||
+                      state.coachFeedback != null ||
+                      state.activeHint != null))
                 Positioned(
                   left: -20,
                   right: -20,

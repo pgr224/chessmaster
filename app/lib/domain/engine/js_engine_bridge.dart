@@ -12,7 +12,42 @@ extension type _JSEngineService._(JSObject _) {
   external JSArray<JSString> getLegalMoves(JSString fen, JSString square);
   external JSObject getGameState(JSString fen);
   external JSString getActiveEngine();
+  external JSPromise<JSObject> analyzeStyle(JSString fen, JSArray<JSString> recentMoves);
   external void dispose();
+}
+
+/// Analyze player style from position and recent moves
+Future<Map<String, dynamic>> jsEngineAnalyzeStyle(String fen, List<String> recentMoves) async {
+  final svc = _getService();
+  if (svc == null) {
+    // Fallback heuristic
+    bool aggressive = recentMoves.any((m) => m.contains('+') || m.contains('#'));
+    return {
+      'style': aggressive ? 'aggressive' : 'positional',
+      'confidence': 0.5,
+      'suggested_personality': aggressive ? 'aggressive' : 'defensive',
+    };
+  }
+
+  try {
+    final movesArray = recentMoves.map((m) => m.toJS).toList().toJS;
+    final result = await svc.analyzeStyle(fen.toJS, movesArray).toDart;
+    if (result == null) return {'style': 'unknown', 'confidence': 0.0};
+
+    final obj = result as JSObject;
+    final style = (obj['style'] as JSString?)?.toDart ?? 'positional';
+    final confidence = (obj['confidence'] as JSNumber?)?.toDartDouble ?? 0.5;
+    final personality = (obj['suggested_personality'] as JSString?)?.toDart ?? 'defensive';
+
+    return {
+      'style': style,
+      'confidence': confidence,
+      'suggested_personality': personality,
+    };
+  } catch (e) {
+    LoggingService.error('[JSBridge] analyzeStyle error', e);
+    return {'style': 'unknown', 'confidence': 0.0};
+  }
 }
 
 /// Get the ChessEngineService from window
@@ -53,15 +88,18 @@ Future<Map<String, dynamic>?> jsEngineGetBestMove(String fen,
     if (result.isA<JSObject>()) {
       final obj = result as JSObject;
       final move = (obj['move'] as JSString?)?.toDart;
-      final candidatesRaw = obj['candidates'] as JSArray<JSObject>?;
+      final candidatesAny = obj['candidates'];
 
       final List<MoveCandidate> candidates = [];
-      if (candidatesRaw != null) {
-        final dartArray = candidatesRaw.toDart;
+      if (candidatesAny != null && candidatesAny.isA<JSArray>()) {
+        final dartArray =
+            (candidatesAny as JSArray<JSAny?>).toDart;
         for (var i = 0; i < dartArray.length; i++) {
           final c = dartArray[i];
-          final uci = (c['uci'] as JSString?)?.toDart;
-          final score = (c['score'] as JSNumber?)?.toDartInt;
+          if (c == null || !c.isA<JSObject>()) continue;
+          final cObj = c as JSObject;
+          final uci = (cObj['uci'] as JSString?)?.toDart;
+          final score = (cObj['score'] as JSNumber?)?.toDartInt;
           if (uci != null && score != null) {
             candidates.add(MoveCandidate(uci: uci, score: score));
           }
@@ -80,8 +118,25 @@ Future<List<MoveCandidate>> jsEngineGetTopMoves(
     String fen, int depth, int count,
     {int? movetime}) async {
   final res = await jsEngineGetBestMove(fen, movetime: movetime);
-  if (res?['candidates'] != null) {
-    return List<MoveCandidate>.from(res!['candidates'] as List);
+  final raw = res?['candidates'];
+  if (raw is List<MoveCandidate>) {
+    return raw;
+  }
+  if (raw is List) {
+    return raw
+        .map<MoveCandidate?>((c) {
+          if (c is MoveCandidate) return c;
+          if (c is Map) {
+            final uciRaw = c['uci'];
+            final scoreRaw = c['score'];
+            if (uciRaw is String && scoreRaw is num) {
+              return MoveCandidate(uci: uciRaw, score: scoreRaw.toInt());
+            }
+          }
+          return null;
+        })
+        .whereType<MoveCandidate>()
+        .toList(growable: false);
   }
   return [];
 }

@@ -22,6 +22,7 @@ import '../../../data/services/achievement_service.dart';
 import '../../../data/services/mission_service.dart';
 import '../theme/theme_bloc.dart';
 import '../../../domain/engine/personality_engine.dart';
+import '../../../domain/engine/candidate_model.dart';
 
 // ═══════════════════════════════════════════
 // EVENTS
@@ -601,6 +602,8 @@ class GameState extends Equatable {
         currentTurn,
         moveHistory,
         showPromotionDialog,
+        promotionFrom,
+        promotionTo,
         tutorial,
         tutorialStep,
         tutorialMessage,
@@ -1219,6 +1222,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       currentFEN: _engine.toFEN(),
       clearSelected: true,
       showPromotionDialog: false,
+      promotionFrom: null,
+      promotionTo: null,
       isAIThinking: false, // Disappear JUST as the move is made
       lastMoveTimestamp: DateTime.now(),
       pendingMove: null, // Clear any pending move UI
@@ -1403,7 +1408,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
           missedWins: missedWins,
           coachFeedback: feedback,
           aiMessage: reactionMsg, // Personality-driven reaction
-          showMiniLesson: feedback.classification == MoveClassification.blunder,
+          showMiniLesson: (state.mode != GameMode.multiplayer) && (feedback.classification == MoveClassification.blunder),
           gameCoachHistory: updatedHistory,
           coachMove: coachMove,
           hintedIndices: newHintedIndices,
@@ -1434,6 +1439,50 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       } catch (e) {
         debugPrint('[Coach Analysis Error] $e');
       }
+    }
+
+    // BACKGROUND LEELA ANALYSIS: Adapt AI personality based on player style
+    if (shouldAnalyze && state.mode == GameMode.singlePlayer) {
+      // Run in background without blocking UI
+      Future.delayed(const Duration(milliseconds: 100), () async {
+        try {
+          final recentMoves = state.moveHistory
+              .take(10) // Last 10 moves
+              .map((m) => m.algebraic ?? m.toAlgebraic())
+              .toList();
+
+          // Use Leela for style analysis (currently heuristic-based)
+          final analysis = await _engineController.analyzePlayerStyle(
+            _engine.toFEN(),
+            recentMoves,
+          );
+
+          if (!isClosed && analysis['style'] != null) {
+            // Update AI personality based on analysis
+            AIPersonality newPersonality;
+            switch (analysis['style']) {
+              case 'aggressive':
+                newPersonality = AIPersonality.aggressive;
+                break;
+              case 'defensive':
+                newPersonality = AIPersonality.defensive;
+                break;
+              default:
+                newPersonality = AIPersonality.tricky;
+            }
+
+            // Only change if confidence is high enough
+            if ((analysis['confidence'] as double? ?? 0) > 0.6) {
+              add(GameUpdatePersonalityEvent(
+                personality: newPersonality,
+                message: 'Adapting to your style...',
+              ));
+            }
+          }
+        } catch (e) {
+          debugPrint('[Background Analysis Error] $e');
+        }
+      });
     }
 
     // Note: We avoid Future.delayed here as it can cause late emits after bloc closure.
@@ -1872,15 +1921,38 @@ class GameBloc extends Bloc<GameEvent, GameState> {
 
         String response = "Nice move! But check this out... ⚡";
 
-        // Find if user move was among candidates to get its score
-        final candidates = res['candidates'] as List<dynamic>? ?? [];
-        final userMoveObj = candidates.firstWhere(
-          (c) => c['uci'] == lastMove,
-          orElse: () => null,
-        );
+        // Find if user move was among candidates to get its score.
+        // Candidate payload can be MoveCandidate or map depending on bridge/runtime.
+        final rawCandidates = res['candidates'];
+        final List<MoveCandidate> candidates;
+        if (rawCandidates is List<MoveCandidate>) {
+          candidates = rawCandidates;
+        } else if (rawCandidates is List) {
+          candidates = rawCandidates
+              .map<MoveCandidate?>((c) {
+                if (c is MoveCandidate) return c;
+                if (c is Map) {
+                  final uciRaw = c['uci'];
+                  final scoreRaw = c['score'];
+                  if (uciRaw is String && scoreRaw is num) {
+                    return MoveCandidate(uci: uciRaw, score: scoreRaw.toInt());
+                  }
+                }
+                return null;
+              })
+              .whereType<MoveCandidate>()
+              .toList(growable: false);
+        } else {
+          candidates = const [];
+        }
+
+        final userMoveObj = candidates
+            .where((c) => c.uci == lastMove)
+            .cast<MoveCandidate?>()
+            .firstOrNull;
 
         if (userMoveObj != null) {
-          final userScore = userMoveObj['score'] as int? ?? 0;
+          final userScore = userMoveObj.score;
           final delta = bestScore - userScore; // Loss of advantage
 
           if (delta > 300) {
@@ -2424,6 +2496,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         _engine.toFEN(),
         engine: _engine,
         moveNumber: state.moveHistory.length,
+        playerAccuracy: state.accuracy,
       );
 
       if (isClosed || aiRequestEpoch != _aiRequestEpoch) return;

@@ -89,12 +89,26 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     try {
       final dio = di.sl<Dio>();
       final response = await dio.get('/api/leaderboard',
-          queryParameters: {'type': _sortType, 'limit': 50});
-      final data = response.data as Map<String, dynamic>;
-      final list = (data['leaderboard'] as List?) ?? [];
+          queryParameters: {'type': _sortType, 'limit': 50},
+          options: Options(validateStatus: (_) => true));
+
+      if (response.statusCode != 200) {
+        if (!mounted) return;
+        setState(() {
+          _loading = false;
+          _error = 'Leaderboard is temporarily unavailable';
+        });
+        return;
+      }
+
+      final data = _asStringKeyedMap(response.data);
+      final list = (data['leaderboard'] is List)
+          ? data['leaderboard'] as List
+          : const [];
       setState(() {
         _entries = list
-            .map((e) => _LeaderboardEntry.fromJson(e as Map<String, dynamic>))
+            .map(_asStringKeyedMap)
+            .map(_LeaderboardEntry.fromJson)
             .toList();
         _loading = false;
       });
@@ -121,8 +135,12 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     try {
       final dio = di.sl<Dio>();
       final response =
-          await dio.get('/api/leaderboard/rank/${authState.user.id}');
-      final data = response.data as Map<String, dynamic>;
+          await dio.get('/api/leaderboard/rank/${authState.user.id}',
+              options: Options(validateStatus: (_) => true));
+
+      if (response.statusCode != 200) return;
+
+      final data = _asStringKeyedMap(response.data);
       setState(() {
         _myRank = (data['rank'] as num?)?.toInt() ?? 0;
       });
@@ -579,5 +597,13 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
         ],
       ),
     );
+  }
+
+  Map<String, dynamic> _asStringKeyedMap(dynamic raw) {
+    if (raw is Map<String, dynamic>) return raw;
+    if (raw is Map) {
+      return raw.map((k, v) => MapEntry(k.toString(), v));
+    }
+    return const <String, dynamic>{};
   }
 }

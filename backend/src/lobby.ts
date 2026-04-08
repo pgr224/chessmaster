@@ -1,4 +1,5 @@
 import { Matchmaker, QueuedPlayer } from './matchmaking'
+import type { Env } from './index'
 
 export interface LobbyPlayer {
   id: string
@@ -9,10 +10,12 @@ export interface LobbyPlayer {
 
 export class Lobby implements DurableObject {
   private state: DurableObjectState
+  private env: Env
   private matchmaker: Matchmaker = new Matchmaker()
 
-  constructor(state: DurableObjectState) {
+  constructor(state: DurableObjectState, env: Env) {
     this.state = state
+    this.env = env
   }
 
   async fetch(request: Request): Promise<Response> {
@@ -20,12 +23,17 @@ export class Lobby implements DurableObject {
     
     const url = new URL(request.url)
     const userId = url.searchParams.get('userId') ?? 'anon'
-    const username = url.searchParams.get('username') ?? 'Player'
+    const queryUsername = url.searchParams.get('username') ?? 'Player'
     const rating = parseInt(url.searchParams.get('rating') ?? '1200')
+
+    const dbUser = await this.env.DB.prepare('SELECT username FROM users WHERE id = ?')
+      .bind(userId)
+      .first<{ username: string }>()
+    const canonicalUsername = dbUser?.username ?? queryUsername
 
     const playerMeta: LobbyPlayer = {
       id: userId,
-      name: username,
+      name: canonicalUsername,
       rating,
       status: 'idle'
     }
@@ -62,6 +70,10 @@ export class Lobby implements DurableObject {
       
       switch (msg.type) {
         case 'FIND_MATCH':
+          const requestedTimeControl =
+            typeof msg.timeControl === 'string' && msg.timeControl.length > 0
+              ? msg.timeControl
+              : '10+0'
           meta.status = 'searching'
           ws.serializeAttachment(meta)
           
@@ -69,6 +81,7 @@ export class Lobby implements DurableObject {
             id: meta.id,
             username: meta.name,
             rating: meta.rating,
+            timeControl: requestedTimeControl,
             joinedAt: Date.now(),
             socket: ws
           })
@@ -185,7 +198,8 @@ export class Lobby implements DurableObject {
           gameId,
           color,
           opponentName: opponent.username,
-          opponentRating: opponent.rating
+          opponentRating: opponent.rating,
+          timeControl: p1.timeControl
         }
       })
 
@@ -220,17 +234,20 @@ export class Lobby implements DurableObject {
       }
     }
 
-    const data = JSON.stringify({
-      type: 'LOBBY_UPDATE',
-      data: {
-        onlinePlayers: allPlayers.length,
-        searchingPlayers: this.matchmaker.getQueueCount(),
-        players: allPlayers
-      }
-    })
-
     for (const ws of sockets) {
       try {
+        const self = ws.deserializeAttachment() as LobbyPlayer | undefined
+        const visiblePlayers = self
+          ? allPlayers.filter((p) => p.id !== self.id)
+          : allPlayers
+        const data = JSON.stringify({
+          type: 'LOBBY_UPDATE',
+          data: {
+            onlinePlayers: visiblePlayers.length,
+            searchingPlayers: this.matchmaker.getQueueCount(),
+            players: visiblePlayers
+          }
+        })
         ws.send(data)
       } catch (_) {
         ws.close()

@@ -188,6 +188,7 @@ export class GameRoom {
           this.broadcast({
             type: 'MOVE_UPDATE',
             data: {
+              userId,
               move: msg.move,
               fen: moveRes.fen,
               turn: moveRes.fen.split(' ')[1] === 'w' ? 'white' : 'black',

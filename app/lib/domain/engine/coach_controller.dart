@@ -7,6 +7,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import '../../domain/engine/chess_engine.dart';
 import '../../domain/engine/ai_engine.dart';
+import '../../domain/engine/candidate_model.dart';
 import '../../data/models/game_config.dart';
 import '../../data/models/coach_model.dart';
 import 'package:flutter/foundation.dart';
@@ -718,15 +719,37 @@ class CoachController {
       final res = await externalAnalyze(fen);
       if (res != null) {
         bestMoveUci = res['move'] as String?;
-        final candidates = res['candidates'] as List<dynamic>? ?? [];
+        final rawCandidates = res['candidates'];
+        final List<MoveCandidate> candidates;
+        if (rawCandidates is List<MoveCandidate>) {
+          candidates = rawCandidates;
+        } else if (rawCandidates is List) {
+          candidates = rawCandidates
+              .map<MoveCandidate?>((c) {
+                if (c is MoveCandidate) return c;
+                if (c is Map) {
+                  final uciRaw = c['uci'];
+                  final scoreRaw = c['score'];
+                  if (uciRaw is String && scoreRaw is num) {
+                    return MoveCandidate(uci: uciRaw, score: scoreRaw.toInt());
+                  }
+                }
+                return null;
+              })
+              .whereType<MoveCandidate>()
+              .toList(growable: false);
+        } else {
+          candidates = const [];
+        }
+
         candidateCount = candidates.length;
         if (candidates.isNotEmpty) {
-          bestScore = (candidates.first as dynamic).score as int? ?? 0;
+          bestScore = candidates.first.score;
           // Find score AND rank for the played move in candidates
           for (int i = 0; i < candidates.length; i++) {
             final c = candidates[i];
             if (c.uci == playedUci) {
-              playedScore = c.score as int?;
+              playedScore = c.score;
               moveRank = i + 1; // 1-indexed rank
               break;
             }

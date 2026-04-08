@@ -57,6 +57,25 @@ class AIEngineController {
   void setThinkingMessage(String msg) => _latestThinkingMessage = msg;
   void clearThinkingMessage() => _latestThinkingMessage = null;
 
+  /// Analyze player style for adaptive AI
+  Future<Map<String, dynamic>> analyzePlayerStyle(String fen, List<String> recentMoves) async {
+    // Use Leela if available, otherwise heuristic analysis
+    try {
+      return await js_bridge.jsEngineAnalyzeStyle(fen, recentMoves);
+    } catch (_) {
+      // Fallback heuristic
+      bool aggressive = recentMoves.any((m) => m.contains('+') || m.contains('#'));
+      bool defensive = recentMoves.length > 5 && !aggressive;
+      bool positional = !aggressive && !defensive;
+
+      return {
+        'style': aggressive ? 'aggressive' : defensive ? 'defensive' : 'positional',
+        'confidence': 0.7,
+        'suggested_personality': aggressive ? 'aggressive' : 'defensive',
+      };
+    }
+  }
+
   /// Initialize engine for the current game session
   void init(GameMode mode, AIDifficulty? difficulty) {
     _mode = mode;
@@ -69,7 +88,7 @@ class AIEngineController {
 
   /// Get the best move for the current position with robust timeout handling
   Future<String?> getBestMove(String fen,
-      {ChessEngine? engine, bool humanized = true, int moveNumber = 0}) async {
+      {ChessEngine? engine, bool humanized = true, int moveNumber = 0, double? playerAccuracy}) async {
     if (!_initialized) return null;
     if (_mode == GameMode.twoPlayer || _mode == GameMode.multiplayer)
       return null;
@@ -83,7 +102,7 @@ class AIEngineController {
         _difficulty == AIDifficulty.impossible ||
         _difficulty == AIDifficulty.advanced) {
       return _getSmartMove(fen, requestId,
-          engine: engine, moveNumber: moveNumber);
+          engine: engine, moveNumber: moveNumber, playerAccuracy: playerAccuracy);
     }
 
     final maxTime = _maxTimeMs[_difficulty] ?? 2000;
@@ -130,7 +149,7 @@ class AIEngineController {
 
   /// SMART AI System: MultiPV candidates -> Opening randomness -> Quality filtering
   Future<String?> _getSmartMove(String fen, int requestId,
-      {ChessEngine? engine, int moveNumber = 0}) async {
+      {ChessEngine? engine, int moveNumber = 0, double? playerAccuracy}) async {
     try {
       List<MoveCandidate> candidates = [];
       String? bestFound;
@@ -155,9 +174,24 @@ class AIEngineController {
               (legalMoves.length * 0.4) + (pieceCount * 1.5);
           final double personalityMult =
               PersonalityEngine().currentPersonality.timeMultiplier;
+
+          // ADAPTIVE ACCURACY MULTIPLIER: Only for AI Mode
+          double accuracyMult = 1.0;
+          if (_difficulty == AIDifficulty.aiMode && playerAccuracy != null) {
+            if (playerAccuracy >= 95.0) {
+              accuracyMult = 1.5; // 50% more time for masters
+            } else if (playerAccuracy >= 90.0) {
+              accuracyMult = 1.3; // 30% more for experts
+            } else if (playerAccuracy >= 80.0) {
+              accuracyMult = 1.1; // 10% more for good players
+            } else if (playerAccuracy < 70.0) {
+              accuracyMult = 0.8; // Reduce time for struggling players
+            }
+          }
+
           final int baseTime = (800 + (complexity * 50)).toInt();
           dynamicMoveTime =
-              (baseTime * personalityMult).toInt().clamp(300, cap);
+              (baseTime * personalityMult * accuracyMult).toInt().clamp(300, cap);
 
           // SET DYNAMIC THINKING MESSAGE
           if (pieceCount < 10) {
@@ -190,7 +224,25 @@ class AIEngineController {
               _normalizeMoveSource(js_bridge.jsEngineGetActiveEngine());
         }
         if (res?['candidates'] != null) {
-          candidates = List<MoveCandidate>.from(res!['candidates'] as List);
+          final rawCandidates = res!['candidates'];
+          if (rawCandidates is List<MoveCandidate>) {
+            candidates = rawCandidates;
+          } else if (rawCandidates is List) {
+            candidates = rawCandidates
+                .map<MoveCandidate?>((c) {
+                  if (c is MoveCandidate) return c;
+                  if (c is Map) {
+                    final uciRaw = c['uci'];
+                    final scoreRaw = c['score'];
+                    if (uciRaw is String && scoreRaw is num) {
+                      return MoveCandidate(uci: uciRaw, score: scoreRaw.toInt());
+                    }
+                  }
+                  return null;
+                })
+                .whereType<MoveCandidate>()
+                .toList(growable: false);
+          }
         } else if (bestFound != null) {
           candidates = [MoveCandidate(uci: bestFound, score: 0)];
         }

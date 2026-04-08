@@ -486,7 +486,7 @@ class AuthRepository {
       return response.statusCode == 200 && response.data['success'] == true;
     } catch (e) {
       print('Failed to request XP: $e');
-      rethrow;
+      return false;
     }
   }
 
@@ -503,7 +503,7 @@ class AuthRepository {
       return response.statusCode == 200 && response.data['success'] == true;
     } catch (e) {
       print('Failed to send direct XP request: $e');
-      rethrow;
+      return false;
     }
   }
 
@@ -529,7 +529,7 @@ class AuthRepository {
       return response.statusCode == 200 && response.data['success'] == true;
     } catch (e) {
       print('Failed to respond to XP request: $e');
-      rethrow;
+      return false;
     }
   }
 
@@ -542,7 +542,7 @@ class AuthRepository {
       return response.statusCode == 200 && response.data['success'] == true;
     } catch (e) {
       print('Failed to send friend request: $e');
-      rethrow;
+      return false;
     }
   }
 
@@ -556,7 +556,7 @@ class AuthRepository {
       return response.statusCode == 200 && response.data['success'] == true;
     } catch (e) {
       print('Failed to respond to friend request: $e');
-      rethrow;
+      return false;
     }
   }
 

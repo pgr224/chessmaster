@@ -7,6 +7,10 @@ const APK_DOWNLOAD_URL = '/downloads/chessmaster.apk';
 const DMG_DOWNLOAD_URL = '/downloads/chessmaster.dmg'; // Placeholder for Apple direct download
 const VAPID_PUBLIC_KEY = 'BCX...'; // USER: Please replace with your actual VAPID Public Key
 
+function isIOS() {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent);
+}
+
 function showInstallBanner() {
     if (isStandalone()) return;
     if (document.getElementById('install-banner-overlay')) return;
@@ -16,7 +20,7 @@ function showInstallBanner() {
     overlay.style.display = 'flex';
 
     const isAndroid = /android/i.test(navigator.userAgent);
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isIOSDevice = isIOS();
     const isDesktop = !isMobile();
 
     overlay.innerHTML = `
@@ -25,7 +29,7 @@ function showInstallBanner() {
             <img id="install-banner-icon" src="icons/Icon-192.png" alt="Chess Master">
             <div id="install-banner-title">Install Chess Master</div>
             <div id="install-banner-text">Install for faster launch and offline play. Share with friends in one tap.</div>
-            ${isIOS ? '<div id="install-banner-hint">On iPhone/iPad: tap Share, then Add to Home Screen.</div>' : ''}
+            ${isIOSDevice ? '<div id="install-banner-hint">On iPhone/iPad: tap Share, then Add to Home Screen.</div>' : ''}
 
             <div id="banner-actions">
                 <button class="install-button" id="pwa-install-btn">Install</button>
@@ -50,7 +54,7 @@ function showInstallBanner() {
 
     if (!deferredInstallPrompt) {
         pwaBtn.style.opacity = '0.5';
-        pwaBtn.innerText = isIOS ? 'Open Share Menu' : 'Install from Browser Menu';
+        pwaBtn.innerText = isIOSDevice ? 'Open Share Menu' : 'Install from Browser Menu';
     }
 
     // Handlers
@@ -142,12 +146,22 @@ function isMobile() {
 }
 
 window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
+    // Let supported browsers manage their native install prompt flow.
+    // We store the event only as a best-effort fallback, but we do not
+    // call preventDefault here, which removes the browser warning about
+    // suppressing the prompt without ever showing it.
     deferredInstallPrompt = e;
-    setTimeout(showInstallBanner, 5000); 
+});
+
+window.addEventListener('appinstalled', () => {
+    deferredInstallPrompt = null;
+    const overlay = document.getElementById('install-banner-overlay');
+    if (overlay) {
+        overlay.remove();
+    }
 });
 
 // For iOS, which doesn't support beforeinstallprompt, we show it manually
-if (isMobile() && /iPad|iPhone|iPod/.test(navigator.userAgent) && !isStandalone()) {
+if (isMobile() && isIOS() && !isStandalone()) {
     setTimeout(showInstallBanner, 3000);
 }

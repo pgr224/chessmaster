@@ -28,7 +28,10 @@ import { PushService } from '../services/push_service'
 challengeRoutes.post('/', async (c) => {
   const user = c.get('user')
   const userId = user.sub
-  const username = user.username || 'Someone'
+  const usernameRow = await c.env.DB.prepare('SELECT username FROM users WHERE id = ?')
+    .bind(userId)
+    .first<{ username: string }>()
+  const username = usernameRow?.username ?? 'Someone'
   const body = await c.req.json()
   const { challenged_id, time_control = '10+0', color_preference = 'random', message = '' } = body
 
