@@ -646,7 +646,11 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
 
   Future<void> _onGameFound(
       MpGameFoundEvent event, Emitter<MultiplayerState> emit) async {
-    await _service.joinRoom(event.gameId, event.color.name);
+    await _service.joinRoom(
+      event.gameId,
+      event.color.name,
+      timeControl: event.timeControl ?? state.selectedTimeControl,
+    );
     _gameSub?.cancel();
     _gameSub = _service.gameUpdates.listen((msg) {
       final msgType = msg['type']?.toString();

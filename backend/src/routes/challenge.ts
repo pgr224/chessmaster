@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { authMiddleware } from '../middleware/auth'
 import type { Env } from '../index'
+import { normalizeTimeControl, DEFAULT_TIME_CONTROL } from '../time_control'
 
 import { v4 as uuidv4 } from 'uuid'
 
@@ -33,7 +34,10 @@ challengeRoutes.post('/', async (c) => {
     .first<{ username: string }>()
   const username = usernameRow?.username ?? 'Someone'
   const body = await c.req.json()
-  const { challenged_id, time_control = '10+0', color_preference = 'random', message = '' } = body
+  const challenged_id = body.challenged_id ?? body.challengedId
+  const time_control = body.time_control ?? body.timeControl ?? DEFAULT_TIME_CONTROL
+  const color_preference = body.color_preference ?? body.colorPreference ?? 'random'
+  const message = body.message ?? ''
 
   if (!challenged_id) {
     return c.json({ error: 'challenged_id is required' }, 400)
@@ -45,7 +49,7 @@ challengeRoutes.post('/', async (c) => {
     await c.env.DB.prepare(
       `INSERT INTO challenges (id, challenger_id, challenged_id, time_control, color_preference, message) 
        VALUES (?, ?, ?, ?, ?, ?)`
-    ).bind(id, userId, challenged_id, time_control, color_preference, message).run()
+    ).bind(id, userId, challenged_id, normalizeTimeControl(time_control), color_preference, message).run()
 
     // ✨ Trigger Push Notification for the recipient
     // Background task (don't wait for it to complete)

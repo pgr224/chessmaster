@@ -3,7 +3,7 @@ import { sign, verify } from 'hono/jwt'
 import { z } from 'zod'
 import { v4 as uuidv4 } from 'uuid'
 import { authMiddleware } from '../middleware/auth'
-import { getFullProfile } from './profile'
+import { getFullProfile, buildProfileData } from './profile'
 import type { Env } from '../index'
 
 const auth = new Hono<{ Bindings: Env }>()
@@ -60,8 +60,11 @@ auth.post('/register', async (c) => {
       { sub: existing.id, username: existing.username, deviceId, exp: Math.floor(Date.now() / 1000) + 86400 * 30 },
       c.env.JWT_SECRET
     )
-    const profileRes = await getFullProfile(c, existing.id)
-    const profile = await profileRes.json()
+    const profile = await buildProfileData(c, existing.id)
+    if (!profile) {
+      console.error('Profile is null for existing device:', existing.id)
+      return c.json({ error: 'Failed to load user profile' }, 500)
+    }
     return c.json({ token, userId: existing.id, username: existing.username, user: profile })
   }
 
@@ -98,12 +101,19 @@ auth.post('/register', async (c) => {
       c.env.JWT_SECRET
     )
 
-    const profileRes = await getFullProfile(c, userId)
-    const profile = await profileRes.json()
+    const profile = await buildProfileData(c, userId)
+    if (!profile) {
+      console.error('Profile is null after user creation for userId:', userId)
+      return c.json({ error: 'Failed to create user profile after registration' }, 500)
+    }
+    console.log('Registration successful for userId:', userId)
     return c.json({ token, userId, username, user: profile }, 201)
   } catch (err) {
     console.error('Error finalizing registration:', err)
-    return c.json({ error: 'Registration failed during token generation' }, 500)
+    const errorMessage = err instanceof Error ? err.message : String(err)
+    const errorStack = err instanceof Error ? err.stack : undefined
+    console.error('Stack trace:', errorStack)
+    return c.json({ error: 'Registration failed during token generation', details: errorMessage }, 500)
   }
 })
 
@@ -137,8 +147,11 @@ auth.post('/login', async (c) => {
       'UPDATE users SET is_online = 1, last_seen = ? WHERE id = ?'
     ).bind(new Date().toISOString(), user.id).run()
 
-    const profileRes = await getFullProfile(c, user.id)
-    const profile = await profileRes.json()
+    const profile = await buildProfileData(c, user.id)
+    if (!profile) {
+      console.error('Profile is null for user during login:', user.id)
+      return c.json({ error: 'Failed to load user profile on login' }, 500)
+    }
     return c.json({ token, userId: user.id, username: user.username, user: profile })
   } catch (err) {
     console.error('Error during login:', err)

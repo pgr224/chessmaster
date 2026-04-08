@@ -1,5 +1,6 @@
 import { Matchmaker, QueuedPlayer } from './matchmaking'
 import type { Env } from './index'
+import { normalizeTimeControl, DEFAULT_TIME_CONTROL } from './time_control'
 
 export interface LobbyPlayer {
   id: string
@@ -72,8 +73,8 @@ export class Lobby implements DurableObject {
         case 'FIND_MATCH':
           const requestedTimeControl =
             typeof msg.timeControl === 'string' && msg.timeControl.length > 0
-              ? msg.timeControl
-              : '10+0'
+              ? normalizeTimeControl(msg.timeControl)
+              : DEFAULT_TIME_CONTROL
           meta.status = 'searching'
           ws.serializeAttachment(meta)
           
@@ -106,7 +107,7 @@ export class Lobby implements DurableObject {
                 challengerId: meta.id,
                 challengerName: meta.name,
                 mode,
-                timeControl
+                timeControl: normalizeTimeControl(timeControl ?? DEFAULT_TIME_CONTROL)
               }
             }))
           }

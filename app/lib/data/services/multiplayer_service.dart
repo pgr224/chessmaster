@@ -102,11 +102,12 @@ class MultiplayerService {
   }
 
   /// Connect to a specific game room
-  Future<void> joinRoom(String gameId, String color) async {
+  Future<void> joinRoom(String gameId, String color,
+      {String timeControl = '10+0'}) async {
     final baseUrl =
         dotenv.env['WS_URL'] ?? 'wss://chess-master-api.pp942920.workers.dev';
     final url =
-        '$baseUrl/multiplayer/game/$gameId?userId=$_userId&username=$_username&color=$color&gameId=$gameId';
+        '$baseUrl/multiplayer/game/$gameId?userId=$_userId&username=$_username&color=$color&timeControl=${Uri.encodeComponent(timeControl)}&gameId=$gameId';
 
     try {
       await _gameChannel?.sink.close();

@@ -1,4 +1,5 @@
 import { ChessValidator, Move } from './validation'
+import { parseTimeControl, DEFAULT_TIME_CONTROL } from './time_control'
 
 export class GameRoom {
   private state: DurableObjectState
@@ -32,8 +33,12 @@ export class GameRoom {
     this.gameId = url.searchParams.get('gameId')
 
     // Parse time control: e.g. "blitz_3_2" or "3+2" or "30+0"
-    const tcStr = url.searchParams.get('timeControl') ?? '30+0'
-    this.parseTimeControl(tcStr)
+    const tcStr = url.searchParams.get('timeControl') ?? DEFAULT_TIME_CONTROL
+    const parsed = parseTimeControl(tcStr)
+    this.baseTime = parsed.baseSeconds
+    this.whiteTime = parsed.baseSeconds
+    this.blackTime = parsed.baseSeconds
+    this.increment = parsed.incrementSeconds
 
     const player = { socket: server, name, color, disconnected: false }
     this.players.set(userId, player)
@@ -72,32 +77,6 @@ export class GameRoom {
       status: 101,
       webSocket: client,
     })
-  }
-
-  private parseTimeControl(tcStr: string) {
-    try {
-      // Formats: "10+5", "blitz_3_2", etc.
-      let base = 30, inc = 0
-      if (tcStr.includes('+')) {
-        const parts = tcStr.split('+')
-        base = parseInt(parts[0])
-        inc = parseInt(parts[1])
-      } else if (tcStr.includes('_')) {
-        const parts = tcStr.split('_')
-        base = parseInt(parts[parts.length - 2])
-        inc = parseInt(parts[parts.length - 1])
-      } else {
-        base = parseInt(tcStr)
-      }
-      this.baseTime = base * 60
-      this.whiteTime = this.baseTime
-      this.blackTime = this.baseTime
-      this.increment = inc
-    } catch (e) {
-      this.whiteTime = 1800
-      this.blackTime = 1800
-      this.increment = 0
-    }
   }
 
   private startSyncTimer() {

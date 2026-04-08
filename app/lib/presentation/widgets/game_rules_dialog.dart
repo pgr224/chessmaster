@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/theme/app_theme.dart';
+import '../../data/models/time_control.dart';
 
 class GameRulesDialog extends StatelessWidget {
   final String timeControl;
@@ -15,20 +16,10 @@ class GameRulesDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Parse timeControl to friendly label
-    String title = "Blitz Match";
-    String description = "Fast-paced action!";
-    String details = "3 minutes per side + 2s increment";
-
-    if (timeControl.contains('10+')) {
-      title = "Rapid Match";
-      description = "Strategic and balanced.";
-      details = "10 minutes per side + 0s increment";
-    } else if (timeControl.contains('30')) {
-      title = "Standard Match";
-      description = "Classic chess pace.";
-      details = "30 minutes per side";
-    }
+    final preset = TimeControlPreset.fromValue(timeControl);
+    final title = preset.label;
+    final description = preset.description;
+    final details = '${preset.value} time control with ${preset.label.toLowerCase()} pace.';
 
     return Dialog(
       backgroundColor: Colors.transparent,

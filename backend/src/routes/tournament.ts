@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { authMiddleware } from '../middleware/auth'
 import type { Env } from '../index'
+import { normalizeTimeControl, DEFAULT_TIME_CONTROL } from '../time_control'
 
 import { v4 as uuidv4 } from 'uuid'
 
@@ -67,7 +68,7 @@ tournamentRoutes.post('/', async (c) => {
       body.description || '',
       body.format || (type === 'private' ? 'best_of' : 'swiss'),
       body.start_time || new Date().toISOString(),
-      body.time_control || '10+0',
+      normalizeTimeControl(body.time_control || body.timeControl || DEFAULT_TIME_CONTROL),
       userId,
       type,
       totalRounds,

@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/di/injection_container.dart' as di;
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/multiplayer_models.dart';
+import '../../../data/models/time_control.dart';
 import '../../../data/repositories/tournament_repository.dart';
 import '../../blocs/auth/auth_bloc.dart';
 import '../../blocs/multiplayer/multiplayer_bloc.dart';
@@ -223,7 +224,8 @@ class _TournamentInviteScreenState extends State<TournamentInviteScreen> {
   }
 
   Widget _buildTimeControlSection(BuildContext context, TournamentState ts) {
-    final times = ['3+0', '5+0', '10+0', '15+10', '30+0'];
+    final times = TimeControlPreset.all;
+    final selectedPreset = TimeControlPreset.fromValue(ts.selectedTimeControl);
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -248,13 +250,38 @@ class _TournamentInviteScreenState extends State<TournamentInviteScreen> {
             runSpacing: 8,
             children: times
                 .map((t) => _buildChip(
-                      label: t,
-                      selected: ts.selectedTimeControl == t,
+                      label: t.value,
+                      selected: ts.selectedTimeControl == t.value,
                       onTap: () => context
                           .read<TournamentBloc>()
-                          .add(TournamentSelectTimeControlEvent(t)),
+                          .add(TournamentSelectTimeControlEvent(t.value)),
                     ))
                 .toList(),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Icon(selectedPreset.icon, size: 18, color: selectedPreset.color),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '${selectedPreset.label} • ${selectedPreset.value}',
+                  style: GoogleFonts.fredoka(
+                    color: AppTheme.textPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            selectedPreset.description,
+            style: GoogleFonts.baloo2(
+              color: AppTheme.textSecondary,
+              fontSize: 13,
+            ),
           ),
         ],
       ),

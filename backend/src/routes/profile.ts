@@ -126,8 +126,10 @@ profileRoutes.put('/:id', async (c) => {
       )
     }
 
-    const res = await getFullProfile(c, userId)
-    const data = await res.json()
+    const data = await buildProfileData(c, userId)
+    if (!data) {
+      return c.json({ error: 'User not found' }, 404)
+    }
     if (token) data.token = token
     return c.json(data)
   } catch (err: any) {
@@ -591,54 +593,107 @@ profileRoutes.get('/:id', async (c) => {
   return getFullProfile(c, targetId)
 })
 
-export async function getFullProfile(c: any, userId: string) {
+// Helper function to build profile data without returning Response
+async function buildProfileData(c: any, userId: string) {
   try {
-    const { results: userRes } = await c.env.DB.prepare(
+    // Get user data
+    const userQuery = c.env.DB.prepare(
       'SELECT id, username, avatar_url, is_ghibli, local_avatar, username_changes, xp, created_at FROM users WHERE id = ?'
-    ).bind(userId).all()
-
-    if (!userRes.length) {
-      return c.json({ error: 'User not found' }, 404)
+    ).bind(userId)
+    
+    const userResult = await userQuery.all()
+    const userRes = userResult.results || userResult
+    
+    if (!userRes || !Array.isArray(userRes) || userRes.length === 0) {
+      console.warn('[buildProfileData] User not found for userId:', userId)
+      return null
     }
+
+    const user = userRes[0]
 
     // Ensure user_stats exists
-    await c.env.DB.prepare(
-      'INSERT OR IGNORE INTO user_stats (user_id) VALUES (?)'
-    ).bind(userId).run()
-
-    const { results: statsRes } = await c.env.DB.prepare(
-      'SELECT * FROM user_stats WHERE user_id = ?'
-    ).bind(userId).all()
-
-    // Fetch recent 5 games
-    const { results: gamesRes } = await c.env.DB.prepare(`
-      SELECT 
-        g.id,
-        g.created_at as date,
-        CASE 
-          WHEN g.mode = 'singlePlayer' THEN 'AI Master'
-          WHEN g.white_user_id = ? THEN COALESCE((SELECT username FROM users WHERE id = g.black_user_id), 'Guest')
-          ELSE COALESCE((SELECT username FROM users WHERE id = g.white_user_id), 'Guest')
-        END as opponent,
-        CASE 
-          WHEN g.result = 'draw' THEN 'Draw'
-          WHEN (g.white_user_id = ? AND g.result = 'white') OR (g.black_user_id = ? AND g.result = 'black') THEN 'Won'
-          ELSE 'Lost'
-        END as result,
-        g.mode,
-        g.move_count as moves
-      FROM games g
-      WHERE (g.white_user_id = ? OR g.black_user_id = ?) AND g.status = 'completed'
-      ORDER BY g.created_at DESC
-      LIMIT 5
-    `).bind(userId, userId, userId, userId, userId).all()
-
-    const profile = {
-      ...userRes[0],
-      stats: statsRes[0] || {},
-      recent_games: gamesRes || []
+    try {
+      await c.env.DB.prepare(
+        'INSERT OR IGNORE INTO user_stats (user_id) VALUES (?)'
+      ).bind(userId).run()
+    } catch (statsErr) {
+      console.warn('[buildProfileData] Could not ensure user_stats:', statsErr)
     }
 
+    // Get stats (with safe defaults if fails)
+    let stats = {}
+    try {
+      const statsResult = await c.env.DB.prepare(
+        'SELECT * FROM user_stats WHERE user_id = ?'
+      ).bind(userId).all()
+      const statsRes = statsResult.results || statsResult
+      if (statsRes && statsRes.length > 0) {
+        stats = statsRes[0]
+      }
+    } catch (statsErr) {
+      console.warn('[buildProfileData] Could not fetch user_stats:', statsErr)
+    }
+
+    // Get recent games (with safe defaults if fails)
+    let recentGames = []
+    try {
+      const gamesResult = await c.env.DB.prepare(`
+        SELECT 
+          g.id,
+          g.created_at as date,
+          CASE 
+            WHEN g.mode = 'singlePlayer' THEN 'AI Master'
+            WHEN g.white_user_id = ? THEN COALESCE((SELECT username FROM users WHERE id = g.black_user_id), 'Guest')
+            ELSE COALESCE((SELECT username FROM users WHERE id = g.white_user_id), 'Guest')
+          END as opponent,
+          CASE 
+            WHEN g.result = 'draw' THEN 'Draw'
+            WHEN (g.white_user_id = ? AND g.result = 'white') OR (g.black_user_id = ? AND g.result = 'black') THEN 'Won'
+            ELSE 'Lost'
+          END as result,
+          g.mode,
+          g.move_count as moves
+        FROM games g
+        WHERE (g.white_user_id = ? OR g.black_user_id = ?) AND g.status = 'completed'
+        ORDER BY g.created_at DESC
+        LIMIT 5
+      `).bind(userId, userId, userId, userId, userId).all()
+      const gamesRes = gamesResult.results || gamesResult
+      if (gamesRes && Array.isArray(gamesRes)) {
+        recentGames = gamesRes
+      }
+    } catch (gamesErr) {
+      console.warn('[buildProfileData] Could not fetch recent games:', gamesErr)
+    }
+
+    const profile = {
+      id: user.id,
+      username: user.username,
+      avatar_url: user.avatar_url,
+      is_ghibli: user.is_ghibli,
+      local_avatar: user.local_avatar,
+      username_changes: user.username_changes,
+      xp: user.xp,
+      created_at: user.created_at,
+      stats,
+      recent_games: recentGames
+    }
+    
+    return profile
+  } catch (err) {
+    console.error('[buildProfileData] Unexpected error:', err)
+    const errorMessage = err instanceof Error ? err.message : String(err)
+    console.error('[buildProfileData] Error message:', errorMessage)
+    throw err
+  }
+}
+
+export async function getFullProfile(c: any, userId: string) {
+  try {
+    const profile = await buildProfileData(c, userId)
+    if (!profile) {
+      return c.json({ error: 'User not found' }, 404)
+    }
     return c.json(profile)
   } catch (err) {
     console.error('Error in getFullProfile:', err)
@@ -648,4 +703,4 @@ export async function getFullProfile(c: any, userId: string) {
   }
 }
 
-export { profileRoutes }
+export { profileRoutes, buildProfileData }

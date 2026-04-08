@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { v4 as uuidv4 } from 'uuid'
 import type { Env } from '../index'
 import { authMiddleware } from '../middleware/auth'
+import { normalizeTimeControl, DEFAULT_TIME_CONTROL } from '../time_control'
 
 const game = new Hono<{ Bindings: Env; Variables: { user: any } }>()
 game.use('*', authMiddleware)
@@ -30,6 +31,7 @@ game.post('/create', async (c) => {
   const { gameId: clientGameId, mode, opponentId, timeControl, color, aiDifficulty, tournamentId, initialFen } = parsed.data
   const gameId = clientGameId ?? uuidv4()
   const now = new Date().toISOString()
+  const normalizedTimeControl = normalizeTimeControl(timeControl ?? DEFAULT_TIME_CONTROL)
 
   // Determine colors
   let whiteId: string | null = null
@@ -67,7 +69,7 @@ game.post('/create', async (c) => {
                          ai_difficulty, tournament_id, initial_fen, created_at, updated_at)
       VALUES (?, ?, ?, ?, 'active', ?, ?, ?, ?, ?, ?)
     `).bind(
-      gameId, whiteId, blackId, dbMode, timeControl ?? null,
+      gameId, whiteId, blackId, dbMode, normalizedTimeControl,
       aiDifficulty ?? null, tournamentId ?? null,
       initialFen ?? 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
       now, now
@@ -85,7 +87,7 @@ game.post('/create', async (c) => {
         whiteId,
         blackId,
         dbMode,
-        timeControl ?? null,
+        normalizedTimeControl,
         now,
         now
       ).run()

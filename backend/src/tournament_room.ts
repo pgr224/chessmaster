@@ -1,4 +1,5 @@
 import type { Env } from './index'
+import { normalizeTimeControl, DEFAULT_TIME_CONTROL } from './time_control'
 
 interface TournamentPlayer {
   id: string
@@ -54,7 +55,7 @@ export class TournamentRoom implements DurableObject {
     const username = url.searchParams.get('username') ?? 'Player'
     const rating = parseInt(url.searchParams.get('rating') ?? '1200')
     const totalRounds = parseInt(url.searchParams.get('totalRounds') ?? '3')
-    const timeControl = url.searchParams.get('timeControl') ?? '10+0'
+    const timeControl = normalizeTimeControl(url.searchParams.get('timeControl') ?? DEFAULT_TIME_CONTROL)
     const type = (url.searchParams.get('type') ?? 'private') as 'public' | 'private'
 
     // Restore persisted state

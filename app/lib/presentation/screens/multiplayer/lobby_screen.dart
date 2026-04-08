@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../data/models/time_control.dart';
 import 'package:chess_master/presentation/blocs/auth/auth_bloc.dart' as auth;
 import 'package:chess_master/presentation/blocs/multiplayer/multiplayer_bloc.dart';
 
@@ -502,50 +503,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
   }
 
   Widget _buildTimeGrid(MultiplayerState state, double width) {
-    final times = [
-      {
-        'label': 'Bullet',
-        'time': '1+0',
-        'icon': Icons.flash_on_rounded,
-        'color': Colors.red,
-        'info': 'Super fast. 1 min per side. Perfect for quick matches.',
-      },
-      {
-        'label': 'Blitz',
-        'time': '3+0',
-        'icon': Icons.local_fire_department_rounded,
-        'color': Colors.orange,
-        'info': '3 min per side. Rapid decision making needed.',
-      },
-      {
-        'label': 'Blitz',
-        'time': '5+0',
-        'icon': Icons.bolt_rounded,
-        'color': Colors.amber,
-        'info': '5 min per side. Fast-paced tactical battles.',
-      },
-      {
-        'label': 'Rapid',
-        'time': '10+0',
-        'icon': Icons.timer_rounded,
-        'color': AppTheme.skyBlue,
-        'info': '10 min per side. Time for strategy & tactics.',
-      },
-      {
-        'label': 'Rapid',
-        'time': '15+10',
-        'icon': Icons.hourglass_top_rounded,
-        'color': AppTheme.accentCyan,
-        'info': '15 min + 10 sec increment. Balanced gameplay.',
-      },
-      {
-        'label': 'Classic',
-        'time': '30+0',
-        'icon': Icons.account_balance_rounded,
-        'color': AppTheme.goldPrimary,
-        'info': '30 min per side. Thoughtful, classical chess.',
-      },
-    ];
+    final timeOptions = TimeControlPreset.all;
 
     final crossAxisCount = width < 520 ? 2 : 3;
     final aspectRatio = width < 520 ? 2.2 : 2.0;
@@ -559,11 +517,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
         mainAxisSpacing: 10,
         childAspectRatio: aspectRatio,
       ),
-      itemCount: times.length,
+      itemCount: timeOptions.length,
       itemBuilder: (context, index) {
-        final item = times[index];
-        final isSelected = state.selectedTimeControl == item['time'];
-        final accentColor = item['color'] as Color;
+        final option = timeOptions[index];
+        final isSelected = state.selectedTimeControl == option.value;
+        final accentColor = option.color;
 
         return Material(
           color: Colors.transparent,
@@ -571,7 +529,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
             borderRadius: BorderRadius.circular(14),
             onTap: () => context
                 .read<MultiplayerBloc>()
-                .add(MpChangeSelectedTimeEvent(item['time'] as String)),
+                .add(MpChangeSelectedTimeEvent(option.value)),
             child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             decoration: BoxDecoration(
@@ -609,7 +567,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   children: [
                     // Icon
                     Icon(
-                      item['icon'] as IconData,
+                      option.icon,
                       color: isSelected ? accentColor : AppTheme.textMuted,
                       size: 18,
                     ),
@@ -617,7 +575,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     Column(
                       children: [
                         Text(
-                          item['time'] as String,
+                          option.value,
                           style: GoogleFonts.fredoka(
                             color: isSelected
                                 ? AppTheme.textPrimary
@@ -628,7 +586,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          item['label'] as String,
+                          option.label,
                           style: GoogleFonts.baloo2(
                             color: isSelected ? accentColor : AppTheme.textMuted,
                             fontSize: 11,
@@ -639,7 +597,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     ),
                     // Info text - smaller and subtle
                     Text(
-                      item['info'] as String,
+                      option.description,
                       style: GoogleFonts.baloo2(
                         color: isSelected
                             ? AppTheme.textSecondary
@@ -1146,6 +1104,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
   void _showChallengeDialog(
       BuildContext context, String message, String challengerId) {
+    final state = context.read<MultiplayerBloc>().state;
+    final preset = TimeControlPreset.fromValue(
+        state.challengerTimeControl ?? TimeControlPreset.defaultValue);
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -1154,9 +1116,36 @@ class _LobbyScreenState extends State<LobbyScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: Text('⚔️ New Challenge!',
             style: GoogleFonts.fredoka(color: AppTheme.goldPrimary)),
-        content: Text(message,
-            style:
-                GoogleFonts.baloo2(color: AppTheme.textPrimary, fontSize: 16)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(message,
+                style: GoogleFonts.baloo2(
+                    color: AppTheme.textPrimary, fontSize: 16)),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Icon(preset.icon, size: 18, color: preset.color),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '${preset.label} • ${preset.value}',
+                    style: GoogleFonts.fredoka(
+                      color: AppTheme.goldPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(preset.description,
+                style: GoogleFonts.baloo2(
+                    color: AppTheme.textSecondary, fontSize: 14)),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () {
@@ -1192,7 +1181,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
       BuildContext context, MultiplayerState state) {
     final challName = state.pendingTournamentChallengerName ?? 'Someone';
     final rounds = state.pendingTournamentRounds;
-    final tc = state.pendingTournamentTimeControl ?? '10+0';
+    final tc = state.pendingTournamentTimeControl ?? TimeControlPreset.defaultValue;
+    final preset = TimeControlPreset.fromValue(tc);
     final tId = state.pendingTournamentId!;
     final cId = state.pendingTournamentChallengerId!;
 
@@ -1204,10 +1194,20 @@ class _LobbyScreenState extends State<LobbyScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: Text('🏆 Tournament Invite!',
             style: GoogleFonts.fredoka(color: AppTheme.goldPrimary)),
-        content: Text(
-          '$challName wants to play a $rounds-round tournament with $tc time control.',
-          style:
-              GoogleFonts.baloo2(color: AppTheme.textPrimary, fontSize: 15),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '$challName wants to play a $rounds-round tournament with ${preset.label} (${preset.value}) time control.',
+              style: GoogleFonts.baloo2(
+                  color: AppTheme.textPrimary, fontSize: 15),
+            ),
+            const SizedBox(height: 12),
+            Text(preset.description,
+                style: GoogleFonts.baloo2(
+                    color: AppTheme.textSecondary, fontSize: 14)),
+          ],
         ),
         actions: [
           TextButton(
