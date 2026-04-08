@@ -1,6 +1,7 @@
 import type { Env } from './index'
 import { normalizeTimeControl, DEFAULT_TIME_CONTROL } from './time_control'
 import { XP_RULES } from './xp_rules'
+import { getPlayerUsername } from './player_name_sync'
 
 interface TournamentPlayer {
   id: string
@@ -152,6 +153,9 @@ export class TournamentRoom implements DurableObject {
   }
 
   private async _kickOffRound() {
+    // Sync player names from database before starting round
+    await this._syncPlayerNames()
+
     const pairings = this._computePairings()
     this.tournament.currentPairings = pairings.map(([p1, p2]) => {
       const gameId = crypto.randomUUID()
@@ -184,6 +188,34 @@ export class TournamentRoom implements DurableObject {
         }),
       },
     })
+  }
+
+  /**
+   * Sync player names from database
+   * Called before each round to ensure displayed names are current
+   */
+  private async _syncPlayerNames() {
+    try {
+      for (const player of this.tournament.players) {
+        const dbUsername = await getPlayerUsername(this.env, player.id)
+        if (dbUsername && dbUsername !== player.username) {
+          const oldName = player.username
+          player.username = dbUsername
+          
+          // Notify about the name change
+          this._broadcastAll({
+            type: 'player_name_updated',
+            data: {
+              userId: player.id,
+              oldName,
+              newName: dbUsername,
+            },
+          })
+        }
+      }
+    } catch (err) {
+      console.error('[TournamentRoom] Name sync error:', err)
+    }
   }
 
   private async _handleMatchResult(msg: any, meta: { id: string }) {

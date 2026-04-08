@@ -1,5 +1,7 @@
 import { ChessValidator, Move } from './validation'
 import { parseTimeControl, DEFAULT_TIME_CONTROL } from './time_control'
+import { getPlayerUsername } from './player_name_sync'
+import type { Env } from './index'
 
 export class GameRoom {
   private state: DurableObjectState
@@ -7,7 +9,7 @@ export class GameRoom {
   private validator: ChessValidator = new ChessValidator()
   private gameId: string | null = null
   private status: 'active' | 'finished' = 'active'
-  private env: any
+  private env: Env
 
   // Timer fields
   private whiteTime: number = 1800
@@ -16,8 +18,11 @@ export class GameRoom {
   private increment: number = 0
   private lastMoveTimestamp: number = 0
   private timerInterval: any = null
+  private nameSyncInterval: any = null
+  private lastNameSync: number = 0
+  private NAME_SYNC_INTERVAL_MS: number = 10000 // Sync player names every 10 seconds
 
-  constructor(state: DurableObjectState, env: any) {
+  constructor(state: DurableObjectState, env: Env) {
     this.state = state
     this.env = env
   }
@@ -87,6 +92,14 @@ export class GameRoom {
       }
 
       this.updateClocks()
+      
+      // Periodically sync player names from database
+      const now = Date.now()
+      if (now - this.lastNameSync > this.NAME_SYNC_INTERVAL_MS) {
+        this.syncPlayerNames()
+        this.lastNameSync = now
+      }
+
       this.broadcast({
         type: 'TIMER_SYNC',
         data: {
@@ -101,6 +114,39 @@ export class GameRoom {
         this.handleTimeout()
       }
     }, 1000)
+  }
+
+  /**
+   * Sync player names from database to ensure current names are displayed
+   * Called periodically during game to handle mid-game username changes
+   */
+  private async syncPlayerNames() {
+    try {
+      const userIds = Array.from(this.players.keys())
+      for (const userId of userIds) {
+        const player = this.players.get(userId)
+        if (!player) continue
+
+        const dbUsername = await getPlayerUsername(this.env, userId)
+        if (dbUsername && dbUsername !== player.name) {
+          const oldName = player.name
+          player.name = dbUsername
+          
+          // Notify all players of the name change
+          this.broadcast({
+            type: 'PLAYER_NAME_UPDATED',
+            data: {
+              userId,
+              oldName,
+              newName: dbUsername,
+              color: player.color
+            }
+          })
+        }
+      }
+    } catch (err) {
+      console.error('[GameRoom] Name sync error:', err)
+    }
   }
 
   private updateClocks() {
@@ -121,6 +167,7 @@ export class GameRoom {
     if (this.status !== 'active') return
     this.status = 'finished'
     clearInterval(this.timerInterval)
+    if (this.nameSyncInterval) clearInterval(this.nameSyncInterval)
 
     const turn = this.validator.getFen().split(' ')[1] === 'w' ? 'white' : 'black'
     const timedOutColor = turn === 'white' ? 'white' : 'black'

@@ -27,13 +27,78 @@ class ProfileScreen extends StatelessWidget {
       body: BlocConsumer<AuthBloc, AuthState>(
         listener: (context, state) {
           if (state is AuthErrorState) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: AppTheme.accentRed,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
+            final errorMsg = state.message;
+            
+            if (errorMsg.startsWith('NAME_CHANGE_COOLDOWN')) {
+              showDialog(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  backgroundColor: AppTheme.surface,
+                  title: const Text('⏱️ Cooldown Active',
+                      style: TextStyle(color: AppTheme.accentRed)),
+                  content: Text(
+                    'You can change your name once every 24 hours. Please try again later.',
+                    style: GoogleFonts.fredoka(color: AppTheme.textSecondary),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('OK',
+                          style: TextStyle(color: AppTheme.goldPrimary)),
+                    ),
+                  ],
+                ),
+              );
+            } else if (errorMsg.startsWith('NAME_CHANGE_LIMIT')) {
+              showDialog(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  backgroundColor: AppTheme.surface,
+                  title: const Text('🔒 Limit Reached',
+                      style: TextStyle(color: AppTheme.accentRed)),
+                  content: Text(
+                    'You have reached the maximum number of name changes (3 lifetime). Your identity is now locked.',
+                    style: GoogleFonts.fredoka(color: AppTheme.textSecondary),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('OK',
+                          style: TextStyle(color: AppTheme.goldPrimary)),
+                    ),
+                  ],
+                ),
+              );
+            } else if (errorMsg.startsWith('NAME_TAKEN')) {
+              showDialog(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  backgroundColor: AppTheme.surface,
+                  title: const Text('❌ Username Taken',
+                      style: TextStyle(color: AppTheme.accentRed)),
+                  content: Text(
+                    'This username is already taken. Please choose another.',
+                    style: GoogleFonts.fredoka(color: AppTheme.textSecondary),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('OK',
+                          style: TextStyle(color: AppTheme.goldPrimary)),
+                    ),
+                  ],
+                ),
+              );
+            } else {
+              // Generic error snackbar
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(errorMsg),
+                  backgroundColor: AppTheme.accentRed,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            }
           }
         },
         builder: (context, state) {
@@ -570,6 +635,10 @@ void showEditProfileModal(BuildContext context, UserModel user) {
   bool checkingName = false;
   bool? nameAvailable;
   String? suggestedName;
+  bool canChangeNameDueToRate = user.remainingNameChanges > 0 && user.canChangeNameNow;
+  DateTime? nextChangeTime = user.lastUsernameChange != null
+      ? DateTime.parse(user.lastUsernameChange!).add(const Duration(hours: 24))
+      : null;
 
   String buildUsernameSuggestion(String currentUsername) {
     final cleaned = currentUsername
@@ -582,6 +651,17 @@ void showEditProfileModal(BuildContext context, UserModel user) {
     final suffix = 100 + Random().nextInt(900);
     final candidate = '$base$suffix';
     return candidate.length > 30 ? candidate.substring(0, 30) : candidate;
+  }
+
+  String formatTimeRemaining(DateTime until) {
+    final now = DateTime.now();
+    if (until.isBefore(now)) return 'now';
+    
+    final diff = until.difference(now);
+    if (diff.inHours > 0) {
+      return '${diff.inHours}h ${diff.inMinutes.remainder(60)}m';
+    }
+    return '${diff.inMinutes}m';
   }
 
   showModalBottomSheet(
@@ -614,40 +694,65 @@ void showEditProfileModal(BuildContext context, UserModel user) {
                       fontWeight: FontWeight.w700,
                       letterSpacing: 1.5)),
               const SizedBox(height: 8),
-              if (user.usernameChanges >= 2)
+              // Rate limit status
+              if (!canChangeNameDueToRate) ...[
                 Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
                     color: AppTheme.accentRed.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.lock_rounded,
-                          color: AppTheme.accentRed, size: 14),
-                      const SizedBox(width: 8),
-                      Text('RENAME LIMIT REACHED (2/2)',
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.lock_rounded,
+                              color: AppTheme.accentRed, size: 16),
+                          const SizedBox(width: 8),
+                          Text(
+                            user.remainingNameChanges == 0
+                                ? 'LIFETIME LIMIT REACHED (3/3)'
+                                : 'COOLDOWN ACTIVE (24 HOURS)',
+                            style: GoogleFonts.fredoka(
+                                color: AppTheme.accentRed,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700),
+                          ),
+                        ],
+                      ),
+                      if (nextChangeTime != null) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          'You can change again in: ${formatTimeRemaining(nextChangeTime!)}',
                           style: GoogleFonts.fredoka(
-                              color: AppTheme.accentRed,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700)),
+                              color: AppTheme.accentRed.withValues(alpha: 0.8),
+                              fontSize: 11),
+                        ),
+                      ]
                     ],
                   ),
                 )
-              else
-                Text('CHANGES ALLOWED: ${2 - user.usernameChanges} REMAINING',
-                    style: GoogleFonts.fredoka(
-                        color: AppTheme.goldPrimary.withValues(alpha: 0.7),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600)),
+              ] else ...[
+                Text(
+                  'CHANGES ALLOWED: ${user.remainingNameChanges}/3',
+                  style: GoogleFonts.fredoka(
+                      color: user.remainingNameChanges == 1
+                          ? AppTheme.accentOrange
+                          : AppTheme.goldPrimary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600),
+                ),
+              ],
               const SizedBox(height: 32),
               GestureDetector(
-                onTap: () async {
-                  final picker = ImagePicker();
-                  final XFile? image = await picker.pickImage(
-                      source: ImageSource.gallery, imageQuality: 85);
+                onTap: canChangeNameDueToRate
+                    ? () async {
+                        final picker = ImagePicker();
+                        final XFile? image = await picker.pickImage(
+                            source: ImageSource.gallery, imageQuality: 85);
                   if (image == null) return;
 
                   final croppedFile = await ImageCropper().cropImage(
@@ -696,9 +801,9 @@ void showEditProfileModal(BuildContext context, UserModel user) {
               const SizedBox(height: 32),
               TextField(
                 controller: nameController,
-                enabled: user.usernameChanges < 2,
+                enabled: canChangeNameDueToRate && !checkingName,
                 style: GoogleFonts.fredoka(
-                    color: user.usernameChanges < 2
+                    color: canChangeNameDueToRate
                         ? AppTheme.textPrimary
                         : AppTheme.textMuted),
                 onChanged: (val) async {
@@ -710,27 +815,47 @@ void showEditProfileModal(BuildContext context, UserModel user) {
                     });
                     return;
                   }
+
+                  if (val.isEmpty) {
+                    setLocalState(() {
+                      checkingName = false;
+                      nameAvailable = false;
+                    });
+                    return;
+                  }
+
                   setLocalState(() {
                     checkingName = true;
                     suggestedName = null;
                   });
-                  final available =
-                      await context.read<AuthRepository>().checkUsername(val);
-                  if (nameController.text == val) {
-                    setLocalState(() {
-                      checkingName = false;
-                      nameAvailable = available;
-                      if (!available) {
-                        suggestedName = buildUsernameSuggestion(val);
-                      }
-                    });
+
+                  try {
+                    final result = await context
+                        .read<AuthRepository>()
+                        .checkUsernameAvailability(val);
+
+                    if (nameController.text == val && mounted) {
+                      setLocalState(() {
+                        checkingName = false;
+                        nameAvailable = result['available'] == true;
+                        if (!nameAvailable!) {
+                          suggestedName = buildUsernameSuggestion(val);
+                        }
+                      });
+                    }
+                  } catch (e) {
+                    if (nameController.text == val) {
+                      setLocalState(() {
+                        checkingName = false;
+                        nameAvailable = false;
+                      });
+                    }
                   }
                 },
                 decoration: InputDecoration(
-                  labelText:
-                      user.usernameChanges < 2 ? 'PLAYER NAME' : 'NAME LOCKED',
+                  labelText: canChangeNameDueToRate ? 'PLAYER NAME' : 'NAME LOCKED',
                   labelStyle: GoogleFonts.fredoka(
-                      color: user.usernameChanges < 2
+                      color: canChangeNameDueToRate
                           ? AppTheme.textSecondary
                           : AppTheme.accentRed.withValues(alpha: 0.5),
                       letterSpacing: 1),
@@ -808,29 +933,62 @@ void showEditProfileModal(BuildContext context, UserModel user) {
                 width: double.infinity,
                 height: 60,
                 child: ElevatedButton(
-                  onPressed: (nameAvailable == false || checkingName)
+                  onPressed: (nameAvailable == false ||
+                          checkingName ||
+                          !canChangeNameDueToRate)
                       ? null
-                      : () {
-                          context.read<AuthBloc>().add(AuthUpdateProfileEvent(
-                                username: nameController.text,
-                                localAvatar: localAvatarPreview,
-                                isGhibli: isCartoon,
-                              ));
-                          Navigator.pop(ctx);
+                      : () async {
+                          // Show loading dialog
+                          showDialog(
+                            context: builderContext,
+                            barrierDismissible: false,
+                            builder: (ctx) => Center(
+                              child: CircularProgressIndicator(
+                                color: AppTheme.goldPrimary,
+                              ),
+                            ),
+                          );
+
+                          try {
+                            context.read<AuthBloc>().add(
+                                  AuthUpdateProfileEvent(
+                                    username: nameController.text,
+                                    localAvatar: localAvatarPreview,
+                                    isGhibli: isCartoon,
+                                  ),
+                                );
+
+                            if (ctx.mounted) Navigator.pop(ctx); // Pop loading
+                            if (ctx.mounted) Navigator.pop(ctx); // Pop modal
+                          } catch (e) {
+                            if (ctx.mounted) Navigator.pop(ctx); // Pop loading
+                            if (ctx.mounted) {
+                              ScaffoldMessenger.of(ctx).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error: ${e.toString()}'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          }
                         },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.goldPrimary,
+                    backgroundColor: canChangeNameDueToRate
+                        ? AppTheme.goldPrimary
+                        : Colors.grey,
                     foregroundColor: Colors.black,
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20)),
                     elevation: 8,
                     shadowColor: AppTheme.goldPrimary.withValues(alpha: 0.4),
                   ),
-                  child: Text('APPLY CHANGES',
-                      style: GoogleFonts.fredoka(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 1.2)),
+                  child: Text(
+                    canChangeNameDueToRate ? 'APPLY CHANGES' : 'NAME LOCKED',
+                    style: GoogleFonts.fredoka(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.2),
+                  ),
                 ),
               ),
             ],

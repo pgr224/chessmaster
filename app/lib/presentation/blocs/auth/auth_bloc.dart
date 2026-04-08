@@ -145,7 +145,21 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       );
       emit(AuthAuthenticatedState(updated));
     } catch (e) {
-      emit(AuthErrorState(e.toString()));
+      final errorMsg = e.toString();
+      
+      if (errorMsg.contains('COOLDOWN_ACTIVE')) {
+        emit(AuthErrorState(
+          'NAME_CHANGE_COOLDOWN::You can change your name once every 24 hours. Please try again later.'
+        ));
+      } else if (errorMsg.contains('LIFETIME_LIMIT_REACHED')) {
+        emit(AuthErrorState(
+          'NAME_CHANGE_LIMIT::You have reached the maximum number of name changes (3 lifetime).'
+        ));
+      } else if (errorMsg.contains('Username already taken')) {
+        emit(AuthErrorState('NAME_TAKEN::This username is already taken. Please choose another.'));
+      } else {
+        emit(AuthErrorState(errorMsg));
+      }
     }
   }
 

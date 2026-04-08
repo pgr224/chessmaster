@@ -68,6 +68,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   String _sortType = 'elo';
   int _myRank = 0;
   String? _bountyUserId;
+  Timer? _refreshTimer;
 
   @override
   void initState() {
@@ -75,10 +76,22 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     final authState = context.read<AuthBloc>().state;
     if (authState is AuthAuthenticatedState) {
       _fetchLeaderboard();
+      // Auto-refresh leaderboard every 30 seconds to sync player name changes
+      _refreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+        if (mounted) {
+          _fetchLeaderboard();
+        }
+      });
     } else {
       _loading = false;
       _error = 'Login required to view leaderboard';
     }
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _fetchLeaderboard() async {
@@ -160,6 +173,14 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                 fontWeight: FontWeight.w700,
                 fontSize: 24)),
         centerTitle: true,
+        actions: [
+          // Refresh button to sync latest player names
+          IconButton(
+            icon: Icon(_loading ? null : Icons.refresh, color: AppTheme.accentCyan),
+            onPressed: _loading ? null : () => _fetchLeaderboard(),
+            tooltip: 'Refresh leaderboard',
+          ),
+        ],
       ),
       body: Container(
         decoration: const BoxDecoration(gradient: AppTheme.backgroundGradient),

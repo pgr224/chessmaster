@@ -73,6 +73,60 @@ profileRoutes.get('/', async (c) => {
   return getFullProfile(c, userId)
 })
 
+// Check username availability with rate limit info
+profileRoutes.get('/check-username/:username', async (c) => {
+  try {
+    const username = c.req.param('username')
+    if (!username || username.length < 3 || username.length > 30) {
+      return c.json({ available: false, error: 'Username must be 3-30 characters' }, 400)
+    }
+
+    // Check if username exists
+    const existing = await c.env.DB.prepare(
+      'SELECT id FROM users WHERE username = ?'
+    ).bind(username).first<{ id: string }>()
+
+    const userId = c.get('user').sub
+    const userInfo = await c.env.DB.prepare(
+      'SELECT username_changes, last_username_change FROM users WHERE id = ?'
+    ).bind(userId).first<{ username_changes: number; last_username_change: string | null }>()
+
+    // Calculate rate limit info
+    let canChangeNow = true
+    let nextChangeTime: number | null = null
+    let remainingLifetimeChanges = 3
+
+    if (userInfo) {
+      remainingLifetimeChanges = Math.max(0, 3 - (userInfo.username_changes || 0))
+      
+      // Check 24-hour cooldown
+      if (userInfo.last_username_change) {
+        const lastChange = new Date(userInfo.last_username_change).getTime()
+        const now = Date.now()
+        const elapsed = now - lastChange
+        const cooldownMs = 24 * 60 * 60 * 1000 // 24 hours
+        
+        if (elapsed < cooldownMs) {
+          canChangeNow = false
+          nextChangeTime = lastChange + cooldownMs
+        }
+      }
+    }
+
+    return c.json({
+      available: !existing,
+      username,
+      canChangeNow: canChangeNow && remainingLifetimeChanges > 0,
+      remainingLifetimeChanges,
+      nextChangeTime,
+      reason: !canChangeNow ? 'cooldown' : remainingLifetimeChanges === 0 ? 'lifetime_limit' : undefined
+    })
+  } catch (err) {
+    console.error('[CheckUsername] Error:', err)
+    return c.json({ available: false, error: 'Check failed' }, 500)
+  }
+})
+
 // Update profile (self or specific ID if authorized)
 profileRoutes.put('/:id', async (c) => {
   const userId = c.get('user').sub
@@ -86,17 +140,80 @@ profileRoutes.put('/:id', async (c) => {
   const allowedUpdates: Record<string, any> = {}
   
   if (body.username) {
-    const { results: userRes } = await c.env.DB.prepare('SELECT username, username_changes FROM users WHERE id = ?').bind(userId).all()
-    const currentName = userRes[0]?.username
-    const currentChanges = (userRes[0]?.username_changes as number) || 0
-    
-    // Only check limit if name is actually being changed
-    if (body.username !== currentName) {
-      if (currentChanges >= 2) {
-        return c.json({ error: 'You have reached the maximum number of name changes (2)' }, 403)
+    try {
+      const userRes = await c.env.DB.prepare(
+        'SELECT username, username_changes, last_username_change FROM users WHERE id = ?'
+      ).bind(userId).first<{ username: string; username_changes: number; last_username_change: string | null }>()
+
+      if (!userRes) {
+        return c.json({ error: 'User not found' }, 404)
       }
-      allowedUpdates.username = body.username
-      allowedUpdates.username_changes = currentChanges + 1
+
+      const currentName = userRes.username
+      const currentChanges = userRes.username_changes || 0
+      const lastChange = userRes.last_username_change
+
+      // Only check limits if name is actually being changed
+      if (body.username !== currentName) {
+        // Check lifetime limit (3 total changes)
+        if (currentChanges >= 3) {
+          return c.json(
+            {
+              error: 'LIFETIME_LIMIT_REACHED',
+              message: 'You have reached the maximum number of name changes (3 lifetime)',
+              changesUsed: currentChanges,
+              changesAllowed: 3
+            },
+            403
+          )
+        }
+
+        // Check 24-hour cooldown
+        if (lastChange) {
+          const lastChangeTime = new Date(lastChange).getTime()
+          const now = Date.now()
+          const elapsed = now - lastChangeTime
+          const cooldownMs = 24 * 60 * 60 * 1000 // 24 hours
+
+          if (elapsed < cooldownMs) {
+            const nextAllowedTime = lastChangeTime + cooldownMs
+            return c.json(
+              {
+                error: 'COOLDOWN_ACTIVE',
+                message: 'You can only change your name once every 24 hours',
+                lastChangeTime,
+                nextChangeTime: nextAllowedTime,
+                cooldownRemainingMs: cooldownMs - elapsed,
+                changesUsed: currentChanges,
+                changesAllowed: 3
+              },
+              429
+            )
+          }
+        }
+
+        // Check if username is available
+        const usernameExists = await c.env.DB.prepare(
+          'SELECT id FROM users WHERE username = ? AND id != ?'
+        ).bind(body.username, userId).first()
+
+        if (usernameExists) {
+          return c.json(
+            {
+              error: 'USERNAME_TAKEN',
+              message: 'Username is already taken'
+            },
+            409
+          )
+        }
+
+        allowedUpdates.username = body.username
+        allowedUpdates.username_changes = currentChanges + 1
+        allowedUpdates.last_username_change = new Date().toISOString()
+      }
+    } catch (err: any) {
+      console.error('[ProfileUpdate] Username validation error:', err)
+      return c.json({ error: 'Username validation failed' }, 500)
     }
   }
 
@@ -115,6 +232,18 @@ profileRoutes.put('/:id', async (c) => {
     await c.env.DB.prepare(`UPDATE users SET ${setClauses}, updated_at = datetime('now') WHERE id = ?`)
       .bind(...values, userId)
       .run()
+
+    // If username was changed, log it for tracking and notify systems
+    if (allowedUpdates.username) {
+      const oldUserRes = await c.env.DB.prepare(
+        'SELECT username FROM users WHERE id = ?'
+      ).bind(userId).first<{ username: string }>()
+      const oldName = oldUserRes?.username || 'Unknown'
+      
+      console.info(
+        `[ProfileUpdate] Username changed for ${userId}: ${oldName} -> ${allowedUpdates.username} (Changes: ${allowedUpdates.username_changes}/3)`
+      )
+    }
 
     let token: string | undefined = undefined;
     if (body.username) {
@@ -598,7 +727,7 @@ async function buildProfileData(c: any, userId: string) {
   try {
     // Get user data
     const userQuery = c.env.DB.prepare(
-      'SELECT id, username, avatar_url, is_ghibli, local_avatar, username_changes, xp, created_at FROM users WHERE id = ?'
+      'SELECT id, username, avatar_url, is_ghibli, local_avatar, username_changes, last_username_change, xp, created_at FROM users WHERE id = ?'
     ).bind(userId)
     
     const userResult = await userQuery.all()
@@ -672,11 +801,15 @@ async function buildProfileData(c: any, userId: string) {
       avatar_url: user.avatar_url,
       is_ghibli: user.is_ghibli,
       local_avatar: user.local_avatar,
-      username_changes: user.username_changes,
+      username_changes: user.username_changes || 0,
+      last_username_change: user.last_username_change,
       xp: user.xp,
       created_at: user.created_at,
       stats,
-      recent_games: recentGames
+      recent_games: recentGames,
+      // Calculate rate limit info for frontend
+      remainingNameChanges: Math.max(0, 3 - (user.username_changes || 0)),
+      canChangeNameNow: !user.last_username_change || (Date.now() - new Date(user.last_username_change).getTime() >= 24 * 60 * 60 * 1000)
     }
     
     return profile

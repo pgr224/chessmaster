@@ -13,6 +13,9 @@ class UserModel {
   final List<GameRecord> recentGames;
   final bool isGhibli;
   final int usernameChanges;
+  final String? lastUsernameChange;
+  final bool canChangeNameNow;
+  final int remainingNameChanges;
 
   const UserModel({
     required this.id,
@@ -26,6 +29,9 @@ class UserModel {
     this.recentGames = const [],
     this.isGhibli = false,
     this.usernameChanges = 0,
+    this.lastUsernameChange,
+    this.canChangeNameNow = true,
+    this.remainingNameChanges = 3,
   });
 
   int get level => UserStats.calculateLevel(xp);
@@ -51,6 +57,9 @@ class UserModel {
       deviceId: (json['device_id'] ?? '').toString(),
       isGhibli: parseBool(json['is_ghibli'], false),
       usernameChanges: json['username_changes'] as int? ?? 0,
+      lastUsernameChange: json['last_username_change'] as String?,
+      canChangeNameNow: json['canChangeNameNow'] as bool? ?? true,
+      remainingNameChanges: json['remainingNameChanges'] as int? ?? 3,
       recentGames: (json['recent_games'] as List? ?? [])
           .map((g) => GameRecord.fromJson(g as Map<String, dynamic>))
           .toList(),
@@ -67,6 +76,9 @@ class UserModel {
         'device_id': deviceId,
         'is_ghibli': isGhibli,
         'username_changes': usernameChanges,
+        'last_username_change': lastUsernameChange,
+        'canChangeNameNow': canChangeNameNow,
+        'remainingNameChanges': remainingNameChanges,
         'stats': {
           'games_played': stats.gamesPlayed,
           'wins': stats.wins,
@@ -101,6 +113,9 @@ class UserModel {
     List<GameRecord>? recentGames,
     bool? isGhibli,
     int? usernameChanges,
+    String? lastUsernameChange,
+    bool? canChangeNameNow,
+    int? remainingNameChanges,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -114,6 +129,9 @@ class UserModel {
       recentGames: recentGames ?? this.recentGames,
       isGhibli: isGhibli ?? this.isGhibli,
       usernameChanges: usernameChanges ?? this.usernameChanges,
+      lastUsernameChange: lastUsernameChange ?? this.lastUsernameChange,
+      canChangeNameNow: canChangeNameNow ?? this.canChangeNameNow,
+      remainingNameChanges: remainingNameChanges ?? this.remainingNameChanges,
     );
   }
 }

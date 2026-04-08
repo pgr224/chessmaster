@@ -124,6 +124,36 @@ class AuthRepository {
     }
   }
 
+  /// Check username availability with detailed rate limit information
+  Future<Map<String, dynamic>> checkUsernameAvailability(String username) async {
+    try {
+      final response = await _dio.get(
+        '/api/profile/check-username/$username',
+        options: Options(validateStatus: (_) => true),
+      );
+      
+      if (response.statusCode == 200) {
+        return {
+          'available': response.data['available'] == true,
+          'canChangeNow': response.data['canChangeNow'] == true,
+          'remainingLifetimeChanges': response.data['remainingLifetimeChanges'] ?? 3,
+          'nextChangeTime': response.data['nextChangeTime'],
+          'reason': response.data['reason'],
+        };
+      } else {
+        return {
+          'available': false,
+          'error': response.data['error'] ?? 'Check failed',
+        };
+      }
+    } catch (e) {
+      return {
+        'available': false,
+        'error': 'Network error',
+      };
+    }
+  }
+
   Future<UserModel> register(
       {required String username, String? avatarPath}) async {
     final normalizedUsername = _normalizeUsername(username);
@@ -289,10 +319,29 @@ class AuthRepository {
       }),
     );
 
-    if (response.statusCode == 409) {
+    // Handle specific error responses for username changes
+    if (response.statusCode == 429) {
+      // Cooldown active
+      final error = response.data as Map<String, dynamic>;
+      final cooldownRemainingMs = error['cooldownRemainingMs'] as int?;
+      final nextChangeTime = error['nextChangeTime'] as int?;
+      throw Exception(
+        'COOLDOWN_ACTIVE::${cooldownRemainingMs ?? 0}::${nextChangeTime ?? 0}'
+      );
+    } else if (response.statusCode == 403) {
+      // Lifetime limit reached or other auth error
+      final error = response.data as Map<String, dynamic>;
+      final errorType = error['error'] as String?;
+      if (errorType == 'LIFETIME_LIMIT_REACHED') {
+        throw Exception('LIFETIME_LIMIT_REACHED');
+      }
+      throw Exception('Permission denied');
+    } else if (response.statusCode == 409) {
       throw Exception('Username already taken');
     } else if (response.statusCode != 200) {
-      throw Exception('Failed to update profile');
+      final error = response.data as Map<String, dynamic>?;
+      final errorMsg = error?['error'] ?? 'Failed to update profile';
+      throw Exception(errorMsg);
     }
 
     final updatedData = response.data as Map<String, dynamic>;
