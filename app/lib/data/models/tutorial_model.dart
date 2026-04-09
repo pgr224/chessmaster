@@ -226,12 +226,12 @@ final List<TutorialLesson> tutorialLessons = [
     steps: [
       TutorialStep(
         text:
-            'A FORK attacks two (or more) pieces simultaneously with one piece. The opponent can only save one!\n\nYour knight on e5 is perfectly placed. Move it to d7 — it will fork the queen on d8 and the bishop on f8!\n\n👉 Move knight from e5 to c6.',
+        'A FORK attacks two (or more) pieces simultaneously with one piece. The opponent can only save one!\n\nHere, your knight jump creates immediate tactical pressure with tempo on Black\'s queen and nearby targets.\n\n👉 Move knight from e5 to c6.',
         expectedMove: 'e5c6',
         hintText:
-            'Tap the knight on e5, then tap c6. This attacks both the queen on d8 and the pawn on d7.',
+        'Tap the knight on e5, then tap c6. This attacks the queen on d8 and forces Black to react.',
         successMessage:
-            '🍴 Brilliant fork! Your knight on c6 attacks the queen on d8 AND threatens b8. Black must lose material!',
+        '🍴 Great tactical jump! Nc6 hits the queen with tempo and improves your piece activity. Always look for forcing moves first.',
       ),
       TutorialStep(
         text:
@@ -254,12 +254,12 @@ final List<TutorialLesson> tutorialLessons = [
     steps: [
       TutorialStep(
         text:
-            'A PIN locks a piece in place because moving it would expose a more valuable piece behind it.\n\nBlack\'s bishop on b4 is pinning your knight on c3 to your king! Let\'s create our own pin.\n\n👉 Move your bishop from c1 to g5 to pin Black\'s knight on f6 to the queen on d8.',
-        expectedMove: 'c1g5',
+        'A PIN locks a piece in place because moving it would expose a more valuable piece behind it.\n\nBlack\'s bishop on b4 is pinning your knight on c3 to your king. First, challenge the pinning piece so your knight can breathe.\n\n👉 Play a2 to a3 to question the bishop on b4.',
+      expectedMove: 'a2a3',
         hintText:
-            'Tap the bishop on c1, then tap g5. The f6 knight cannot move because it shields the queen.',
+        'Tap the pawn on a2, then tap a3. This forces the bishop to decide and reduces pin pressure.',
         successMessage:
-            '📍 Superb pin! Black\'s knight on f6 is now frozen — if it moves, you capture the queen! This is called an "absolute pin" when the king is behind, and a "relative pin" when another valuable piece is behind.',
+        '📍 Great practical response! Before counter-pinning, first neutralize the opponent\'s pinning piece. Good players solve threats before creating new ones.',
       ),
       TutorialStep(
         text:
@@ -542,11 +542,8 @@ final List<TutorialLesson> tutorialLessons = [
       ),
       TutorialStep(
         text:
-            'Now secure your king immediately.\n\n👉 Castle kingside: Move king from e1 to g1.',
-        expectedMove: 'e1g1',
-        hintText: 'Tap your king on e1, then tap g1.',
-        successMessage:
-            '🏰 Perfect! Castling early is a key principle. Your king is safe, and your rook is now connected and ready for action.',
+            'Now secure your king as soon as the position allows. In many Ruy López lines, castling is your next practical priority after development and bishop retreat.',
+        isCompletion: true,
       ),
       TutorialStep(
         text:
@@ -685,6 +682,54 @@ final List<TutorialLesson> tutorialLessons = [
   ),
 
   // ═══════════════════════════════════════════
+  // WEEK 10: Middlegame Planning
+  // ═══════════════════════════════════════════
+  TutorialLesson(
+    id: 'strategy_middlegame',
+    title: '🧭 Middlegame Planning',
+    description: 'Build a plan from imbalances and improve your worst piece.',
+    initialFEN:
+        'r2q1rk1/pp2bppp/2n1pn2/2bp4/3P4/2N1PN2/PPQ1BPPP/R1B2RK1 w - - 0 1',
+    steps: [
+      TutorialStep(
+        text: '''In the middlegame, do not move randomly. Ask:
+1) What is my worst-placed piece?
+2) Which side has more space?
+3) Where is the pawn break?
+
+In this position, White should improve piece coordination and prepare pressure on the c-file.
+
+  👉 Improve your worst piece first: move your bishop from c1 to d2.''',
+      expectedMove: 'c1d2',
+        hintText:
+        'Develop the quiet piece first. Better coordination comes before direct attacks.',
+        successMessage:
+        '✅ Excellent! Bd2 connects your rooks and improves harmony before creating tactical threats.',
+      ),
+      TutorialStep(
+      text: '''Now improve central piece activity and challenge Black's structure.
+
+  👉 Jump your knight from f3 to d4.''',
+      expectedMove: 'f3d4',
+        hintText:
+        'Central knights create threats in every direction and support future pawn breaks.',
+        successMessage:
+        '🔥 Great! Nd4 centralizes a key piece and increases control over important squares. Plan first, then strike.',
+      ),
+      TutorialStep(
+        text: '''Lesson complete! Middlegame planning checklist:
+      • Improve your worst piece first
+      • Play for open files and diagonals
+      • Use pawn breaks to change the position
+      • Only attack after your pieces are coordinated
+
+      🎓 Strong plans beat random tactics over time.''',
+        isCompletion: true,
+      ),
+    ],
+  ),
+
+  // ═══════════════════════════════════════════
   // WEEK 11: The Opera Game
   // ═══════════════════════════════════════════
   TutorialLesson(
@@ -698,7 +743,7 @@ final List<TutorialLesson> tutorialLessons = [
             'Paul Morphy is playing White. Black\'s king is stuck in the center. All of White\'s pieces are developed and attacking perfectly.\n\nMorphy finds a spectacular queen sacrifice to force checkmate.\n\n👉 Sacrifice the queen to draw the knight away from defending d8: Move your Queen to b8.',
         expectedMove: 'b3b8',
         hintText:
-            'Move the queen to b8, capturing the invisible knight and checking the king.',
+          'Move the queen to b8, capturing the knight and checking the king.',
         successMessage:
             '💥 Qb8+!! The legendary sacrifice. Black is forced to capture with the knight (Nxb8).',
       ),

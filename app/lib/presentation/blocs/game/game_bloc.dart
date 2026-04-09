@@ -1605,6 +1605,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
           ));
           _achievementService.evaluateSpecialActions('tutorial');
         } else {
+          await _autoAdvanceTutorialBoardForStep(nextStep, emit);
           // Advance to the next interactive step
           emit(state.copyWith(
             tutorialStep: nextIdx,
@@ -2230,7 +2231,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
 
   Future<void> _onRequestHint(
       GameRequestHintEvent event, Emitter<GameState> emit) async {
-    // Puzzle Hint Logic — free in learning modes (no XP penalties)
+    // Puzzle Hint Logic — costs flat 10 XP (puzzle hint is from predefined data)
     if (state.mode == GameMode.puzzle && state.puzzle != null) {
       final moves = state.puzzle!.moves;
       if (state.puzzleStep < 0 || state.puzzleStep >= moves.length) {
@@ -2243,10 +2244,21 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       final currentMove = moves[state.puzzleStep];
       if (currentMove.isOpponentMove) return;
 
+      final newXp = state.xpGained - 10;
       emit(state.copyWith(
         tutorialMessage: "💡 Psst! Here's a little hint: ${currentMove.hint}",
         isPuzzleHintUsed: true,
+        xpGained: newXp,
       ));
+
+      final user = await _authRepository.getCurrentUser();
+      if (user != null) {
+        await _authRepository.updateXPProgress(
+          userId: user.id,
+          xpDelta: -10,
+          statUpdates: {},
+        );
+      }
       return;
     }
 
@@ -2662,6 +2674,101 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     final next = [...history, source];
     if (next.length <= maxEntries) return next;
     return next.sublist(next.length - maxEntries);
+  }
+
+  Future<void> _autoAdvanceTutorialBoardForStep(
+      TutorialStep nextStep, Emitter<GameState> emit) async {
+    // Many lessons describe an implied opponent reply between white moves.
+    // If next expected move is not currently playable, auto-play one lightweight
+    // legal reply to keep board state aligned with lesson instructions.
+    if (nextStep.expectedMove == null || nextStep.expectedMove!.isEmpty) {
+      return;
+    }
+
+    for (int i = 0; i < 2; i++) {
+      if (_isExpectedTutorialMovePlayableNow(nextStep)) {
+        return;
+      }
+
+      final legal = _engine.allLegalMoves();
+      if (legal.isEmpty) return;
+
+      final reply = _pickTutorialAutoReply(legal);
+      final applied = _engine.makeMove(reply);
+      if (!applied) return;
+
+      final captured = _collectCaptured();
+      emit(state.copyWith(
+        board: _engine.board,
+        currentTurn: _engine.currentTurn,
+        moveHistory: _engine.moveHistory,
+        status: _engine.status,
+        result: _engine.result,
+        currentFEN: _engine.toFEN(),
+        capturedWhite: captured.$1,
+        capturedBlack: captured.$2,
+        clearSelected: true,
+        clearHint: true,
+        clearPendingMove: true,
+      ));
+    }
+  }
+
+  bool _isExpectedTutorialMovePlayableNow(TutorialStep step) {
+    final expected = step.expectedMove;
+    if (expected == null || expected.isEmpty) return true;
+
+    Move parsed;
+    try {
+      parsed = Move.fromAlgebraic(expected);
+    } catch (_) {
+      return true;
+    }
+
+    final piece = _engine.pieceAt(parsed.from);
+    if (piece == null || piece.color != _engine.currentTurn) return false;
+
+    final legal = _engine.legalMovesFrom(parsed.from);
+    return legal.any((m) => m.to == parsed.to);
+  }
+
+  Move _pickTutorialAutoReply(List<Move> legalMoves) {
+    Move best = legalMoves.first;
+    var bestScore = -100000;
+
+    for (final move in legalMoves) {
+      var score = 0;
+      final piece = _engine.pieceAt(move.from);
+      if (piece == null) continue;
+
+      final capturedTarget = _engine.pieceAt(move.to);
+      if (capturedTarget != null) score += 30;
+
+      if (move.to.file >= 2 && move.to.file <= 5 && move.to.rank >= 2 && move.to.rank <= 5) {
+        score += 8;
+      }
+
+      if (piece.type == PieceType.knight || piece.type == PieceType.bishop) {
+        score += 16;
+      }
+
+      if (piece.type == PieceType.pawn) {
+        if (move.to.file == 3 || move.to.file == 4) {
+          score += 10;
+        }
+        final forward = piece.color == PieceColor.white
+            ? (move.to.rank - move.from.rank)
+            : (move.from.rank - move.to.rank);
+        if (forward > 0) score += 6;
+      }
+
+      if (score > bestScore) {
+        bestScore = score;
+        best = move;
+      }
+    }
+
+    return best;
   }
 
   Future<void> _finalizeGameAnalysis(Emitter<GameState> emit) async {

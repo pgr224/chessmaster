@@ -289,7 +289,7 @@ class _GameRoomScreenState extends State<GameRoomScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Online Milestones',
+                    'Live Notifications',
                     style: GoogleFonts.fredoka(
                       color: AppTheme.textPrimary,
                       fontSize: 12,

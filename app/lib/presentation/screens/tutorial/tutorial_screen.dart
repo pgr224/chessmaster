@@ -6,7 +6,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/router/app_router.dart';
 import '../../../data/models/tutorial_model.dart';
 
-enum TutorialDifficulty { beginner, intermediate, advanced }
+enum TutorialDifficulty { beginner, intermediate, advanced, curriculum }
 
 class TutorialScreen extends StatefulWidget {
   const TutorialScreen({super.key});
@@ -25,10 +25,22 @@ class _TutorialScreenState extends State<TutorialScreen> {
   }
 
   List<TutorialLesson> _getLessonsByDifficulty(TutorialDifficulty difficulty) {
-    final prefix = difficulty.name;
-    return tutorialLessons
-        .where((lesson) => lesson.id.startsWith(prefix))
-        .toList();
+    switch (difficulty) {
+      case TutorialDifficulty.beginner:
+      case TutorialDifficulty.intermediate:
+      case TutorialDifficulty.advanced:
+        final prefix = difficulty.name;
+        return tutorialLessons
+            .where((lesson) => lesson.id.startsWith(prefix))
+            .toList();
+      case TutorialDifficulty.curriculum:
+        return tutorialLessons
+            .where((lesson) =>
+                !lesson.id.startsWith('beginner') &&
+                !lesson.id.startsWith('intermediate') &&
+                !lesson.id.startsWith('advanced'))
+            .toList();
+    }
   }
 
   Color _getDifficultyColor(TutorialDifficulty difficulty) {
@@ -39,6 +51,8 @@ class _TutorialScreenState extends State<TutorialScreen> {
         return Colors.orange;
       case TutorialDifficulty.advanced:
         return AppTheme.accentRed;
+      case TutorialDifficulty.curriculum:
+        return AppTheme.skyBlue;
     }
   }
 
@@ -79,6 +93,9 @@ class _TutorialScreenState extends State<TutorialScreen> {
                       const SizedBox(width: 12),
                       _buildDifficultyTab(
                           TutorialDifficulty.advanced, '🔴 Advanced'),
+                      const SizedBox(width: 12),
+                      _buildDifficultyTab(
+                          TutorialDifficulty.curriculum, '📘 Weekly Track'),
                     ],
                   ),
                 ),

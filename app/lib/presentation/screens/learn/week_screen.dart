@@ -351,7 +351,7 @@ final List<WeekDetail> weekDetails = [
           'r1bq1rk1/pp2bppp/2n1pn2/3p4/3P4/2N1PN2/PPB2PPP/R1BQ1RK1 w - - 0 9',
           'Typical QGD middlegame'),
     ],
-    tutorialId: 'advanced2',
+    tutorialId: 'strategy_middlegame',
     resources: [
       _ExtLink('Chess.com Annotated Games', 'https://www.chess.com/games'),
       _ExtLink('Lichess Study Library', 'https://lichess.org/study'),
@@ -769,8 +769,9 @@ class _WeekScreenState extends State<WeekScreen> {
         ..._week.resources.map((r) => GestureDetector(
               onTap: () async {
                 final uri = Uri.parse(r.url);
-                if (await canLaunchUrl(uri))
+                if (await canLaunchUrl(uri)) {
                   await launchUrl(uri, mode: LaunchMode.externalApplication);
+                }
               },
               child: Container(
                 margin: const EdgeInsets.only(bottom: 8),
