@@ -753,29 +753,32 @@ void showEditProfileModal(BuildContext context, UserModel user) {
                         final picker = ImagePicker();
                         final XFile? image = await picker.pickImage(
                             source: ImageSource.gallery, imageQuality: 85);
-                  if (image == null) return;
+                        if (image == null) return;
 
-                  final croppedFile = await ImageCropper().cropImage(
-                    sourcePath: image.path,
-                    aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
-                    compressFormat: ImageCompressFormat.jpg,
-                    uiSettings: [
-                      AndroidUiSettings(
-                          toolbarTitle: 'Crop Avatar',
-                          toolbarColor: AppTheme.midnight,
-                          toolbarWidgetColor: Colors.white,
-                          lockAspectRatio: true),
-                      IOSUiSettings(
-                          title: 'Crop Avatar', aspectRatioLockEnabled: true),
-                    ],
-                  );
+                        final croppedFile = await ImageCropper().cropImage(
+                          sourcePath: image.path,
+                          aspectRatio:
+                              const CropAspectRatio(ratioX: 1, ratioY: 1),
+                          compressFormat: ImageCompressFormat.jpg,
+                          uiSettings: [
+                            AndroidUiSettings(
+                                toolbarTitle: 'Crop Avatar',
+                                toolbarColor: AppTheme.midnight,
+                                toolbarWidgetColor: Colors.white,
+                                lockAspectRatio: true),
+                            IOSUiSettings(
+                                title: 'Crop Avatar',
+                                aspectRatioLockEnabled: true),
+                          ],
+                        );
 
-                  if (croppedFile != null) {
-                    final bytes = await croppedFile.readAsBytes();
-                    setLocalState(
-                        () => localAvatarPreview = base64Encode(bytes));
-                  }
-                },
+                        if (croppedFile != null) {
+                          final bytes = await croppedFile.readAsBytes();
+                          setLocalState(
+                              () => localAvatarPreview = base64Encode(bytes));
+                        }
+                      }
+                    : null,
                 child: Stack(
                   alignment: Alignment.bottomRight,
                   children: [
@@ -834,7 +837,7 @@ void showEditProfileModal(BuildContext context, UserModel user) {
                         .read<AuthRepository>()
                         .checkUsernameAvailability(val);
 
-                    if (nameController.text == val && mounted) {
+                    if (nameController.text == val && context.mounted) {
                       setLocalState(() {
                         checkingName = false;
                         nameAvailable = result['available'] == true;

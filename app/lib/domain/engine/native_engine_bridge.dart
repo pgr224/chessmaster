@@ -10,6 +10,19 @@ void jsEngineInit(String mode, String difficulty) {
   NativeStockfish().init();
 }
 
+Future<Map<String, dynamic>> jsEngineAnalyzeStyle(
+  String fen,
+  List<String> recentMoves,
+) async {
+  final aggressive = recentMoves.any((m) => m.contains('+') || m.contains('#'));
+  final defensive = recentMoves.length > 5 && !aggressive;
+  return {
+    'style': aggressive ? 'aggressive' : defensive ? 'defensive' : 'positional',
+    'confidence': 0.6,
+    'suggested_personality': aggressive ? 'aggressive' : 'defensive',
+  };
+}
+
 Future<Map<String, dynamic>?> jsEngineGetBestMove(String fen,
     {int? movetime}) async {
   if (_currentDifficulty == 'aiMode') {

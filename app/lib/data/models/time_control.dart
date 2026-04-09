@@ -23,6 +23,22 @@ class TimeControlPreset {
 
   static const List<TimeControlPreset> all = [
     TimeControlPreset(
+      value: '1/4+0',
+      label: 'Ultra-Bullet',
+      description: 'The fastest chess possible! 15 seconds per side.',
+      category: TimeControlCategory.bullet,
+      icon: Icons.electric_bolt_rounded,
+      color: Colors.deepPurpleAccent,
+    ),
+    TimeControlPreset(
+      value: '1/2+0',
+      label: 'Hyper-Bullet',
+      description: 'Blink and you miss it! 30 seconds per side.',
+      category: TimeControlCategory.bullet,
+      icon: Icons.speed_rounded,
+      color: Colors.pinkAccent,
+    ),
+    TimeControlPreset(
       value: '1+0',
       label: 'Bullet',
       description: 'Ultra-fast games with 1 minute per side.',
@@ -117,6 +133,22 @@ class TimeControlPreset {
       category: TimeControlCategory.classical,
       icon: Icons.account_balance_rounded,
       color: Colors.green,
+    ),
+    TimeControlPreset(
+      value: '30+20',
+      label: 'Classical',
+      description: 'Long classical games with significant increment.',
+      category: TimeControlCategory.classical,
+      icon: Icons.history_edu_rounded,
+      color: Colors.teal,
+    ),
+    TimeControlPreset(
+      value: '90+30',
+      label: 'Tournament',
+      description: 'FIDE-style tournament time control.',
+      category: TimeControlCategory.classical,
+      icon: Icons.emoji_events_rounded,
+      color: Colors.indigo,
     ),
   ];
 

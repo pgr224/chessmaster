@@ -695,6 +695,45 @@ final List<Achievement> allAchievements = [
       icon: '🌟',
       points: 200,
       category: AchievementCategory.special),
+  // ── NEW ENGAGING BADGES (5) ──
+  const Achievement(
+      id: 'daily_warrior',
+      title: 'Daily Warrior',
+      description: 'Play 5 multiplayer games in a single day.',
+      icon: '🗓️',
+      points: 50,
+      category: AchievementCategory.social,
+      requiredCount: 5),
+  const Achievement(
+      id: 'gg_champion',
+      title: 'GG Champion',
+      description: 'Send "Good Game" or a friendly chat 10 times.',
+      icon: '🤝',
+      points: 30,
+      category: AchievementCategory.social,
+      requiredCount: 10),
+  const Achievement(
+      id: 'bounty_hunter',
+      title: 'Bounty Hunter',
+      description: 'Capture the opponent\'s Queen in 5 different multiplayer games.',
+      icon: '🎯',
+      points: 60,
+      category: AchievementCategory.combat,
+      requiredCount: 5),
+  const Achievement(
+      id: 'speed_demon_mp',
+      title: 'Speed Demon',
+      description: 'Win a Bullet game in under 2 minutes.',
+      icon: '⚡',
+      points: 45,
+      category: AchievementCategory.speed),
+  const Achievement(
+      id: 'tournament_star',
+      title: 'Tournament Star',
+      description: 'Participate in your first online tournament.',
+      icon: '✨',
+      points: 25,
+      category: AchievementCategory.special),
 ];
 
 // Helper to get achievements by category

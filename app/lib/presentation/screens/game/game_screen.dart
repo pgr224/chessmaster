@@ -164,13 +164,17 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             if (mpState.status == MultiplayerStatus.inGame) {
               _didShowRules = true;
               WidgetsBinding.instance.addPostFrameCallback((_) {
-                showDialog(
-                  context: context,
-                  builder: (ctx) => GameRulesDialog(
-                    timeControl: mpState.timeControl ?? '30+0',
-                    mode: 'Multiplayer',
-                  ),
-                );
+                // Check if dialog is already showing to avoid double overlay
+                if (ModalRoute.of(context)?.isCurrent ?? false) {
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false, // Force interaction with the "LET'S PLAY" button
+                    builder: (ctx) => GameRulesDialog(
+                      timeControl: mpState.timeControl ?? '30+0',
+                      mode: 'Multiplayer',
+                    ),
+                  );
+                }
               });
             }
           }
@@ -235,13 +239,17 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                       _buildConfirmMoveOverlay(state),
                     if (_showMoves) _buildMoveHistoryOverlay(state),
                     if (state.isPuzzleRush) _buildPuzzleRushOverlay(state),
-                    if (state.showMiniLesson && state.coachFeedback == null && state.mode != GameMode.multiplayer)
+                    if (state.showMiniLesson &&
+                        state.coachFeedback == null &&
+                        state.mode != GameMode.multiplayer &&
+                        state.mode != GameMode.twoPlayer)
                       _buildMiniLessonOverlay(context, state),
                     // Only show floating chat on mobile/compact, wide layout has sidebar chat
                     // Universal floating chat window (all layouts)
                     if (state.mode == GameMode.multiplayer)
                       _buildFloatingChat(context),
-                    if (state.puzzleExplanation != null)
+                    if (state.puzzleExplanation != null &&
+                        state.mode == GameMode.puzzle)
                       _buildBrainExplainer(state),
                     if (state.engineError != null)
                       _buildEngineErrorOverlay(context, state),

@@ -297,6 +297,10 @@ class GameState extends Equatable {
   // Undo penalty source square for bubble animation
   final Square? lastUndoPenaltySquare;
 
+  final int gameDurationSeconds;
+  final bool isTournamentGame;
+  final String? tournamentId;
+
   const GameState({
     required this.board,
     required this.currentTurn,
@@ -378,6 +382,9 @@ class GameState extends Equatable {
     this.evalHistory = const [],
     this.eloChange = 0,
     this.lastUndoPenaltySquare,
+    this.gameDurationSeconds = 0,
+    this.isTournamentGame = false,
+    this.tournamentId,
   });
 
   bool get isGameOver =>
@@ -493,6 +500,9 @@ class GameState extends Equatable {
     int? eloChange,
     Square? lastUndoPenaltySquare,
     bool clearUndoPenalty = false,
+    int? gameDurationSeconds,
+    bool? isTournamentGame,
+    String? tournamentId,
   }) {
     return GameState(
       board: board ?? this.board,
@@ -586,6 +596,9 @@ class GameState extends Equatable {
       lastUndoPenaltySquare: clearUndoPenalty
           ? null
           : (lastUndoPenaltySquare ?? this.lastUndoPenaltySquare),
+      gameDurationSeconds: gameDurationSeconds ?? this.gameDurationSeconds,
+      isTournamentGame: isTournamentGame ?? this.isTournamentGame,
+      tournamentId: tournamentId ?? this.tournamentId,
     );
   }
 
@@ -653,6 +666,9 @@ class GameState extends Equatable {
         evalHistory,
         eloChange,
         lastUndoPenaltySquare,
+        gameDurationSeconds,
+        isTournamentGame,
+        tournamentId,
       ];
 }
 

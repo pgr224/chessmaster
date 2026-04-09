@@ -1,38 +1,43 @@
 /// XP Rules for all game modes
 /// Aligned with what is displayed in profile settings
 
-const xpRules = {
+const Map<String, Map<String, int>> xpRules = {
   // Multiplayer vs other players
-  multiplayer: {
-    win: 100,
-    draw: 30,
-    loss: -20,
+  'multiplayer': {
+    'win': 100,
+    'draw': 30,
+    'loss': -20,
   },
 
   // Tournament
-  tournament: {
-    win: 100,
-    draw: 30,
-    loss: -20,
-    tournamentWinBonus: 200,
+  'tournament': {
+    'win': 100,
+    'draw': 30,
+    'loss': -20,
+    'tournamentWinBonus': 200,
   },
 
   // Penalties
-  penalties: {
-    takeback: -25,
-    hintUsage: -10,
+  'penalties': {
+    'takeback': -25,
+    'hintUsage': -10,
   },
 };
 
 /// Calculate XP for a multiplayer game result
 int calculateMultiplayerXP(String result) {
+  final rules = xpRules['multiplayer'];
+  if (rules == null) {
+    return 0;
+  }
+
   switch (result) {
     case 'win':
-      return xpRules['multiplayer']['win'] as int;
+      return rules['win'] ?? 0;
     case 'draw':
-      return xpRules['multiplayer']['draw'] as int;
+      return rules['draw'] ?? 0;
     case 'loss':
-      return xpRules['multiplayer']['loss'] as int;
+      return rules['loss'] ?? 0;
     default:
       return 0;
   }

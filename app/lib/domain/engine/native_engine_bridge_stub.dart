@@ -3,6 +3,15 @@
 library;
 
 void jsEngineInit(String mode, String difficulty) {}
+Future<Map<String, dynamic>> jsEngineAnalyzeStyle(
+    String fen,
+    List<String> recentMoves,
+) async =>
+        {
+            'style': 'unknown',
+            'confidence': 0.0,
+            'suggested_personality': 'defensive',
+        };
 Future<Map<String, dynamic>?> jsEngineGetBestMove(String fen,
         {int? movetime}) async =>
     null;

@@ -61,7 +61,10 @@ Future<void> init() async {
               // Manual cleanup to avoid dependencies
               await sl<SharedPreferences>().remove('auth_token');
               await sl<SharedPreferences>().remove('user_data');
-              if (AppRouter.router.state.matchedLocation != '/onboarding') {
+              
+              final isResumingMatch = AppRouter.router.state.matchedLocation == '/game';
+              
+              if (!isResumingMatch && AppRouter.router.state.matchedLocation != '/onboarding') {
                 AppRouter.router.go('/onboarding?reason=session_expired');
               }
             } finally {

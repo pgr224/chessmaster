@@ -212,6 +212,17 @@ class AchievementService {
         unlockAchievement('queen_sacrifice');
       }
     }
+    
+    // Bounty Hunter (Capture Opposition Queen in Multiplayer)
+    if (state.mode == GameMode.multiplayer) {
+      final capturedOppPieces = state.playerColor == PieceColor.white ? state.capturedBlack : state.capturedWhite;
+      if (capturedOppPieces.any((p) => p.type == PieceType.queen)) {
+         int queensCount = _prefs.getInt('mp_queens_captured') ?? 0;
+         queensCount++;
+         _prefs.setInt('mp_queens_captured', queensCount);
+         updateProgress('bounty_hunter', queensCount);
+      }
+    }
 
     // Combat
     updateProgress('win_10', stats.wins);
@@ -299,11 +310,29 @@ class AchievementService {
     }
     updateProgress('mp_win_10', stats.multiplayerWins);
     updateProgress('mp_win_50', stats.multiplayerWins);
-    if (stats.multiplayerWins >= 10) {
-      unlockAchievement('mp_win_10');
-    }
     if (stats.multiplayerWins >= 50) {
       unlockAchievement('mp_win_50');
+    }
+
+    // Daily Warrior (Play 3 multiplayer games in one day)
+    if (state.mode == GameMode.multiplayer) {
+      final lastDate = _prefs.getString('last_mp_date');
+      final todayStr = DateTime.now().toIso8601String().split('T')[0];
+      int dailyMpCount = _prefs.getInt('daily_mp_count') ?? 0;
+      if (lastDate != todayStr) {
+        dailyMpCount = 1;
+      } else {
+        dailyMpCount++;
+      }
+      _prefs.setString('last_mp_date', todayStr);
+      _prefs.setInt('daily_mp_count', dailyMpCount);
+      updateProgress('daily_warrior', dailyMpCount);
+    }
+    
+    // Speed Demon (Win MP in under 2 minutes)
+    // Note: We'll assume the evaluation happens if the game lasted < 120 seconds
+    if (state.mode == GameMode.multiplayer && isPlayerWin && state.gameDurationSeconds > 0 && state.gameDurationSeconds < 120) {
+       unlockAchievement('speed_demon_mp');
     }
 
     // Mastery
@@ -337,6 +366,14 @@ class AchievementService {
     if (state.isPuzzleRush) {
       unlockAchievement('puzzle_rush_survive');
     }
+    
+    // Tournament Star
+    if (state.mode == GameMode.multiplayer && state.isTournamentGame) {
+       int tournamentGames = _prefs.getInt('tournament_games_played') ?? 0;
+       tournamentGames++;
+       _prefs.setInt('tournament_games_played', tournamentGames);
+       updateProgress('tournament_star', tournamentGames);
+    }
   }
 
   bool _isPlayerMove(int moveIndex, PieceColor? playerColor) {
@@ -356,6 +393,10 @@ class AchievementService {
       unlockAchievement('donate_xp');
     }
     if (action == 'chat') {
+      int chatCount = _prefs.getInt('chat_messages_sent') ?? 0;
+      chatCount++;
+      _prefs.setInt('chat_messages_sent', chatCount);
+      updateProgress('gg_champion', chatCount);
       unlockAchievement('chat_game');
     }
     if (action == 'puzzle_rush') {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:confetti/confetti.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -10,67 +11,105 @@ import '../../blocs/auth/auth_bloc.dart';
 import '../../blocs/tournament/tournament_bloc.dart';
 
 /// Full-page results screen shown after a tournament ends.
-class TournamentResultScreen extends StatelessWidget {
+class TournamentResultScreen extends StatefulWidget {
   final String tournamentId;
   const TournamentResultScreen({super.key, required this.tournamentId});
+
+  @override
+  State<TournamentResultScreen> createState() => _TournamentResultScreenState();
+}
+
+class _TournamentResultScreenState extends State<TournamentResultScreen> {
+  late ConfettiController _confettiController;
+
+  @override
+  void initState() {
+    super.initState();
+    _confettiController =
+        ConfettiController(duration: const Duration(seconds: 10));
+    _confettiController.play();
+  }
+
+  @override
+  void dispose() {
+    _confettiController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<TournamentBloc, TournamentState>(
       builder: (context, ts) {
         final authState = context.watch<AuthBloc>().state;
-        final myId = authState is AuthAuthenticatedState
-            ? authState.user.id
-            : null;
+        final myId = authState is AuthAuthenticatedState ? authState.user.id : null;
 
         final players = ts.activeTournament?.players ?? [];
-        final winner =
-            players.isNotEmpty ? players.first : null;
+        final winner = players.isNotEmpty ? players.first : null;
         final iWon = winner?.id == myId;
 
         return Scaffold(
           backgroundColor: AppTheme.midnight,
-          body: Container(
-            decoration:
-                const BoxDecoration(gradient: AppTheme.backgroundGradient),
-            child: SafeArea(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 20),
-                    _buildTrophy(iWon),
-                    const SizedBox(height: 16),
-                    Text(
-                      iWon ? '🎉 You Won the Tournament!' : '🥈 Tournament Complete',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.fredoka(
-                        color: iWon
-                            ? AppTheme.goldPrimary
-                            : AppTheme.textPrimary,
-                        fontSize: 26,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ).animate().fadeIn().slideY(begin: 0.2),
-                    if (winner != null && !iWon) ...[
-                      const SizedBox(height: 6),
-                      Text(
-                        '${winner.username} wins this tournament 👑',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.baloo2(
-                            color: AppTheme.textSecondary, fontSize: 14),
-                      ),
-                    ],
-                    const SizedBox(height: 28),
-                    _buildXpCard(ts, myId),
-                    const SizedBox(height: 16),
-                    _buildStandings(players, myId),
-                    const SizedBox(height: 32),
-                    _buildActions(context),
-                  ],
+          body: Stack(
+            children: [
+              Container(
+                decoration:
+                    const BoxDecoration(gradient: AppTheme.backgroundGradient),
+                child: SafeArea(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 20),
+                        _buildTrophy(iWon),
+                        const SizedBox(height: 16),
+                        Text(
+                          iWon
+                              ? '🥇 WORLD CHAMPION'
+                              : '🎗️ TOURNAMENT FINISHED',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.outfit(
+                            color: iWon ? AppTheme.goldPrimary : AppTheme.textPrimary,
+                            fontSize: 30,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.2,
+                          ),
+                        ).animate().fadeIn().slideY(begin: 0.2),
+                        if (winner != null && !iWon) ...[
+                          const SizedBox(height: 6),
+                          Text(
+                            '${winner.username} took the 1st Place 🏆',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.baloo2(
+                                color: AppTheme.textSecondary, fontSize: 16),
+                          ),
+                        ],
+                        const SizedBox(height: 28),
+                        _buildXpCard(ts, myId),
+                        const SizedBox(height: 16),
+                        _buildStandings(players, myId),
+                        const SizedBox(height: 32),
+                        _buildActions(context),
+                      ],
+                    ),
+                  ),
                 ),
               ),
-            ),
+              Align(
+                alignment: Alignment.topCenter,
+                child: ConfettiWidget(
+                  confettiController: _confettiController,
+                  blastDirectionality: BlastDirectionality.explosive,
+                  colors: const [
+                    AppTheme.goldPrimary,
+                    AppTheme.accentCyan,
+                    AppTheme.accentPurple,
+                    AppTheme.accentOrange,
+                  ],
+                  numberOfParticles: 50,
+                  gravity: 0.1,
+                ),
+              ),
+            ],
           ),
         );
       },
@@ -131,11 +170,11 @@ class TournamentResultScreen extends StatelessWidget {
     return Column(
       children: [
         Text(value,
-            style: GoogleFonts.fredoka(
-                color: color, fontSize: 18, fontWeight: FontWeight.w700)),
+            style: GoogleFonts.outfit(
+                color: color, fontSize: 20, fontWeight: FontWeight.w800)),
         Text(label,
             style: GoogleFonts.baloo2(
-                color: AppTheme.textMuted, fontSize: 11)),
+                color: AppTheme.textMuted, fontSize: 12)),
       ],
     );
   }

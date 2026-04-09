@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' as UI;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -79,15 +80,24 @@ class _TournamentLobbyScreenState extends State<TournamentLobbyScreen> {
               },
             ),
             title: Text(
-              '🏆 TOURNAMENT HQ',
-              style: GoogleFonts.fredoka(
+              'WORLD CHAMPIONSHIP HQ',
+              style: GoogleFonts.outfit(
                 color: AppTheme.goldPrimary,
                 fontSize: 22,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.8,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.5,
+                shadows: [
+                  Shadow(color: AppTheme.goldPrimary.withValues(alpha: 0.5), blurRadius: 10),
+                ],
               ),
             ),
             centerTitle: true,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.info_outline, color: AppTheme.goldPrimary),
+                onPressed: () => _showTournamentRules(context),
+              ),
+            ],
           ),
           body: Container(
             decoration: const BoxDecoration(gradient: AppTheme.backgroundGradient),
@@ -204,6 +214,53 @@ class _TournamentLobbyScreenState extends State<TournamentLobbyScreen> {
     setState(() {});
   }
 
+  void _showTournamentRules(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.navyCard,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Text('TOURNAMENT RULES',
+            style: GoogleFonts.outfit(
+                color: AppTheme.goldPrimary, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _ruleBullet('Standard Fischer Timing (Synced)'),
+            _ruleBullet('Double-Round Swiss Pairing algorithm'),
+            _ruleBullet('Maximum 2 undos allowed in first 5 seconds'),
+            _ruleBullet('Disconnecting for >2 mins results in forfeit'),
+            _ruleBullet('Top 3 podium spots earn unique badges'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('GOT IT',
+                style: GoogleFonts.outfit(color: AppTheme.accentCyan)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _ruleBullet(String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          const Icon(Icons.check_circle_outline,
+              color: AppTheme.goldPrimary, size: 16),
+          const SizedBox(width: 8),
+          Expanded(
+              child: Text(text,
+                  style: GoogleFonts.baloo2(color: AppTheme.textPrimary))),
+        ],
+      ),
+    );
+  }
+
   Widget _buildStatusBanner(TournamentState ts) {
     final rank = _myRank(ts.activeTournament?.players ?? const <TournamentPlayer>[]);
     final score = _myPlayer(ts.activeTournament?.players ?? const <TournamentPlayer>[])?.score ?? 0;
@@ -218,19 +275,58 @@ class _TournamentLobbyScreenState extends State<TournamentLobbyScreen> {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 18),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withValues(alpha: 0.42)),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(color: color.withValues(alpha: 0.2), blurRadius: 20),
+        ],
       ),
-      child: Text(
-        text,
-        textAlign: TextAlign.center,
-        style: GoogleFonts.fredoka(
-          color: color,
-          fontSize: 15,
-          fontWeight: FontWeight.w700,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: BackdropFilter(
+          filter: UI.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  color.withValues(alpha: 0.15),
+                  color.withValues(alpha: 0.05),
+                ],
+              ),
+              border: Border.all(color: color.withValues(alpha: 0.4), width: 1.5),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(color == AppTheme.accentGreen ? Icons.play_circle_fill : Icons.timer, color: color, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      ts.status.name.toUpperCase(),
+                      style: GoogleFonts.outfit(
+                        color: color,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 2,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  text,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.outfit(
+                    color: AppTheme.textPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -902,7 +998,7 @@ class _TournamentLobbyScreenState extends State<TournamentLobbyScreen> {
             height: 46,
             alignment: Alignment.bottomCenter,
             child: Container(
-              height: math.max(6, 40 * bars[i]),
+              height: math.max(6.0, 40.0 * bars[i]).toDouble(),
               decoration: BoxDecoration(
                 color: i == 0
                     ? AppTheme.goldPrimary
