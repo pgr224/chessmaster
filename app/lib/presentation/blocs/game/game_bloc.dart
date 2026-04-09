@@ -244,8 +244,11 @@ class GameState extends Equatable {
 
   // Analytics & Rewards
   final double accuracy;
+  final double opponentAccuracy;
   final int mistakes;
+  final int opponentMistakes;
   final int blunders;
+  final int opponentBlunders;
   final int missedWins;
   final int bestMoves;
   final int xpGained;
@@ -345,9 +348,12 @@ class GameState extends Equatable {
     this.confirmMoves = false,
     this.autoQueen = false,
     this.pendingMove,
-    this.accuracy = 0.0,
+    this.accuracy = 100.0,
+    this.opponentAccuracy = 100.0,
     this.mistakes = 0,
+    this.opponentMistakes = 0,
     this.blunders = 0,
+    this.opponentBlunders = 0,
     this.missedWins = 0,
     this.bestMoves = 0,
     this.xpGained = 0,
@@ -449,8 +455,11 @@ class GameState extends Equatable {
     bool? autoQueen,
     Move? pendingMove,
     double? accuracy,
+    double? opponentAccuracy,
     int? mistakes,
+    int? opponentMistakes,
     int? blunders,
+    int? opponentBlunders,
     int? missedWins,
     int? bestMoves,
     int? xpGained,
@@ -552,8 +561,11 @@ class GameState extends Equatable {
       autoQueen: autoQueen ?? this.autoQueen,
       pendingMove: clearPendingMove ? null : (pendingMove ?? this.pendingMove),
       accuracy: accuracy ?? this.accuracy,
+      opponentAccuracy: opponentAccuracy ?? this.opponentAccuracy,
       mistakes: mistakes ?? this.mistakes,
+      opponentMistakes: opponentMistakes ?? this.opponentMistakes,
       blunders: blunders ?? this.blunders,
+      opponentBlunders: opponentBlunders ?? this.opponentBlunders,
       missedWins: missedWins ?? this.missedWins,
       bestMoves: bestMoves ?? this.bestMoves,
       xpGained: xpGained ?? this.xpGained,
@@ -737,7 +749,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     on<GameAIRequestEvent>(_onAIRequest);
     on<GameDismissErrorEvent>(
         (e, emit) => emit(state.copyWith(clearEngineError: true)));
-    on<MpGameOverSyncEvent>((e, emit) {
+    on<MpGameOverSyncEvent>((e, emit) async {
       _stopClock();
       final status =
           e.result == GameResult.draw ? GameStatus.draw : GameStatus.checkmate;
@@ -748,6 +760,9 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         xpGained: e.xpGained,
         clockRunning: false,
       ));
+      
+      // Perform final analysis
+      await _finalizeGameAnalysis();
     });
     on<GameClockTickEvent>(_onClockTick);
     on<GameUpdatePersonalityEvent>(_onUpdatePersonality);
@@ -1660,6 +1675,9 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     if (_gameId != null) {
       if (state.isGameOver) {
         _gameRepository.setLastActiveGameId(null);
+        
+        // Trigger final accuracy analysis for comparison
+        _finalizeGameAnalysis();
 
         // Scale Practice Difficulty
         if (state.mode == GameMode.practice) {
@@ -2602,5 +2620,49 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     final next = [...history, source];
     if (next.length <= maxEntries) return next;
     return next.sublist(next.length - maxEntries);
+  }
+
+  Future<void> _finalizeGameAnalysis() async {
+    if (state.moveHistory.isEmpty) return;
+
+    // Only perform deep analysis for finished games
+    if (!state.isGameOver) return;
+
+    try {
+      final analysis = await _coachController.analyzeFullGame(
+        moveHistory: state.moveHistory,
+        initialFEN: state.puzzle?.initialFEN ??
+            'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+      );
+
+      final isWhite =
+          state.playerColor == PieceColor.white || state.playerColor == null;
+
+      final playerAccuracy =
+          isWhite ? analysis['whiteAccuracy'] : analysis['blackAccuracy'];
+      final opponentAccuracy =
+          isWhite ? analysis['blackAccuracy'] : analysis['whiteAccuracy'];
+
+      final playerMistakes =
+          isWhite ? analysis['whiteMistakes'] : analysis['blackMistakes'];
+      final opponentMistakes =
+          isWhite ? analysis['blackMistakes'] : analysis['whiteMistakes'];
+
+      final playerBlunders =
+          isWhite ? analysis['whiteBlunders'] : analysis['blackBlunders'];
+      final opponentBlunders =
+          isWhite ? analysis['blackBlunders'] : analysis['whiteBlunders'];
+
+      emit(state.copyWith(
+        accuracy: playerAccuracy,
+        opponentAccuracy: opponentAccuracy,
+        mistakes: playerMistakes,
+        opponentMistakes: opponentMistakes,
+        blunders: playerBlunders,
+        opponentBlunders: opponentBlunders,
+      ));
+    } catch (e) {
+      debugPrint('[Game Analysis Error] $e');
+    }
   }
 }

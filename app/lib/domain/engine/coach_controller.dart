@@ -634,9 +634,9 @@ class CoachController {
 
 
   // ═══════════════════════════════════════════
-  // POST-GAME ANALYSIS
-
+  // POST-GAME ANALYSIS — Reward & Feedback Summary
   // ═══════════════════════════════════════════
+
   PostGameAnalysis buildPostGameAnalysis({
     required double accuracy,
     required int totalMoves,
@@ -686,6 +686,69 @@ class CoachController {
       overallMessage: overallMessage,
       improvementTip: improvementTip,
     );
+  }
+
+  /// Performs a full post-game analysis of a move history.
+  /// Returns a summary containing accuracies and move classifications for both colors.
+  Future<Map<String, dynamic>> analyzeFullGame({
+    required List<Move> moveHistory,
+    String initialFEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+  }) async {
+    final analysisEngine = ChessEngine.fromFEN(initialFEN);
+    
+    int whiteTotalCpLoss = 0;
+    int whiteMoves = 0;
+    int whiteMistakes = 0;
+    int whiteBlunders = 0;
+    
+    int blackTotalCpLoss = 0;
+    int blackMoves = 0;
+    int blackMistakes = 0;
+    int blackBlunders = 0;
+
+    for (final move in moveHistory) {
+      final color = analysisEngine.currentTurn;
+      final fenBefore = analysisEngine.toFEN();
+      final engineBefore = ChessEngine.fromFEN(fenBefore);
+      
+      // Get best move score
+      final topMoves = await AIEngine.getTopMoves(engineBefore, AIDifficulty.advanced, count: 1);
+      final bestScore = topMoves.isNotEmpty ? topMoves[0].$2 : 0;
+      
+      analysisEngine.makeMove(move);
+      final fenAfter = analysisEngine.toFEN();
+      final scoreAfter = -(await AIEngine.evaluatePosition(ChessEngine.fromFEN(fenAfter)));
+      
+      final cpLoss = math.max(0, bestScore - scoreAfter);
+      
+      if (color == PieceColor.white) {
+        whiteTotalCpLoss += cpLoss;
+        whiteMoves++;
+        if (cpLoss >= 300) whiteBlunders++;
+        else if (cpLoss >= 100) whiteMistakes++;
+      } else {
+        blackTotalCpLoss += cpLoss;
+        blackMoves++;
+        if (cpLoss >= 300) blackBlunders++;
+        else if (cpLoss >= 100) blackMistakes++;
+      }
+    }
+
+    double calculateAccuracy(int totalLoss, int count) {
+      if (count == 0) return 100.0;
+      final avgLoss = totalLoss / count;
+      // Formula: accuracy = 100 * exp(-0.004 * avg_loss)
+      return (100.0 * math.exp(-0.003 * avgLoss)).clamp(0.0, 100.0);
+    }
+
+    return {
+      'whiteAccuracy': calculateAccuracy(whiteTotalCpLoss, whiteMoves),
+      'blackAccuracy': calculateAccuracy(blackTotalCpLoss, blackMoves),
+      'whiteMistakes': whiteMistakes,
+      'whiteBlunders': whiteBlunders,
+      'blackMistakes': blackMistakes,
+      'blackBlunders': blackBlunders,
+    };
   }
 
   // ═══════════════════════════════════════════

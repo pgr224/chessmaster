@@ -21,8 +21,11 @@ class GameOverOverlay extends StatefulWidget {
   final int? moveCount;
   final GameMode? gameMode;
   final double accuracy;
+  final double opponentAccuracy;
   final int mistakes;
+  final int opponentMistakes;
   final int blunders;
+  final int opponentBlunders;
   final int xpGained;
   final int xpReward;
   final int xpPenalty;
@@ -45,8 +48,11 @@ class GameOverOverlay extends StatefulWidget {
     this.moveCount,
     this.gameMode,
     this.accuracy = 0.0,
+    this.opponentAccuracy = 0.0,
     this.mistakes = 0,
+    this.opponentMistakes = 0,
     this.blunders = 0,
+    this.opponentBlunders = 0,
     this.xpGained = 0,
     this.xpReward = 0,
     this.xpPenalty = 0,
@@ -271,17 +277,21 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
-                            _statItem(
+                            _dualStatItem(
                                 'Accuracy',
-                                '${widget.accuracy.toStringAsFixed(1)}%',
+                                '${widget.accuracy.round()}%',
+                                '${widget.opponentAccuracy.round()}%',
                                 AppTheme.accentCyan),
-                            _statItem('Mistakes', '${widget.mistakes}',
+                            _dualStatItem(
+                                'Mistakes',
+                                '${widget.mistakes}',
+                                '${widget.opponentMistakes}',
                                 AppTheme.lavender),
-                            _statItem('Blunders', '${widget.blunders}',
+                            _dualStatItem(
+                                'Blunders',
+                                '${widget.blunders}',
+                                '${widget.opponentBlunders}',
                                 AppTheme.accentRed),
-                            if (widget.moveCount != null)
-                              _statItem('Moves', '${widget.moveCount}',
-                                  AppTheme.skyBlue),
                           ],
                         ),
                         if (widget.analysisMessage != null) ...[
@@ -597,6 +607,44 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
           value,
           style: GoogleFonts.fredoka(
               color: color, fontSize: 20, fontWeight: FontWeight.w800),
+        ),
+        Text(
+          label,
+          style: GoogleFonts.baloo2(
+              color: AppTheme.textMuted,
+              fontSize: 11,
+              fontWeight: FontWeight.w600),
+        ),
+      ],
+    );
+  }
+
+  Widget _dualStatItem(String label, String me, String them, Color color) {
+    return Column(
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              me,
+              style: GoogleFonts.fredoka(
+                  color: color, fontSize: 18, fontWeight: FontWeight.w800),
+            ),
+            Text(
+              ' vs ',
+              style: GoogleFonts.fredoka(
+                  color: AppTheme.textMuted,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600),
+            ),
+            Text(
+              them,
+              style: GoogleFonts.fredoka(
+                  color: color.withValues(alpha: 0.7),
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800),
+            ),
+          ],
         ),
         Text(
           label,
