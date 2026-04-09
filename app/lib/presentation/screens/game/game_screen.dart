@@ -247,7 +247,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                     // Only show floating chat on mobile/compact, wide layout has sidebar chat
                     // Universal floating chat window (all layouts)
                     if (state.mode == GameMode.multiplayer)
-                      _buildFloatingChat(context),
+                      _buildFloatingChat(context, constraints),
                     if (state.puzzleExplanation != null &&
                         state.mode == GameMode.puzzle)
                       _buildBrainExplainer(state),
@@ -813,9 +813,11 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildFloatingChat(BuildContext context) {
-    return LayoutBuilder(builder: (context, constraints) {
-      return BlocBuilder<MultiplayerBloc, MultiplayerState>(
+  Widget _buildFloatingChat(BuildContext context, BoxConstraints constraints) {
+    return Positioned(
+      left: _chatPosition.dx,
+      top: _chatPosition.dy,
+      child: BlocBuilder<MultiplayerBloc, MultiplayerState>(
         builder: (context, mpState) {
           final messages = mpState.chatMessages.where((msg) {
             // Keep messages sent within the last 2 minutes for bubble previews
@@ -823,22 +825,19 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             return age.inSeconds < 120;
           }).toList();
 
-          return Positioned(
-            left: _chatPosition.dx,
-            top: _chatPosition.dy,
-            child: GestureDetector(
-              onPanUpdate: (details) {
-                setState(() {
-                  _isChatDragging = true;
-                  // Clamp to screen boundaries
-                  double newX = _chatPosition.dx + details.delta.dx;
-                  double newY = _chatPosition.dy + details.delta.dy;
-                  newX = newX.clamp(0.0, constraints.maxWidth - 60);
-                  newY = newY.clamp(80.0, constraints.maxHeight - 200);
-                  _chatPosition = Offset(newX, newY);
-                });
-              },
-              onPanEnd: (_) => setState(() => _isChatDragging = false),
+          return GestureDetector(
+            onPanUpdate: (details) {
+              setState(() {
+                _isChatDragging = true;
+                // Clamp to screen boundaries
+                double newX = _chatPosition.dx + details.delta.dx;
+                double newY = _chatPosition.dy + details.delta.dy;
+                newX = newX.clamp(0.0, constraints.maxWidth - 60);
+                newY = newY.clamp(80.0, constraints.maxHeight - 200);
+                _chatPosition = Offset(newX, newY);
+              });
+            },
+            onPanEnd: (_) => setState(() => _isChatDragging = false),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
@@ -919,11 +918,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                       curve: Curves.easeInOut),
                 ],
               ),
-            ),
           );
         },
-      );
-    });
+      ),
+    );
   }
 
   void _showChatHistory(BuildContext context, List<ChatMessage> messages) {
