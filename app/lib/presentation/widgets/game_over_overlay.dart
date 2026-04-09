@@ -274,26 +274,45 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                     ),
                     child: Column(
                       children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: [
-                            _dualStatItem(
-                                'Accuracy',
-                                '${widget.accuracy.round()}%',
-                                '${widget.opponentAccuracy.round()}%',
-                                AppTheme.accentCyan),
-                            _dualStatItem(
-                                'Mistakes',
-                                '${widget.mistakes}',
-                                '${widget.opponentMistakes}',
-                                AppTheme.lavender),
-                            _dualStatItem(
-                                'Blunders',
-                                '${widget.blunders}',
-                                '${widget.opponentBlunders}',
-                                AppTheme.accentRed),
-                          ],
-                        ),
+                        if (widget.gameMode == GameMode.multiplayer) ...[
+                          _buildAccuracyBars(),
+                          const SizedBox(height: 12),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: [
+                              _dualStatItem(
+                                  'Mistakes',
+                                  '${widget.mistakes}',
+                                  '${widget.opponentMistakes}',
+                                  AppTheme.lavender),
+                              _dualStatItem(
+                                  'Blunders',
+                                  '${widget.blunders}',
+                                  '${widget.opponentBlunders}',
+                                  AppTheme.accentRed),
+                            ],
+                          ),
+                        ] else
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: [
+                              _dualStatItem(
+                                  'Accuracy',
+                                  '${widget.accuracy.round()}%',
+                                  '${widget.opponentAccuracy.round()}%',
+                                  AppTheme.accentCyan),
+                              _dualStatItem(
+                                  'Mistakes',
+                                  '${widget.mistakes}',
+                                  '${widget.opponentMistakes}',
+                                  AppTheme.lavender),
+                              _dualStatItem(
+                                  'Blunders',
+                                  '${widget.blunders}',
+                                  '${widget.opponentBlunders}',
+                                  AppTheme.accentRed),
+                            ],
+                          ),
                         if (widget.analysisMessage != null) ...[
                           const Divider(height: 20, color: AppTheme.textMuted),
                           Text(
@@ -600,25 +619,6 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
     );
   }
 
-  Widget _statItem(String label, String value, Color color) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: GoogleFonts.fredoka(
-              color: color, fontSize: 20, fontWeight: FontWeight.w800),
-        ),
-        Text(
-          label,
-          style: GoogleFonts.baloo2(
-              color: AppTheme.textMuted,
-              fontSize: 11,
-              fontWeight: FontWeight.w600),
-        ),
-      ],
-    );
-  }
-
   Widget _dualStatItem(String label, String me, String them, Color color) {
     return Column(
       children: [
@@ -652,6 +652,101 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
               color: AppTheme.textMuted,
               fontSize: 11,
               fontWeight: FontWeight.w600),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAccuracyBars() {
+    final myLabel = 'You';
+    final oppLabel = widget.opponentName?.trim().isNotEmpty == true
+        ? widget.opponentName!.trim()
+        : 'Opponent';
+
+    final myAcc = widget.accuracy.clamp(0.0, 100.0);
+    final oppAcc = widget.opponentAccuracy.clamp(0.0, 100.0);
+
+    final isTie = (myAcc - oppAcc).abs() < 0.05;
+    final myIsHigher = myAcc > oppAcc;
+
+    final myColor = isTie
+        ? AppTheme.accentCyan
+        : (myIsHigher ? AppTheme.accentGreen : AppTheme.accentRed);
+    final oppColor = isTie
+        ? AppTheme.accentCyan
+        : (!myIsHigher ? AppTheme.accentGreen : AppTheme.accentRed);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Accuracy Comparison',
+          style: GoogleFonts.fredoka(
+            color: AppTheme.textPrimary,
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 10),
+        _accuracyBarRow(
+          name: myLabel,
+          value: myAcc,
+          color: myColor,
+        ),
+        const SizedBox(height: 8),
+        _accuracyBarRow(
+          name: oppLabel,
+          value: oppAcc,
+          color: oppColor,
+        ),
+      ],
+    );
+  }
+
+  Widget _accuracyBarRow({
+    required String name,
+    required double value,
+    required Color color,
+  }) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 86,
+          child: Text(
+            name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.fredoka(
+              color: AppTheme.textSecondary,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              value: (value / 100.0).clamp(0.0, 1.0),
+              minHeight: 10,
+              backgroundColor: AppTheme.textMuted.withValues(alpha: 0.24),
+              valueColor: AlwaysStoppedAnimation<Color>(color),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        SizedBox(
+          width: 50,
+          child: Text(
+            '${value.toStringAsFixed(1)}%',
+            textAlign: TextAlign.right,
+            style: GoogleFonts.fredoka(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
         ),
       ],
     );

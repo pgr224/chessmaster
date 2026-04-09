@@ -16,6 +16,7 @@ import '../../../data/models/tutorial_model.dart';
 import '../../../data/models/puzzle_model.dart';
 import '../../../data/services/audio_service.dart';
 import '../../../data/services/elo_service.dart';
+import '../../../data/models/xp_rules.dart';
 import '../../../data/repositories/auth_repository.dart';
 import '../../../data/repositories/puzzle_repository.dart';
 import '../../../data/services/achievement_service.dart';
@@ -187,6 +188,10 @@ class MpGameOverSyncEvent extends GameEvent {
   const MpGameOverSyncEvent(this.result, this.reason, this.xpGained);
   @override
   List<Object?> get props => [result, reason, xpGained];
+}
+
+class GameFinalizePostGameAnalysisEvent extends GameEvent {
+  const GameFinalizePostGameAnalysisEvent();
 }
 
 class GameAIRequestEvent extends GameEvent {}
@@ -760,9 +765,12 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         xpGained: e.xpGained,
         clockRunning: false,
       ));
-      
-      // Perform final analysis
-      await _finalizeGameAnalysis();
+
+      // Queue final analysis after pending move/timer events settle.
+      add(const GameFinalizePostGameAnalysisEvent());
+    });
+    on<GameFinalizePostGameAnalysisEvent>((event, emit) async {
+      await _finalizeGameAnalysis(emit);
     });
     on<GameClockTickEvent>(_onClockTick);
     on<GameUpdatePersonalityEvent>(_onUpdatePersonality);
@@ -778,6 +786,47 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       activePersonality: event.personality,
       aiMessage: event.message,
     ));
+  }
+
+  static ({int xpDelta, Map<String, dynamic> statUpdates})
+      buildMultiplayerResultDelta({
+    required bool isWin,
+    required bool isLoss,
+    required bool isDraw,
+    required int syncedXpDelta,
+  }) {
+    final updates = <String, dynamic>{'multiplayer_games': 1};
+
+    if (isWin) {
+      updates['wins'] = 1;
+      updates['multiplayer_wins'] = 1;
+      return (
+        xpDelta:
+            syncedXpDelta != 0 ? syncedXpDelta : calculateMultiplayerXP('win'),
+        statUpdates: updates,
+      );
+    }
+
+    if (isLoss) {
+      updates['losses'] = 1;
+      return (
+        xpDelta:
+            syncedXpDelta != 0 ? syncedXpDelta : calculateMultiplayerXP('loss'),
+        statUpdates: updates,
+      );
+    }
+
+    if (isDraw) {
+      updates['draws'] = 1;
+      return (
+        xpDelta: syncedXpDelta != 0
+            ? syncedXpDelta
+            : calculateMultiplayerXP('draw'),
+        statUpdates: updates,
+      );
+    }
+
+    return (xpDelta: syncedXpDelta, statUpdates: updates);
   }
 
   Future<void> _onDiscard(
@@ -1268,8 +1317,6 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     final isPracticeOrSingle = state.mode == GameMode.singlePlayer ||
         state.mode == GameMode.practice ||
         state.mode == GameMode.twoPlayer;
-    final isMultiplayer = state.mode == GameMode.multiplayer;
-    final isPuzzle = state.mode == GameMode.puzzle;
 
     if (!state.isGameOver && isPracticeOrSingle) {
       final fenSnapshot = _engine.toFEN();
@@ -1677,7 +1724,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         _gameRepository.setLastActiveGameId(null);
         
         // Trigger final accuracy analysis for comparison
-        _finalizeGameAnalysis();
+        await _finalizeGameAnalysis(emit);
 
         // Scale Practice Difficulty
         if (state.mode == GameMode.practice) {
@@ -1723,111 +1770,102 @@ class GameBloc extends Bloc<GameEvent, GameState> {
             // ── XP & REWARDS CALCULATION (Robust Engine) ──
             int xpDelta = 0;
 
-            if (isWin) {
-              // 1. Mode/Difficulty based XP
-              if (state.mode == GameMode.singlePlayer) {
-                xpDelta += switch (state.aiDifficulty) {
-                  AIDifficulty.basic => 100,
-                  AIDifficulty.intermediate => 250,
-                  AIDifficulty.advanced => 400,
-                  AIDifficulty.impossible => 700,
-                  AIDifficulty.aiMode => 1000,
-                  _ => 100,
-                };
-              } else if (state.mode == GameMode.multiplayer) {
-                xpDelta += 150; // Higher base for multiplayer
-              } else if (state.mode == GameMode.practice) {
-                xpDelta += 50;
-              }
+            if (state.mode == GameMode.multiplayer) {
+              final mpUpdate = GameBloc.buildMultiplayerResultDelta(
+                isWin: isWin,
+                isLoss: isLoss,
+                isDraw: isDraw,
+                syncedXpDelta: state.xpGained,
+              );
+              xpDelta = mpUpdate.xpDelta;
+              mapUpdates.addAll(mpUpdate.statUpdates);
 
-              // 2. Global Bonuses
-              // Mate in 5 moves (10 half-moves)
-              if (state.status == GameStatus.checkmate &&
-                  state.moveHistory.length <= 10) {
-                xpDelta += 500;
-              }
-
-              // Perfect Game (No pieces lost)
-              final myCaptured = state.playerColor == PieceColor.black
-                  ? state.capturedBlack
-                  : state.capturedWhite;
-              if (myCaptured.isEmpty && state.moveHistory.length > 10) {
-                xpDelta += 1000;
-              }
-
-              // Underdog Bonus (Tiered)
-              final playerElo = user.stats.eloRating;
-              int? opponentElo;
-              if (state.mode == GameMode.singlePlayer) {
-                opponentElo = switch (state.aiDifficulty) {
-                  AIDifficulty.basic => 600,
-                  AIDifficulty.intermediate => 1200,
-                  AIDifficulty.advanced => 1800,
-                  AIDifficulty.impossible => 2400,
-                  AIDifficulty.aiMode => 2800,
-                  _ => 600,
-                };
-              } else if (state.mode == GameMode.multiplayer) {
-                opponentElo =
-                    playerElo; // Simplified for now, or fetch from state if available
-              }
-
-              if (opponentElo != null) {
-                final diff = opponentElo - playerElo;
-                if (diff >= 1000) {
-                  xpDelta += 1000;
-                } else if (diff >= 500) {
-                  xpDelta += 500;
-                } else if (diff >= 200) {
-                  xpDelta += 200;
+              xpReward = xpDelta > 0 ? xpDelta : 0;
+              xpPenalty = xpDelta < 0 ? -xpDelta : 0;
+              xp = xpDelta;
+            } else {
+              if (isWin) {
+                // 1. Mode/Difficulty based XP
+                if (state.mode == GameMode.singlePlayer) {
+                  xpDelta += switch (state.aiDifficulty) {
+                    AIDifficulty.basic => 100,
+                    AIDifficulty.intermediate => 250,
+                    AIDifficulty.advanced => 400,
+                    AIDifficulty.impossible => 700,
+                    AIDifficulty.aiMode => 1000,
+                    _ => 100,
+                  };
+                } else if (state.mode == GameMode.practice) {
+                  xpDelta += 50;
                 }
+
+                // 2. Global Bonuses
+                // Mate in 5 moves (10 half-moves)
+                if (state.status == GameStatus.checkmate &&
+                    state.moveHistory.length <= 10) {
+                  xpDelta += 500;
+                }
+
+                // Perfect Game (No pieces lost)
+                final myCaptured = state.playerColor == PieceColor.black
+                    ? state.capturedBlack
+                    : state.capturedWhite;
+                if (myCaptured.isEmpty && state.moveHistory.length > 10) {
+                  xpDelta += 1000;
+                }
+
+                // Underdog Bonus (Tiered)
+                final playerElo = user.stats.eloRating;
+                int? opponentElo;
+                if (state.mode == GameMode.singlePlayer) {
+                  opponentElo = switch (state.aiDifficulty) {
+                    AIDifficulty.basic => 600,
+                    AIDifficulty.intermediate => 1200,
+                    AIDifficulty.advanced => 1800,
+                    AIDifficulty.impossible => 2400,
+                    AIDifficulty.aiMode => 2800,
+                    _ => 600,
+                  };
+                }
+
+                if (opponentElo != null) {
+                  final diff = opponentElo - playerElo;
+                  if (diff >= 1000) {
+                    xpDelta += 1000;
+                  } else if (diff >= 500) {
+                    xpDelta += 500;
+                  } else if (diff >= 200) {
+                    xpDelta += 200;
+                  }
+                }
+
+                // 5. Streak Multiplier (10% per streak point, max 2.0x)
+                final double streakMultiplier =
+                    1.0 + (user.stats.currentStreak * 0.1).clamp(0.0, 1.0);
+                xpDelta = (xpDelta * streakMultiplier).round();
+
+                mapUpdates['wins'] = 1;
+                if (state.mode == GameMode.singlePlayer) {
+                  mapUpdates['ai_wins'] = 1;
+                }
+              } else if (isLoss) {
+                xpDelta = -20;
+                mapUpdates['losses'] = 1;
+              } else if (isDraw) {
+                xpDelta = 10;
+                mapUpdates['draws'] = 1;
               }
 
-              // 4. Bounty Bonus (50% Extra XP)
-              if (state.mode == GameMode.multiplayer &&
-                  state.opponentName == _missionService.bountyUserId) {
-                // Assuming opponentName is the ID for ID matching, or fetching opponent info
-                // We'll treat opponentId as a separate field if needed, but for now we'll match on bountyUserId
-                xpDelta = (xpDelta * 1.5).round();
-                mapUpdates['bounty_claimed'] = true;
-              }
-
-              // 5. Streak Multiplier (10% per streak point, max 2.0x)
-              double streakMultiplier =
-                  1.0 + (user.stats.currentStreak * 0.1).clamp(0.0, 1.0);
-
-              // Enhanced AI Streak Multiplier (+10% per streak point in AI mode, max 10 wins total 2.0x)
-              // Since the base already covers 10% per point, we just ensure it stays consistent
-              // Or if the base was different, we'd adjust here.
-              // The user specified +10% per win, which matches the base (1.0 + streak * 0.1).
-
-              xpDelta = (xpDelta * streakMultiplier).round();
-
-              mapUpdates['wins'] = 1;
-              if (state.mode == GameMode.singlePlayer) {
-                mapUpdates['ai_wins'] = 1;
-              }
-              if (state.mode == GameMode.multiplayer) {
-                mapUpdates['multiplayer_wins'] = 1;
-              }
-            } else if (isLoss) {
-              xpDelta = -20;
-              mapUpdates['losses'] = 1;
-            } else if (isDraw) {
-              xpDelta = 10;
-              mapUpdates['draws'] = 1;
+              xpReward =
+                  (xpDelta > 0 ? xpDelta : 0) + (state.xpGained > 0 ? state.xpGained : 0);
+              xpPenalty =
+                  (xpDelta < 0 ? -xpDelta : 0) + (state.xpGained < 0 ? -state.xpGained : 0);
+              xp = xpReward - xpPenalty;
             }
-
-            xpReward =
-                (xpDelta > 0 ? xpDelta : 0) + (state.xpGained > 0 ? state.xpGained : 0);
-            xpPenalty =
-                (xpDelta < 0 ? -xpDelta : 0) + (state.xpGained < 0 ? -state.xpGained : 0);
-            final totalDelta = xpReward - xpPenalty;
-            xp = totalDelta;
 
             await _authRepository.updateXPProgress(
               userId: user.id,
-              xpDelta: totalDelta,
+              xpDelta: xp,
               statUpdates: mapUpdates,
               isOnlineMatch: state.mode == GameMode.multiplayer,
             );
@@ -2622,7 +2660,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     return next.sublist(next.length - maxEntries);
   }
 
-  Future<void> _finalizeGameAnalysis() async {
+  Future<void> _finalizeGameAnalysis(Emitter<GameState> emit) async {
     if (state.moveHistory.isEmpty) return;
 
     // Only perform deep analysis for finished games
@@ -2638,10 +2676,20 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       final isWhite =
           state.playerColor == PieceColor.white || state.playerColor == null;
 
-      final playerAccuracy =
-          isWhite ? analysis['whiteAccuracy'] : analysis['blackAccuracy'];
-      final opponentAccuracy =
-          isWhite ? analysis['blackAccuracy'] : analysis['whiteAccuracy'];
+      final fallbackPlayerAcc = state.accuracy;
+      final fallbackOpponentAcc = state.opponentAccuracy;
+
+      final whiteAccuracy = _toClampedAccuracy(
+        analysis['whiteAccuracy'],
+        fallback: isWhite ? fallbackPlayerAcc : fallbackOpponentAcc,
+      );
+      final blackAccuracy = _toClampedAccuracy(
+        analysis['blackAccuracy'],
+        fallback: isWhite ? fallbackOpponentAcc : fallbackPlayerAcc,
+      );
+
+      final playerAccuracy = isWhite ? whiteAccuracy : blackAccuracy;
+      final opponentAccuracy = isWhite ? blackAccuracy : whiteAccuracy;
 
       final playerMistakes =
           isWhite ? analysis['whiteMistakes'] : analysis['blackMistakes'];
@@ -2664,5 +2712,13 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     } catch (e) {
       debugPrint('[Game Analysis Error] $e');
     }
+  }
+
+  double _toClampedAccuracy(dynamic value, {required double fallback}) {
+    final parsed = value is num
+        ? value.toDouble()
+        : double.tryParse(value?.toString() ?? '');
+    final safe = parsed ?? fallback;
+    return safe.clamp(0.0, 100.0);
   }
 }

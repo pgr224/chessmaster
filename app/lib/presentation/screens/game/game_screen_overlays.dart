@@ -1,6 +1,6 @@
 part of 'game_screen.dart';
 
-extension GameScreenOverlays on _GameScreenState {
+extension _GameScreenOverlays on _GameScreenState {
   Widget _buildGameOverOverlay(BuildContext context, GameState state) {
     if (!state.isGameOver) return const SizedBox.shrink();
 

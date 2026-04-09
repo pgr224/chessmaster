@@ -40,6 +40,12 @@ class _LeaderboardEntry {
   });
 
   factory _LeaderboardEntry.fromJson(Map<String, dynamic> json) {
+    final rawOnline = json['is_online'];
+    final isOnline = rawOnline == true ||
+        rawOnline == 1 ||
+        rawOnline == '1' ||
+        rawOnline == 'true';
+
     return _LeaderboardEntry(
       id: json['id'] as String? ?? '',
       username: json['username'] as String? ?? 'Player',
@@ -51,7 +57,7 @@ class _LeaderboardEntry {
       winRate: (json['win_rate'] as num?)?.toDouble() ?? 0,
       longestStreak: (json['longest_streak'] as num?)?.toInt() ?? 0,
       rank: (json['rank'] as num?)?.toInt() ?? 0,
-      isOnline: (json['is_online'] as num?)?.toInt() == 1,
+      isOnline: isOnline,
     );
   }
 }
@@ -151,6 +157,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
       final dio = di.sl<Dio>();
       final response =
           await dio.get('/api/leaderboard/rank/${authState.user.id}',
+            queryParameters: {'type': _sortType},
               options: Options(validateStatus: (_) => true));
 
       if (response.statusCode != 200) return;

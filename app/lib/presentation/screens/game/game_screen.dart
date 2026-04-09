@@ -7,7 +7,6 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:confetti/confetti.dart';
 import 'package:go_router/go_router.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/router/app_router.dart';
@@ -18,7 +17,6 @@ import '../../../presentation/blocs/settings/settings_bloc.dart';
 import '../../../presentation/blocs/multiplayer/multiplayer_bloc.dart';
 import '../../../presentation/blocs/auth/auth_bloc.dart';
 import '../../../presentation/blocs/theme/theme_bloc.dart';
-import '../../../data/models/user_model.dart';
 import '../../../domain/engine/chess_engine.dart';
 import '../../widgets/chess_board_widget.dart';
 import '../../widgets/captured_pieces_widget.dart';
@@ -32,7 +30,6 @@ import '../../widgets/timer_widget.dart';
 import '../../widgets/game_rules_dialog.dart';
 import '../../widgets/eval_bar_widget.dart';
 import '../../widgets/chat_widget.dart';
-import '../../../data/models/coach_model.dart';
 
 part 'game_screen_players.dart';
 part 'game_screen_board.dart';
@@ -190,12 +187,21 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                 !state.isGameOver) {
               // Map mpResult to GameResult
               GameResult res = GameResult.ongoing;
-              if (mpState.gameResult == 'white') {
+              final mpResult = mpState.gameResult?.toLowerCase();
+              if (mpResult == 'white') {
                 res = GameResult.whiteWins;
-              } else if (mpState.gameResult == 'black') {
+              } else if (mpResult == 'black') {
                 res = GameResult.blackWins;
-              } else if (mpState.gameResult == 'draw') {
+              } else if (mpResult == 'draw' || mpResult == 'tie') {
                 res = GameResult.draw;
+              } else if (mpResult == 'win' && state.playerColor != null) {
+                res = state.playerColor == PieceColor.white
+                    ? GameResult.whiteWins
+                    : GameResult.blackWins;
+              } else if (mpResult == 'loss' && state.playerColor != null) {
+                res = state.playerColor == PieceColor.white
+                    ? GameResult.blackWins
+                    : GameResult.whiteWins;
               }
 
               DrawReason? reason;

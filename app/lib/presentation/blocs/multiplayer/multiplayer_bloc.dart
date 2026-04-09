@@ -77,7 +77,11 @@ class MpChatReceivedEvent extends MultiplayerEvent {
 class MpGameOverEvent extends MultiplayerEvent {
   final String result;
   final String reason;
-  const MpGameOverEvent(this.result, this.reason);
+  final int? xpDelta;
+  const MpGameOverEvent(this.result, this.reason, {this.xpDelta});
+
+  @override
+  List<Object?> get props => [result, reason, xpDelta];
 }
 
 class MpLobbyUpdateEvent extends MultiplayerEvent {
@@ -483,28 +487,28 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
       emit(const MultiplayerState());
     });
     on<MpGameOverEvent>((event, emit) {
-      // Use standardized XP rules: +100 win, +30 draw, -20 loss
-      // (aligned with profile settings rules)
-      final isWin = (event.result == 'white' &&
-              state.playerColor == PieceColor.white) ||
-          (event.result == 'black' && state.playerColor == PieceColor.black);
-      final isLoss = (event.result == 'white' &&
-              state.playerColor == PieceColor.black) ||
-          (event.result == 'black' && state.playerColor == PieceColor.white);
-      final isDraw = event.result == 'draw';
+      final normalizedResult = _normalizeGameResult(event.result);
 
-      int xp = 0;
-      if (isWin) {
-        xp = calculateMultiplayerXP('win');
-      } else if (isLoss) {
-        xp = calculateMultiplayerXP('loss');
-      } else if (isDraw) {
-        xp = calculateMultiplayerXP('draw');
-      }
+      final isWin = normalizedResult == 'win' ||
+          (normalizedResult == 'white' &&
+              state.playerColor == PieceColor.white) ||
+          (normalizedResult == 'black' && state.playerColor == PieceColor.black);
+      final isLoss = normalizedResult == 'loss' ||
+          (normalizedResult == 'white' &&
+              state.playerColor == PieceColor.black) ||
+          (normalizedResult == 'black' && state.playerColor == PieceColor.white);
+      final isDraw = normalizedResult == 'draw';
+
+      final xp = event.xpDelta ??
+          (isWin
+              ? calculateMultiplayerXP('win')
+              : (isLoss
+                  ? calculateMultiplayerXP('loss')
+                  : (isDraw ? calculateMultiplayerXP('draw') : 0)));
 
       emit(state.copyWith(
         status: MultiplayerStatus.gameOver,
-        gameResult: event.result,
+        gameResult: normalizedResult,
         gameReason: event.reason,
         xpGained: xp,
       ));
@@ -739,6 +743,9 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
           add(MpGameOverEvent(
             gameOverData['result']?.toString() ?? 'draw',
             gameOverData['reason']?.toString() ?? 'unknown',
+            xpDelta: _toIntOrNull(gameOverData['xpDelta']) ??
+                _toIntOrNull(gameOverData['xp']) ??
+                _toIntOrNull(gameOverData['xpChange']),
           ));
           break;
         case 'DRAW_OFFER':
@@ -837,5 +844,29 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
     if (value is double) return value;
     if (value is num) return value.toDouble();
     return double.tryParse(value?.toString() ?? '') ?? fallback;
+  }
+
+  int? _toIntOrNull(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value.toString());
+  }
+
+  String _normalizeGameResult(String rawResult) {
+    final value = rawResult.trim().toLowerCase();
+    if (value == 'white' || value == 'black' || value == 'draw') {
+      return value;
+    }
+    if (value == 'win' || value == 'won' || value == 'victory') {
+      return 'win';
+    }
+    if (value == 'loss' || value == 'lose' || value == 'lost' || value == 'defeat') {
+      return 'loss';
+    }
+    if (value == 'tie') {
+      return 'draw';
+    }
+    return value;
   }
 }
