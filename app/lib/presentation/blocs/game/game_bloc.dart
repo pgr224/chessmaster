@@ -1728,9 +1728,14 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     if (_gameId != null) {
       if (state.isGameOver) {
         _gameRepository.setLastActiveGameId(null);
-        
-        // Trigger final accuracy analysis for comparison
-        await _finalizeGameAnalysis(emit);
+
+        final isLearningCompletion =
+            state.mode == GameMode.tutorial || state.mode == GameMode.puzzle;
+
+        // Trigger final accuracy analysis only for competitive gameplay.
+        if (!isLearningCompletion) {
+          await _finalizeGameAnalysis(emit);
+        }
 
         // Scale Practice Difficulty
         if (state.mode == GameMode.practice) {
@@ -1945,11 +1950,11 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         }
 
         emit(state.copyWith(
-          xpGained: xp,
-          xpReward: xpReward,
-          xpPenalty: xpPenalty,
-          analysisMessage: msg,
-          eloChange: eloChange,
+          xpGained: isLearningCompletion ? state.xpGained : xp,
+          xpReward: isLearningCompletion ? 0 : xpReward,
+          xpPenalty: isLearningCompletion ? 0 : xpPenalty,
+          analysisMessage: isLearningCompletion ? null : msg,
+          eloChange: isLearningCompletion ? 0 : eloChange,
         ));
 
         final game = GameModel(
@@ -2225,7 +2230,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
 
   Future<void> _onRequestHint(
       GameRequestHintEvent event, Emitter<GameState> emit) async {
-    // Puzzle Hint Logic — costs flat 10 XP (puzzle hint is from predefined data)
+    // Puzzle Hint Logic — free in learning modes (no XP penalties)
     if (state.mode == GameMode.puzzle && state.puzzle != null) {
       final moves = state.puzzle!.moves;
       if (state.puzzleStep < 0 || state.puzzleStep >= moves.length) {
@@ -2238,26 +2243,21 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       final currentMove = moves[state.puzzleStep];
       if (currentMove.isOpponentMove) return;
 
-      final newXp = state.xpGained - 10;
       emit(state.copyWith(
         tutorialMessage: "💡 Psst! Here's a little hint: ${currentMove.hint}",
         isPuzzleHintUsed: true,
-        xpGained: newXp,
       ));
-
-      final user = await _authRepository.getCurrentUser();
-      if (user != null) {
-        await _authRepository.updateXPProgress(
-          userId: user.id,
-          xpDelta: -10,
-          statUpdates: {},
-        );
-      }
       return;
     }
 
     final isLocalMode =
-        state.mode == GameMode.practice || state.mode == GameMode.twoPlayer;
+        state.mode == GameMode.practice ||
+        state.mode == GameMode.twoPlayer ||
+        state.mode == GameMode.tutorial;
+    final isLearningMode =
+        state.mode == GameMode.practice ||
+        state.mode == GameMode.tutorial ||
+        state.mode == GameMode.puzzle;
     if (!isLocalMode && state.hintsRemaining <= 0) return;
     // Allow hints in local modes regardless of 'player side'
     if (!isLocalMode && !state.isPlayerTurn) return;
@@ -2270,8 +2270,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       }
 
       final nextLevel = hint.currentLevel + 1;
-      final isPractice = state.mode == GameMode.practice;
-      final xpCost = isPractice ? 0 : hint.nextLevelXpCost; // Free in practice
+      final xpCost = isLearningMode ? 0 : hint.nextLevelXpCost;
 
       // Deduct XP for this upgrade (free in practice mode)
       final newXp = state.xpGained - xpCost;
@@ -2290,7 +2289,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       ));
 
       // Sync XP deduction to server
-      if (state.mode != GameMode.practice) {
+      if (!isLearningMode && xpCost > 0) {
         final user = await _authRepository.getCurrentUser();
         if (user != null) {
           await _authRepository.updateXPProgress(
@@ -2313,8 +2312,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     emit(state.copyWith(isAIThinking: false));
 
     if (hintResult != null) {
-      final isPractice = state.mode == GameMode.practice;
-      final xpCost = isPractice ? 0 : hintResult.xpCostLevel1; // 5 XP for L1
+      final xpCost = isLearningMode ? 0 : hintResult.xpCostLevel1;
 
       emit(state.copyWith(
         activeHint: hintResult,
@@ -2323,7 +2321,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       ));
 
       // Sync XP to server
-      if (!isPractice && xpCost > 0) {
+      if (!isLearningMode && xpCost > 0) {
         final user = await _authRepository.getCurrentUser();
         if (user != null) {
           await _authRepository.updateXPProgress(
