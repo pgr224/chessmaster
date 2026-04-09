@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/tournament_model.dart';
 import '../../blocs/auth/auth_bloc.dart';
+import '../../blocs/multiplayer/multiplayer_bloc.dart';
 import '../../blocs/tournament/tournament_bloc.dart';
 
 /// Full-page results screen shown after a tournament ends.
@@ -28,6 +29,10 @@ class _TournamentResultScreenState extends State<TournamentResultScreen> {
     _confettiController =
         ConfettiController(duration: const Duration(seconds: 10));
     _confettiController.play();
+    context.read<MultiplayerBloc>().add(const MpSetPresenceEvent(
+          LobbyPresence.online,
+          context: 'tournament_result',
+        ));
   }
 
   @override

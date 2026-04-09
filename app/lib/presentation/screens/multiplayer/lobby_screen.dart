@@ -51,6 +51,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
             authState.user.username,
             rating: authState.user.xp,
           ));
+      context
+          .read<MultiplayerBloc>()
+          .add(const MpSetPresenceEvent(LobbyPresence.online, context: 'lobby'));
 
       // 📲 Handle Deep-linked Invitation
       if (widget.initialChallengeId != null) {
@@ -107,13 +110,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
         }
 
         if (state.lobbyNotice != null) {
-          if (state.lobbyNotice!.contains('invited you') &&
-              state.challengerId != null) {
-            _showChallengeDialog(
-                context, state.lobbyNotice!, state.challengerId!);
+          if (state.incomingChallenges.isNotEmpty) {
             _pushEngagementNotice(
-              title: 'New Challenge',
-              body: state.lobbyNotice!,
+              title: 'Challenge Inbox',
+              body: '${state.incomingChallenges.length} pending game request(s)',
               accent: AppTheme.accentCyan,
             );
           } else {
@@ -142,7 +142,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
               icon: const Icon(Icons.arrow_back_rounded,
                   color: AppTheme.textPrimary),
               onPressed: () {
-                context.read<MultiplayerBloc>().add(MpDisconnectLobbyEvent());
+                context
+                    .read<MultiplayerBloc>()
+                    .add(const MpSetPresenceEvent(LobbyPresence.online, context: 'app'));
                 context.pop();
               },
             ),
@@ -437,7 +439,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
         children: [
           Expanded(
             child: Text(
-              'Engagement Alerts',
+              'Notifications',
               style: GoogleFonts.fredoka(
                 color: AppTheme.textPrimary,
                 fontSize: 16,
@@ -447,7 +449,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
           ),
           Switch(
             value: _engagement.notifyEnabled,
-            activeColor: AppTheme.accentGreen,
+            activeThumbColor: AppTheme.accentGreen,
             onChanged: (value) {
               setState(() {
                 _engagement.setNotifyEnabled(value);
@@ -475,7 +477,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Online Milestones',
+            'Notifications',
             style: GoogleFonts.fredoka(
               color: AppTheme.accentOrange,
               fontSize: 16,
@@ -834,6 +836,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
   }
 
   Widget _buildOnlinePlayersButton(MultiplayerState state) {
+    final pendingCount = state.incomingChallenges
+        .where((request) => request.status == 'pending')
+        .length;
     return FilledButton.icon(
       style: FilledButton.styleFrom(
         padding: const EdgeInsets.symmetric(vertical: 18),
@@ -843,7 +848,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
       onPressed: () => _showSocialWindow(state),
       icon: const Icon(Icons.groups_2_rounded, color: Colors.white),
       label: Text(
-        'View Online Players',
+        pendingCount > 0
+            ? 'Players & Requests ($pendingCount)'
+            : 'View Online Players',
         style: GoogleFonts.fredoka(
           color: Colors.white,
           fontSize: 18,
@@ -953,6 +960,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
   Widget _buildOnlinePlayersPreview(MultiplayerState state) {
     final previewPlayers =
         state.availablePlayers.take(3).toList(growable: false);
+    final pendingRequests = state.incomingChallenges
+      .where((request) => request.status == 'pending')
+      .length;
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -989,6 +999,36 @@ class _LobbyScreenState extends State<LobbyScreen> {
             ],
           ),
           const SizedBox(height: 10),
+          if (pendingRequests > 0) ...[
+            Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppTheme.accentCyan.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: AppTheme.accentCyan.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.mark_email_unread_rounded,
+                      color: AppTheme.accentCyan),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      '$pendingRequests pending battle request(s) waiting in your inbox',
+                      style: GoogleFonts.fredoka(
+                        color: AppTheme.textPrimary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           Text(
             'Challenge a player directly or invite them to a friendly tournament room.',
             style: GoogleFonts.baloo2(
@@ -1048,13 +1088,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
               ],
             ),
           ),
-          _availabilityChip(player.isAvailable),
+          _availabilityChip(player.presenceLabel, player.isAvailable),
         ],
       ),
     );
   }
 
-  Widget _availabilityChip(bool isAvailable) {
+  Widget _availabilityChip(String label, bool isAvailable) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
@@ -1063,7 +1103,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
-        isAvailable ? 'Ready' : 'Busy',
+        label,
         style: GoogleFonts.fredoka(
           color: isAvailable ? AppTheme.accentCyan : AppTheme.textMuted,
           fontSize: 12,
@@ -1080,7 +1120,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       backgroundColor: Colors.transparent,
       builder: (sheetContext) {
         return DefaultTabController(
-          length: 2,
+          length: 3,
           child: DraggableScrollableSheet(
             initialChildSize: 0.82,
             minChildSize: 0.55,
@@ -1119,18 +1159,24 @@ class _LobbyScreenState extends State<LobbyScreen> {
                               text: 'Players',
                               icon: Icon(Icons.people_rounded)),
                           Tab(
+                              text: 'Game Requests',
+                              icon: Icon(Icons.inbox_rounded)),
+                          Tab(
                               text: 'XP Requests',
                               icon: Icon(Icons.volunteer_activism_rounded)),
                         ],
                       ),
                       Expanded(
-                        child: TabBarView(
-                          children: [
-                            // PLAYERS TAB
-                            _buildPlayersTab(state, scrollController),
-                            // REQUESTS TAB
-                            _buildRequestsTab(state, scrollController),
-                          ],
+                        child: BlocBuilder<MultiplayerBloc, MultiplayerState>(
+                          builder: (context, liveState) {
+                            return TabBarView(
+                              children: [
+                                _buildPlayersTab(liveState, scrollController),
+                                _buildGameRequestsTab(liveState, scrollController),
+                                _buildRequestsTab(liveState, scrollController),
+                              ],
+                            );
+                          },
                         ),
                       ),
                     ],
@@ -1146,6 +1192,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
   Widget _buildPlayersTab(
       MultiplayerState state, ScrollController scrollController) {
+    final sortedPlayers = List<OnlineLobbyUser>.from(state.availablePlayers)
+      ..sort((left, right) {
+        if (left.isAvailable != right.isAvailable) {
+          return left.isAvailable ? -1 : 1;
+        }
+        return left.name.toLowerCase().compareTo(right.name.toLowerCase());
+      });
+
     return Padding(
       padding: const EdgeInsets.all(18),
       child: Column(
@@ -1168,12 +1222,82 @@ class _LobbyScreenState extends State<LobbyScreen> {
           ),
           const SizedBox(height: 16),
           Expanded(
-            child: ListView.builder(
-              controller: scrollController,
-              itemCount: state.availablePlayers.length,
-              itemBuilder: (context, index) =>
-                  _buildChallengeCard(state.availablePlayers[index]),
+            child: sortedPlayers.isEmpty
+                ? Center(
+                    child: Text(
+                      'No players visible right now. Keep this screen open and the list will refresh live.',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.baloo2(
+                        color: AppTheme.textMuted,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  )
+                : ListView.builder(
+                    controller: scrollController,
+                    itemCount: sortedPlayers.length,
+                    itemBuilder: (context, index) =>
+                        _buildChallengeCard(sortedPlayers[index]),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGameRequestsTab(
+      MultiplayerState state, ScrollController scrollController) {
+    final requests = <ChallengeRequest>[
+      ...state.incomingChallenges,
+      ...state.outgoingChallenges,
+    ]..sort((left, right) => right.createdAt.compareTo(left.createdAt));
+
+    return Padding(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Battle Request Inbox',
+            style: GoogleFonts.fredoka(
+              color: AppTheme.accentCyan,
+              fontSize: 26,
+              fontWeight: FontWeight.w700,
             ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Accept, decline, or monitor queued requests while other players are still busy.',
+            style: GoogleFonts.baloo2(
+              color: AppTheme.textSecondary,
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: requests.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.inbox_outlined,
+                            color: AppTheme.textMuted, size: 48),
+                        const SizedBox(height: 12),
+                        Text(
+                          'No battle requests yet',
+                          style: GoogleFonts.baloo2(color: AppTheme.textMuted),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    controller: scrollController,
+                    itemCount: requests.length,
+                    itemBuilder: (context, index) =>
+                        _buildChallengeRequestCard(requests[index]),
+                  ),
           ),
         ],
       ),
@@ -1321,7 +1445,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   ],
                 ),
               ),
-              _availabilityChip(player.isAvailable),
+              _availabilityChip(player.presenceLabel, player.isAvailable),
             ],
           ),
           const SizedBox(height: 14),
@@ -1330,46 +1454,186 @@ class _LobbyScreenState extends State<LobbyScreen> {
             runSpacing: 10,
             children: [
               FilledButton.icon(
-                onPressed: player.isAvailable
-                    ? () => context.read<MultiplayerBloc>().add(
-                          MpSendChallengeEvent(
-                            opponent: player,
-                            mode: ChallengeMode.duel,
-                            timeControl: context
-                                .read<MultiplayerBloc>()
-                                .state
-                                .selectedTimeControl,
-                            variantId: context
-                                .read<MultiplayerBloc>()
-                                .state
-                                .selectedVariantId,
-                          ),
-                        )
-                    : null,
+                onPressed: () => _handleChallengeTap(
+                  player,
+                  ChallengeMode.duel,
+                ),
                 icon: const Icon(Icons.sports_martial_arts_rounded),
-                label: const Text('1v1 Challenge'),
+                label: Text(player.isAvailable
+                    ? '1v1 Challenge'
+                    : 'Queue 1v1 Request'),
               ),
               OutlinedButton.icon(
-                onPressed: player.isAvailable
-                    ? () => context.read<MultiplayerBloc>().add(
-                          MpSendChallengeEvent(
-                            opponent: player,
-                            mode: ChallengeMode.tournament,
-                            timeControl: context
-                                .read<MultiplayerBloc>()
-                                .state
-                                .selectedTimeControl,
-                            variantId: context
-                                .read<MultiplayerBloc>()
-                                .state
-                                .selectedVariantId,
-                          ),
+                onPressed: player.isAvailable || player.supportsQueuedChallenge
+                    ? () => _handleChallengeTap(
+                          player,
+                          ChallengeMode.tournament,
                         )
                     : null,
                 icon: const Icon(Icons.emoji_events_rounded),
-                label: const Text('Tournament Invite'),
+                label: Text(player.isAvailable
+                    ? 'Tournament Invite'
+                    : 'Queue Tournament Invite'),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChallengeRequestCard(ChallengeRequest request) {
+    final isIncoming = request.isIncoming;
+    final isPending = request.status == 'pending';
+    final accent = isIncoming ? AppTheme.accentCyan : AppTheme.goldPrimary;
+    final statusLabel = request.status == 'pending'
+        ? (request.isQueued ? 'Queued' : 'Pending')
+        : request.status.toUpperCase();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: AppTheme.cardGradient,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: accent.withValues(alpha: 0.22)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: accent,
+                child: Text(
+                  request.playerName.characters.first.toUpperCase(),
+                  style: GoogleFonts.fredoka(color: AppTheme.midnight),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      request.playerName,
+                      style: GoogleFonts.fredoka(
+                        color: AppTheme.textPrimary,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Text(
+                      request.summary,
+                      style: GoogleFonts.baloo2(
+                        color: AppTheme.textSecondary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              _availabilityChip(statusLabel, isPending),
+            ],
+          ),
+          if (request.message != null) ...[
+            const SizedBox(height: 10),
+            Text(
+              request.message!,
+              style: GoogleFonts.baloo2(
+                color: AppTheme.textSecondary,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          if (isIncoming && isPending)
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                FilledButton(
+                  onPressed: () {
+                    context.read<MultiplayerBloc>().add(MpAcceptChallengeEvent(
+                          request.playerId,
+                          requestId: request.id,
+                          mode: request.mode,
+                          timeControl: request.timeControl,
+                          variantId: request.variantId,
+                          isQueued: request.isQueued,
+                        ));
+                  },
+                  child: const Text('Accept'),
+                ),
+                OutlinedButton(
+                  onPressed: () {
+                    context.read<MultiplayerBloc>().add(MpDeclineChallengeEvent(
+                          request.playerId,
+                          requestId: request.id,
+                        ));
+                  },
+                  child: const Text('Decline'),
+                ),
+              ],
+            )
+          else
+            Text(
+              isPending
+                  ? 'Waiting for ${request.playerName} to respond.'
+                  : 'Request ${request.status}.',
+              style: GoogleFonts.baloo2(
+                color: AppTheme.textMuted,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _handleChallengeTap(OnlineLobbyUser player, ChallengeMode mode) {
+    final multiplayerState = context.read<MultiplayerBloc>().state;
+    final requestEvent = MpSendChallengeEvent(
+      opponent: player,
+      mode: mode,
+      timeControl: multiplayerState.selectedTimeControl,
+      variantId: multiplayerState.selectedVariantId,
+      allowOffline: !player.isAvailable,
+    );
+
+    if (player.isAvailable) {
+      context.read<MultiplayerBloc>().add(requestEvent);
+      return;
+    }
+
+    final modeLabel = mode == ChallengeMode.duel ? 'battle request' : 'tournament invite';
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.midnight,
+        title: Text(
+          'Player Busy',
+          style: GoogleFonts.fredoka(color: AppTheme.goldPrimary),
+        ),
+        content: Text(
+          '${player.name} is currently ${player.presenceLabel.toLowerCase()}. The request will be sent offline and appear when they are free. Send this $modeLabel anyway?',
+          style: GoogleFonts.baloo2(color: AppTheme.textPrimary, fontSize: 15),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Cancel',
+                style: GoogleFonts.fredoka(color: AppTheme.textMuted)),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              context.read<MultiplayerBloc>().add(requestEvent);
+            },
+            child: const Text('Send Offline'),
           ),
         ],
       ),
@@ -1431,99 +1695,6 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 ),
               ],
             ),
-    );
-  }
-
-  void _showChallengeDialog(
-      BuildContext context, String message, String challengerId) {
-    final state = context.read<MultiplayerBloc>().state;
-    final preset = TimeControlPreset.fromValue(
-        state.challengerTimeControl ?? TimeControlPreset.defaultValue);
-    final variant = GameVariantPreset.fromId(state.challengerVariantId);
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.midnight,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: Text('⚔️ New Challenge!',
-            style: GoogleFonts.fredoka(color: AppTheme.goldPrimary)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(message,
-                style: GoogleFonts.baloo2(
-                    color: AppTheme.textPrimary, fontSize: 16)),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                Icon(preset.icon, size: 18, color: preset.color),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    '${preset.label} • ${preset.value}',
-                    style: GoogleFonts.fredoka(
-                      color: AppTheme.goldPrimary,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(preset.description,
-                style: GoogleFonts.baloo2(
-                    color: AppTheme.textSecondary, fontSize: 14)),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Icon(variant.icon, size: 18, color: variant.color),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Variant: ${variant.name}',
-                    style: GoogleFonts.fredoka(
-                      color: variant.color,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              context.read<MultiplayerBloc>().add(MpClearNoticeEvent());
-              Navigator.pop(ctx);
-            },
-            child: Text('Decline',
-                style: GoogleFonts.fredoka(
-                    color: AppTheme.accentRed, fontWeight: FontWeight.w600)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.goldPrimary,
-              foregroundColor: AppTheme.midnight,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14)),
-            ),
-            onPressed: () {
-              context
-                  .read<MultiplayerBloc>()
-                  .add(MpAcceptChallengeEvent(challengerId));
-              Navigator.pop(ctx);
-            },
-            child: Text('Accept',
-                style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
     );
   }
 

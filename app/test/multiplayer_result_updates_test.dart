@@ -45,6 +45,51 @@ void main() {
     );
   });
 
+  group('MultiplayerBloc presence and challenge inbox', () {
+    blocTest<MultiplayerBloc, MultiplayerState>(
+      'tracks queued outgoing challenge when opponent is busy',
+      build: () => MultiplayerBloc(MultiplayerService()),
+      act: (bloc) => bloc.add(
+        MpSendChallengeEvent(
+          opponent: const OnlineLobbyUser(
+            id: 'opponent-1',
+            name: 'Rival',
+            xp: 1320,
+            presence: LobbyPresence.playing,
+            flair: 'In a live game',
+          ),
+          mode: ChallengeMode.duel,
+          timeControl: '10+0',
+          variantId: 'standard',
+          allowOffline: true,
+        ),
+      ),
+      expect: () => [
+        isA<MultiplayerState>()
+            .having((s) => s.outgoingChallenges.length, 'outgoing count', 1)
+            .having(
+                (s) => s.outgoingChallenges.first.isQueued, 'queued', true)
+            .having((s) => s.outgoingChallenges.first.status, 'status', 'queued')
+            .having((s) => s.lobbyNotice, 'notice', contains('queued')),
+      ],
+    );
+
+    blocTest<MultiplayerBloc, MultiplayerState>(
+      'updates local presence even before lobby socket is connected',
+      build: () => MultiplayerBloc(MultiplayerService()),
+      act: (bloc) => bloc.add(
+        const MpSetPresenceEvent(
+          LobbyPresence.offlineGame,
+          context: 'offline_game',
+        ),
+      ),
+      expect: () => [
+        isA<MultiplayerState>().having(
+            (s) => s.myPresence, 'myPresence', LobbyPresence.offlineGame),
+      ],
+    );
+  });
+
   group('GameBloc multiplayer result stat updates', () {
     test('win includes multiplayer win stats and win XP fallback', () {
       final result = GameBloc.buildMultiplayerResultDelta(

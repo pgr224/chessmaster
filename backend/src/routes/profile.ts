@@ -259,8 +259,8 @@ profileRoutes.put('/:id', async (c) => {
     if (!data) {
       return c.json({ error: 'User not found' }, 404)
     }
-    if (token) data.token = token
-    return c.json(data)
+    const responseData = token ? { ...data, token } : data
+    return c.json(responseData)
   } catch (err: any) {
     if (err.message.includes('UNIQUE constraint failed: users.username')) {
       return c.json({ error: 'Username already taken' }, 409)

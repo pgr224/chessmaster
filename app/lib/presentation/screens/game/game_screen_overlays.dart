@@ -4,6 +4,14 @@ extension _GameScreenOverlays on _GameScreenState {
   Widget _buildGameOverOverlay(BuildContext context, GameState state) {
     if (!state.isGameOver) return const SizedBox.shrink();
 
+    if (_showCheckmateIntro && !_showGameOverDetails) {
+      return _buildCheckmateIntroOverlay(state);
+    }
+
+    if (!_showGameOverDetails) {
+      return const SizedBox.shrink();
+    }
+
     return GameOverOverlay(
       result: state.result,
       drawReason: state.drawReason,
@@ -35,6 +43,84 @@ extension _GameScreenOverlays on _GameScreenState {
       },
       onGoHome: () => context.go('/home'),
       onShare: () => context.read<GameBloc>().add(GameSaveEvent()),
+    );
+  }
+
+  Widget _buildCheckmateIntroOverlay(GameState state) {
+    final didPlayerWin = (state.result == GameResult.whiteWins &&
+            state.playerColor == PieceColor.white) ||
+        (state.result == GameResult.blackWins &&
+            state.playerColor == PieceColor.black);
+
+    final title = state.result == GameResult.draw
+        ? 'GAME OVER'
+        : (didPlayerWin ? 'CHECKMATE!' : 'CHECKMATE!');
+
+    final subtitle = state.result == GameResult.draw
+        ? 'Game finished. Review the final position...'
+        : (didPlayerWin
+            ? 'You delivered checkmate. Review the board...'
+            : 'You are checkmated. Review the board...');
+
+    return Positioned(
+      top: 96,
+      left: 16,
+      right: 16,
+      child: IgnorePointer(
+        ignoring: true,
+        child: Center(
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 520),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            decoration: BoxDecoration(
+              color: AppTheme.midnight.withValues(alpha: 0.9),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: didPlayerWin
+                    ? AppTheme.goldPrimary.withValues(alpha: 0.7)
+                    : AppTheme.accentRed.withValues(alpha: 0.7),
+                width: 2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.35),
+                  blurRadius: 16,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.fredoka(
+                    color: didPlayerWin
+                        ? AppTheme.goldPrimary
+                        : AppTheme.accentRed,
+                    fontSize: 30,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.6,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  subtitle,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.baloo2(
+                    color: AppTheme.textSecondary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          )
+              .animate()
+              .fadeIn(duration: 240.ms)
+              .slideY(begin: -0.12, end: 0, duration: 240.ms),
+        ),
+      ),
     );
   }
 

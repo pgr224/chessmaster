@@ -39,6 +39,18 @@ CREATE TABLE IF NOT EXISTS user_subscriptions (
 
 CREATE INDEX idx_sub_user ON user_subscriptions(user_id);
 
+-- ────────────────────────────────────────
+-- USER NOTIFICATION PREFERENCES
+-- ────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS user_notification_preferences (
+  user_id                    TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  challenge_notifications    INTEGER NOT NULL DEFAULT 1,
+  community_notifications    INTEGER NOT NULL DEFAULT 1,
+  tournament_notifications   INTEGER NOT NULL DEFAULT 1,
+  system_notifications       INTEGER NOT NULL DEFAULT 1,
+  updated_at                 TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE INDEX idx_users_device ON users(device_id);
 CREATE INDEX idx_users_xp     ON users(xp DESC);
 
@@ -183,14 +195,20 @@ CREATE TABLE IF NOT EXISTS challenges (
   id              TEXT PRIMARY KEY,
   challenger_id   TEXT NOT NULL REFERENCES users(id),
   challenged_id   TEXT NOT NULL REFERENCES users(id),
+  mode            TEXT NOT NULL DEFAULT 'duel'
+                    CHECK(mode IN ('duel','tournament')),
+  variant_id      TEXT NOT NULL DEFAULT 'standard',
   time_control    TEXT NOT NULL DEFAULT '10+0',
+  delivery_status TEXT NOT NULL DEFAULT 'live'
+                    CHECK(delivery_status IN ('live','queued')),
   color_preference TEXT DEFAULT 'random',
   status          TEXT NOT NULL DEFAULT 'pending'
-                    CHECK(status IN ('pending','accepted','declined','expired','completed')),
+                    CHECK(status IN ('pending','accepted','declined','expired','completed','cancelled')),
   game_id         TEXT REFERENCES games(id),
   message         TEXT,
   expires_at      TEXT,
-  created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE INDEX idx_challenges_status ON challenges(status);

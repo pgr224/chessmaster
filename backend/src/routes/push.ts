@@ -4,6 +4,20 @@ import { v4 as uuidv4 } from 'uuid'
 
 export const pushRoutes = new Hono<{ Bindings: Env }>()
 
+type PushCategorySettings = {
+  challenges: boolean
+  community: boolean
+  tournaments: boolean
+  system: boolean
+}
+
+const defaultCategorySettings: PushCategorySettings = {
+  challenges: true,
+  community: true,
+  tournaments: true,
+  system: true,
+}
+
 // Public VAPID key for web push subscription bootstrap
 pushRoutes.get('/vapid-public-key', async (c) => {
   return c.json({ publicKey: c.env.VAPID_PUBLIC_KEY })
@@ -58,12 +72,89 @@ pushRoutes.post('/unsubscribe', async (c) => {
 })
 
 // Toggle overall push preference
+pushRoutes.get('/settings', async (c) => {
+  const userId = c.req.query('userId')
+  if (!userId) {
+    return c.json({ error: 'userId is required' }, 400)
+  }
+
+  const user = await c.env.DB.prepare(
+    'SELECT push_enabled FROM users WHERE id = ?'
+  ).bind(userId).first<{ push_enabled: number }>()
+
+  if (!user) {
+    return c.json({ error: 'User not found' }, 404)
+  }
+
+  const prefs = await c.env.DB.prepare(
+    `SELECT challenge_notifications, community_notifications,
+            tournament_notifications, system_notifications
+     FROM user_notification_preferences
+     WHERE user_id = ?`
+  ).bind(userId).first<{
+    challenge_notifications: number
+    community_notifications: number
+    tournament_notifications: number
+    system_notifications: number
+  }>()
+
+  return c.json({
+    enabled: user.push_enabled === 1,
+    categories: {
+      challenges: prefs ? prefs.challenge_notifications === 1 : true,
+      community: prefs ? prefs.community_notifications === 1 : true,
+      tournaments: prefs ? prefs.tournament_notifications === 1 : true,
+      system: prefs ? prefs.system_notifications === 1 : true,
+    },
+  })
+})
+
 pushRoutes.put('/settings', async (c) => {
-  const { userId, enabled } = await c.req.json()
+  const { userId, enabled, categories } = await c.req.json<{
+    userId?: string
+    enabled?: boolean
+    categories?: Partial<PushCategorySettings>
+  }>()
+
+  if (!userId) {
+    return c.json({ error: 'userId is required' }, 400)
+  }
+
+  const resolvedCategories: PushCategorySettings = {
+    ...defaultCategorySettings,
+    ...(categories ?? {}),
+  }
   
   await c.env.DB.prepare(
     'UPDATE users SET push_enabled = ? WHERE id = ?'
-  ).bind(enabled ? 1 : 0, userId).run()
+  ).bind(enabled == false ? 0 : 1, userId).run()
 
-  return c.json({ status: 'updated' })
+  await c.env.DB.prepare(
+    `INSERT INTO user_notification_preferences (
+        user_id,
+        challenge_notifications,
+        community_notifications,
+        tournament_notifications,
+        system_notifications,
+        updated_at
+      ) VALUES (?, ?, ?, ?, ?, datetime('now'))
+      ON CONFLICT(user_id) DO UPDATE SET
+        challenge_notifications = excluded.challenge_notifications,
+        community_notifications = excluded.community_notifications,
+        tournament_notifications = excluded.tournament_notifications,
+        system_notifications = excluded.system_notifications,
+        updated_at = datetime('now')`
+  ).bind(
+    userId,
+    resolvedCategories.challenges ? 1 : 0,
+    resolvedCategories.community ? 1 : 0,
+    resolvedCategories.tournaments ? 1 : 0,
+    resolvedCategories.system ? 1 : 0,
+  ).run()
+
+  return c.json({
+    status: 'updated',
+    enabled: enabled == false ? false : true,
+    categories: resolvedCategories,
+  })
 })

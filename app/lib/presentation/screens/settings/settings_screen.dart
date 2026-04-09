@@ -82,6 +82,45 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 .read<SettingsBloc>()
                                 .add(SettingsNotificationsEvent(v)),
                           ),
+                          if (settings.notificationsEnabled) ...[
+                            const SizedBox(height: 6),
+                            _switchTile(
+                              title: 'Challenge Notifications',
+                              subtitle: 'Direct battle requests and accepts',
+                              value: settings.notificationChallenges,
+                              onChanged: (v) => context
+                                  .read<SettingsBloc>()
+                                  .add(SettingsNotificationCategoryEvent(
+                                      'challenges', v)),
+                            ),
+                            _switchTile(
+                              title: 'Community Notifications',
+                              subtitle: 'XP requests and social community alerts',
+                              value: settings.notificationCommunity,
+                              onChanged: (v) => context
+                                  .read<SettingsBloc>()
+                                  .add(SettingsNotificationCategoryEvent(
+                                      'community', v)),
+                            ),
+                            _switchTile(
+                              title: 'Tournament Notifications',
+                              subtitle: 'Tournament invites and progress updates',
+                              value: settings.notificationTournaments,
+                              onChanged: (v) => context
+                                  .read<SettingsBloc>()
+                                  .add(SettingsNotificationCategoryEvent(
+                                      'tournaments', v)),
+                            ),
+                            _switchTile(
+                              title: 'System Notifications',
+                              subtitle: 'General service and account messages',
+                              value: settings.notificationSystem,
+                              onChanged: (v) => context
+                                  .read<SettingsBloc>()
+                                  .add(SettingsNotificationCategoryEvent(
+                                      'system', v)),
+                            ),
+                          ],
                         ],
                       ),
                     );

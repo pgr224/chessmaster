@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:audioplayers/audioplayers.dart';
 
@@ -49,10 +50,14 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   late ConfettiController _confettiController;
   late AnimationController _checkAnimController;
   final AudioPlayer _audioPlayer = AudioPlayer();
+  Timer? _gameOverRevealTimer;
   Offset _chatPosition =
       const Offset(16, 450); // Initial floating chat position
   bool _isChatDragging = false;
   bool _didRefreshPostGameAuth = false;
+  bool _didStartGameOverSequence = false;
+  bool _showCheckmateIntro = false;
+  bool _showGameOverDetails = false;
 
   @override
   void initState() {
@@ -60,6 +65,19 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     _confettiController =
         ConfettiController(duration: const Duration(seconds: 3));
     _checkAnimController = AnimationController(vsync: this, duration: 500.ms);
+
+    final multiplayerBloc = context.read<MultiplayerBloc>();
+    if (widget.config.mode == GameMode.multiplayer) {
+      multiplayerBloc.add(const MpSetPresenceEvent(
+        LobbyPresence.playing,
+        context: 'multiplayer_game',
+      ));
+    } else {
+      multiplayerBloc.add(const MpSetPresenceEvent(
+        LobbyPresence.offlineGame,
+        context: 'offline_game',
+      ));
+    }
 
     // Sync initial settings
     final settings = context.read<SettingsBloc>().state;
@@ -91,11 +109,22 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
   @override
   void dispose() {
+    context
+        .read<MultiplayerBloc>()
+        .add(const MpSetPresenceEvent(LobbyPresence.online, context: 'app'));
     context.read<GameBloc>().add(GameExitEvent());
+    _gameOverRevealTimer?.cancel();
     _confettiController.dispose();
     _checkAnimController.dispose();
     _audioPlayer.dispose();
     super.dispose();
+  }
+
+  bool _shouldUseCheckmateIntro(GameState state) {
+    if (!state.isGameOver) return false;
+    if (state.mode != GameMode.multiplayer) return false;
+    if (state.result == GameResult.draw) return false;
+    return true;
   }
 
   @override
@@ -109,9 +138,54 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
           if (!state.isGameOver) {
             _didRefreshPostGameAuth = false;
+            if (_didStartGameOverSequence ||
+                _showCheckmateIntro ||
+                _showGameOverDetails) {
+              _gameOverRevealTimer?.cancel();
+              if (mounted) {
+                setState(() {
+                  _didStartGameOverSequence = false;
+                  _showCheckmateIntro = false;
+                  _showGameOverDetails = false;
+                });
+              }
+            }
           }
 
           if (state.isGameOver) {
+            context.read<MultiplayerBloc>().add(const MpSetPresenceEvent(
+                  LobbyPresence.online,
+                  context: 'post_game',
+                ));
+            if (!_didStartGameOverSequence) {
+              _didStartGameOverSequence = true;
+
+              if (_shouldUseCheckmateIntro(state)) {
+                if (mounted) {
+                  setState(() {
+                    _showCheckmateIntro = true;
+                    _showGameOverDetails = false;
+                  });
+                }
+
+                _gameOverRevealTimer?.cancel();
+                _gameOverRevealTimer = Timer(const Duration(seconds: 2), () {
+                  if (!mounted) return;
+                  setState(() {
+                    _showCheckmateIntro = false;
+                    _showGameOverDetails = true;
+                  });
+                });
+              } else {
+                if (mounted) {
+                  setState(() {
+                    _showCheckmateIntro = false;
+                    _showGameOverDetails = true;
+                  });
+                }
+              }
+            }
+
             if (!_didRefreshPostGameAuth) {
               context.read<AuthBloc>().add(AuthCheckStatusEvent());
               _didRefreshPostGameAuth = true;

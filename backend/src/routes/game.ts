@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid'
 import type { Env } from '../index'
 import { authMiddleware } from '../middleware/auth'
 import { normalizeTimeControl, DEFAULT_TIME_CONTROL } from '../time_control'
+import { calculateMultiplayerXP } from '../xp_rules'
 
 const game = new Hono<{ Bindings: Env; Variables: { user: any } }>()
 game.use('*', authMiddleware)

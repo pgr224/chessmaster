@@ -16,7 +16,10 @@ self.addEventListener('push', function(event) {
     }
   }
 
-  const title = data.title || '♟️ New Match Invite!';
+  const category = data?.data?.category || 'system';
+  const title = data.title || (category === 'challenges'
+    ? '♟️ New Match Invite!'
+    : 'Chess Master Notification');
   const isXpRequest = data?.data?.type === 'XP_DIRECT_REQUEST';
   const options = {
     body: data.body || 'Someone challenged you to a game!',
@@ -46,9 +49,9 @@ self.addEventListener('notificationclick', function(event) {
   const data = event.notification.data;
   let targetUrl = '/'; // Default to root
 
-  if (data.type === 'CHALLENGE_RECEIVED' && data.challengeId) {
+  if (data.type === 'CHALLENGE_RECEIVED' && data.requestId) {
     // Redirect to the Lobby with the challenge ID as a query param
-    targetUrl = `/lobby?accept_challenge=${data.challengeId}`;
+    targetUrl = `/lobby?accept_challenge=${data.requestId}`;
   }
 
   if (data.type === 'XP_DIRECT_REQUEST' && data.requestId) {

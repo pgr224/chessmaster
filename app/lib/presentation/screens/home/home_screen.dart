@@ -8,6 +8,7 @@ import '../../../core/di/injection_container.dart' as di;
 import '../../../core/theme/app_theme.dart';
 import '../../../core/router/app_router.dart';
 import '../../../presentation/blocs/auth/auth_bloc.dart';
+import '../../../presentation/blocs/multiplayer/multiplayer_bloc.dart';
 import '../../../presentation/blocs/settings/settings_bloc.dart';
 import '../../../data/models/game_model.dart';
 import '../../../data/models/user_model.dart';
@@ -43,6 +44,19 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final bgTheme = context.watch<SettingsBloc>().state.backgroundTheme;
+    final pendingChallenges = context.select<MultiplayerBloc, int>(
+      (bloc) => bloc.state.incomingChallenges
+          .where((request) => request.status == 'pending')
+          .length,
+    );
+    final multiplayerState = context.watch<MultiplayerBloc>().state;
+    final incomingPending = multiplayerState.incomingChallenges
+      .where((request) => request.status == 'pending')
+      .length;
+    final outgoingPending = multiplayerState.outgoingChallenges
+      .where((request) =>
+        request.status == 'pending' || request.status == 'queued')
+      .length;
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, authState) {
         final user =
@@ -64,6 +78,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   SliverToBoxAdapter(child: _buildHeader(user)),
                   SliverToBoxAdapter(child: _buildLevelProgress(user)),
                   SliverToBoxAdapter(child: _buildQuickStats(user)),
+                  if (user != null)
+                    SliverToBoxAdapter(
+                      child: _buildGlobalNotifications(
+                        incomingPending: incomingPending,
+                        outgoingPending: outgoingPending,
+                        multiplayerState: multiplayerState,
+                      ),
+                    ),
                   if (user != null && user.xp < 0)
                     SliverToBoxAdapter(child: _buildLowXPWarning(user)),
                   if (_lastActiveGameId != null)
@@ -102,11 +124,15 @@ class _HomeScreenState extends State<HomeScreen> {
                         _buildModeCard(
                           emoji: '🌍',
                           title: 'Online Battle',
-                          subtitle: 'Play with the world!',
+                          subtitle: pendingChallenges > 0
+                              ? '$pendingChallenges request${pendingChallenges == 1 ? '' : 's'} waiting in your inbox'
+                              : 'Play with the world!',
                           gradient: const LinearGradient(
                             colors: [Color(0xFFFF6B9D), Color(0xFFA29BFE)],
                           ),
                           shadowColor: const Color(0xFFFF6B9D),
+                          badgeText:
+                              pendingChallenges > 0 ? '$pendingChallenges new' : null,
                           onTap: () => context.push('/lobby'),
                           delay: 160,
                         ),
@@ -371,6 +397,100 @@ class _HomeScreenState extends State<HomeScreen> {
     ).animate().fadeIn(delay: 150.ms).slideY(begin: 0.1);
   }
 
+  Widget _buildGlobalNotifications({
+    required int incomingPending,
+    required int outgoingPending,
+    required MultiplayerState multiplayerState,
+  }) {
+    final total = incomingPending + outgoingPending;
+    final latestIncoming = multiplayerState.incomingChallenges.isNotEmpty
+        ? multiplayerState.incomingChallenges.first
+        : null;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: AppTheme.cardGradient,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.notifications_active_rounded,
+                  color: AppTheme.accentCyan),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Notifications',
+                  style: GoogleFonts.fredoka(
+                    color: AppTheme.textPrimary,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              if (total > 0)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppTheme.accentCyan.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                      color: AppTheme.accentCyan.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Text(
+                    '$total new',
+                    style: GoogleFonts.fredoka(
+                      color: AppTheme.accentCyan,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            total == 0
+                ? 'No pending battle requests right now.'
+                : '$incomingPending incoming and $outgoingPending outgoing battle request${total == 1 ? '' : 's'} waiting.',
+            style: GoogleFonts.baloo2(
+              color: AppTheme.textSecondary,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          if (latestIncoming != null) ...[
+            const SizedBox(height: 10),
+            Text(
+              'Latest: ${latestIncoming.playerName} • ${latestIncoming.timeControl} • ${latestIncoming.mode.toUpperCase()}',
+              style: GoogleFonts.baloo2(
+                color: AppTheme.textPrimary,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: () => context.push('/lobby'),
+              icon: const Icon(Icons.arrow_forward_rounded),
+              label: const Text('Open Notifications'),
+            ),
+          ),
+        ],
+      ),
+    ).animate().fadeIn(delay: 180.ms).slideY(begin: 0.06);
+  }
+
   Widget _buildLowXPWarning(UserModel user) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -601,6 +721,7 @@ class _HomeScreenState extends State<HomeScreen> {
     required LinearGradient gradient,
     required Color shadowColor,
     required VoidCallback onTap,
+    String? badgeText,
     int delay = 0,
   }) {
     return GestureDetector(
@@ -658,12 +779,38 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(title,
-                            style: GoogleFonts.fredoka(
-                              color: AppTheme.textPrimary,
-                              fontSize: 20,
-                              fontWeight: FontWeight.w600,
-                            )),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(title,
+                                  style: GoogleFonts.fredoka(
+                                    color: AppTheme.textPrimary,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w600,
+                                  )),
+                            ),
+                            if (badgeText != null)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 5),
+                                decoration: BoxDecoration(
+                                  color: shadowColor.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(999),
+                                  border: Border.all(
+                                      color:
+                                          shadowColor.withValues(alpha: 0.28)),
+                                ),
+                                child: Text(
+                                  badgeText,
+                                  style: GoogleFonts.fredoka(
+                                    color: shadowColor,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
                         const SizedBox(height: 3),
                         Text(subtitle,
                             style: GoogleFonts.baloo2(

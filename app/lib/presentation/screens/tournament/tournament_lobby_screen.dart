@@ -1,5 +1,5 @@
 import 'dart:math' as math;
-import 'dart:ui' as UI;
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -11,6 +11,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/tournament_model.dart';
 import '../../blocs/auth/auth_bloc.dart';
+import '../../blocs/multiplayer/multiplayer_bloc.dart';
 import '../../blocs/settings/settings_bloc.dart';
 import '../../blocs/tournament/tournament_bloc.dart';
 import '../../utils/engagement_notifier.dart';
@@ -36,6 +37,10 @@ class _TournamentLobbyScreenState extends State<TournamentLobbyScreen> {
   @override
   void initState() {
     super.initState();
+    context.read<MultiplayerBloc>().add(const MpSetPresenceEvent(
+          LobbyPresence.tournament,
+          context: 'tournament_lobby',
+        ));
     final authState = context.read<AuthBloc>().state;
     if (authState is AuthAuthenticatedState) {
       _myUserId = authState.user.id;
@@ -48,6 +53,14 @@ class _TournamentLobbyScreenState extends State<TournamentLobbyScreen> {
             ),
           );
     }
+  }
+
+  @override
+  void dispose() {
+    context
+        .read<MultiplayerBloc>()
+        .add(const MpSetPresenceEvent(LobbyPresence.online, context: 'app'));
+    super.dispose();
   }
 
   @override
@@ -284,7 +297,7 @@ class _TournamentLobbyScreenState extends State<TournamentLobbyScreen> {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(20),
         child: BackdropFilter(
-          filter: UI.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
             decoration: BoxDecoration(
@@ -1124,8 +1137,11 @@ class _TournamentLobbyScreenState extends State<TournamentLobbyScreen> {
             children: [
               FilledButton.icon(
                 onPressed: () {
-                  Share.share(
-                    'I am currently #$rank in a live chess tournament with ${score.toStringAsFixed(1)} points. Join me in Chess Master! ',
+                  SharePlus.instance.share(
+                    ShareParams(
+                      text:
+                          'I am currently #$rank in a live chess tournament with ${score.toStringAsFixed(1)} points. Join me in Chess Master! ',
+                    ),
                   );
                 },
                 icon: const Icon(Icons.ios_share_rounded),
@@ -1185,7 +1201,7 @@ class _TournamentLobbyScreenState extends State<TournamentLobbyScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Engagement Feed',
+            'Notifications',
             style: GoogleFonts.fredoka(
               color: AppTheme.accentOrange,
               fontSize: 16,

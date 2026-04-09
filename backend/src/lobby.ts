@@ -1,12 +1,29 @@
 import { Matchmaker, QueuedPlayer } from './matchmaking'
 import type { Env } from './index'
 import { normalizeTimeControl, DEFAULT_TIME_CONTROL } from './time_control'
+import { PushService } from './services/push_service'
 
 export interface LobbyPlayer {
   id: string
   name: string
   rating: number
-  status: 'idle' | 'searching' | 'in_game'
+  status: 'idle' | 'searching' | 'in_game' | 'tournament' | 'offline_game'
+}
+
+type ChallengeMode = 'duel' | 'tournament'
+type ChallengeDelivery = 'live' | 'queued'
+
+interface StoredChallengeRow {
+  id: string
+  challenger_id: string
+  challenged_id: string
+  time_control: string
+  mode: ChallengeMode
+  variant_id: string
+  delivery_status: ChallengeDelivery
+  challenger_name?: string
+  challenged_name?: string
+  created_at?: string
 }
 
 export class Lobby implements DurableObject {
@@ -55,6 +72,7 @@ export class Lobby implements DurableObject {
 
     // Broadcast update to everyone
     this.broadcastUpdate()
+    await this.sendPendingChallenges(server, userId)
 
     return new Response(null, {
       status: 101,
@@ -70,6 +88,16 @@ export class Lobby implements DurableObject {
       const msg = JSON.parse(message as string)
       
       switch (msg.type) {
+        case 'PRESENCE_UPDATE': {
+          meta.status = this.normalizePresence(msg.status)
+          ws.serializeAttachment(meta)
+          if (meta.status !== 'searching') {
+            this.matchmaker.remove(meta.id)
+          }
+          this.broadcastUpdate()
+          break
+        }
+
         case 'FIND_MATCH':
           const requestedTimeControl =
             typeof msg.timeControl === 'string' && msg.timeControl.length > 0
@@ -97,37 +125,243 @@ export class Lobby implements DurableObject {
           break
 
         case 'CHALLENGE': {
-          const { opponentId, mode, timeControl } = msg
+          const opponentId = typeof msg.opponentId === 'string' ? msg.opponentId : ''
+          const requestId =
+            typeof msg.requestId === 'string' && msg.requestId.length > 0
+              ? msg.requestId
+              : crypto.randomUUID()
+          const mode = this.normalizeChallengeMode(msg.mode)
+          const timeControl = normalizeTimeControl(msg.timeControl ?? DEFAULT_TIME_CONTROL)
+          const variantId =
+            typeof msg.variantId === 'string' && msg.variantId.length > 0
+              ? msg.variantId
+              : 'standard'
+          const allowOffline = msg.allowOffline === true
           const sockets = this.state.getWebSockets()
           const opponent = sockets.find(s => (s.deserializeAttachment() as LobbyPlayer)?.id === opponentId)
-          if (opponent) {
+          const opponentMeta = opponent?.deserializeAttachment() as LobbyPlayer | undefined
+          const opponentStatus = opponentMeta?.status ?? 'offline'
+          const isOpponentReady = opponentMeta?.status === 'idle'
+
+          if (!opponentId) {
+            ws.send(JSON.stringify({
+              type: 'CHALLENGE_CANCELLED',
+              data: {
+                requestId,
+                message: 'Opponent not specified.',
+              },
+            }))
+            break
+          }
+
+          if (!opponent && !allowOffline) {
+            ws.send(JSON.stringify({
+              type: 'CHALLENGE_BUSY',
+              data: {
+                requestId,
+                opponentId,
+                recipientStatus: opponentStatus,
+                message: 'That player is offline right now. Send as offline request to queue it.',
+              },
+            }))
+            break
+          }
+
+          if (opponent && !isOpponentReady && !allowOffline) {
+            ws.send(JSON.stringify({
+              type: 'CHALLENGE_BUSY',
+              data: {
+                requestId,
+                opponentId,
+                recipientStatus: opponentStatus,
+                message: `${opponentMeta?.name ?? 'That player'} is currently busy. Send it as an offline request to queue it.`,
+              },
+            }))
+            break
+          }
+
+          const deliveryStatus: ChallengeDelivery =
+            opponent && isOpponentReady ? 'live' : 'queued'
+
+          await this.upsertChallenge({
+            id: requestId,
+            challengerId: meta.id,
+            challengedId: opponentId,
+            timeControl,
+            mode,
+            variantId,
+            deliveryStatus,
+          })
+
+          if (opponent && isOpponentReady) {
             opponent.send(JSON.stringify({
               type: 'CHALLENGE_RECEIVED',
               data: {
+                requestId,
                 challengerId: meta.id,
                 challengerName: meta.name,
                 mode,
-                timeControl: normalizeTimeControl(timeControl ?? DEFAULT_TIME_CONTROL)
+                timeControl,
+                variantId,
+                queued: false,
+                ts: Date.now(),
               }
+            }))
+
+            ws.send(JSON.stringify({
+              type: 'CHALLENGE_SENT',
+              data: {
+                requestId,
+                opponentId,
+                recipientStatus: opponentStatus,
+                deliveryStatus,
+              },
+            }))
+          } else {
+            await PushService.notifyUser(opponentId, {
+              title: '♟️ New Battle Request',
+              body: `${meta.name} sent you a ${mode} request. Open Chess Master to respond.`,
+              icon: '/icons/Icon-192.png',
+              data: {
+                type: 'CHALLENGE_RECEIVED',
+                requestId,
+                challengerId: meta.id,
+                challengerName: meta.name,
+                category: 'challenges',
+                mode,
+                timeControl,
+                variantId,
+                queued: true,
+              },
+            }, this.env)
+
+            ws.send(JSON.stringify({
+              type: 'CHALLENGE_QUEUED',
+              data: {
+                requestId,
+                opponentId,
+                recipientStatus: opponentStatus,
+                message: `${opponentMeta?.name ?? 'That player'} is busy. Your request is queued and will appear in their inbox.`,
+              },
             }))
           }
           break
         }
 
         case 'CHALLENGE_ACCEPTED': {
-          const { challengerId, mode, timeControl } = msg
+          const challengerId = typeof msg.challengerId === 'string' ? msg.challengerId : ''
+          const requestId = typeof msg.requestId === 'string' ? msg.requestId : ''
           const sockets = this.state.getWebSockets()
           const challenger = sockets.find(s => (s.deserializeAttachment() as LobbyPlayer)?.id === challengerId)
-          
-          if (challenger) {
-            const gameId = crypto.randomUUID()
-            const payload = (color: string, oppName: string) => JSON.stringify({
-              type: 'MATCH_FOUND',
-              data: { gameId, color, opponentName: oppName, mode, timeControl }
-            })
+          if (!requestId) {
+            ws.send(JSON.stringify({
+              type: 'CHALLENGE_CANCELLED',
+              data: {
+                message: 'Missing request ID for challenge acceptance.',
+              },
+            }))
+            break
+          }
 
-            ws.send(payload('black', (challenger.deserializeAttachment() as LobbyPlayer).name))
-            challenger.send(payload('white', meta.name))
+          const challenge = await this.getPendingChallenge(requestId, meta.id)
+          if (!challenge) {
+            ws.send(JSON.stringify({
+              type: 'CHALLENGE_EXPIRED',
+              data: {
+                requestId,
+                message: 'This request is no longer available.',
+              },
+            }))
+            break
+          }
+
+          const gameId = crypto.randomUUID()
+          await this.acceptChallengeRecord(challenge, gameId)
+
+          const challengerName =
+            (challenger?.deserializeAttachment() as LobbyPlayer | undefined)?.name ??
+            challenge.challenger_name ??
+            'Opponent'
+          const acceptorName = meta.name
+          const payload = (
+            color: string,
+            oppName: string,
+            oppId: string,
+          ) => JSON.stringify({
+            type: 'MATCH_FOUND',
+            data: {
+              gameId,
+              color,
+              opponentId: oppId,
+              opponentName: oppName,
+              mode: challenge.mode,
+              timeControl: challenge.time_control,
+              variantId: challenge.variant_id,
+              requestId,
+              queued: challenge.delivery_status === 'queued',
+            }
+          })
+
+          ws.send(payload('black', challengerName, challenge.challenger_id))
+          if (challenger) {
+            challenger.send(payload('white', acceptorName, challenge.challenged_id))
+          } else {
+            await PushService.notifyUser(challenge.challenger_id, {
+              title: '♟️ Battle Request Accepted',
+              body: `${acceptorName} accepted your request. Re-open the app to join the game.`,
+              icon: '/icons/Icon-192.png',
+              data: {
+                type: 'CHALLENGE_ACCEPTED',
+                requestId,
+                gameId,
+                category: 'challenges',
+              },
+            }, this.env)
+          }
+
+          meta.status = 'in_game'
+          ws.serializeAttachment(meta)
+          if (challenger) {
+            const challengerMeta = challenger.deserializeAttachment() as LobbyPlayer | undefined
+            if (challengerMeta) {
+              challengerMeta.status = 'in_game'
+              challenger.serializeAttachment(challengerMeta)
+            }
+          }
+          this.broadcastUpdate()
+          break
+        }
+
+        case 'CHALLENGE_DECLINED': {
+          const challengerId = typeof msg.challengerId === 'string' ? msg.challengerId : ''
+          const requestId = typeof msg.requestId === 'string' ? msg.requestId : ''
+          if (!requestId) {
+            break
+          }
+          const didDecline = await this.declineChallengeRecord(requestId, meta.id)
+          if (!didDecline) {
+            ws.send(JSON.stringify({
+              type: 'CHALLENGE_EXPIRED',
+              data: {
+                requestId,
+                message: 'This request has already been processed.',
+              },
+            }))
+            break
+          }
+
+          const sockets = this.state.getWebSockets()
+          const challenger = sockets.find(s => (s.deserializeAttachment() as LobbyPlayer)?.id === challengerId)
+          const declinePayload = JSON.stringify({
+            type: 'CHALLENGE_DECLINED',
+            data: {
+              requestId,
+              challengerId,
+              message: `${meta.name} declined your request.`,
+            },
+          })
+          if (challenger) {
+            challenger.send(declinePayload)
           }
           break
         }
@@ -246,7 +480,11 @@ export class Lobby implements DurableObject {
           data: {
             onlinePlayers: visiblePlayers.length,
             searchingPlayers: this.matchmaker.getQueueCount(),
-            players: visiblePlayers
+            players: visiblePlayers.map((player) => ({
+              ...player,
+              presence: this.mapPresence(player.status),
+              flair: this.buildFlair(player.status),
+            }))
           }
         })
         ws.send(data)
@@ -254,5 +492,167 @@ export class Lobby implements DurableObject {
         ws.close()
       }
     }
+  }
+
+  private normalizePresence(value: unknown): LobbyPlayer['status'] {
+    switch (value) {
+      case 'searching':
+        return 'searching'
+      case 'playing':
+      case 'in_game':
+        return 'in_game'
+      case 'tournament':
+        return 'tournament'
+      case 'offline_game':
+        return 'offline_game'
+      default:
+        return 'idle'
+    }
+  }
+
+  private mapPresence(status: LobbyPlayer['status']): string {
+    switch (status) {
+      case 'in_game':
+        return 'playing'
+      case 'offline_game':
+        return 'offline_game'
+      default:
+        return status
+    }
+  }
+
+  private buildFlair(status: LobbyPlayer['status']): string {
+    switch (status) {
+      case 'searching':
+        return 'Searching for a match'
+      case 'in_game':
+        return 'In a live game'
+      case 'tournament':
+        return 'In a tournament'
+      case 'offline_game':
+        return 'Playing offline'
+      default:
+        return 'Ready for a challenge'
+    }
+  }
+
+  private normalizeChallengeMode(value: unknown): ChallengeMode {
+    return value === 'tournament' ? 'tournament' : 'duel'
+  }
+
+  private async upsertChallenge(input: {
+    id: string
+    challengerId: string
+    challengedId: string
+    timeControl: string
+    mode: ChallengeMode
+    variantId: string
+    deliveryStatus: ChallengeDelivery
+  }) {
+    await this.env.DB.prepare(
+      `INSERT OR REPLACE INTO challenges (
+        id,
+        challenger_id,
+        challenged_id,
+        time_control,
+        mode,
+        variant_id,
+        delivery_status,
+        status,
+        created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', datetime('now'))`
+    )
+      .bind(
+        input.id,
+        input.challengerId,
+        input.challengedId,
+        input.timeControl,
+        input.mode,
+        input.variantId,
+        input.deliveryStatus,
+      )
+      .run()
+  }
+
+  private async sendPendingChallenges(ws: WebSocket, userId: string) {
+    const { results } = await this.env.DB.prepare(
+      `SELECT c.id, c.challenger_id, c.challenged_id, c.time_control, c.mode, c.variant_id,
+              c.delivery_status, c.created_at, u.username as challenger_name
+       FROM challenges c
+       JOIN users u ON u.id = c.challenger_id
+       WHERE c.challenged_id = ? AND c.status = 'pending'
+       ORDER BY c.created_at DESC
+       LIMIT 20`
+    )
+      .bind(userId)
+      .all<StoredChallengeRow>()
+
+    if (!results.length) {
+      return
+    }
+
+    ws.send(JSON.stringify({
+      type: 'PENDING_CHALLENGES_SYNC',
+      data: {
+        requests: results.map((challenge) => ({
+          requestId: challenge.id,
+          challengerId: challenge.challenger_id,
+          challengerName: challenge.challenger_name ?? 'Opponent',
+          mode: challenge.mode,
+          timeControl: challenge.time_control,
+          variantId: challenge.variant_id,
+          queued: challenge.delivery_status === 'queued',
+          ts: challenge.created_at ? Date.parse(challenge.created_at) : Date.now(),
+        })),
+      },
+    }))
+  }
+
+  private async getPendingChallenge(requestId: string, challengedUserId: string) {
+    return this.env.DB.prepare(
+      `SELECT c.id, c.challenger_id, c.challenged_id, c.time_control, c.mode, c.variant_id,
+              c.delivery_status, c.created_at,
+              cu.username as challenger_name,
+              tu.username as challenged_name
+       FROM challenges c
+       JOIN users cu ON cu.id = c.challenger_id
+       JOIN users tu ON tu.id = c.challenged_id
+       WHERE c.id = ? AND c.challenged_id = ? AND c.status = 'pending'`
+    )
+      .bind(requestId, challengedUserId)
+      .first<StoredChallengeRow>()
+  }
+
+  private async acceptChallengeRecord(challenge: StoredChallengeRow, gameId: string) {
+    let whiteId = challenge.challenger_id
+    let blackId = challenge.challenged_id
+    if (challenge.mode === 'tournament') {
+      whiteId = challenge.challenger_id
+      blackId = challenge.challenged_id
+    }
+
+    await this.env.DB.batch([
+      this.env.DB.prepare(
+        `INSERT INTO games (id, white_user_id, black_user_id, mode, time_control)
+         VALUES (?, ?, ?, 'multiplayer', ?)`
+      ).bind(gameId, whiteId, blackId, challenge.time_control),
+      this.env.DB.prepare(
+        `UPDATE challenges
+         SET status = 'accepted', game_id = ?, updated_at = datetime('now')
+         WHERE id = ?`
+      ).bind(gameId, challenge.id),
+    ])
+  }
+
+  private async declineChallengeRecord(requestId: string, challengedUserId: string) {
+    const result = await this.env.DB.prepare(
+      `UPDATE challenges
+       SET status = 'declined', updated_at = datetime('now')
+       WHERE id = ? AND challenged_id = ? AND status = 'pending'`
+    )
+      .bind(requestId, challengedUserId)
+      .run()
+
+    return (result.meta?.changes ?? 0) > 0
   }
 }

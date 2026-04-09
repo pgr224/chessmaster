@@ -23,6 +23,24 @@ export class PushService {
    * Send a notification to all registered subscriptions of a user
    */
   static async notifyUser(userId: string, payload: NotificationPayload, env: Env) {
+    const category = this.resolveCategory(payload)
+
+    const preferences = await env.DB.prepare(
+      `SELECT challenge_notifications, community_notifications,
+              tournament_notifications, system_notifications
+       FROM user_notification_preferences
+       WHERE user_id = ?`
+    ).bind(userId).first<{
+      challenge_notifications: number
+      community_notifications: number
+      tournament_notifications: number
+      system_notifications: number
+    }>()
+
+    if (preferences && !this.isCategoryEnabled(category, preferences)) {
+      return
+    }
+
     // 1. Fetch all active subscriptions for the user
     // We only send if user preference is enabled
     const { results: subs } = await env.DB.prepare(`
@@ -46,6 +64,36 @@ export class PushService {
         console.error(`[Push Notification Failed] User: ${userId}, Endpoint: ${(subs[i] as any).endpoint}, Error:`, r.reason)
       }
     })
+  }
+
+  private static resolveCategory(payload: NotificationPayload):
+      'challenges' | 'community' | 'tournaments' | 'system' {
+    const raw = payload.data?.category
+    if (raw === 'challenges' || raw === 'community' || raw === 'tournaments') {
+      return raw
+    }
+    return 'system'
+  }
+
+  private static isCategoryEnabled(
+    category: 'challenges' | 'community' | 'tournaments' | 'system',
+    row: {
+      challenge_notifications: number
+      community_notifications: number
+      tournament_notifications: number
+      system_notifications: number
+    }
+  ): boolean {
+    switch (category) {
+      case 'challenges':
+        return row.challenge_notifications === 1
+      case 'community':
+        return row.community_notifications === 1
+      case 'tournaments':
+        return row.tournament_notifications === 1
+      default:
+        return row.system_notifications === 1
+    }
   }
 
   /**

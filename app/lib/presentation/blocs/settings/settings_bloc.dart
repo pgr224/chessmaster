@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -31,6 +33,15 @@ class SettingsNotificationsEvent extends SettingsEvent {
   const SettingsNotificationsEvent(this.enabled);
   @override
   List<Object?> get props => [enabled];
+}
+
+class SettingsNotificationCategoryEvent extends SettingsEvent {
+  final String category;
+  final bool enabled;
+  const SettingsNotificationCategoryEvent(this.category, this.enabled);
+
+  @override
+  List<Object?> get props => [category, enabled];
 }
 
 class SettingsShowCoordinatesEvent extends SettingsEvent {
@@ -107,6 +118,10 @@ class SettingsState extends Equatable {
   final bool soundEnabled;
   final bool vibrationEnabled;
   final bool notificationsEnabled;
+  final bool notificationChallenges;
+  final bool notificationCommunity;
+  final bool notificationTournaments;
+  final bool notificationSystem;
   final bool showCoordinates;
   final bool showSquareLabels;
   final bool showLegalMoves;
@@ -123,6 +138,10 @@ class SettingsState extends Equatable {
     this.soundEnabled = true,
     this.vibrationEnabled = true,
     this.notificationsEnabled = true,
+    this.notificationChallenges = true,
+    this.notificationCommunity = true,
+    this.notificationTournaments = true,
+    this.notificationSystem = true,
     this.showCoordinates = true,
     this.showSquareLabels = false,
     this.showLegalMoves = true,
@@ -140,6 +159,10 @@ class SettingsState extends Equatable {
     bool? soundEnabled,
     bool? vibrationEnabled,
     bool? notificationsEnabled,
+    bool? notificationChallenges,
+    bool? notificationCommunity,
+    bool? notificationTournaments,
+    bool? notificationSystem,
     bool? showCoordinates,
     bool? showSquareLabels,
     bool? showLegalMoves,
@@ -156,6 +179,12 @@ class SettingsState extends Equatable {
         soundEnabled: soundEnabled ?? this.soundEnabled,
         vibrationEnabled: vibrationEnabled ?? this.vibrationEnabled,
         notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
+        notificationChallenges:
+          notificationChallenges ?? this.notificationChallenges,
+        notificationCommunity: notificationCommunity ?? this.notificationCommunity,
+        notificationTournaments:
+          notificationTournaments ?? this.notificationTournaments,
+        notificationSystem: notificationSystem ?? this.notificationSystem,
         showCoordinates: showCoordinates ?? this.showCoordinates,
         showSquareLabels: showSquareLabels ?? this.showSquareLabels,
         showLegalMoves: showLegalMoves ?? this.showLegalMoves,
@@ -174,6 +203,10 @@ class SettingsState extends Equatable {
         soundEnabled,
         vibrationEnabled,
         notificationsEnabled,
+        notificationChallenges,
+        notificationCommunity,
+        notificationTournaments,
+        notificationSystem,
         showCoordinates,
         showSquareLabels,
         showLegalMoves,
@@ -205,19 +238,34 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
       final prefs = await SharedPreferences.getInstance();
       prefs.setBool('notifications', e.enabled);
       emit(state.copyWith(notificationsEnabled: e.enabled));
+      await _syncNotificationSettings(prefs, state.copyWith(notificationsEnabled: e.enabled));
+    });
+    on<SettingsNotificationCategoryEvent>((e, emit) async {
+      final prefs = await SharedPreferences.getInstance();
+      final next = switch (e.category) {
+        'challenges' => state.copyWith(notificationChallenges: e.enabled),
+        'community' => state.copyWith(notificationCommunity: e.enabled),
+        'tournaments' => state.copyWith(notificationTournaments: e.enabled),
+        _ => state.copyWith(notificationSystem: e.enabled),
+      };
 
-      // Sync with backend if logged in
-      final userId = prefs.getString('user_id');
-      if (userId != null && dio != null) {
-        try {
-          await dio!.put('/api/push/settings', data: {
-            'userId': userId,
-            'enabled': e.enabled,
-          });
-        } catch (e) {
-          LoggingService.error('Failed to sync notification settings', e);
-        }
+      switch (e.category) {
+        case 'challenges':
+          await prefs.setBool('notif_challenges', e.enabled);
+          break;
+        case 'community':
+          await prefs.setBool('notif_community', e.enabled);
+          break;
+        case 'tournaments':
+          await prefs.setBool('notif_tournaments', e.enabled);
+          break;
+        default:
+          await prefs.setBool('notif_system', e.enabled);
+          break;
       }
+
+      emit(next);
+      await _syncNotificationSettings(prefs, next);
     });
     on<SettingsShowCoordinatesEvent>((e, emit) async {
       (await SharedPreferences.getInstance())
@@ -275,10 +323,14 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
   Future<void> _onLoad(
       SettingsLoadEvent event, Emitter<SettingsState> emit) async {
     final prefs = await SharedPreferences.getInstance();
-    emit(SettingsState(
+    var loadedState = SettingsState(
       soundEnabled: prefs.getBool('sound') ?? true,
       vibrationEnabled: prefs.getBool('vibration') ?? true,
       notificationsEnabled: prefs.getBool('notifications') ?? true,
+      notificationChallenges: prefs.getBool('notif_challenges') ?? true,
+      notificationCommunity: prefs.getBool('notif_community') ?? true,
+      notificationTournaments: prefs.getBool('notif_tournaments') ?? true,
+      notificationSystem: prefs.getBool('notif_system') ?? true,
       showCoordinates: prefs.getBool('show_coordinates') ?? true,
       showSquareLabels: prefs.getBool('show_square_labels') ?? false,
       showLegalMoves: prefs.getBool('show_legal_moves') ?? true,
@@ -290,6 +342,86 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
       autoQueen: prefs.getBool('auto_queen') ?? false,
       backgroundTheme: prefs.getString('background_theme') ?? 'midnight',
       isLoaded: true,
-    ));
+    );
+
+    emit(loadedState);
+
+    final userId = _resolveUserIdFromPrefs(prefs);
+    if (dio != null && userId != null) {
+      try {
+        final response = await dio!.get('/api/push/settings',
+            queryParameters: {'userId': userId});
+        final data = response.data as Map<String, dynamic>;
+        final categories = (data['categories'] as Map?)?.map(
+              (key, value) => MapEntry(key.toString(), value),
+            ) ??
+            const <String, dynamic>{};
+
+        loadedState = loadedState.copyWith(
+          notificationsEnabled: data['enabled'] == true,
+          notificationChallenges: categories['challenges'] != false,
+          notificationCommunity: categories['community'] != false,
+          notificationTournaments: categories['tournaments'] != false,
+          notificationSystem: categories['system'] != false,
+        );
+
+        await prefs.setBool('notifications', loadedState.notificationsEnabled);
+        await prefs.setBool('notif_challenges', loadedState.notificationChallenges);
+        await prefs.setBool('notif_community', loadedState.notificationCommunity);
+        await prefs.setBool('notif_tournaments', loadedState.notificationTournaments);
+        await prefs.setBool('notif_system', loadedState.notificationSystem);
+        emit(loadedState);
+      } catch (e) {
+        LoggingService.error('Failed to fetch remote notification settings', e);
+      }
+    }
+  }
+
+  Future<void> _syncNotificationSettings(
+    SharedPreferences prefs,
+    SettingsState next,
+  ) async {
+    final userId = _resolveUserIdFromPrefs(prefs);
+    if (userId == null || dio == null) {
+      return;
+    }
+
+    try {
+      await dio!.put('/api/push/settings', data: {
+        'userId': userId,
+        'enabled': next.notificationsEnabled,
+        'categories': {
+          'challenges': next.notificationChallenges,
+          'community': next.notificationCommunity,
+          'tournaments': next.notificationTournaments,
+          'system': next.notificationSystem,
+        },
+      });
+    } catch (e) {
+      LoggingService.error('Failed to sync notification settings', e);
+    }
+  }
+
+  String? _resolveUserIdFromPrefs(SharedPreferences prefs) {
+    final direct = prefs.getString('user_id');
+    if (direct != null && direct.isNotEmpty) {
+      return direct;
+    }
+
+    final rawUser = prefs.getString('user_data');
+    if (rawUser == null || rawUser.isEmpty) {
+      return null;
+    }
+
+    try {
+      final decoded = jsonDecode(rawUser);
+      if (decoded is Map<String, dynamic>) {
+        final id = decoded['id']?.toString();
+        if (id != null && id.isNotEmpty) {
+          return id;
+        }
+      }
+    } catch (_) {}
+    return null;
   }
 }

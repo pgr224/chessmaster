@@ -49,6 +49,10 @@ class MultiplayerService {
   /// Connect to the global lobby
   Future<void> connectLobby(String userId, String username,
       {int rating = 1200}) async {
+    if (_lobbyChannel != null && _userId == userId && _username == username) {
+      return;
+    }
+
     _userId = userId;
     _username = username;
     _rating = rating;
@@ -150,25 +154,60 @@ class MultiplayerService {
 
   /// Send a direct challenge to another player in the lobby
   void sendChallenge(
-      String opponentId, String mode, String timeControl, String variantId) {
+    String opponentId,
+    String mode,
+    String timeControl,
+    String variantId, {
+    String? requestId,
+    bool allowOffline = false,
+    String? recipientStatus,
+  }) {
     _lobbyChannel?.sink.add(jsonEncode({
       'type': 'CHALLENGE',
       'opponentId': opponentId,
       'mode': mode,
       'timeControl': timeControl,
       'variantId': variantId,
+      if (requestId != null) 'requestId': requestId,
+      if (allowOffline) 'allowOffline': true,
+      if (recipientStatus != null) 'recipientStatus': recipientStatus,
     }));
   }
 
   /// Accept a direct challenge from another player
   void acceptChallenge(
-      String challengerId, String mode, String timeControl, String variantId) {
+    String challengerId,
+    String mode,
+    String timeControl,
+    String variantId, {
+    String? requestId,
+    bool isQueued = false,
+  }) {
     _lobbyChannel?.sink.add(jsonEncode({
       'type': 'CHALLENGE_ACCEPTED',
       'challengerId': challengerId,
       'mode': mode,
       'timeControl': timeControl,
       'variantId': variantId,
+      if (requestId != null) 'requestId': requestId,
+      if (isQueued) 'queued': true,
+    }));
+  }
+
+  void declineChallenge(String challengerId, {String? requestId}) {
+    _lobbyChannel?.sink.add(jsonEncode({
+      'type': 'CHALLENGE_DECLINED',
+      'challengerId': challengerId,
+      if (requestId != null) 'requestId': requestId,
+    }));
+  }
+
+  void sendPresence(String status, {String? gameId, String? context}) {
+    _lobbyChannel?.sink.add(jsonEncode({
+      'type': 'PRESENCE_UPDATE',
+      'status': status,
+      if (gameId != null) 'gameId': gameId,
+      if (context != null) 'context': context,
     }));
   }
 

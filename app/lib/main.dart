@@ -58,21 +58,36 @@ class ChessApp extends StatelessWidget {
         BlocProvider<SettingsBloc>(
             create: (_) => di.sl<SettingsBloc>()..add(SettingsLoadEvent())),
       ],
-      child: BlocBuilder<SettingsBloc, SettingsState>(
-        builder: (context, settingsState) {
-          return BlocBuilder<ThemeBloc, ThemeState>(
-            builder: (context, themeState) {
-              return MaterialApp.router(
-                title: 'Chess Master',
-                debugShowCheckedModeBanner: false,
-                theme: AppTheme.darkTheme,
-                darkTheme: AppTheme.darkTheme,
-                themeMode: ThemeMode.dark,
-                routerConfig: AppRouter.router,
-              );
-            },
-          );
+      child: BlocListener<AuthBloc, AuthState>(
+        listenWhen: (previous, current) => previous.runtimeType != current.runtimeType,
+        listener: (context, authState) {
+          final multiplayerBloc = context.read<MultiplayerBloc>();
+          if (authState is AuthAuthenticatedState) {
+            multiplayerBloc.add(MpConnectLobbyEvent(
+              authState.user.id,
+              authState.user.username,
+              rating: authState.user.xp,
+            ));
+          } else {
+            multiplayerBloc.add(MpDisconnectLobbyEvent());
+          }
         },
+        child: BlocBuilder<SettingsBloc, SettingsState>(
+          builder: (context, settingsState) {
+            return BlocBuilder<ThemeBloc, ThemeState>(
+              builder: (context, themeState) {
+                return MaterialApp.router(
+                  title: 'Chess Master',
+                  debugShowCheckedModeBanner: false,
+                  theme: AppTheme.darkTheme,
+                  darkTheme: AppTheme.darkTheme,
+                  themeMode: ThemeMode.dark,
+                  routerConfig: AppRouter.router,
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }
