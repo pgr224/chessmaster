@@ -76,8 +76,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 physics: const BouncingScrollPhysics(),
                 slivers: [
                   SliverToBoxAdapter(child: _buildHeader(user)),
-                  SliverToBoxAdapter(child: _buildLevelProgress(user)),
-                  SliverToBoxAdapter(child: _buildQuickStats(user)),
                   if (user != null)
                     SliverToBoxAdapter(
                       child: _buildGlobalNotifications(
@@ -86,6 +84,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         multiplayerState: multiplayerState,
                       ),
                     ),
+                  SliverToBoxAdapter(child: _buildLevelProgress(user)),
+                  SliverToBoxAdapter(child: _buildQuickStats(user)),
                   if (user != null && user.xp < 0)
                     SliverToBoxAdapter(child: _buildLowXPWarning(user)),
                   if (_lastActiveGameId != null)
@@ -403,88 +403,90 @@ class _HomeScreenState extends State<HomeScreen> {
     required MultiplayerState multiplayerState,
   }) {
     final total = incomingPending + outgoingPending;
-    final latestIncoming = multiplayerState.incomingChallenges.isNotEmpty
-        ? multiplayerState.incomingChallenges.first
-        : null;
+    final latestPending = [
+      ...multiplayerState.incomingChallenges
+          .where((request) => request.status == 'pending'),
+      ...multiplayerState.outgoingChallenges.where((request) =>
+          request.status == 'pending' || request.status == 'queued'),
+    ]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+    final current = latestPending.isNotEmpty ? latestPending.first : null;
+    final currentLabel = current == null
+        ? 'No pending notification right now.'
+        : current.isIncoming
+            ? '${current.playerName} sent a ${current.mode.toUpperCase()} request (${current.timeControl}).'
+            : 'Waiting on ${current.playerName} for your ${current.mode.toUpperCase()} request (${current.timeControl}).';
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         gradient: AppTheme.cardGradient,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            children: [
-              const Icon(Icons.notifications_active_rounded,
-                  color: AppTheme.accentCyan),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'Notifications',
-                  style: GoogleFonts.fredoka(
-                    color: AppTheme.textPrimary,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
+          const Icon(Icons.notifications_active_rounded,
+              color: AppTheme.accentCyan, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      'Notifications',
+                      style: GoogleFonts.fredoka(
+                        color: AppTheme.textPrimary,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    if (total > 0) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppTheme.accentCyan.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(
+                            color: AppTheme.accentCyan.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Text(
+                          '$total',
+                          style: GoogleFonts.fredoka(
+                            color: AppTheme.accentCyan,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  currentLabel,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.baloo2(
+                    color: AppTheme.textSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-              ),
-              if (total > 0)
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppTheme.accentCyan.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(
-                      color: AppTheme.accentCyan.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  child: Text(
-                    '$total new',
-                    style: GoogleFonts.fredoka(
-                      color: AppTheme.accentCyan,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Text(
-            total == 0
-                ? 'No pending battle requests right now.'
-                : '$incomingPending incoming and $outgoingPending outgoing battle request${total == 1 ? '' : 's'} waiting.',
-            style: GoogleFonts.baloo2(
-              color: AppTheme.textSecondary,
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
+              ],
             ),
           ),
-          if (latestIncoming != null) ...[
-            const SizedBox(height: 10),
-            Text(
-              'Latest: ${latestIncoming.playerName} • ${latestIncoming.timeControl} • ${latestIncoming.mode.toUpperCase()}',
-              style: GoogleFonts.baloo2(
-                color: AppTheme.textPrimary,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-          const SizedBox(height: 12),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton.icon(
-              onPressed: () => context.push('/lobby'),
-              icon: const Icon(Icons.arrow_forward_rounded),
-              label: const Text('Open Notifications'),
-            ),
+          const SizedBox(width: 8),
+          TextButton.icon(
+            onPressed: () => context.push('/settings'),
+            icon: const Icon(Icons.tune_rounded, size: 16),
+            label: const Text('Manage'),
           ),
         ],
       ),

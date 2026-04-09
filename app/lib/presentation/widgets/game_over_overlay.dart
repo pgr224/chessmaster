@@ -274,7 +274,8 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                     ),
                     child: Column(
                       children: [
-                        if (widget.gameMode == GameMode.multiplayer) ...[
+                        if (widget.gameMode == GameMode.multiplayer ||
+                            widget.gameMode == GameMode.twoPlayer) ...[
                           _buildAccuracyBars(),
                           const SizedBox(height: 12),
                           Row(
@@ -289,6 +290,21 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                                   'Blunders',
                                   '${widget.blunders}',
                                   '${widget.opponentBlunders}',
+                                  AppTheme.accentRed),
+                            ],
+                          ),
+                        ] else if (widget.gameMode == GameMode.singlePlayer ||
+                            widget.gameMode == GameMode.practice) ...[
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: [
+                              _singleStatItem(
+                                  'Accuracy',
+                                  '${widget.accuracy.round()}%',
+                                  AppTheme.accentCyan),
+                              _singleStatItem('Mistakes', '${widget.mistakes}',
+                                  AppTheme.lavender),
+                              _singleStatItem('Blunders', '${widget.blunders}',
                                   AppTheme.accentRed),
                             ],
                           ),
@@ -615,6 +631,25 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
               gravity: 0.2,
             ),
           ),
+      ],
+    );
+  }
+
+  Widget _singleStatItem(String label, String value, Color color) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: GoogleFonts.fredoka(
+              color: color, fontSize: 20, fontWeight: FontWeight.w800),
+        ),
+        Text(
+          label,
+          style: GoogleFonts.baloo2(
+              color: AppTheme.textMuted,
+              fontSize: 11,
+              fontWeight: FontWeight.w600),
+        ),
       ],
     );
   }

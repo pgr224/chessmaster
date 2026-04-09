@@ -97,13 +97,13 @@ challengeRoutes.post('/', async (c) => {
           requestId,
           challengerId: userId,
           challengerName: username,
-          category: 'challenges',
+            category: mode === 'tournament' ? 'tournaments' : 'challenges',
           mode,
           timeControl: normalizeTimeControl(time_control),
           variantId: variant_id,
           queued: delivery_status === 'queued',
         }
-      }, c.env)
+      }, c.env, mode === 'tournament' ? 'tournaments' : 'challenges')
     )
 
     return c.json({ success: true, id: requestId }, 201)

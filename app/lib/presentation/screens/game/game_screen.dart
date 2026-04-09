@@ -900,9 +900,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       child: BlocBuilder<MultiplayerBloc, MultiplayerState>(
         builder: (context, mpState) {
           final messages = mpState.chatMessages.where((msg) {
-            // Keep messages sent within the last 2 minutes for bubble previews
+            // Auto-discard floating previews after 4 seconds.
             final age = DateTime.now().difference(msg.timestamp);
-            return age.inSeconds < 120;
+            return age.inMilliseconds < 4000;
           }).toList();
 
           return GestureDetector(
@@ -937,7 +937,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                 .animate()
                                 .fadeIn(duration: 400.ms)
                                 .slideY(begin: 0.2, end: 0)
-                                .fadeOut(delay: 5.seconds, duration: 1.seconds);
+                                .fadeOut(delay: 3200.ms, duration: 800.ms);
                           },
                         ),
                       ),

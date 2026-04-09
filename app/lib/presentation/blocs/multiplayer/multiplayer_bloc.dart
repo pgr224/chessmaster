@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../auth/auth_bloc.dart';
 import '../../../data/models/multiplayer_models.dart';
 import '../../../data/models/xp_rules.dart';
 import '../../../data/services/multiplayer_service.dart';
@@ -247,6 +248,37 @@ class MpSendXpBroadcastEvent extends MultiplayerEvent {
 class MpSetXpBroadcastRequestsEvent extends MultiplayerEvent {
   final List<Map<String, dynamic>> requests;
   const MpSetXpBroadcastRequestsEvent(this.requests);
+}
+
+class MpXpTransferUpdateEvent extends MultiplayerEvent {
+  final String donorId;
+  final String donorName;
+  final int donorXp;
+  final String recipientId;
+  final String recipientName;
+  final int recipientXp;
+  final int amount;
+
+  const MpXpTransferUpdateEvent({
+    required this.donorId,
+    required this.donorName,
+    required this.donorXp,
+    required this.recipientId,
+    required this.recipientName,
+    required this.recipientXp,
+    required this.amount,
+  });
+
+  @override
+  List<Object?> get props => [
+        donorId,
+        donorName,
+        donorXp,
+        recipientId,
+        recipientName,
+        recipientXp,
+        amount,
+      ];
 }
 
 class MpSendTournamentInviteEvent extends MultiplayerEvent {
@@ -513,6 +545,7 @@ class MpTimerSyncEvent extends MultiplayerEvent {
 // BLOC
 class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
   final MultiplayerService _service;
+  final AuthBloc _authBloc;
   StreamSubscription? _lobbySub;
   StreamSubscription? _gameSub;
   String? _myUserId;
@@ -520,7 +553,7 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
   /// Exposed so screens can call service methods not wrapped in events.
   MultiplayerService get mpService => _service;
 
-  MultiplayerBloc(this._service) : super(const MultiplayerState()) {
+  MultiplayerBloc(this._service, this._authBloc) : super(const MultiplayerState()) {
     on<MpConnectLobbyEvent>(_onConnectLobby);
     on<MpReconnectEvent>((event, emit) {
       if (_service.isLobbyConnected) return;
@@ -758,6 +791,40 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
     on<MpSetXpBroadcastRequestsEvent>((event, emit) {
       emit(state.copyWith(xpBroadcastRequests: event.requests));
     });
+    on<MpXpTransferUpdateEvent>((event, emit) {
+      final updatedPlayers = state.availablePlayers.map((player) {
+        if (player.id == event.donorId) {
+          return player.copyWith(xp: event.donorXp);
+        }
+        if (player.id == event.recipientId) {
+          return player.copyWith(xp: event.recipientXp);
+        }
+        return player;
+      }).toList();
+
+      final updatedRequests = state.xpBroadcastRequests
+          .where((req) => req['userId']?.toString() != event.recipientId)
+          .toList();
+
+      final amIRecipient = _myUserId != null && _myUserId == event.recipientId;
+      final amIDonor = _myUserId != null && _myUserId == event.donorId;
+
+      if (amIRecipient || amIDonor) {
+        _authBloc.add(AuthCheckStatusEvent());
+      }
+
+      final notice = amIRecipient
+          ? '${event.donorName} donated ${event.amount} XP to you.'
+          : (amIDonor
+              ? 'You donated ${event.amount} XP to ${event.recipientName}.'
+              : '${event.donorName} donated ${event.amount} XP to ${event.recipientName}.');
+
+      emit(state.copyWith(
+        availablePlayers: updatedPlayers,
+        xpBroadcastRequests: updatedRequests,
+        lobbyNotice: notice,
+      ));
+    });
     // MpTimerSyncEvent already registered above at line ~287
   }
 
@@ -921,6 +988,17 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
           d['userId']?.toString() ?? '',
           d['username']?.toString() ?? 'Someone',
           _toInt(d['amount']),
+        ));
+      } else if (msgType == 'XP_TRANSFERRED') {
+        final d = data;
+        add(MpXpTransferUpdateEvent(
+          donorId: d['donorId']?.toString() ?? '',
+          donorName: d['donorName']?.toString() ?? 'Player',
+          donorXp: _toInt(d['donorXp']),
+          recipientId: d['recipientId']?.toString() ?? '',
+          recipientName: d['recipientName']?.toString() ?? 'Player',
+          recipientXp: _toInt(d['recipientXp']),
+          amount: _toInt(d['amount']),
         ));
       } else if (msgType == 'CONNECTION_LOST') {
         add(MpLobbyNoticeEvent('Connection lost. Please check your internet.'));

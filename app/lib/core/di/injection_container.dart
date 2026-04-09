@@ -99,7 +99,7 @@ Future<void> init() async {
         sl<MissionService>(),
       ));
   sl.registerLazySingleton<MultiplayerBloc>(
-      () => MultiplayerBloc(sl<MultiplayerService>()));
+      () => MultiplayerBloc(sl<MultiplayerService>(), sl<AuthBloc>()));
   sl.registerFactory<TournamentBloc>(
       () => TournamentBloc(sl<TournamentRepository>(), sl<MultiplayerService>()));
   sl.registerLazySingleton<ThemeBloc>(() => ThemeBloc());

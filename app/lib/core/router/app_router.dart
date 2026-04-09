@@ -19,6 +19,7 @@ import '../../presentation/screens/news/chess_world_screen.dart';
 import '../../presentation/screens/profile/profile_screen.dart';
 import '../../presentation/screens/leaderboard/leaderboard_screen.dart';
 import '../../presentation/screens/settings/settings_screen.dart';
+import '../../presentation/screens/settings/donation_settings_screen.dart';
 import '../../presentation/screens/tutorial/tutorial_screen.dart';
 import '../../presentation/screens/learn/learn_screen.dart';
 import '../../presentation/screens/learn/article_screen.dart';
@@ -113,6 +114,11 @@ class AppRouter {
             path: '/settings',
             name: 'settings',
             builder: (context, state) => const SettingsScreen(),
+          ),
+          GoRoute(
+            path: '/settings/donations',
+            name: 'settings_donations',
+            builder: (context, state) => const DonationSettingsScreen(),
           ),
         ],
       ),

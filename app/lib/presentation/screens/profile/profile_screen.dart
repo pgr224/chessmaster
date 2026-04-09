@@ -10,6 +10,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:image_cropper/image_cropper.dart';
+import '../../../core/di/injection_container.dart' as di;
 
 import '../../../core/theme/app_theme.dart';
 import 'package:chess_master/presentation/blocs/auth/auth_bloc.dart';
@@ -629,6 +630,7 @@ class _ProfileContent extends StatelessWidget {
 
 // Global helper for profile editing
 void showEditProfileModal(BuildContext context, UserModel user) {
+  final authRepository = di.sl<AuthRepository>();
   final nameController = TextEditingController(text: user.username);
   String? localAvatarPreview = user.localAvatar;
   bool isCartoon = user.isGhibli;
@@ -726,7 +728,7 @@ void showEditProfileModal(BuildContext context, UserModel user) {
                       if (nextChangeTime != null) ...[
                         const SizedBox(height: 8),
                         Text(
-                          'You can change again in: ${formatTimeRemaining(nextChangeTime!)}',
+                          'You can change again in: ${formatTimeRemaining(nextChangeTime)}',
                           style: GoogleFonts.fredoka(
                               color: AppTheme.accentRed.withValues(alpha: 0.8),
                               fontSize: 11),
@@ -833,9 +835,8 @@ void showEditProfileModal(BuildContext context, UserModel user) {
                   });
 
                   try {
-                    final result = await context
-                        .read<AuthRepository>()
-                        .checkUsernameAvailability(val);
+                    final result =
+                        await authRepository.checkUsernameAvailability(val);
 
                     if (nameController.text == val && context.mounted) {
                       setLocalState(() {
@@ -941,6 +942,9 @@ void showEditProfileModal(BuildContext context, UserModel user) {
                           !canChangeNameDueToRate)
                       ? null
                       : () async {
+                          final normalizedName = nameController.text.trim();
+                          final hasNameChange = normalizedName != user.username;
+
                           // Show loading dialog
                           showDialog(
                             context: builderContext,
@@ -953,22 +957,39 @@ void showEditProfileModal(BuildContext context, UserModel user) {
                           );
 
                           try {
-                            context.read<AuthBloc>().add(
-                                  AuthUpdateProfileEvent(
-                                    username: nameController.text,
-                                    localAvatar: localAvatarPreview,
-                                    isGhibli: isCartoon,
-                                  ),
-                                );
+                            await authRepository.updateProfile(
+                              userId: user.id,
+                              username: hasNameChange ? normalizedName : null,
+                              localAvatar: localAvatarPreview,
+                              isGhibli: isCartoon,
+                            );
 
-                            if (ctx.mounted) Navigator.pop(ctx); // Pop loading
-                            if (ctx.mounted) Navigator.pop(ctx); // Pop modal
+                            if (builderContext.mounted) {
+                              builderContext
+                                  .read<AuthBloc>()
+                                  .add(AuthCheckStatusEvent());
+                            }
+
+                            if (ctx.mounted) Navigator.pop(ctx);
+                            if (ctx.mounted) Navigator.pop(ctx);
                           } catch (e) {
-                            if (ctx.mounted) Navigator.pop(ctx); // Pop loading
+                            if (ctx.mounted) Navigator.pop(ctx);
+                            String message = e.toString();
+                            if (message.contains('COOLDOWN_ACTIVE')) {
+                              message =
+                                  'You can change your name once every 24 hours. Please try again later.';
+                            } else if (message.contains('LIFETIME_LIMIT_REACHED')) {
+                              message =
+                                  'You have reached the maximum number of name changes (3 lifetime).';
+                            } else if (message.contains('Username already taken')) {
+                              message =
+                                  'This username is already taken. Please choose another.';
+                            }
+
                             if (ctx.mounted) {
                               ScaffoldMessenger.of(ctx).showSnackBar(
                                 SnackBar(
-                                  content: Text('Error: ${e.toString()}'),
+                                  content: Text(message),
                                   backgroundColor: Colors.red,
                                 ),
                               );

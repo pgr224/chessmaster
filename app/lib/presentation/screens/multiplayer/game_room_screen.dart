@@ -3,15 +3,12 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/router/app_router.dart';
-import '../../../core/di/injection_container.dart' as di;
-import '../../../data/services/achievement_service.dart';
 
 import '../../blocs/game/game_bloc.dart';
 import '../../blocs/multiplayer/multiplayer_bloc.dart';
 import '../../blocs/settings/settings_bloc.dart';
 import '../../blocs/theme/theme_bloc.dart';
 import '../game/game_screen.dart';
-import '../../widgets/chat_widget.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../domain/engine/chess_engine.dart';
 import '../../../data/models/game_config.dart';
@@ -161,12 +158,6 @@ class _GameRoomScreenState extends State<GameRoomScreen> {
           ],
           child: Scaffold(
             backgroundColor: Colors.transparent,
-            floatingActionButton: FloatingActionButton(
-              onPressed: () => _showChat(context),
-              backgroundColor: AppTheme.goldPrimary,
-              child: const Icon(Icons.chat_bubble_rounded,
-                  color: AppTheme.midnight),
-            ),
             body: Stack(
               children: [
                 GameScreen(config: config),
@@ -383,28 +374,6 @@ class _GameRoomScreenState extends State<GameRoomScreen> {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  void _showChat(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => FractionallySizedBox(
-        heightFactor: 0.8,
-        child: BlocBuilder<MultiplayerBloc, MultiplayerState>(
-          builder: (context, state) {
-            return ChatWidget(
-              messages: state.chatMessages,
-              onSendMessage: (msg) {
-                context.read<MultiplayerBloc>().add(MpSendChatEvent(msg));
-                di.sl<AchievementService>().evaluateSpecialActions('chat');
-              },
-            );
-          },
         ),
       ),
     );

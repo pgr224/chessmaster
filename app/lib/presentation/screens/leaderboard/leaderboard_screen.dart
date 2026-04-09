@@ -614,6 +614,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                 ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Donation successful! 💖')));
                 di.sl<AchievementService>().evaluateSpecialActions('donate_xp');
+                context.read<AuthBloc>().add(AuthCheckStatusEvent());
                 _fetchLeaderboard(); // Refresh to see updated XP
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(

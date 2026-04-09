@@ -14,6 +14,12 @@ interface NotificationPayload {
   data?: any
 }
 
+export type NotificationCategory =
+  | 'challenges'
+  | 'community'
+  | 'tournaments'
+  | 'system'
+
 /**
  * Service to send Web Push notifications using VAPID (Voluntary Application Server Identification)
  * Handles token generation, signing (ES256), and encryption (using Web Crypto API)
@@ -22,52 +28,60 @@ export class PushService {
   /**
    * Send a notification to all registered subscriptions of a user
    */
-  static async notifyUser(userId: string, payload: NotificationPayload, env: Env) {
-    const category = this.resolveCategory(payload)
+  static async notifyUser(
+    userId: string,
+    payload: NotificationPayload,
+    env: Env,
+    explicitCategory?: NotificationCategory,
+  ) {
+    const category = explicitCategory ?? this.resolveCategory(payload)
 
-    const preferences = await env.DB.prepare(
-      `SELECT challenge_notifications, community_notifications,
-              tournament_notifications, system_notifications
-       FROM user_notification_preferences
-       WHERE user_id = ?`
-    ).bind(userId).first<{
-      challenge_notifications: number
-      community_notifications: number
-      tournament_notifications: number
-      system_notifications: number
-    }>()
-
-    if (preferences && !this.isCategoryEnabled(category, preferences)) {
-      return
-    }
-
-    // 1. Fetch all active subscriptions for the user
-    // We only send if user preference is enabled
     const { results: subs } = await env.DB.prepare(`
-      SELECT s.endpoint, s.p256dh, s.auth 
+      SELECT
+        s.endpoint,
+        s.p256dh,
+        s.auth,
+        u.push_enabled,
+        p.challenge_notifications,
+        p.community_notifications,
+        p.tournament_notifications,
+        p.system_notifications
       FROM user_subscriptions s
       JOIN users u ON s.user_id = u.id
-      WHERE s.user_id = ? AND u.push_enabled = 1
+      LEFT JOIN user_notification_preferences p ON p.user_id = s.user_id
+      WHERE s.user_id = ?
     `).bind(userId).all()
 
     if (!subs || subs.length === 0) return
 
+    const first = subs[0] as {
+      push_enabled?: number
+      challenge_notifications?: number | null
+      community_notifications?: number | null
+      tournament_notifications?: number | null
+      system_notifications?: number | null
+    }
+
+    if (first.push_enabled !== 1) return
+    if (!this.isCategoryEnabled(category, first)) return
+
     const results = await Promise.allSettled(
-      subs.map(sub => 
+      subs.map((sub) =>
         this.sendPush(sub as unknown as PushSubscription, payload, env)
       )
     )
 
-    // Log failures
-    results.forEach((r, i) => {
-      if (r.status === 'rejected') {
-        console.error(`[Push Notification Failed] User: ${userId}, Endpoint: ${(subs[i] as any).endpoint}, Error:`, r.reason)
+    results.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        console.error(
+          `[Push Notification Failed] User: ${userId}, Endpoint: ${(subs[index] as any).endpoint}, Error:`,
+          result.reason,
+        )
       }
     })
   }
 
-  private static resolveCategory(payload: NotificationPayload):
-      'challenges' | 'community' | 'tournaments' | 'system' {
+  private static resolveCategory(payload: NotificationPayload): NotificationCategory {
     const raw = payload.data?.category
     if (raw === 'challenges' || raw === 'community' || raw === 'tournaments') {
       return raw
@@ -76,23 +90,23 @@ export class PushService {
   }
 
   private static isCategoryEnabled(
-    category: 'challenges' | 'community' | 'tournaments' | 'system',
-    row: {
-      challenge_notifications: number
-      community_notifications: number
-      tournament_notifications: number
-      system_notifications: number
+    category: NotificationCategory,
+    prefs: {
+      challenge_notifications?: number | null
+      community_notifications?: number | null
+      tournament_notifications?: number | null
+      system_notifications?: number | null
     }
   ): boolean {
     switch (category) {
       case 'challenges':
-        return row.challenge_notifications === 1
+        return prefs.challenge_notifications !== 0
       case 'community':
-        return row.community_notifications === 1
+        return prefs.community_notifications !== 0
       case 'tournaments':
-        return row.tournament_notifications === 1
+        return prefs.tournament_notifications !== 0
       default:
-        return row.system_notifications === 1
+        return prefs.system_notifications !== 0
     }
   }
 

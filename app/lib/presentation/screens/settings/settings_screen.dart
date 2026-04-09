@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../blocs/settings/settings_bloc.dart';
@@ -73,6 +74,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 showEditProfileModal(context, user);
                               }
                             },
+                          ),
+                          _listTile(
+                            icon: Icons.volunteer_activism_rounded,
+                            title: 'Donation Settings',
+                            subtitle:
+                                'Donate XP from leaderboard and friends (online/offline)',
+                            onTap: () => context.push('/settings/donations'),
                           ),
                           _switchTile(
                             title: 'Notifications',

@@ -26,6 +26,17 @@ interface StoredChallengeRow {
   created_at?: string
 }
 
+interface XpTransferNotification {
+  donorId: string
+  donorName: string
+  donorXp: number
+  recipientId: string
+  recipientName: string
+  recipientXp: number
+  amount: number
+  ts?: number
+}
+
 export class Lobby implements DurableObject {
   private state: DurableObjectState
   private env: Env
@@ -37,9 +48,49 @@ export class Lobby implements DurableObject {
   }
 
   async fetch(request: Request): Promise<Response> {
-    const { 0: client, 1: server } = new WebSocketPair()
-    
     const url = new URL(request.url)
+    const upgrade = request.headers.get('Upgrade')
+
+    if (upgrade !== 'websocket') {
+      if (request.method === 'POST' && url.pathname.endsWith('/internal/xp-update')) {
+        try {
+          const payload = await request.json() as Partial<XpTransferNotification>
+          if (!payload.donorId || !payload.recipientId || !payload.amount) {
+            return new Response(JSON.stringify({ error: 'Invalid payload' }), {
+              status: 400,
+              headers: { 'content-type': 'application/json' },
+            })
+          }
+
+          this.broadcastXpTransfer({
+            donorId: payload.donorId,
+            donorName: payload.donorName ?? 'Player',
+            donorXp: Number(payload.donorXp ?? 0),
+            recipientId: payload.recipientId,
+            recipientName: payload.recipientName ?? 'Player',
+            recipientXp: Number(payload.recipientXp ?? 0),
+            amount: Number(payload.amount),
+            ts: payload.ts ?? Date.now(),
+          })
+
+          return new Response(JSON.stringify({ success: true }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          })
+        } catch (err) {
+          console.error('Failed to broadcast XP update:', err)
+          return new Response(JSON.stringify({ error: 'Bad request' }), {
+            status: 400,
+            headers: { 'content-type': 'application/json' },
+          })
+        }
+      }
+
+      return new Response('Expected websocket upgrade', { status: 426 })
+    }
+
+    const { 0: client, 1: server } = new WebSocketPair()
+
     const userId = url.searchParams.get('userId') ?? 'anon'
     const queryUsername = url.searchParams.get('username') ?? 'Player'
     const rating = parseInt(url.searchParams.get('rating') ?? '1200')
@@ -78,6 +129,22 @@ export class Lobby implements DurableObject {
       status: 101,
       webSocket: client,
     })
+  }
+
+  private broadcastXpTransfer(payload: XpTransferNotification) {
+    const sockets = this.state.getWebSockets()
+    const message = JSON.stringify({
+      type: 'XP_TRANSFERRED',
+      data: payload,
+    })
+
+    for (const ws of sockets) {
+      try {
+        ws.send(message)
+      } catch (_) {
+        ws.close()
+      }
+    }
   }
 
   async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer) {
@@ -227,13 +294,13 @@ export class Lobby implements DurableObject {
                 requestId,
                 challengerId: meta.id,
                 challengerName: meta.name,
-                category: 'challenges',
+                category: mode === 'tournament' ? 'tournaments' : 'challenges',
                 mode,
                 timeControl,
                 variantId,
                 queued: true,
               },
-            }, this.env)
+            }, this.env, mode === 'tournament' ? 'tournaments' : 'challenges')
 
             ws.send(JSON.stringify({
               type: 'CHALLENGE_QUEUED',
@@ -314,9 +381,9 @@ export class Lobby implements DurableObject {
                 type: 'CHALLENGE_ACCEPTED',
                 requestId,
                 gameId,
-                category: 'challenges',
+                category: challenge.mode === 'tournament' ? 'tournaments' : 'challenges',
               },
-            }, this.env)
+            }, this.env, challenge.mode === 'tournament' ? 'tournaments' : 'challenges')
           }
 
           meta.status = 'in_game'

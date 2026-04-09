@@ -348,6 +348,23 @@ profileRoutes.post('/xp/transfer', async (c) => {
 
   const normalizedAmount = Math.floor(amount)
 
+  const donatedAgg = await c.env.DB.prepare(`
+    SELECT
+      COALESCE(SUM(amount), 0) as total_donated,
+      COALESCE(SUM(CASE WHEN date(created_at) = date('now') THEN amount ELSE 0 END), 0) as donated_today
+    FROM xp_transfers
+    WHERE donor_id = ?
+  `).bind(donorId).first<{ total_donated: number; donated_today: number }>()
+
+  const donatedToday = Number(donatedAgg?.donated_today ?? 0)
+  const totalDonated = Number(donatedAgg?.total_donated ?? 0)
+  if (donatedToday + normalizedAmount > 2000) {
+    return c.json({ error: 'Daily donation limit (2000 XP) reached.' }, 400)
+  }
+  if (totalDonated + normalizedAmount > 10000) {
+    return c.json({ error: 'Total donation limit (10000 XP) reached.' }, 400)
+  }
+
   // Verify donor has enough XP and recipient exists
   const { results: donor } = await c.env.DB.prepare('SELECT xp, username FROM users WHERE id = ?').bind(donorId).all()
   const { results: recipient } = await c.env.DB.prepare('SELECT id, username FROM users WHERE id = ?').bind(recipientId).all()
@@ -379,17 +396,67 @@ profileRoutes.post('/xp/transfer', async (c) => {
     }
 
     // Check donation badge
-    const { results: totalDonated } = await c.env.DB.prepare(
+    const { results: donatedTotals } = await c.env.DB.prepare(
       'SELECT SUM(amount) as total FROM xp_transfers WHERE donor_id = ?'
     ).bind(donorId).all()
     
-    if ((totalDonated[0]?.total as number) >= 500) {
+    if ((donatedTotals[0]?.total as number) >= 500) {
        await c.env.DB.prepare('INSERT OR IGNORE INTO user_achievements (user_id, achievement_id) VALUES (?, ?)')
           .bind(donorId, 'generous_donor')
           .run();
     }
 
-    return c.json({ success: true, donorId, recipientId, amount: normalizedAmount })
+    const donorUser = await c.env.DB.prepare('SELECT xp FROM users WHERE id = ?')
+      .bind(donorId)
+      .first<{ xp: number }>()
+    const recipientUser = await c.env.DB.prepare('SELECT xp FROM users WHERE id = ?')
+      .bind(recipientId)
+      .first<{ xp: number }>()
+
+    const donatedAfter = await c.env.DB.prepare(`
+      SELECT
+        COALESCE(SUM(amount), 0) as total_donated,
+        COALESCE(SUM(CASE WHEN date(created_at) = date('now') THEN amount ELSE 0 END), 0) as donated_today
+      FROM xp_transfers
+      WHERE donor_id = ?
+    `).bind(donorId).first<{ total_donated: number; donated_today: number }>()
+
+    c.executionCtx.waitUntil((async () => {
+      try {
+        const lobbyId = c.env.LOBBY.idFromName('global_lobby')
+        const lobbyStub = c.env.LOBBY.get(lobbyId)
+        await lobbyStub.fetch('https://internal/lobby/internal/xp-update', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            donorId,
+            donorName: donor[0]?.username ?? 'Player',
+            donorXp: Number(donorUser?.xp ?? 0),
+            recipientId,
+            recipientName: recipient[0]?.username ?? 'Player',
+            recipientXp: Number(recipientUser?.xp ?? 0),
+            amount: normalizedAmount,
+            ts: Date.now(),
+          }),
+        })
+      } catch (err) {
+        console.error('Failed to dispatch lobby XP update:', err)
+      }
+    })())
+
+    return c.json({
+      success: true,
+      donorId,
+      recipientId,
+      amount: normalizedAmount,
+      donorXp: Number(donorUser?.xp ?? 0),
+      recipientXp: Number(recipientUser?.xp ?? 0),
+      donorDonationStats: {
+        dailyDonatedXP: Number(donatedAfter?.donated_today ?? 0),
+        totalDonatedXP: Number(donatedAfter?.total_donated ?? 0),
+        lastDonationDate: new Date().toISOString().split('T')[0],
+      },
+    })
   } catch (err: any) {
     return c.json({ error: err.message }, 500)
   }
@@ -456,9 +523,10 @@ profileRoutes.post('/xp/request', async (c) => {
             type: 'XP_DIRECT_REQUEST',
             requestId,
             requesterName: username,
+            category: 'community',
             amount: normalizedAmount,
           }
-        }, c.env)
+        }, c.env, 'community')
       )
     }
 
@@ -595,8 +663,8 @@ profileRoutes.post('/xp/request/:id/respond', async (c) => {
       PushService.notifyUser(request.requester_id, {
         title: 'XP Request Rejected',
         body: `${responderName} declined your XP request.`,
-        data: { type: 'XP_REQUEST_REJECTED', requestId }
-      }, c.env)
+        data: { type: 'XP_REQUEST_REJECTED', requestId, category: 'community' }
+      }, c.env, 'community')
     )
 
     return c.json({ success: true, status: 'rejected' })
@@ -630,8 +698,13 @@ profileRoutes.post('/xp/request/:id/respond', async (c) => {
     PushService.notifyUser(request.requester_id, {
       title: 'XP Request Fulfilled',
       body: `${responderName} donated ${amount} XP to you.`,
-      data: { type: 'XP_REQUEST_FULFILLED', requestId, amount }
-    }, c.env)
+      data: {
+        type: 'XP_REQUEST_FULFILLED',
+        requestId,
+        amount,
+        category: 'community',
+      }
+    }, c.env, 'community')
   )
 
   return c.json({ success: true, status: 'fulfilled', amount })
@@ -704,6 +777,7 @@ profileRoutes.get('/xp/friends', async (c) => {
       CASE WHEN f.user_a = ? THEN f.user_b ELSE f.user_a END as user_id,
       u.username,
       u.xp,
+      u.is_online,
       f.status,
       f.requested_by,
       f.updated_at

@@ -428,26 +428,11 @@ class AuthRepository {
     } catch (_) {}
   }
 
-    Future<bool> donateXP(
+  Future<bool> donateXP(
       {required String recipientId, required int amount, int? requestId}) async {
     try {
-      final user = await getCurrentUser();
-      if (user == null) return false;
-
-      // Enforce caps: 2000 per day, 10000 max
-      final now = DateTime.now();
-      final todayStr = "${now.year}-${now.month}-${now.day}";
-
-      int currentDaily = user.stats.dailyDonatedXP;
-      if (user.stats.lastDonationDate != todayStr) {
-        currentDaily = 0; // New day, reset daily cap
-      }
-
-      if (currentDaily + amount > 2000) {
-        throw Exception('Daily donation limit (2000 XP) reached.');
-      }
-      if (user.stats.totalDonatedXP + amount > 10000) {
-        throw Exception('Total donation limit (10000 XP) reached.');
+      if (amount <= 0) {
+        throw Exception('Donation amount must be greater than 0.');
       }
 
       final response = await _dio.post(
@@ -460,22 +445,41 @@ class AuthRepository {
       );
 
       if (response.statusCode == 200 && response.data['success'] == true) {
-        // Update local stats
         final prefs = await SharedPreferences.getInstance();
         final userData = prefs.getString(_userKey);
         if (userData != null) {
-          final Map<String, dynamic> data = jsonDecode(userData);
-          final userJson = data['user'] as Map<String, dynamic>;
-          final statsJson = userJson['stats'] as Map<String, dynamic>;
+          final dynamic decoded = jsonDecode(userData);
+          if (decoded is Map<String, dynamic>) {
+            final Map<String, dynamic> current = decoded;
+            final statsJson =
+                (current['stats'] as Map<String, dynamic>?) ?? <String, dynamic>{};
+            final donationStats = response.data['donorDonationStats'] as Map<String, dynamic>?;
+            final donorXpRaw = response.data['donorXp'];
 
-          userJson['xp'] = (userJson['xp'] as int? ?? 0) - amount;
-          statsJson['daily_donated_xp'] = currentDaily + amount;
-          statsJson['total_donated_xp'] =
-              (statsJson['total_donated_xp'] as int? ?? 0) + amount;
-          statsJson['last_donation_date'] = todayStr;
+            final serverDonorXp = donorXpRaw is num
+                ? donorXpRaw.toInt()
+                : ((current['xp'] as num?)?.toInt() ?? 0) - amount;
 
-          await prefs.setString(_userKey, jsonEncode(data));
+            current['xp'] = serverDonorXp;
+            if (donationStats != null) {
+              statsJson['daily_donated_xp'] =
+                  (donationStats['dailyDonatedXP'] as num?)?.toInt() ??
+                      (statsJson['daily_donated_xp'] as int? ?? 0);
+              statsJson['total_donated_xp'] =
+                  (donationStats['totalDonatedXP'] as num?)?.toInt() ??
+                      (statsJson['total_donated_xp'] as int? ?? 0);
+              statsJson['last_donation_date'] =
+                  donationStats['lastDonationDate']?.toString();
+            }
+            current['stats'] = statsJson;
+            await prefs.setString(_userKey, jsonEncode(current));
+          }
         }
+
+        // Best-effort server re-sync to keep all game modes and boards consistent.
+        try {
+          await getCurrentUser(forceRefresh: true);
+        } catch (_) {}
         return true;
       }
     } catch (e) {

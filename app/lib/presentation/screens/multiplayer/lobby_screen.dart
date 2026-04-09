@@ -1214,7 +1214,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
           ),
           const SizedBox(height: 6),
           Text(
-            'Choose a player and send either a 1v1 challenge or a tournament invite.',
+            'Choose a player to challenge, invite to tournament, or donate XP instantly.',
             style: GoogleFonts.baloo2(
                 color: AppTheme.textSecondary,
                 fontSize: 16,
@@ -1474,6 +1474,15 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 label: Text(player.isAvailable
                     ? 'Tournament Invite'
                     : 'Queue Tournament Invite'),
+              ),
+              OutlinedButton.icon(
+                onPressed: () => _handleDonateXP(
+                  player.id,
+                  player.name,
+                  100,
+                ),
+                icon: const Icon(Icons.volunteer_activism_rounded),
+                label: const Text('Donate 100 XP'),
               ),
             ],
           ),
