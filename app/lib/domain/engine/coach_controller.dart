@@ -710,27 +710,51 @@ class CoachController {
       final color = analysisEngine.currentTurn;
       final fenBefore = analysisEngine.toFEN();
       final engineBefore = ChessEngine.fromFEN(fenBefore);
-      
-      // Get best move score
-      final topMoves = await AIEngine.getTopMoves(engineBefore, AIDifficulty.advanced, count: 1);
-      final bestScore = topMoves.isNotEmpty ? topMoves[0].$2 : 0;
-      
-      analysisEngine.makeMove(move);
-      final fenAfter = analysisEngine.toFEN();
-      final scoreAfter = -(await AIEngine.evaluatePosition(ChessEngine.fromFEN(fenAfter)));
-      
-      final cpLoss = math.max(0, bestScore - scoreAfter);
-      
+
+      int cpLoss = 0;
+      bool moveApplied = false;
+
+      try {
+        // Best score for side-to-move before the played move.
+        final topMoves =
+            await AIEngine.getTopMoves(engineBefore, AIDifficulty.advanced, count: 1);
+        final bestScore = topMoves.isNotEmpty ? topMoves[0].$2 : 0;
+
+        analysisEngine.makeMove(move);
+        moveApplied = true;
+
+        final fenAfter = analysisEngine.toFEN();
+        final scoreAfter =
+            -(await AIEngine.evaluatePosition(ChessEngine.fromFEN(fenAfter)));
+        cpLoss = math.max(0, bestScore - scoreAfter);
+      } catch (_) {
+        // Keep analysis progressing even if a single engine probe fails.
+        if (!moveApplied) {
+          try {
+            analysisEngine.makeMove(move);
+            moveApplied = true;
+          } catch (_) {
+            continue;
+          }
+        }
+      }
+
       if (color == PieceColor.white) {
         whiteTotalCpLoss += cpLoss;
         whiteMoves++;
-        if (cpLoss >= 300) whiteBlunders++;
-        else if (cpLoss >= 100) whiteMistakes++;
+        if (cpLoss >= 300) {
+          whiteBlunders++;
+        } else if (cpLoss >= 100) {
+          whiteMistakes++;
+        }
       } else {
         blackTotalCpLoss += cpLoss;
         blackMoves++;
-        if (cpLoss >= 300) blackBlunders++;
-        else if (cpLoss >= 100) blackMistakes++;
+        if (cpLoss >= 300) {
+          blackBlunders++;
+        } else if (cpLoss >= 100) {
+          blackMistakes++;
+        }
       }
     }
 

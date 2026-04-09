@@ -76,17 +76,18 @@ profileRoutes.get('/', async (c) => {
 // Check username availability with rate limit info
 profileRoutes.get('/check-username/:username', async (c) => {
   try {
-    const username = c.req.param('username')
+    const username = (c.req.param('username') || '').trim()
     if (!username || username.length < 3 || username.length > 30) {
       return c.json({ available: false, error: 'Username must be 3-30 characters' }, 400)
     }
 
+    const userId = c.get('user').sub
+
     // Check if username exists
     const existing = await c.env.DB.prepare(
-      'SELECT id FROM users WHERE username = ?'
+      'SELECT id FROM users WHERE username = ? COLLATE NOCASE'
     ).bind(username).first<{ id: string }>()
 
-    const userId = c.get('user').sub
     const userInfo = await c.env.DB.prepare(
       'SELECT username_changes, last_username_change FROM users WHERE id = ?'
     ).bind(userId).first<{ username_changes: number; last_username_change: string | null }>()
@@ -114,7 +115,7 @@ profileRoutes.get('/check-username/:username', async (c) => {
     }
 
     return c.json({
-      available: !existing,
+      available: !existing || existing.id === userId,
       username,
       canChangeNow: canChangeNow && remainingLifetimeChanges > 0,
       remainingLifetimeChanges,

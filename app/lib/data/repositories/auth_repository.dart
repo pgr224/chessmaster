@@ -127,8 +127,9 @@ class AuthRepository {
   /// Check username availability with detailed rate limit information
   Future<Map<String, dynamic>> checkUsernameAvailability(String username) async {
     try {
+      final normalized = username.trim();
       final response = await _dio.get(
-        '/api/profile/check-username/$username',
+        '/api/profile/check-username/$normalized',
         options: Options(validateStatus: (_) => true),
       );
       
@@ -142,13 +143,14 @@ class AuthRepository {
         };
       } else {
         return {
-          'available': false,
+          'available': null,
           'error': response.data['error'] ?? 'Check failed',
+          'statusCode': response.statusCode,
         };
       }
     } catch (e) {
       return {
-        'available': false,
+        'available': null,
         'error': 'Network error',
       };
     }

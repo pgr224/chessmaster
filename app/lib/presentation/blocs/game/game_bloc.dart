@@ -25,6 +25,9 @@ import '../theme/theme_bloc.dart';
 import '../../../domain/engine/personality_engine.dart';
 import '../../../domain/engine/candidate_model.dart';
 
+const bool _kLogGameOverMetrics =
+  bool.fromEnvironment('LOG_GAME_OVER_METRICS', defaultValue: false);
+
 // ═══════════════════════════════════════════
 // EVENTS
 // ═══════════════════════════════════════════
@@ -704,6 +707,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
   final MissionService _missionService;
   String? _gameId;
   int _aiRequestEpoch = 0;
+  bool _hasLoggedGameOverMetrics = false;
   Timer? _rushTimer;
   Timer? _clockTimer;
   DateTime? _lastClockTickTime;
@@ -841,6 +845,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
   Future<void> _onStart(GameStartEvent event, Emitter<GameState> emit) async {
     // Invalidate any pending AI response from a previous game lifecycle.
     _aiRequestEpoch++;
+    _hasLoggedGameOverMetrics = false;
 
     // Trigger shuffle if the user has chosen it
     _themeBloc.add(ThemeShuffleEvent());
@@ -986,6 +991,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     if (game == null) return;
 
     _aiRequestEpoch++;
+    _hasLoggedGameOverMetrics = false;
     _engine = ChessEngine.fromFEN(game.fen);
     _gameId = game.id;
     _gameRepository.setLastActiveGameId(game.id);
@@ -2673,8 +2679,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
             'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
       );
 
-      final isWhite =
-          state.playerColor == PieceColor.white || state.playerColor == null;
+        final isWhite = state.playerColor == PieceColor.white;
 
       final fallbackPlayerAcc = state.accuracy;
       final fallbackOpponentAcc = state.opponentAccuracy;
@@ -2688,18 +2693,38 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         fallback: isWhite ? fallbackOpponentAcc : fallbackPlayerAcc,
       );
 
-      final playerAccuracy = isWhite ? whiteAccuracy : blackAccuracy;
-      final opponentAccuracy = isWhite ? blackAccuracy : whiteAccuracy;
+        final whiteMistakes = _toNonNegativeInt(analysis['whiteMistakes']);
+        final blackMistakes = _toNonNegativeInt(analysis['blackMistakes']);
+        final whiteBlunders = _toNonNegativeInt(analysis['whiteBlunders']);
+        final blackBlunders = _toNonNegativeInt(analysis['blackBlunders']);
 
-      final playerMistakes =
-          isWhite ? analysis['whiteMistakes'] : analysis['blackMistakes'];
-      final opponentMistakes =
-          isWhite ? analysis['blackMistakes'] : analysis['whiteMistakes'];
+        final bool mapAsWhiteVsBlack = state.mode == GameMode.twoPlayer;
 
-      final playerBlunders =
-          isWhite ? analysis['whiteBlunders'] : analysis['blackBlunders'];
-      final opponentBlunders =
-          isWhite ? analysis['blackBlunders'] : analysis['whiteBlunders'];
+        final playerAccuracy =
+          mapAsWhiteVsBlack ? whiteAccuracy : (isWhite ? whiteAccuracy : blackAccuracy);
+        final opponentAccuracy =
+          mapAsWhiteVsBlack ? blackAccuracy : (isWhite ? blackAccuracy : whiteAccuracy);
+
+        final playerMistakes =
+          mapAsWhiteVsBlack ? whiteMistakes : (isWhite ? whiteMistakes : blackMistakes);
+        final opponentMistakes =
+          mapAsWhiteVsBlack ? blackMistakes : (isWhite ? blackMistakes : whiteMistakes);
+
+        final playerBlunders =
+          mapAsWhiteVsBlack ? whiteBlunders : (isWhite ? whiteBlunders : blackBlunders);
+        final opponentBlunders =
+          mapAsWhiteVsBlack ? blackBlunders : (isWhite ? blackBlunders : whiteBlunders);
+
+        if (_kLogGameOverMetrics && !_hasLoggedGameOverMetrics) {
+          debugPrint(
+            '[GameOverMetrics] mode=${state.mode.name} result=${state.result.name} '
+            'white=(acc:${whiteAccuracy.toStringAsFixed(1)},mist:$whiteMistakes,bl:$whiteBlunders) '
+            'black=(acc:${blackAccuracy.toStringAsFixed(1)},mist:$blackMistakes,bl:$blackBlunders) '
+            'player=(acc:${playerAccuracy.toStringAsFixed(1)},mist:$playerMistakes,bl:$playerBlunders) '
+            'opponent=(acc:${opponentAccuracy.toStringAsFixed(1)},mist:$opponentMistakes,bl:$opponentBlunders)',
+          );
+          _hasLoggedGameOverMetrics = true;
+        }
 
       emit(state.copyWith(
         accuracy: playerAccuracy,
@@ -2720,5 +2745,11 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         : double.tryParse(value?.toString() ?? '');
     final safe = parsed ?? fallback;
     return safe.clamp(0.0, 100.0);
+  }
+
+  int _toNonNegativeInt(dynamic value, {int fallback = 0}) {
+    final parsed = value is num ? value.toInt() : int.tryParse(value?.toString() ?? '');
+    final safe = parsed ?? fallback;
+    return safe < 0 ? 0 : safe;
   }
 }

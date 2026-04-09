@@ -839,11 +839,17 @@ void showEditProfileModal(BuildContext context, UserModel user) {
                         await authRepository.checkUsernameAvailability(val);
 
                     if (nameController.text == val && context.mounted) {
+                      final bool hasError = result['error'] != null;
+                      final bool isAvailable = result['available'] == true;
+                      final bool isUnavailable = result['available'] == false;
+
                       setLocalState(() {
                         checkingName = false;
-                        nameAvailable = result['available'] == true;
-                        if (!nameAvailable!) {
+                        nameAvailable = hasError ? null : (isAvailable ? true : (isUnavailable ? false : null));
+                        if (isUnavailable) {
                           suggestedName = buildUsernameSuggestion(val);
+                        } else {
+                          suggestedName = null;
                         }
                       });
                     }
@@ -851,7 +857,8 @@ void showEditProfileModal(BuildContext context, UserModel user) {
                     if (nameController.text == val) {
                       setLocalState(() {
                         checkingName = false;
-                        nameAvailable = false;
+                        nameAvailable = null;
+                        suggestedName = null;
                       });
                     }
                   }

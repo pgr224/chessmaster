@@ -295,19 +295,28 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                           ),
                         ] else if (widget.gameMode == GameMode.singlePlayer ||
                             widget.gameMode == GameMode.practice) ...[
+                          const SizedBox(height: 4),
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                             children: [
                               _singleStatItem(
                                   'Accuracy',
                                   '${widget.accuracy.round()}%',
-                                  AppTheme.accentCyan),
-                              _singleStatItem('Mistakes', '${widget.mistakes}',
-                                  AppTheme.lavender),
-                              _singleStatItem('Blunders', '${widget.blunders}',
-                                  AppTheme.accentRed),
+                                  AppTheme.accentCyan,
+                                  Icons.gps_fixed_rounded),
+                              _singleStatItem(
+                                  'Mistakes',
+                                  '${widget.mistakes}',
+                                  AppTheme.lavender,
+                                  Icons.warning_amber_rounded),
+                              _singleStatItem(
+                                  'Blunders',
+                                  '${widget.blunders}',
+                                  AppTheme.accentRed,
+                                  Icons.report_gmailerrorred_rounded),
                             ],
                           ),
+                          const SizedBox(height: 4),
                         ] else
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -635,14 +644,18 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
     );
   }
 
-  Widget _singleStatItem(String label, String value, Color color) {
+  Widget _singleStatItem(
+      String label, String value, Color color, IconData icon) {
     return Column(
       children: [
+        Icon(icon, color: color.withValues(alpha: 0.95), size: 16),
+        const SizedBox(height: 4),
         Text(
           value,
           style: GoogleFonts.fredoka(
               color: color, fontSize: 20, fontWeight: FontWeight.w800),
         ),
+        const SizedBox(height: 2),
         Text(
           label,
           style: GoogleFonts.baloo2(
@@ -693,10 +706,13 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
   }
 
   Widget _buildAccuracyBars() {
-    final myLabel = 'You';
-    final oppLabel = widget.opponentName?.trim().isNotEmpty == true
+    final isTwoPlayer = widget.gameMode == GameMode.twoPlayer;
+    final myLabel = isTwoPlayer ? 'White' : 'You';
+    final oppLabel = isTwoPlayer
+      ? 'Black'
+      : (widget.opponentName?.trim().isNotEmpty == true
         ? widget.opponentName!.trim()
-        : 'Opponent';
+        : 'Opponent');
 
     final myAcc = widget.accuracy.clamp(0.0, 100.0);
     final oppAcc = widget.opponentAccuracy.clamp(0.0, 100.0);
@@ -715,7 +731,7 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Accuracy Comparison',
+          isTwoPlayer ? 'Accuracy Comparison (White vs Black)' : 'Accuracy Comparison',
           style: GoogleFonts.fredoka(
             color: AppTheme.textPrimary,
             fontSize: 13,
