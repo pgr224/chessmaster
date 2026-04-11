@@ -4,6 +4,42 @@ library;
 
 enum PieceType { pawn, rook, knight, bishop, queen, king }
 
+extension PieceTypePromotionCode on PieceType {
+  String get promotionCode {
+    return switch (this) {
+      PieceType.queen => 'q',
+      PieceType.rook => 'r',
+      PieceType.bishop => 'b',
+      PieceType.knight => 'n',
+      _ => '',
+    };
+  }
+}
+
+PieceType? pieceTypeFromPromotionCode(String? code) {
+  if (code == null) return null;
+  switch (code.toLowerCase()) {
+    case 'q':
+    case 'queen':
+      return PieceType.queen;
+    case 'r':
+    case 'rook':
+      return PieceType.rook;
+    case 'b':
+    case 'bishop':
+      return PieceType.bishop;
+    case 'n':
+    case 'knight':
+      return PieceType.knight;
+    default:
+      return null;
+  }
+}
+
+String? normalizePromotionCode(String? code) {
+  return pieceTypeFromPromotionCode(code)?.promotionCode;
+}
+
 enum PieceColor { white, black }
 
 class ChessPiece {

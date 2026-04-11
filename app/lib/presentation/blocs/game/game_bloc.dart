@@ -72,7 +72,13 @@ class GameMakeMoveEvent extends GameEvent {
   List<Object?> get props => [from, to, promotion];
 }
 
-class GameUndoEvent extends GameEvent {}
+class GameUndoEvent extends GameEvent {
+  final bool fromOpponent;
+  const GameUndoEvent({this.fromOpponent = false});
+
+  @override
+  List<Object?> get props => [fromOpponent];
+}
 
 class GameRedoEvent extends GameEvent {}
 
@@ -2087,7 +2093,9 @@ class GameBloc extends Bloc<GameEvent, GameState> {
 
   Future<void> _onUndo(GameUndoEvent event, Emitter<GameState> emit) async {
     // 5-Second Rule Enforcement — only for Multiplayer (Online) to prevent frustration
-    if (state.mode == GameMode.multiplayer && state.lastMoveTimestamp != null) {
+    if (state.mode == GameMode.multiplayer &&
+        !event.fromOpponent &&
+        state.lastMoveTimestamp != null) {
       final elapsed = DateTime.now().difference(state.lastMoveTimestamp!);
       if (elapsed.inSeconds >= 5) {
         emit(state.copyWith(
@@ -2100,11 +2108,31 @@ class GameBloc extends Bloc<GameEvent, GameState> {
 
     if (state.mode == GameMode.multiplayer ||
         state.mode == GameMode.twoPlayer) {
-      if (state.mode == GameMode.multiplayer && state.mpUndosUsed >= 2) return;
+      if (state.mode == GameMode.multiplayer &&
+          !event.fromOpponent &&
+          state.mpUndosUsed >= 2) {
+        return;
+      }
       if (_engine.moveHistory.isEmpty) return;
 
+      final undoneMove = _engine.moveHistory.last;
       _engine.undoMove();
       final captured = _collectCaptured();
+
+      var nextXp = state.xpGained;
+      var nextUndosUsed = state.mpUndosUsed;
+      String? undoMessage = state.tutorialMessage;
+
+      if (state.mode == GameMode.multiplayer && !event.fromOpponent) {
+        final takebackPenalty = xpRules['penalties']?['takeback'] ?? -25;
+        nextXp += takebackPenalty;
+        nextUndosUsed = state.mpUndosUsed + 1;
+        undoMessage =
+            '⏪ Take back applied! (${takebackPenalty > 0 ? '+' : ''}$takebackPenalty XP)';
+      } else if (state.mode == GameMode.multiplayer && event.fromOpponent) {
+        undoMessage = '⏪ Opponent used take back. Your turn will resume normally.';
+      }
+
       emit(state.copyWith(
         board: _engine.board,
         currentTurn: _engine.currentTurn,
@@ -2115,7 +2143,15 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         capturedWhite: captured.$1,
         capturedBlack: captured.$2,
         clearSelected: true,
-        mpUndosUsed: state.mpUndosUsed + 1,
+        isAIThinking: false,
+        xpGained: nextXp,
+        tutorialMessage: undoMessage,
+        mpUndosUsed: nextUndosUsed,
+        lastUndoPenaltySquare:
+            (state.mode == GameMode.multiplayer && !event.fromOpponent)
+                ? undoneMove.to
+                : state.lastUndoPenaltySquare,
+        lastMoveTimestamp: DateTime.now(),
       ));
       _achievementService.evaluateSpecialActions('undo');
       return;

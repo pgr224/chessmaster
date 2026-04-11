@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid'
 import type { Env } from '../index'
 import { authMiddleware } from '../middleware/auth'
 import { normalizeTimeControl, DEFAULT_TIME_CONTROL } from '../time_control'
-import { calculateMultiplayerXP } from '../xp_rules'
+import { calculateMultiplayerXP, calculateAIGameXP } from '../xp_rules'
 
 const game = new Hono<{ Bindings: Env; Variables: { user: any } }>()
 game.use('*', authMiddleware)
@@ -112,7 +112,10 @@ const MoveSchema = z.object({
   gameId: z.string(),
   from: z.string().length(2),
   to: z.string().length(2),
-  promotion: z.enum(['q', 'r', 'b', 'n']).optional(),
+  promotion: z.union([
+    z.enum(['q', 'r', 'b', 'n']),
+    z.enum(['queen', 'rook', 'bishop', 'knight']),
+  ]).optional(),
   fenAfter: z.string(),
   algebraic: z.string(),
   timeSpent: z.number().optional(),
@@ -124,7 +127,16 @@ game.post('/move', async (c) => {
   const parsed = MoveSchema.safeParse(body)
   if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 400)
 
-  const { gameId, from, to, promotion, fenAfter, algebraic, timeSpent } = parsed.data
+  const { gameId, from, to, promotion: rawPromotion, fenAfter, algebraic, timeSpent } = parsed.data
+  const promotion = rawPromotion === 'queen' || rawPromotion === 'q'
+    ? 'q'
+    : rawPromotion === 'rook' || rawPromotion === 'r'
+    ? 'r'
+    : rawPromotion === 'bishop' || rawPromotion === 'b'
+    ? 'b'
+    : rawPromotion === 'knight' || rawPromotion === 'n'
+    ? 'n'
+    : undefined
 
   // Get current game state
   const gameRow = await c.env.DB.prepare(
@@ -193,8 +205,9 @@ game.post('/complete', async (c) => {
                      completed_at = ?, updated_at = ? WHERE id = ?
   `).bind(result, termination, pgn ?? null, now, now, gameId).run()
 
-  // Update XP (for rated multiplayer games)
-  if (gameRow.mode === 'multiplayer' && gameRow.rated) {
+  // Update XP — Expand to singlePlayer and tournament
+  const supportedModes = ['multiplayer', 'tournament', 'singlePlayer'];
+  if (supportedModes.includes(gameRow.mode as string) && gameRow.rated !== 0) {
     await updateXP(c.env.DB, gameRow, result)
   }
 
@@ -288,66 +301,86 @@ game.post('/abandon', async (c) => {
 // HELPERS
 // ────────────────────────────────────────
 async function updateXP(db: D1Database, gameRow: Record<string, unknown>, result: string) {
-  const white = await db.prepare('SELECT xp FROM users WHERE id = ?')
-    .bind(gameRow.white_user_id).first<{ xp: number }>()
-  const black = await db.prepare('SELECT xp FROM users WHERE id = ?')
-    .bind(gameRow.black_user_id).first<{ xp: number }>()
-  if (!white || !black) return
+  const mode = gameRow.mode as string;
+  const whiteId = gameRow.white_user_id as string | null;
+  const blackId = gameRow.black_user_id as string | null;
 
-  // Use standardized XP rules from profile (Multiplayer: +100 win, +30 draw, -20 loss)
-  let scoreW: number
-  let scoreB: number
+  const usersToUpdate = [];
+  if (whiteId) usersToUpdate.push({ id: whiteId, color: 'white' });
+  if (blackId) usersToUpdate.push({ id: blackId, color: 'black' });
 
-  if (result === 'draw') {
-    scoreW = calculateMultiplayerXP('draw')
-    scoreB = calculateMultiplayerXP('draw')
-  } else if (result === 'white') {
-    scoreW = calculateMultiplayerXP('win')
-    scoreB = calculateMultiplayerXP('loss')
-  } else {
-    // result === 'black'
-    scoreW = calculateMultiplayerXP('loss')
-    scoreB = calculateMultiplayerXP('win')
+  for (const userRef of usersToUpdate) {
+    const user = await db.prepare('SELECT xp FROM users WHERE id = ?')
+      .bind(userRef.id).first<{ xp: number }>()
+    if (!user) continue;
+
+    let xpChange = 0;
+    const isWinner = result === userRef.color;
+    const isDraw = result === 'draw';
+
+    if (mode === 'multiplayer' || mode === 'tournament') {
+      xpChange = calculateMultiplayerXP(isWinner ? 'win' : (isDraw ? 'draw' : 'loss'));
+    } else if (mode === 'singlePlayer' && isWinner) {
+      // For AI games, we use the difficulty-based reward
+      xpChange = calculateAIGameXP((gameRow.ai_difficulty as string) ?? 'medium');
+    }
+
+    if (xpChange === 0) continue;
+
+    const newXp = Math.max(0, user.xp + xpChange);
+    const now = new Date().toISOString();
+
+    await db.prepare('UPDATE users SET xp = ?, updated_at = ? WHERE id = ?')
+      .bind(newXp, now, userRef.id).run();
+
+    // Log xp history
+    await db.prepare(`
+      INSERT INTO xp_history (user_id, game_id, xp_before, xp_after, change, created_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).bind(userRef.id, gameRow.id, user.xp, newXp, xpChange, now).run();
   }
-
-  const newWhite = Math.max(0, white.xp + scoreW)
-  const newBlack = Math.max(0, black.xp + scoreB)
-  const now = new Date().toISOString()
-
-  await db.prepare('UPDATE users SET xp = ? WHERE id = ?').bind(newWhite, gameRow.white_user_id).run()
-  await db.prepare('UPDATE users SET xp = ? WHERE id = ?').bind(newBlack, gameRow.black_user_id).run()
-
-  // Log xp history
-  await db.prepare(`
-    INSERT INTO xp_history (user_id, game_id, xp_before, xp_after, change, created_at)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `).bind(gameRow.white_user_id, gameRow.id, white.xp, newWhite, scoreW, now).run()
-  await db.prepare(`
-    INSERT INTO xp_history (user_id, game_id, xp_before, xp_after, change, created_at)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `).bind(gameRow.black_user_id, gameRow.id, black.xp, newBlack, scoreB, now).run()
 }
 
 async function updateStats(db: D1Database, userId: string, outcome: 'win' | 'loss' | 'draw', mode: string) {
-  const field = outcome === 'win' ? 'wins' : outcome === 'loss' ? 'losses' : 'draws'
+  const field = outcome === 'win' ? 'wins' : outcome === 'loss' ? 'losses' : 'draws';
   const modeField = mode === 'multiplayer' ? 'multiplayer_games' : 
                     mode === 'tournament' ? 'tournament_games' : 
-                    mode === 'twoPlayer' ? 'two_player_games' : 'ai_games'
+                    mode === 'twoPlayer' ? 'two_player_games' : 'ai_games';
   const modeWinField = mode === 'multiplayer' ? 'multiplayer_wins' : 
                        mode === 'tournament' ? 'tournament_wins' : 
-                       mode === 'twoPlayer' ? 'two_player_wins' : 'ai_wins'
+                       mode === 'twoPlayer' ? 'two_player_wins' : 'ai_wins';
+  
+  const isWin = outcome === 'win';
+  const now = new Date().toISOString();
 
+  // Robust update using UPSERT to handle missing rows for legacy users
   await db.prepare(`
-    UPDATE user_stats SET 
-      games_played = games_played + 1,
-      ${field} = ${field} + 1,
-      ${modeField} = ${modeField} + 1,
-      ${outcome === 'win' ? `${modeWinField} = ${modeWinField} + 1,` : ''}
-      current_streak = CASE WHEN ? = 'win' THEN current_streak + 1 ELSE 0 END,
-      longest_streak = CASE WHEN current_streak + 1 > longest_streak AND ? = 'win' THEN current_streak + 1 ELSE longest_streak END,
-      updated_at = ?
-    WHERE user_id = ?
-  `).bind(outcome, outcome, new Date().toISOString(), userId).run()
+    INSERT INTO user_stats (
+      user_id, games_played, ${field}, ${modeField}, 
+      ${isWin ? `${modeWinField},` : ''} 
+      current_streak, longest_streak, updated_at
+    ) 
+    VALUES (?, 1, 1, 1, ${isWin ? '1, ' : ''} ?, ?, ?)
+    ON CONFLICT(user_id) DO UPDATE SET
+      games_played = user_stats.games_played + 1,
+      ${field} = user_stats.${field} + 1,
+      ${modeField} = user_stats.${modeField} + 1,
+      ${isWin ? `${modeWinField} = user_stats.${modeWinField} + 1,` : ''}
+      current_streak = CASE WHEN ? = 'win' THEN user_stats.current_streak + 1 ELSE 0 END,
+      longest_streak = CASE 
+        WHEN ? = 'win' AND user_stats.current_streak + 1 > user_stats.longest_streak 
+        THEN user_stats.current_streak + 1 
+        ELSE user_stats.longest_streak 
+      END,
+      updated_at = EXCLUDED.updated_at
+  `).bind(
+    userId, 
+    isWin ? 1 : 0, 
+    isWin ? 1 : 0, 
+    now,
+    outcome,
+    outcome
+  ).run();
 }
 
 export { game as gameRoutes }

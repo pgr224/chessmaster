@@ -110,9 +110,7 @@ class _GameRoomScreenState extends State<GameRoomScreen> {
                 context.read<GameBloc>().add(GameMakeMoveEvent(
                       Square.fromString(state.lastMoveFrom!),
                       Square.fromString(state.lastMoveTo!),
-                      promotion: state.lastMovePromotion != null
-                          ? PieceType.values.byName(state.lastMovePromotion!)
-                          : null,
+                      promotion: pieceTypeFromPromotionCode(state.lastMovePromotion),
                     ));
               },
             ),
@@ -134,13 +132,16 @@ class _GameRoomScreenState extends State<GameRoomScreen> {
               listenWhen: (prev, current) =>
                   current.opponentUndoCount > prev.opponentUndoCount,
               listener: (context, state) {
-                context.read<GameBloc>().add(GameUndoEvent());
+                context
+                    .read<GameBloc>()
+                    .add(const GameUndoEvent(fromOpponent: true));
               },
             ),
             BlocListener<GameBloc, GameState>(
               listenWhen: (prev, current) =>
                   prev.moveHistory.length > current.moveHistory.length &&
-                  current.mode == GameMode.multiplayer,
+                  current.mode == GameMode.multiplayer &&
+                  current.isPlayerTurn,
               listener: (context, state) {
                 context.read<MultiplayerBloc>().add(MpUndoEvent());
               },

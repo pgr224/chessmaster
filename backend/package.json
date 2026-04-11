@@ -20,7 +20,8 @@
     "tail": "wrangler tail",
     "secret:jwt": "wrangler secret put JWT_SECRET",
     "secret:jwt:staging": "wrangler secret put JWT_SECRET --env staging",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test:unit": "tsx --test src/**/*.test.ts"
   },
   "dependencies": {
     "chess.js": "^1.4.0",
@@ -31,7 +32,9 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240529.0",
+    "@types/node": "^22.15.17",
     "@types/uuid": "^10.0.0",
+    "tsx": "^4.20.0",
     "typescript": "^5.4.5",
     "wrangler": "^3.60.0"
   }

@@ -1,7 +1,18 @@
 import { ChessValidator, Move } from './validation'
 import { parseTimeControl, DEFAULT_TIME_CONTROL } from './time_control'
 import { getPlayerUsername } from './player_name_sync'
+import { calculateMultiplayerXP } from './xp_rules'
 import type { Env } from './index'
+
+function normalizePromotionCode(code?: string): string | undefined {
+  if (!code) return undefined
+  const value = code.toLowerCase()
+  if (value === 'q' || value === 'queen') return 'q'
+  if (value === 'r' || value === 'rook') return 'r'
+  if (value === 'b' || value === 'bishop') return 'b'
+  if (value === 'n' || value === 'knight') return 'n'
+  return undefined
+}
 
 export class GameRoom {
   private state: DurableObjectState
@@ -198,6 +209,9 @@ export class GameRoom {
 
     switch (msg.type) {
       case 'MOVE':
+        if (msg.move?.promotion) {
+          msg.move.promotion = normalizePromotionCode(msg.move.promotion)
+        }
         const moveRes = this.validator.validateMove(msg.move as Move)
         if (moveRes.valid) {
           // Final clock update for this turn
@@ -359,37 +373,63 @@ export class GameRoom {
         new Date().toISOString(), new Date().toISOString(), new Date().toISOString()
       ).run()
 
-      // Update user stats
+      // Update user stats and XP
       if (whiteUserId) {
-        const whiteOutcome = winner === 'white' ? 'win' : winner === 'black' ? 'loss' : 'draw'
-        await this.updateUserStats(whiteUserId, whiteOutcome)
+        const outcome = winner === 'white' ? 'win' : winner === 'black' ? 'loss' : 'draw'
+        await this.updateUserStatsAndXP(whiteUserId, outcome)
       }
       if (blackUserId) {
-        const blackOutcome = winner === 'black' ? 'win' : winner === 'white' ? 'loss' : 'draw'
-        await this.updateUserStats(blackUserId, blackOutcome)
+        const outcome = winner === 'black' ? 'win' : winner === 'white' ? 'loss' : 'draw'
+        await this.updateUserStatsAndXP(blackUserId, outcome)
       }
     } catch (e) {
       console.error('[GameRoom] DB Save Failed:', e)
     }
   }
 
-  private async updateUserStats(userId: string, outcome: 'win' | 'loss' | 'draw') {
+  private async updateUserStatsAndXP(userId: string, outcome: 'win' | 'loss' | 'draw') {
     if (!this.env.DB) return
     try {
       const field = outcome === 'win' ? 'wins' : outcome === 'loss' ? 'losses' : 'draws'
+      const now = new Date().toISOString()
+
+      // 1. Update/Create User Stats (UPSERT)
       await this.env.DB.prepare(`
-        UPDATE user_stats SET 
-          games_played = games_played + 1,
-          ${field} = ${field} + 1,
-          multiplayer_games = multiplayer_games + 1,
-          ${outcome === 'win' ? 'multiplayer_wins = multiplayer_wins + 1,' : ''}
-          current_streak = CASE WHEN ? = 'win' THEN current_streak + 1 ELSE 0 END,
-          longest_streak = CASE WHEN current_streak + 1 > longest_streak AND ? = 'win' THEN current_streak + 1 ELSE longest_streak END,
-          updated_at = ?
-        WHERE user_id = ?
-      `).bind(outcome, outcome, new Date().toISOString(), userId).run()
+        INSERT INTO user_stats (user_id, games_played, ${field}, multiplayer_games, 
+                               ${outcome === 'win' ? 'multiplayer_wins,' : ''}
+                               current_streak, longest_streak, updated_at)
+        VALUES (?, 1, 1, 1, ${outcome === 'win' ? '1,' : ''} ?, ?, ?)
+        ON CONFLICT(user_id) DO UPDATE SET
+          games_played = user_stats.games_played + 1,
+          ${field} = user_stats.${field} + 1,
+          multiplayer_games = user_stats.multiplayer_games + 1,
+          ${outcome === 'win' ? 'multiplayer_wins = user_stats.multiplayer_wins + 1,' : ''}
+          current_streak = CASE WHEN ? = 'win' THEN user_stats.current_streak + 1 ELSE 0 END,
+          longest_streak = CASE 
+            WHEN ? = 'win' AND user_stats.current_streak + 1 > user_stats.longest_streak 
+            THEN user_stats.current_streak + 1 
+            ELSE user_stats.longest_streak 
+          END,
+          updated_at = excluded.updated_at
+      `).bind(userId, outcome === 'win' ? 1 : 0, outcome === 'win' ? 1 : 0, now, outcome, outcome).run()
+
+      // 2. Award XP
+      const user = await this.env.DB.prepare('SELECT xp FROM users WHERE id = ?').bind(userId).first<{ xp: number }>()
+      if (user) {
+        // use multiplayer rules
+        const xpChange = calculateMultiplayerXP(outcome)
+        const newXp = Math.max(0, user.xp + xpChange)
+        
+        await this.env.DB.prepare('UPDATE users SET xp = ?, updated_at = ? WHERE id = ?').bind(newXp, now, userId).run()
+        
+        // Log XP history
+        await this.env.DB.prepare(`
+          INSERT INTO xp_history (user_id, game_id, xp_before, xp_after, change, created_at)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `).bind(userId, this.gameId, user.xp, newXp, xpChange, now).run()
+      }
     } catch (e) {
-      console.error('[GameRoom] Stats update failed:', e)
+      console.error('[GameRoom] Stats/XP update failed:', e)
     }
   }
   private async syncPausedGame() {

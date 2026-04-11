@@ -219,7 +219,7 @@ export class TournamentRoom implements DurableObject {
   }
 
   private async _handleMatchResult(msg: any, meta: { id: string }) {
-    const { gameId, result } = msg  // result: 'player1' | 'player2' | 'draw'
+    const { gameId, result, pgn, termination } = msg  // result: 'player1' | 'player2' | 'draw'
     const pairing = this.tournament.currentPairings.find(p => p.gameId === gameId)
     if (!pairing || pairing.result) return  // already processed
 
@@ -228,14 +228,49 @@ export class TournamentRoom implements DurableObject {
       : result === 'player2' ? pairing.player2Id
       : undefined
 
-    // Update scores
+    // Update scores in memory
     const p1 = this.tournament.players.find(p => p.id === pairing.player1Id)!
     const p2 = this.tournament.players.find(p => p.id === pairing.player2Id)!
-    if (result === 'player1') { p1.score += 1; p1.wins++; p2.losses++ }
-    else if (result === 'player2') { p2.score += 1; p2.wins++; p1.losses++ }
-    else { p1.score += 0.5; p2.score += 0.5; p1.draws++; p2.draws++ }
+    
+    let p1Outcome: 'win' | 'loss' | 'draw'
+    let p2Outcome: 'win' | 'loss' | 'draw'
+
+    if (result === 'player1') { 
+      p1.score += 1; p1.wins++; p2.losses++;
+      p1Outcome = 'win'; p2Outcome = 'loss';
+    }
+    else if (result === 'player2') { 
+      p2.score += 1; p2.wins++; p1.losses++;
+      p1Outcome = 'loss'; p2Outcome = 'win';
+    }
+    else { 
+      p1.score += 0.5; p2.score += 0.5; p1.draws++; p2.draws++;
+      p1Outcome = 'draw'; p2Outcome = 'draw';
+    }
 
     await this._persist()
+
+    // PERSIST TO DATABASE
+    if (this.env.DB) {
+      try {
+        const now = new Date().toISOString()
+        // 1. Save game record
+        await this.env.DB.prepare(`
+          INSERT INTO games (id, white_user_id, black_user_id, mode, status, result, pgn, tournament_id, termination, completed_at, updated_at)
+          VALUES (?, ?, ?, 'tournament', 'completed', ?, ?, ?, ?, ?, ?)
+        `).bind(
+          gameId, pairing.player1Id, pairing.player2Id, 
+          result === 'player1' ? 'white' : (result === 'player2' ? 'black' : 'draw'),
+          pgn ?? '', this.state.id.toString(), termination ?? 'normal', now, now
+        ).run()
+
+        // 2. Update Stats and award XP for both players
+        await this._updateUserStatsAndXP(pairing.player1Id, p1Outcome, gameId)
+        await this._updateUserStatsAndXP(pairing.player2Id, p2Outcome, gameId)
+      } catch (e) {
+        console.error('[TournamentRoom] DB update failed:', e)
+      }
+    }
 
     const standings = this._standings()
     this._broadcastAll({
@@ -270,6 +305,47 @@ export class TournamentRoom implements DurableObject {
     }
   }
 
+  private async _updateUserStatsAndXP(userId: string, outcome: 'win' | 'loss' | 'draw', gameId: string) {
+    if (!this.env.DB) return
+    const field = outcome === 'win' ? 'wins' : outcome === 'loss' ? 'losses' : 'draws'
+    const now = new Date().toISOString()
+
+    // 1. Stats UPSERT
+    await this.env.DB.prepare(`
+      INSERT INTO user_stats (user_id, games_played, ${field}, tournament_games, 
+                             ${outcome === 'win' ? 'tournament_wins,' : ''}
+                             current_streak, longest_streak, updated_at)
+      VALUES (?, 1, 1, 1, ${outcome === 'win' ? '1,' : ''} ?, ?, ?)
+      ON CONFLICT(user_id) DO UPDATE SET
+        games_played = user_stats.games_played + 1,
+        ${field} = user_stats.${field} + 1,
+        tournament_games = user_stats.tournament_games + 1,
+        ${outcome === 'win' ? 'tournament_wins = user_stats.tournament_wins + 1,' : ''}
+        current_streak = CASE WHEN ? = 'win' THEN user_stats.current_streak + 1 ELSE 0 END,
+        longest_streak = CASE 
+          WHEN ? = 'win' AND user_stats.current_streak + 1 > user_stats.longest_streak 
+          THEN user_stats.current_streak + 1 
+          ELSE user_stats.longest_streak 
+        END,
+        updated_at = excluded.updated_at
+    `).bind(userId, outcome === 'win' ? 1 : 0, outcome === 'win' ? 1 : 0, now, outcome, outcome).run()
+
+    // 2. Award XP
+    const user = await this.env.DB.prepare('SELECT xp FROM users WHERE id = ?').bind(userId).first<{ xp: number }>()
+    if (user) {
+      const xpChange = (outcome === 'win' ? XP_RULES.tournament.win 
+                       : (outcome === 'draw' ? XP_RULES.tournament.draw 
+                       : XP_RULES.tournament.loss))
+      const newXp = Math.max(0, user.xp + xpChange)
+      await this.env.DB.prepare('UPDATE users SET xp = ?, updated_at = ? WHERE id = ?').bind(newXp, now, userId).run()
+      
+      await this.env.DB.prepare(`
+        INSERT INTO xp_history (user_id, game_id, xp_before, xp_after, change, created_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).bind(userId, gameId, user.xp, newXp, xpChange, now).run()
+    }
+  }
+
   private async _handleNextRound() {
     if (this.tournament.currentRound < this.tournament.totalRounds) {
       this.tournament.currentRound++
@@ -285,13 +361,32 @@ export class TournamentRoom implements DurableObject {
     const standings = this._standings()
     const winner = standings[0]
 
-    // XP calculation per standardized rules: Win=+100, Draw=+30, Loss=-20, bonus +200 for overall winner
+    // Award overall tournament winner bonus to database
+    if (winner && this.env.DB) {
+      try {
+        const user = await this.env.DB.prepare('SELECT xp FROM users WHERE id = ?').bind(winner.id).first<{ xp: number }>()
+        if (user) {
+          const bonus = XP_RULES.tournament.tournamentWinBonus
+          const newXp = user.xp + bonus
+          const now = new Date().toISOString()
+          await this.env.DB.prepare('UPDATE users SET xp = ?, updated_at = ? WHERE id = ?').bind(newXp, now, winner.id).run()
+          
+          await this.env.DB.prepare(`
+            INSERT INTO xp_history (user_id, xp_before, xp_after, change, created_at)
+            VALUES (?, ?, ?, ?, ?)
+          `).bind(winner.id, user.xp, newXp, bonus, now).run()
+        }
+      } catch (e) {
+        console.error('[TournamentRoom] Bonus award failed:', e)
+      }
+    }
+
     const xpDeltas: Record<string, number> = {}
     const eloDeltas: Record<string, number> = {}
     for (const p of this.tournament.players) {
-      const xpBase = (p.wins * XP_RULES.multiplayer.win) + 
-                     (p.draws * XP_RULES.multiplayer.draw) + 
-                     (p.losses * XP_RULES.multiplayer.loss)
+      const xpBase = (p.wins * XP_RULES.tournament.win) + 
+                     (p.draws * XP_RULES.tournament.draw) + 
+                     (p.losses * XP_RULES.tournament.loss)
       const streakMultiplier = 1 + Math.min(p.wins, 5) * 0.2
       xpDeltas[p.id] = Math.round(xpBase * streakMultiplier) + (p.id === winner?.id ? XP_RULES.tournament.tournamentWinBonus : 0)
       eloDeltas[p.id] = (p.wins * 20) + (p.draws * 5) + (p.losses * -15)

@@ -116,6 +116,18 @@ class _LobbyScreenState extends State<LobbyScreen> {
               body: '${state.incomingChallenges.length} pending game request(s)',
               accent: AppTheme.accentCyan,
             );
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                    '⚔️ New game request from ${state.incomingChallenges.first.playerName}!'),
+                backgroundColor: AppTheme.accentCyan,
+                action: SnackBarAction(
+                  label: 'VIEW',
+                  textColor: Colors.white,
+                  onPressed: () => _showSocialWindow(state),
+                ),
+              ),
+            );
           } else {
             ScaffoldMessenger.of(context)
               ..hideCurrentSnackBar()

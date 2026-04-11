@@ -75,6 +75,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   String _error = '';
   String _sortType = 'elo';
   int _myRank = 0;
+  int _activeFetchId = 0;
   String? _bountyUserId;
   Timer? _refreshTimer;
 
@@ -103,18 +104,23 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   }
 
   Future<void> _fetchLeaderboard() async {
+    final requestedSortType = _sortType;
+    final fetchId = ++_activeFetchId;
+
     setState(() {
       _loading = true;
       _error = '';
+      _myRank = 0;
     });
     try {
       final dio = di.sl<Dio>();
       final response = await dio.get('/api/leaderboard',
-          queryParameters: {'type': _sortType, 'limit': 50},
+          queryParameters: {'type': requestedSortType, 'limit': 50},
           options: Options(validateStatus: (_) => true));
 
+      if (!mounted || fetchId != _activeFetchId) return;
+
       if (response.statusCode != 200) {
-        if (!mounted) return;
         setState(() {
           _loading = false;
           _error = 'Leaderboard is temporarily unavailable';
@@ -133,9 +139,10 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
             .toList();
         _loading = false;
       });
-      _fetchMyRank();
+      _fetchMyRank(sortType: requestedSortType, fetchId: fetchId);
       _fetchBountyTarget();
     } catch (_) {
+      if (!mounted || fetchId != _activeFetchId) return;
       setState(() {
         _loading = false;
         _error = 'Failed to load leaderboard';
@@ -150,15 +157,22 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     });
   }
 
-  Future<void> _fetchMyRank() async {
+  Future<void> _fetchMyRank({
+    required String sortType,
+    required int fetchId,
+  }) async {
     final authState = context.read<AuthBloc>().state;
     if (authState is! AuthAuthenticatedState) return;
     try {
       final dio = di.sl<Dio>();
       final response =
           await dio.get('/api/leaderboard/rank/${authState.user.id}',
-            queryParameters: {'type': _sortType},
+            queryParameters: {'type': sortType},
               options: Options(validateStatus: (_) => true));
+
+      if (!mounted || fetchId != _activeFetchId || sortType != _sortType) {
+        return;
+      }
 
       if (response.statusCode != 200) return;
 
@@ -419,10 +433,10 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     }
 
     final statValue = _sortType == 'elo'
-        ? '${entry.eloRating} 🔥'
+        ? '${entry.eloRating} ⭐'
         : _sortType == 'wins'
-            ? '${entry.wins} W'
-            : '${entry.xp} XP';
+            ? '${entry.wins} 🏆'
+            : '${entry.xp} 🔥';
 
     return GestureDetector(
       onTap: isMe ? null : () => _showDonationDialog(context, entry),

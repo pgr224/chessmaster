@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../domain/engine/chess_engine.dart';
+import '../../widgets/chess_board_widget.dart';
 
 // ─── Article Data Model ───────────────────────────────────────────────────────
 
@@ -21,6 +23,8 @@ class _ArticleData {
   final List<_StudyWeek> studySchedule;
   final List<_Reference> references;
   final _ContactInfo contactInfo;
+  final String? boardFen;
+  final String? boardCaption;
 
   const _ArticleData({
     required this.title,
@@ -36,6 +40,8 @@ class _ArticleData {
     required this.studySchedule,
     required this.references,
     required this.contactInfo,
+    this.boardFen,
+    this.boardCaption,
   });
 }
 
@@ -232,6 +238,9 @@ final _articles = <String, _ArticleData>{
         type: 'Regulation',
       ),
     ],
+    boardFen: 'rnbqkb1r/pp2pppp/3p1n2/8/3NP3/2N5/PPP2PPP/R1BQKB1R w KQkq - 0 6',
+    boardCaption:
+        'Position after 1.e4 c5 2.Nf3 d6 3.d4 cxd4 4.Nxd4 Nf6 5.Nc3',
     contactInfo: _ContactInfo(
       curator: 'Chess Academy Editorial Team',
       email: 'lessons@chessmaster.app',
@@ -870,7 +879,7 @@ class ArticleScreen extends StatelessWidget {
                   const SizedBox(height: 28),
                   _buildKeyMovesSection(data),
                   const SizedBox(height: 28),
-                  _buildBoardDiagram(),
+                  _buildBoardDiagram(context, data),
                   const SizedBox(height: 28),
                   _buildStudySchedule(data),
                   const SizedBox(height: 28),
@@ -1117,39 +1126,62 @@ class ArticleScreen extends StatelessWidget {
 
   // ── Board Diagram Placeholder ─────────────────────────────────────────────
 
-  Widget _buildBoardDiagram() {
+  Widget _buildBoardDiagram(BuildContext context, _ArticleData data) {
+    final engine = data.boardFen != null
+        ? ChessEngine.fromFEN(data.boardFen!)
+        : ChessEngine();
+    final caption = data.boardCaption ??
+        'Tap any square to review the starting position and key ideas.';
+
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Container(
-          height: 280,
-          width: double.infinity,
           decoration: BoxDecoration(
             color: AppTheme.navyCard,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.15)),
           ),
+          padding: const EdgeInsets.all(16),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Icon(Icons.grid_4x4_rounded,
-                  size: 60, color: AppTheme.goldPrimary),
-              const SizedBox(height: 14),
               Text('Interactive Board',
                   style: GoogleFonts.fredoka(
-                      color: AppTheme.textPrimary, fontSize: 18)),
-              const SizedBox(height: 4),
-              Text('Tap to explore position',
+                      color: AppTheme.textPrimary,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700)),
+              const SizedBox(height: 10),
+              SizedBox(
+                height: 300,
+                child: ChessBoardWidget(
+                  board: engine.board,
+                  perspective: PieceColor.white,
+                  currentTurn: engine.currentTurn,
+                  isInteractive: true,
+                  showCoordinates: true,
+                  showSquareLabels: false,
+                  boardTheme: 'classic',
+                  pieceShape: 'classic',
+                  pieceStyle: '3d',
+                  onSquareTap: (square) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                            'Selected square ${square.toAlgebraic()}. Explore the position and compare with the key moves.'),
+                        duration: const Duration(milliseconds: 900),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(caption,
                   style: GoogleFonts.baloo2(
-                      color: AppTheme.textMuted, fontSize: 13)),
+                      color: AppTheme.textMuted, fontSize: 12, height: 1.4)),
             ],
           ),
         ),
-        const SizedBox(height: 6),
-        Center(
-            child: Text(
-                'Position after 1.e4 c5 2.Nf3 d6 3.d4 cxd4 4.Nxd4 Nf6 5.Nc3',
-                style: GoogleFonts.baloo2(
-                    color: AppTheme.textMuted, fontSize: 11))),
       ],
     ).animate().fadeIn(delay: 250.ms);
   }
@@ -1450,7 +1482,8 @@ class ArticleScreen extends StatelessWidget {
 
   Future<void> _launchUrl(String url) async {
     final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri))
+    if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
   }
 }

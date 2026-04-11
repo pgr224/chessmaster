@@ -628,6 +628,35 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
             : 'Challenge sent to ${event.opponent.name}!',
       ));
     });
+
+    on<MpSendTournamentInviteEvent>((event, emit) {
+      final requestId = _buildChallengeRequestId(event.opponent.id);
+      final request = ChallengeRequest(
+        id: requestId,
+        playerId: event.opponent.id,
+        playerName: event.opponent.name,
+        mode: 'tournament',
+        timeControl: event.timeControl,
+        variantId: 'standard',
+        isIncoming: false,
+        status: 'pending',
+        createdAt: DateTime.now(),
+      );
+
+      _service.sendTournamentChallenge(
+        opponentId: event.opponent.id,
+        tournamentId: event.tournamentId,
+        totalRounds: event.totalRounds,
+        timeControl: event.timeControl,
+      );
+      emit(state.copyWith(
+        outgoingChallenges: _upsertChallenge(
+          state.outgoingChallenges,
+          request,
+        ),
+        lobbyNotice: '🏆 Tournament invite sent to ${event.opponent.name}!',
+      ));
+    });
     on<MpIncomingChallengeReceivedEvent>((event, emit) {
       emit(state.copyWith(
         incomingChallenges: _upsertChallenge(
@@ -747,10 +776,13 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
     on<MpChangeSelectedVariantEvent>((event, emit) =>
         emit(state.copyWith(selectedVariantId: event.variantId)));
     on<MpClearNoticeEvent>((event, emit) => emit(state.copyWith(
-        lobbyNotice: null,
-        challengerId: null,
-        challengerVariantId: '',
-      )));
+          lobbyNotice: null,
+          challengerId: null,
+          challengerVariantId: '',
+          pendingTournamentId: null,
+          pendingTournamentChallengerId: null,
+          pendingTournamentChallengerName: null,
+        )));
 
     on<MpXpBroadcastRequestEvent>((event, emit) {
       final requests =
@@ -764,16 +796,6 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
       emit(state.copyWith(xpBroadcastRequests: requests));
     });
 
-    on<MpSendTournamentInviteEvent>((event, emit) {
-      _service.sendTournamentChallenge(
-        opponentId: event.opponent.id,
-        tournamentId: event.tournamentId,
-        totalRounds: event.totalRounds,
-        timeControl: event.timeControl,
-      );
-      emit(state.copyWith(
-          lobbyNotice: '🏆 Tournament invite sent to ${event.opponent.name}!'));
-    });
     on<MpTournamentChallengeReceivedEvent>((event, emit) {
       emit(state.copyWith(
         pendingTournamentId: event.tournamentId,
@@ -1159,16 +1181,16 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
     _service.sendMove({
       'from': event.from,
       'to': event.to,
-      if (event.promotion != null) 'promotion': event.promotion,
+      if (event.promotion != null)
+        'promotion': normalizePromotionCode(event.promotion),
     });
   }
 
-  void _onOpponentMove(
-      MpOpponentMoveEvent event, Emitter<MultiplayerState> emit) {
+  void _onOpponentMove(MpOpponentMoveEvent event, Emitter<MultiplayerState> emit) {
     emit(state.copyWith(
-      lastMoveFrom: event.moveData['move']['from'],
-      lastMoveTo: event.moveData['move']['to'],
-      lastMovePromotion: event.moveData['move']['promotion'],
+      lastMoveFrom: event.moveData['move']?['from']?.toString(),
+      lastMoveTo: event.moveData['move']?['to']?.toString(),
+      lastMovePromotion: event.moveData['move']?['promotion']?.toString(),
     ));
   }
 
