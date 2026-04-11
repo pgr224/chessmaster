@@ -851,13 +851,21 @@ final _articles = <String, _ArticleData>{
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
-class ArticleScreen extends StatelessWidget {
+class ArticleScreen extends StatefulWidget {
   final String articleId;
   const ArticleScreen({super.key, required this.articleId});
 
   @override
+  State<ArticleScreen> createState() => _ArticleScreenState();
+}
+
+class _ArticleScreenState extends State<ArticleScreen> {
+  int? _selectedSequenceIndex;
+  int _currentStepInSequence = 0;
+
+  @override
   Widget build(BuildContext context) {
-    final data = _articles[articleId];
+    final data = _articles[widget.articleId];
     if (data == null) return _buildNotFound(context);
 
     return Scaffold(
@@ -1072,54 +1080,87 @@ class ArticleScreen extends StatelessWidget {
       children: [
         _sectionHeading('♟ Key Move Sequences'),
         const SizedBox(height: 12),
-        ...data.keyMoves.map((m) => _buildMoveCard(m)),
+        ...List.generate(data.keyMoves.length, (index) {
+          final seq = data.keyMoves[index];
+          return _buildMoveCard(seq, index, data);
+        }),
       ],
     ).animate().fadeIn(delay: 200.ms);
   }
 
-  Widget _buildMoveCard(_MoveSequence seq) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppTheme.navyCard,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.accentPurple.withValues(alpha: 0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(seq.label,
-              style: GoogleFonts.fredoka(
-                color: AppTheme.accentPurple,
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.5,
-              )),
-          const SizedBox(height: 6),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.black26,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text(seq.moves,
-                style: const TextStyle(
-                  color: AppTheme.goldPrimary,
-                  fontFamily: 'monospace',
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                )),
+  Widget _buildMoveCard(_MoveSequence seq, int index, _ArticleData data) {
+    final isSelected = _selectedSequenceIndex == index;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedSequenceIndex = index;
+          _currentStepInSequence = 0;
+        });
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isSelected ? AppTheme.accentPurple.withValues(alpha: 0.15) : AppTheme.navyCard,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected ? AppTheme.accentPurple : AppTheme.accentPurple.withValues(alpha: 0.2),
+            width: isSelected ? 2 : 1,
           ),
-          const SizedBox(height: 8),
-          Text(seq.notes,
-              style: GoogleFonts.baloo2(
-                color: AppTheme.textSecondary,
-                fontSize: 13,
-                height: 1.5,
-              )),
-        ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(seq.label,
+                    style: GoogleFonts.fredoka(
+                      color: isSelected ? AppTheme.accentPurple : AppTheme.accentPurple.withValues(alpha: 0.7),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.5,
+                    )),
+                const Spacer(),
+                if (isSelected)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppTheme.goldPrimary.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text('Click to show position ▶',
+                        style: GoogleFonts.baloo2(
+                          color: AppTheme.goldPrimary,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                        )),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: isSelected ? AppTheme.midnight : Colors.black26,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(seq.moves,
+                  style: TextStyle(
+                    color: AppTheme.goldPrimary,
+                    fontFamily: 'monospace',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  )),
+            ),
+            const SizedBox(height: 8),
+            Text(seq.notes,
+                style: GoogleFonts.baloo2(
+                  color: AppTheme.textSecondary,
+                  fontSize: 13,
+                  height: 1.5,
+                )),
+          ],
       ),
     );
   }
@@ -1127,11 +1168,25 @@ class ArticleScreen extends StatelessWidget {
   // ── Board Diagram Placeholder ─────────────────────────────────────────────
 
   Widget _buildBoardDiagram(BuildContext context, _ArticleData data) {
-    final engine = data.boardFen != null
-        ? ChessEngine.fromFEN(data.boardFen!)
-        : ChessEngine();
-    final caption = data.boardCaption ??
-        'Tap any square to review the starting position and key ideas.';
+    late List<List<ChessPiece?>> board;
+    late String caption;
+    late String boardTitle;
+
+    if (_selectedSequenceIndex != null &&
+        _selectedSequenceIndex! < data.keyMoves.length) {
+      final sequence = data.keyMoves[_selectedSequenceIndex!];
+      board = _getBoardAfterMoves(sequence.moves, data.boardFen);
+      boardTitle = 'Position: ${sequence.label}';
+      caption = sequence.notes;
+    } else {
+      final engine = data.boardFen != null
+          ? ChessEngine.fromFEN(data.boardFen!)
+          : ChessEngine();
+      board = engine.board;
+      boardTitle = 'Interactive Board';
+      caption = data.boardCaption ??
+          'Click on a move sequence above to see the resulting position.';
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1146,18 +1201,47 @@ class ArticleScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Interactive Board',
-                  style: GoogleFonts.fredoka(
-                      color: AppTheme.textPrimary,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700)),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(boardTitle,
+                        style: GoogleFonts.fredoka(
+                            color: AppTheme.textPrimary,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700)),
+                  ),
+                  if (_selectedSequenceIndex != null)
+                    GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _selectedSequenceIndex = null;
+                          _currentStepInSequence = 0;
+                        });
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: AppTheme.accentPurple.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text('Reset',
+                            style: GoogleFonts.baloo2(
+                              color: AppTheme.accentPurple,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            )),
+                      ),
+                    ),
+                ],
+              ),
               const SizedBox(height: 10),
               SizedBox(
                 height: 300,
                 child: ChessBoardWidget(
-                  board: engine.board,
+                  board: board,
                   perspective: PieceColor.white,
-                  currentTurn: engine.currentTurn,
+                  currentTurn: PieceColor.white,
                   isInteractive: true,
                   showCoordinates: true,
                   showSquareLabels: false,
@@ -1168,8 +1252,8 @@ class ArticleScreen extends StatelessWidget {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
-                            'Selected square ${square.toAlgebraic()}. Explore the position and compare with the key moves.'),
-                        duration: const Duration(milliseconds: 900),
+                            'Square: ${square.toAlgebraic()}. Study the position to understand key ideas.'),
+                        duration: const Duration(milliseconds: 1200),
                       ),
                     );
                   },
@@ -1394,6 +1478,97 @@ class ArticleScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  // ── Helper: Parse moves from algebraic notation ─────────────────────────
+
+  /// Converts algebraic notation like "1.e4 c5 2.Nf3" into individual move strings
+  /// Returns list of moves in UCI format (e.g., ['e2e4', 'c7c5', 'g1f3', ...])
+  List<String> _parseAlgebraicMoves(String notation) {
+    final moves = <String>[];
+    final engine = _selectedSequenceIndex != null && _selectedSequenceIndex! < _articles.values.elementAt(0).keyMoves.length
+        ? ChessEngine()
+        : ChessEngine();
+
+    final tokens = notation.split(RegExp(r'[\s]+'))
+        .where((t) => t.isNotEmpty && !RegExp(r'^\d+\.$').hasMatch(t))
+        .toList();
+
+    for (final token in tokens) {
+      if (token.isEmpty) continue;
+      try {
+        final candidateMoves = engine.getLegalMoves();
+        Move? parsedMove;
+
+        for (final move in candidateMoves) {
+          final algebraic = _moveToAlgebraic(engine, move);
+          if (algebraic.replaceAll('+', '').replaceAll('#', '') == token.replaceAll('+', '').replaceAll('#', '')) {
+            parsedMove = move;
+            break;
+          }
+        }
+
+        if (parsedMove == null && token.length >= 4) {
+          try {
+            parsedMove = Move.fromAlgebraic(token.toLowerCase().replaceAll(RegExp(r'[^a-h0-8=qrbn]'), ''));
+          } catch (_) {}
+        }
+
+        if (parsedMove != null) {
+          final uci = '${parsedMove.from.toAlgebraic()}${parsedMove.to.toAlgebraic()}';
+          if (parsedMove.promotion != null) {
+            moves.add('$uci${parsedMove.promotion!.promotionCode}');
+          } else {
+            moves.add(uci);
+          }
+          engine.makeMove(parsedMove);
+        }
+      } catch (_) {}
+    }
+    return moves;
+  }
+
+  /// Convert a move object to algebraic notation for matching
+  String _moveToAlgebraic(ChessEngine engine, Move move) {
+    final piece = engine.getPieceAt(move.from);
+    if (piece == null) return '';
+
+    if (move.isCastle) {
+      return move.to.file > move.from.file ? 'O-O' : 'O-O-O';
+    }
+
+    String notation = '';
+    if (piece.type != PieceType.pawn) {
+      notation += piece.symbol.toUpperCase();
+    }
+
+    notation += move.to.toAlgebraic();
+
+    if (move.promotion != null) {
+      notation += '=${move.promotion!.symbol.toUpperCase()}';
+    }
+
+    return notation;
+  }
+
+  /// Get the board position after applying moves from a sequence
+  List<List<ChessPiece?>> _getBoardAfterMoves(String moveNotation, String? initialFen) {
+    final engine = initialFen != null ? ChessEngine.fromFEN(initialFen) : ChessEngine();
+    final moves = _parseAlgebraicMoves(moveNotation);
+
+    for (final moveUci in moves) {
+      try {
+        if (moveUci.length >= 4) {
+          final from = Square.fromString(moveUci.substring(0, 2));
+          final to = Square.fromString(moveUci.substring(2, 4));
+          final promotion = moveUci.length > 4 ? pieceTypeFromPromotionCode(moveUci[4]) : null;
+          final move = Move(from: from, to: to, promotion: promotion);
+          engine.makeMove(move);
+        }
+      } catch (_) {}
+    }
+
+    return engine.board;
   }
 
   // ── Related Lessons ───────────────────────────────────────────────────────
