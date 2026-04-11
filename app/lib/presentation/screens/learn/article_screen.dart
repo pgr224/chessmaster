@@ -1019,7 +1019,7 @@ class _ArticleScreenState extends State<ArticleScreen> {
           _statItem(Icons.bar_chart_rounded, data.difficulty, 'Level'),
           _vDivider(),
           _statItem(Icons.library_books_rounded,
-              '${_articles[articleId]!.references.length} refs', 'References'),
+              '${_articles[widget.articleId]!.references.length} refs', 'References'),
           _vDivider(),
           _statItem(Icons.event_note_rounded, '7 days', 'Study Plan'),
         ],
@@ -1153,7 +1153,7 @@ class _ArticleScreenState extends State<ArticleScreen> {
                     fontWeight: FontWeight.w600,
                   )),
             ),
-            const SizedBox(height: 8),
+              const SizedBox(height: 8),
             Text(seq.notes,
                 style: GoogleFonts.baloo2(
                   color: AppTheme.textSecondary,
@@ -1161,6 +1161,7 @@ class _ArticleScreenState extends State<ArticleScreen> {
                   height: 1.5,
                 )),
           ],
+        ),
       ),
     );
   }
@@ -1486,23 +1487,28 @@ class _ArticleScreenState extends State<ArticleScreen> {
   /// Returns list of moves in UCI format (e.g., ['e2e4', 'c7c5', 'g1f3', ...])
   List<String> _parseAlgebraicMoves(String notation) {
     final moves = <String>[];
-    final engine = _selectedSequenceIndex != null && _selectedSequenceIndex! < _articles.values.elementAt(0).keyMoves.length
-        ? ChessEngine()
-        : ChessEngine();
+    final engine = ChessEngine();
 
-    final tokens = notation.split(RegExp(r'[\s]+'))
-        .where((t) => t.isNotEmpty && !RegExp(r'^\d+\.$').hasMatch(t))
+    var sanitized = notation
+        .replaceAll(RegExp(r'\d+\.\.\.|\d+\.'), ' ')
+        .replaceAll(RegExp(r'1-0|0-1|1/2-1/2'), ' ') // remove score tokens
+        .replaceAll(RegExp(r'\$\d+'), ' '); // remove numeric annotations
+
+    final tokens = sanitized
+        .split(RegExp(r'[\s]+'))
+        .where((t) => t.isNotEmpty)
+        .map((t) => t.replaceAll(RegExp(r'[+#]'), ''))
         .toList();
 
     for (final token in tokens) {
       if (token.isEmpty) continue;
       try {
-        final candidateMoves = engine.getLegalMoves();
+        final candidateMoves = engine.allLegalMoves();
         Move? parsedMove;
 
         for (final move in candidateMoves) {
           final algebraic = _moveToAlgebraic(engine, move);
-          if (algebraic.replaceAll('+', '').replaceAll('#', '') == token.replaceAll('+', '').replaceAll('#', '')) {
+          if (algebraic.replaceAll('+', '').replaceAll('#', '') == token) {
             parsedMove = move;
             break;
           }
@@ -1530,25 +1536,27 @@ class _ArticleScreenState extends State<ArticleScreen> {
 
   /// Convert a move object to algebraic notation for matching
   String _moveToAlgebraic(ChessEngine engine, Move move) {
-    final piece = engine.getPieceAt(move.from);
+    if (move.isCastle) {
+      return move.to.file == 6 ? 'O-O' : 'O-O-O';
+    }
+
+    final piece = engine.pieceAt(move.from);
     if (piece == null) return '';
 
-    if (move.isCastle) {
-      return move.to.file > move.from.file ? 'O-O' : 'O-O-O';
-    }
-
-    String notation = '';
+    final buf = StringBuffer();
     if (piece.type != PieceType.pawn) {
-      notation += piece.symbol.toUpperCase();
+      buf.write(piece.toFEN().toUpperCase());
     }
-
-    notation += move.to.toAlgebraic();
-
+    if (move.capturedPiece != null || move.isEnPassant) {
+      if (piece.type == PieceType.pawn) buf.write(move.from.toAlgebraic()[0]);
+      buf.write('x');
+    }
+    buf.write(move.to.toAlgebraic());
     if (move.promotion != null) {
-      notation += '=${move.promotion!.symbol.toUpperCase()}';
+      buf.write('=${ChessPiece(type: move.promotion!, color: piece.color).toFEN().toUpperCase()}');
     }
 
-    return notation;
+    return buf.toString();
   }
 
   /// Get the board position after applying moves from a sequence
