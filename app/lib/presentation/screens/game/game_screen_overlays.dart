@@ -21,6 +21,7 @@ extension _GameScreenOverlays on _GameScreenState {
     return GameOverOverlay(
       result: state.result,
       drawReason: state.drawReason,
+      gameReason: state.gameReason,
       playerColor: state.playerColor,
       puzzle: state.puzzle,
       gameMode: state.mode,

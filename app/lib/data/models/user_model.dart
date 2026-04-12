@@ -46,20 +46,27 @@ class UserModel {
       return fallback;
     }
 
+    int parseInt(dynamic raw, [int fallback = 0]) {
+      if (raw is int) return raw;
+      if (raw is num) return raw.toInt();
+      if (raw is String) return int.tryParse(raw) ?? fallback;
+      return fallback;
+    }
+
     return UserModel(
       id: (json['id'] ?? '').toString(),
       username: (json['username'] ?? 'User').toString(),
       avatarUrl: json['avatar_url'] as String?,
       localAvatar: json['local_avatar'] as String?,
-      xp: json['xp'] as int? ?? 0,
+      xp: parseInt(json['xp']),
       isOnline: parseBool(json['is_online'], false),
       stats: UserStats.fromJson(json['stats'] as Map<String, dynamic>? ?? {}),
       deviceId: (json['device_id'] ?? '').toString(),
       isGhibli: parseBool(json['is_ghibli'], false),
-      usernameChanges: json['username_changes'] as int? ?? 0,
+      usernameChanges: parseInt(json['username_changes']),
       lastUsernameChange: json['last_username_change'] as String?,
       canChangeNameNow: json['canChangeNameNow'] as bool? ?? true,
-      remainingNameChanges: json['remainingNameChanges'] as int? ?? 3,
+      remainingNameChanges: parseInt(json['remainingNameChanges'], 3),
       recentGames: (json['recent_games'] as List? ?? [])
           .map((g) => GameRecord.fromJson(g as Map<String, dynamic>))
           .toList(),
@@ -191,28 +198,35 @@ class UserStats {
       twoPlayerGames > 0 ? twoPlayerWins / twoPlayerGames * 100 : 0;
 
   factory UserStats.fromJson(Map<String, dynamic> json) {
+    int parseInt(dynamic raw, [int fallback = 0]) {
+      if (raw is int) return raw;
+      if (raw is num) return raw.toInt();
+      if (raw is String) return int.tryParse(raw) ?? fallback;
+      return fallback;
+    }
+
     return UserStats(
-      gamesPlayed: json['games_played'] as int? ?? 0,
-      wins: json['wins'] as int? ?? 0,
-      losses: json['losses'] as int? ?? 0,
-      draws: json['draws'] as int? ?? 0,
-      longestStreak: json['longest_streak'] as int? ?? 0,
-      currentStreak: json['current_streak'] as int? ?? 0,
-      totalPlaytimeMins: json['total_playtime_mins'] as int? ?? 0,
-      aiGames: json['ai_games'] as int? ?? 0,
-      aiWins: json['ai_wins'] as int? ?? 0,
-      multiplayerGames: json['multiplayer_games'] as int? ?? 0,
-      multiplayerWins: json['multiplayer_wins'] as int? ?? 0,
-      twoPlayerGames: json['two_player_games'] as int? ?? 0,
-      twoPlayerWins: json['two_player_wins'] as int? ?? 0,
-      tournamentWins: json['tournament_wins'] as int? ?? 0,
+      gamesPlayed: parseInt(json['games_played']),
+      wins: parseInt(json['wins']),
+      losses: parseInt(json['losses']),
+      draws: parseInt(json['draws']),
+      longestStreak: parseInt(json['longest_streak']),
+      currentStreak: parseInt(json['current_streak']),
+      totalPlaytimeMins: parseInt(json['total_playtime_mins']),
+      aiGames: parseInt(json['ai_games']),
+      aiWins: parseInt(json['ai_wins']),
+      multiplayerGames: parseInt(json['multiplayer_games']),
+      multiplayerWins: parseInt(json['multiplayer_wins']),
+      twoPlayerGames: parseInt(json['two_player_games']),
+      twoPlayerWins: parseInt(json['two_player_wins']),
+      tournamentWins: parseInt(json['tournament_wins']),
       practiceDifficulty:
           (json['practice_difficulty'] as num?)?.toDouble() ?? 1.0,
-      eloRating: json['elo_rating'] as int? ?? 1200,
-      puzzlesSolved: json['puzzles_solved'] as int? ?? 0,
-      puzzleRating: json['puzzle_rating'] as int? ?? 1200,
-      dailyDonatedXP: json['daily_donated_xp'] as int? ?? 0,
-      totalDonatedXP: json['total_donated_xp'] as int? ?? 0,
+      eloRating: parseInt(json['elo_rating'], 1200),
+      puzzlesSolved: parseInt(json['puzzles_solved']),
+      puzzleRating: parseInt(json['puzzle_rating'], 1200),
+      dailyDonatedXP: parseInt(json['daily_donated_xp']),
+      totalDonatedXP: parseInt(json['total_donated_xp']),
       lastDonationDate: json['last_donation_date'] as String?,
     );
   }

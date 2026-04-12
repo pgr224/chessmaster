@@ -40,6 +40,20 @@ class _LeaderboardEntry {
   });
 
   factory _LeaderboardEntry.fromJson(Map<String, dynamic> json) {
+    int parseInt(dynamic raw, [int fallback = 0]) {
+      if (raw is int) return raw;
+      if (raw is num) return raw.toInt();
+      if (raw is String) return int.tryParse(raw) ?? fallback;
+      return fallback;
+    }
+
+    double parseDouble(dynamic raw, [double fallback = 0]) {
+      if (raw is double) return raw;
+      if (raw is num) return raw.toDouble();
+      if (raw is String) return double.tryParse(raw) ?? fallback;
+      return fallback;
+    }
+
     final rawOnline = json['is_online'];
     final isOnline = rawOnline == true ||
         rawOnline == 1 ||
@@ -50,13 +64,13 @@ class _LeaderboardEntry {
       id: json['id'] as String? ?? '',
       username: json['username'] as String? ?? 'Player',
       avatarUrl: json['avatar_url'] as String?,
-      xp: (json['xp'] as num?)?.toInt() ?? 0,
-      eloRating: (json['elo_rating'] as num?)?.toInt() ?? 1200,
-      wins: (json['wins'] as num?)?.toInt() ?? 0,
-      gamesPlayed: (json['games_played'] as num?)?.toInt() ?? 0,
-      winRate: (json['win_rate'] as num?)?.toDouble() ?? 0,
-      longestStreak: (json['longest_streak'] as num?)?.toInt() ?? 0,
-      rank: (json['rank'] as num?)?.toInt() ?? 0,
+      xp: parseInt(json['xp']),
+      eloRating: parseInt(json['elo_rating'], 1200),
+      wins: parseInt(json['wins']),
+      gamesPlayed: parseInt(json['games_played']),
+      winRate: parseDouble(json['win_rate']),
+      longestStreak: parseInt(json['longest_streak']),
+      rank: parseInt(json['rank']),
       isOnline: isOnline,
     );
   }

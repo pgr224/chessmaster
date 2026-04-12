@@ -247,8 +247,10 @@ export class Lobby implements DurableObject {
             break
           }
 
-          const deliveryStatus: ChallengeDelivery =
-            opponent && isOpponentReady ? 'live' : 'queued'
+          // Cancel any existing challenge from this challenger to this opponent
+          await this.env.DB.prepare(
+            `DELETE FROM challenges WHERE challenger_id = ? AND challenged_id = ? AND status = 'pending'`
+          ).bind(meta.id, opponentId).run()
 
           await this.upsertChallenge({
             id: requestId,

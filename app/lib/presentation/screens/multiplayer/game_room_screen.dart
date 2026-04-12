@@ -51,11 +51,21 @@ class _GameRoomScreenState extends State<GameRoomScreen> {
         }
         if (mpState.status == MultiplayerStatus.gameOver &&
             mpState.gameReason != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content:
-                    Text('Match ended: ${_friendlyCause(mpState.gameReason)}')),
-          );
+          if (mpState.gameReason == 'opponent_no_show') {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Your opponent did not join the game in time.')),
+            );
+            // Navigate back to lobby after a short delay
+            Future.delayed(const Duration(seconds: 2), () {
+              if (context.mounted) context.go('/lobby');
+            });
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                  content:
+                      Text('Match ended: ${_friendlyCause(mpState.gameReason)}')),
+            );
+          }
         }
         if (mpState.status == MultiplayerStatus.disconnected) {
           context.go('/home');
@@ -70,12 +80,65 @@ class _GameRoomScreenState extends State<GameRoomScreen> {
       builder: (context, mpState) {
         if (mpState.status != MultiplayerStatus.inGame &&
             mpState.status != MultiplayerStatus.gameOver) {
-          return const Scaffold(
-            backgroundColor: AppTheme.midnight,
-            body: Center(
-              child: CircularProgressIndicator(color: AppTheme.goldPrimary),
-            ),
-          );
+          if (!mpState.opponentConnected) {
+            // Show waiting screen for opponent
+            return Scaffold(
+              backgroundColor: AppTheme.midnight,
+              body: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const CircularProgressIndicator(color: AppTheme.goldPrimary),
+                      const SizedBox(height: 24),
+                      Text(
+                        'Waiting for ${mpState.opponentName ?? 'opponent'} to join...',
+                        style: GoogleFonts.fredoka(
+                          color: AppTheme.textPrimary,
+                          fontSize: 24,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'You can safely leave without penalty until they join.',
+                        style: GoogleFonts.baloo2(
+                          color: AppTheme.textSecondary,
+                          fontSize: 16,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 32),
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          context.read<MultiplayerBloc>().add(const MpLeaveGameEvent());
+                          context.go('/home');
+                        },
+                        icon: const Icon(Icons.exit_to_app),
+                        label: Text(
+                          'Leave Game',
+                          style: GoogleFonts.fredoka(),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.accentRed,
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          } else {
+            return const Scaffold(
+              backgroundColor: AppTheme.midnight,
+              body: Center(
+                child: CircularProgressIndicator(color: AppTheme.goldPrimary),
+              ),
+            );
+          }
         }
 
         final themeState = context.read<ThemeBloc>().state;

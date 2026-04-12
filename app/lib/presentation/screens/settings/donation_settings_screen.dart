@@ -103,7 +103,14 @@ class _DonationSettingsScreenState extends State<DonationSettingsScreen> {
 
         final existing = byId[friendId];
         final isOnline = _parseOnline(row['is_online']);
-        final rowXp = (row['xp'] as num?)?.toInt() ?? 0;
+        int parseInt(dynamic raw, [int fallback = 0]) {
+          if (raw is int) return raw;
+          if (raw is num) return raw.toInt();
+          if (raw is String) return int.tryParse(raw) ?? fallback;
+          return fallback;
+        }
+
+        final rowXp = parseInt(row['xp']);
         final rowName = row['username']?.toString() ?? 'Player';
 
         if (existing == null) {

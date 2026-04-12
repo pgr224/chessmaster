@@ -132,7 +132,23 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     return PopScope(
       canPop: false, // Prevent default pop behavior
       onPopInvokedWithResult: (didPop, result) => _onPopInvoked(didPop),
-      child: BlocConsumer<GameBloc, GameState>(
+      child: BlocListener<MultiplayerBloc, MultiplayerState>(
+        listener: (context, mpState) {
+          // Show challenge notification dialog when challenges arrive during gameplay
+          if (mpState.incomingChallenges.isNotEmpty) {
+            final challenge = mpState.incomingChallenges.first; // Show the first one
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (ModalRoute.of(context)?.isCurrent ?? false) {
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (ctx) => _buildChallengeDialog(ctx, challenge),
+                );
+              }
+            });
+          }
+        },
+        child: BlocConsumer<GameBloc, GameState>(
         listener: (context, state) {
           final settings = context.read<SettingsBloc>().state;
 
@@ -289,7 +305,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
               context
                   .read<GameBloc>()
-                  .add(MpGameOverSyncEvent(res, reason, mpState.xpGained));
+                  .add(MpGameOverSyncEvent(res, reason, mpState.xpGained, gameReason: mpState.gameReason));
             }
           }
         },
@@ -1591,6 +1607,123 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildChallengeDialog(BuildContext context, ChallengeRequest challenge) {
+    return AlertDialog(
+      backgroundColor: AppTheme.navyCard,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+      title: Row(
+        children: [
+          CircleAvatar(
+            backgroundColor: AppTheme.accentCyan,
+            child: Text(
+              challenge.playerName.characters.first.toUpperCase(),
+              style: GoogleFonts.fredoka(color: AppTheme.midnight),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${challenge.playerName} challenges you!',
+                  style: GoogleFonts.fredoka(
+                    color: AppTheme.textPrimary,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                Text(
+                  challenge.summary,
+                  style: GoogleFonts.baloo2(
+                    color: AppTheme.textSecondary,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (challenge.message != null) ...[
+            Text(
+              challenge.message!,
+              style: GoogleFonts.baloo2(
+                color: AppTheme.textSecondary,
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+          Text(
+            'Mode: ${challenge.mode.toUpperCase()}',
+            style: GoogleFonts.baloo2(
+              color: AppTheme.textPrimary,
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          Text(
+            'Time Control: ${challenge.timeControl}',
+            style: GoogleFonts.baloo2(
+              color: AppTheme.textPrimary,
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          if (challenge.variantId != null && challenge.variantId != 'standard') ...[
+            Text(
+              'Variant: ${challenge.variantId}',
+              style: GoogleFonts.baloo2(
+                color: AppTheme.textPrimary,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () {
+            context.read<MultiplayerBloc>().add(MpDeclineChallengeEvent(
+              challengerId: challenge.playerId,
+              requestId: challenge.id,
+            ));
+            Navigator.of(context).pop();
+          },
+          child: Text(
+            'Decline',
+            style: GoogleFonts.fredoka(color: AppTheme.accentRed),
+          ),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppTheme.accentGreen,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+          ),
+          onPressed: () {
+            context.read<MultiplayerBloc>().add(MpAcceptChallengeEvent(
+              challengerId: challenge.playerId,
+              requestId: challenge.id,
+            ));
+            Navigator.of(context).pop();
+          },
+          child: Text(
+            'Accept',
+            style: GoogleFonts.fredoka(color: Colors.white),
+          ),
+        ),
+      ],
     );
   }
 

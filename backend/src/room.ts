@@ -2,6 +2,7 @@ import { ChessValidator, Move } from './validation'
 import { parseTimeControl, DEFAULT_TIME_CONTROL } from './time_control'
 import { getPlayerUsername } from './player_name_sync'
 import { calculateMultiplayerXP } from './xp_rules'
+import { PushService } from './services/push_service'
 import type { Env } from './index'
 
 function normalizePromotionCode(code?: string): string | undefined {
@@ -32,6 +33,8 @@ export class GameRoom {
   private nameSyncInterval: any = null
   private lastNameSync: number = 0
   private NAME_SYNC_INTERVAL_MS: number = 10000 // Sync player names every 10 seconds
+  private waitingTimer: any = null
+  private opponentUserId: string | null = null
 
   constructor(state: DurableObjectState, env: Env) {
     this.state = state
@@ -47,6 +50,12 @@ export class GameRoom {
     const name = url.searchParams.get('username') ?? 'Player'
     const color = url.searchParams.get('color') as 'white' | 'black' ?? 'white'
     this.gameId = url.searchParams.get('gameId')
+
+    // If game is already finished, reject connection
+    if (this.status === 'finished') {
+      server.close(1000, 'Game has ended')
+      return new Response(null, { status: 101, webSocket: client })
+    }
 
     // Parse time control: e.g. "blitz_3_2" or "3+2" or "30+0"
     const tcStr = url.searchParams.get('timeControl') ?? DEFAULT_TIME_CONTROL
@@ -82,6 +91,23 @@ export class GameRoom {
         increment: this.increment
       }
     }))
+
+    // Notify all players if opponent has joined
+    if (this.players.size === 2) {
+      if (this.waitingTimer) {
+        clearTimeout(this.waitingTimer)
+        this.waitingTimer = null
+      }
+      this.broadcast({
+        type: 'OPPONENT_JOINED',
+        data: {}
+      })
+    }
+
+    // If only one player, start waiting timer and notify opponent
+    if (this.players.size === 1) {
+      this.startWaitingTimer(userId)
+    }
 
     // Start game if 2 players are present
     if (this.players.size === 2 && !this.timerInterval) {
@@ -172,6 +198,74 @@ export class GameRoom {
       this.blackTime -= elapsed
     }
     this.lastMoveTimestamp = now
+  }
+
+  private async startWaitingTimer(waitingUserId: string) {
+    try {
+      // Query challenge to find opponent
+      const challenge = await this.env.DB.prepare(
+        `SELECT challenger_id, challenged_id FROM challenges WHERE game_id = ?`
+      ).bind(this.gameId).first<{ challenger_id: string; challenged_id: string }>()
+
+      if (!challenge) return
+
+      const opponentId = challenge.challenger_id === waitingUserId ? challenge.challenged_id : challenge.challenger_id
+      this.opponentUserId = opponentId
+
+      // Send push notification
+      const waitingPlayer = this.players.get(waitingUserId)
+      if (waitingPlayer) {
+        await this.sendOpponentWaitingNotification(opponentId, waitingPlayer.name)
+      }
+
+      // Start 10-second timer
+      this.waitingTimer = setTimeout(async () => {
+        await this.handleOpponentNoShow()
+      }, 10000)
+    } catch (err) {
+      console.error('[GameRoom] Error starting waiting timer:', err)
+    }
+  }
+
+  private async sendOpponentWaitingNotification(opponentId: string, waitingPlayerName: string) {
+    await PushService.notifyUser(opponentId, {
+      title: '♟️ Game Started!',
+      body: `${waitingPlayerName} has joined the game and is waiting for you. Join now!`,
+      icon: '/icons/Icon-192.png',
+      data: {
+        type: 'GAME_WAITING',
+        gameId: this.gameId,
+        category: 'games',
+      },
+    }, this.env, 'games')
+  }
+
+  private async handleOpponentNoShow() {
+    this.status = 'finished'
+    this.broadcast({
+      type: 'GAME_OVER',
+      data: {
+        result: 'opponent_no_show',
+        reason: 'opponent_no_show',
+        message: 'Your opponent did not join the game in time.',
+      }
+    })
+
+    // Clear the challenge
+    if (this.gameId) {
+      await this.env.DB.prepare(
+        `DELETE FROM challenges WHERE game_id = ?`
+      ).bind(this.gameId).run()
+    }
+
+    // Disconnect players after a short delay
+    setTimeout(() => {
+      for (const [userId, player] of this.players) {
+        try {
+          player.socket.close(1000, 'Opponent did not join')
+        } catch (_) {}
+      }
+    }, 2000)
   }
 
   private async handleTimeout() {

@@ -12,6 +12,7 @@ import 'post_game_analysis_chart.dart';
 class GameOverOverlay extends StatefulWidget {
   final GameResult result;
   final DrawReason? drawReason;
+  final String? gameReason;
   final PieceColor? playerColor;
   final VoidCallback onPlayAgain;
   final VoidCallback onGoHome;
@@ -39,6 +40,7 @@ class GameOverOverlay extends StatefulWidget {
     super.key,
     required this.result,
     this.drawReason,
+    this.gameReason,
     this.playerColor,
     required this.onPlayAgain,
     required this.onGoHome,
@@ -168,13 +170,13 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            isCheckmate
-                                ? 'CHECKMATE!'
-                                : isWin
-                                    ? 'VICTORY!'
-                                    : isDraw
-                                        ? 'DRAW!'
-                                        : 'DEFEAT',
+                            isWin
+                                ? 'VICTORY!'
+                                : isDraw
+                                    ? 'DRAW!'
+                                    : widget.gameReason == 'checkmate' || (widget.gameReason == null && !isWin && !isDraw)
+                                        ? 'CHECKMATE!'
+                                        : 'GAME OVER',
                             style: GoogleFonts.fredoka(
                               color: statusColor,
                               fontSize: 28,
@@ -824,6 +826,26 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
             widget.playerColor == PieceColor.black) ||
         (widget.result == GameResult.blackWins &&
             widget.playerColor == PieceColor.white);
+
+    if (didPlayerWin && widget.gameReason != null) {
+      return switch (widget.gameReason) {
+        'resignation' => 'Opponent resigned! You win! 🏆',
+        'disconnect_timeout' => 'Opponent disconnected! You win! 📴',
+        'opponent_no_show' => 'Opponent didn\'t join! You win! ⏰',
+        'checkmate' => 'Checkmate! You win! ♔',
+        _ => null,
+      } ?? 'You win this round.';
+    }
+
+    if (didPlayerLose && widget.gameReason != null) {
+      return switch (widget.gameReason) {
+        'resignation' => 'You resigned.',
+        'disconnect_timeout' => 'You disconnected.',
+        'opponent_no_show' => 'You didn\'t join in time.',
+        'checkmate' => 'Checkmate! You lose.',
+        _ => 'You lose this round.',
+      };
+    }
 
     if (widget.gameMode == GameMode.singlePlayer ||
         widget.gameMode == GameMode.practice) {

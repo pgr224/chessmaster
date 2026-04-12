@@ -194,9 +194,10 @@ class MpGameOverSyncEvent extends GameEvent {
   final GameResult result;
   final DrawReason? reason;
   final int xpGained;
-  const MpGameOverSyncEvent(this.result, this.reason, this.xpGained);
+  final String? gameReason;
+  const MpGameOverSyncEvent(this.result, this.reason, this.xpGained, {this.gameReason});
   @override
-  List<Object?> get props => [result, reason, xpGained];
+  List<Object?> get props => [result, reason, xpGained, gameReason];
 }
 
 class GameFinalizePostGameAnalysisEvent extends GameEvent {
@@ -219,6 +220,7 @@ class GameState extends Equatable {
   final GameStatus status;
   final GameResult result;
   final DrawReason? drawReason;
+  final String? gameReason;
   final bool isAIThinking;
   final Move? hintMove;
   final int hintsUsed;
@@ -329,6 +331,7 @@ class GameState extends Equatable {
     this.aiMessage,
     this.activePersonality,
     this.drawReason,
+    this.gameReason,
     this.isAIThinking = false,
     this.hintMove,
     this.hintsUsed = 0,
@@ -436,6 +439,7 @@ class GameState extends Equatable {
     GameStatus? status,
     GameResult? result,
     DrawReason? drawReason,
+    String? gameReason,
     bool? isAIThinking,
     Move? hintMove,
     int? hintsUsed,
@@ -539,6 +543,7 @@ class GameState extends Equatable {
       aiMessage: aiMessage ?? this.aiMessage,
       activePersonality: activePersonality ?? this.activePersonality,
       drawReason: drawReason ?? this.drawReason,
+      gameReason: gameReason ?? this.gameReason,
       isAIThinking: isAIThinking ?? this.isAIThinking,
       hintMove: clearHint ? null : (hintMove ?? this.hintMove),
       hintsUsed: hintsUsed ?? this.hintsUsed,
@@ -632,6 +637,8 @@ class GameState extends Equatable {
   List<Object?> get props => [
         status,
         result,
+        drawReason,
+        gameReason,
         isAIThinking,
         hintMove,
         hintsUsed,
@@ -772,6 +779,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         status: status,
         result: e.result,
         drawReason: e.reason,
+        gameReason: e.gameReason,
         xpGained: e.xpGained,
         clockRunning: false,
       ));

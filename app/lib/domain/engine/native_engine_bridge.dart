@@ -28,7 +28,7 @@ Future<Map<String, dynamic>?> jsEngineGetBestMove(String fen,
   if (_currentDifficulty == 'aiMode') {
     // Temporary fallback: route aiMode to a stronger Stockfish search on Android.
     final best =
-        await NativeStockfish().getBestMove(fen, depth: 20, movetime: movetime);
+        await NativeStockfish().getBestMove(fen, depth: 24, movetime: movetime);
     return best != null ? {'move': best} : null;
   }
 

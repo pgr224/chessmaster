@@ -32,7 +32,7 @@ class AIEngineController {
     AIDifficulty.intermediate: 4000,
     AIDifficulty.advanced: 5000,
     AIDifficulty.impossible: 5000, // Reduced from 17000 to keep it engaging
-    AIDifficulty.aiMode: 7000, // Reduced from 25000
+    AIDifficulty.aiMode: 10500, // Increased to make AI Mode significantly stronger
   };
 
   static const int _fallbackBufferMs = 2000; // reserved for retry logic
@@ -189,9 +189,31 @@ class AIEngineController {
             }
           }
 
+          final bool isAIMode = _difficulty == AIDifficulty.aiMode;
+          if (isAIMode && playerAccuracy != null) {
+            final normalizedAccuracy = playerAccuracy.clamp(0.0, 100.0);
+            if (normalizedAccuracy >= 95.0) {
+              accuracyMult = 1.8;
+            } else if (normalizedAccuracy >= 90.0) {
+              accuracyMult = 1.6;
+            } else if (normalizedAccuracy >= 80.0) {
+              accuracyMult = 1.4;
+            } else if (normalizedAccuracy >= 70.0) {
+              accuracyMult = 1.2;
+            } else {
+              accuracyMult = 1.1;
+            }
+          } else if (isAIMode) {
+            accuracyMult = 1.5;
+          }
+
           final int baseTime = (800 + (complexity * 50)).toInt();
           dynamicMoveTime =
-              (baseTime * personalityMult * accuracyMult).toInt().clamp(300, cap);
+              (baseTime * personalityMult * accuracyMult).toInt().clamp(500, cap);
+
+          if (isAIMode) {
+            dynamicMoveTime = dynamicMoveTime.clamp(8000, cap);
+          }
 
           // SET DYNAMIC THINKING MESSAGE
           if (pieceCount < 10) {
@@ -253,6 +275,9 @@ class AIEngineController {
 
       // ── 1. OPENING RANDOMIZATION (First 10 moves) ──
       if (moveNumber < 10 && candidates.length > 1) {
+        if (_difficulty == AIDifficulty.aiMode) {
+          return candidates.first.uci;
+        }
         final rand = math.Random().nextDouble();
         if (rand > 0.6) {
           return candidates[math.Random().nextInt(candidates.length)].uci;
@@ -260,7 +285,9 @@ class AIEngineController {
       }
 
       // ── 2. QUALITY FILTER (Reject repetitive edge pawn spam e.g., a6, h6) ──
-      String move = _pickSmartMove(candidates);
+      String move = _difficulty == AIDifficulty.aiMode
+          ? candidates.first.uci
+          : _pickSmartMove(candidates);
 
       if (_lastMoveSource == 'none') {
         _lastMoveSource =
