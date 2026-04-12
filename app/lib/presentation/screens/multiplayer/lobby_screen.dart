@@ -1159,35 +1159,39 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      TabBar(
-                        dividerColor: Colors.transparent,
-                        indicatorColor: AppTheme.accentCyan,
-                        labelColor: AppTheme.accentCyan,
-                        unselectedLabelColor: AppTheme.textMuted,
-                        labelStyle: GoogleFonts.fredoka(
-                            fontWeight: FontWeight.bold, fontSize: 18),
-                        tabs: [
-                          const Tab(
-                              text: 'Players',
-                              icon: Icon(Icons.people_rounded)),
-                          _buildGameRequestsTabWithBadge(liveState),
-                          const Tab(
-                              text: 'XP Requests',
-                              icon: Icon(Icons.volunteer_activism_rounded)),
-                        ],
-                      ),
-                      Expanded(
-                        child: BlocBuilder<MultiplayerBloc, MultiplayerState>(
-                          builder: (context, liveState) {
-                            return TabBarView(
-                              children: [
-                                _buildPlayersTab(liveState, scrollController),
-                                _buildGameRequestsTab(liveState, scrollController),
-                                _buildRequestsTab(liveState, scrollController),
-                              ],
-                            );
-                          },
-                        ),
+                      BlocBuilder<MultiplayerBloc, MultiplayerState>(
+                        builder: (context, liveState) {
+                          return Column(
+                            children: [
+                              TabBar(
+                                dividerColor: Colors.transparent,
+                                indicatorColor: AppTheme.accentCyan,
+                                labelColor: AppTheme.accentCyan,
+                                unselectedLabelColor: AppTheme.textMuted,
+                                labelStyle: GoogleFonts.fredoka(
+                                    fontWeight: FontWeight.bold, fontSize: 18),
+                                tabs: [
+                                  const Tab(
+                                      text: 'Players',
+                                      icon: Icon(Icons.people_rounded)),
+                                  _buildGameRequestsTabWithBadge(liveState),
+                                  const Tab(
+                                      text: 'XP Requests',
+                                      icon: Icon(Icons.volunteer_activism_rounded)),
+                                ],
+                              ),
+                              Expanded(
+                                child: TabBarView(
+                                  children: [
+                                    _buildPlayersTab(liveState, scrollController),
+                                    _buildGameRequestsTab(liveState, scrollController),
+                                    _buildRequestsTab(liveState, scrollController),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -2088,7 +2092,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
         TextButton(
           onPressed: () {
             context.read<MultiplayerBloc>().add(MpDeclineChallengeEvent(
-              challengerId: challenge.playerId,
+              challenge.playerId,
               requestId: challenge.id,
             ));
             Navigator.of(context).pop();
@@ -2107,7 +2111,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
           ),
           onPressed: () {
             context.read<MultiplayerBloc>().add(MpAcceptChallengeEvent(
-              challengerId: challenge.playerId,
+              challenge.playerId,
               requestId: challenge.id,
             ));
             Navigator.of(context).pop();

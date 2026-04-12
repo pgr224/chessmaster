@@ -309,10 +309,10 @@ class _ProfileContent extends StatelessWidget {
   }
 
   Widget _buildXPProgress() {
-    final level = (user.xp / 1000).floor() + 1;
-    final currentLevelXP = (level - 1) * 1000;
-    final nextLevelXP = level * 1000;
-    final progress = (user.xp - currentLevelXP) / 1000;
+    final level = UserStats.calculateLevel(user.xp);
+    final progress = UserStats.progressToNextLevel(user.xp);
+    final currentLevelXP = pow(level - 1, 2) * 100;
+    final nextLevelXP = pow(level, 2) * 100;
 
     return SliverToBoxAdapter(
       child: Padding(
@@ -370,10 +370,10 @@ class _ProfileContent extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('$currentLevelXP XP',
+                  Text('${currentLevelXP.toInt()} XP',
                       style: GoogleFonts.baloo2(
                           color: AppTheme.textMuted, fontSize: 12)),
-                  Text('Next: $nextLevelXP XP',
+                  Text('Next: ${nextLevelXP.toInt()} XP',
                       style: GoogleFonts.baloo2(
                           color: AppTheme.textMuted, fontSize: 12)),
                 ],
@@ -394,10 +394,10 @@ class _ProfileContent extends StatelessWidget {
         crossAxisSpacing: 16,
         childAspectRatio: 1.6,
         children: [
+          _statTile('Rating (ILO)', '${user.stats.eloRating}', AppTheme.lavender,
+              Icons.stars_rounded),
           _statTile('Wins', '${user.stats.wins}', AppTheme.goldPrimary,
               Icons.emoji_events_rounded),
-          _statTile('Losses', '${user.stats.losses}', AppTheme.accentRed,
-              Icons.close_rounded),
           _statTile('Win Rate', '${user.stats.winRate.toStringAsFixed(0)}%',
               AppTheme.accentCyan, Icons.insights_rounded),
           _statTile('Matches', '${user.stats.gamesPlayed}', AppTheme.skyBlue,

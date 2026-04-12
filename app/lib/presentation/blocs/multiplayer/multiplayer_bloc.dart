@@ -239,7 +239,9 @@ class MpSaveDeclineEvent extends MultiplayerEvent {}
 
 class MpGameSavedEvent extends MultiplayerEvent {}
 
-class MpLeaveGameEvent extends MultiplayerEvent {}
+class MpLeaveGameEvent extends MultiplayerEvent {
+  const MpLeaveGameEvent();
+}
 
 class MpChangeSelectedTimeEvent extends MultiplayerEvent {
   final String timeControl;

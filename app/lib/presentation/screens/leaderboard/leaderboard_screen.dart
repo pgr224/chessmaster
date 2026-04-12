@@ -74,6 +74,8 @@ class _LeaderboardEntry {
       isOnline: isOnline,
     );
   }
+
+  int get level => (xp <= 0) ? 1 : (math.sqrt(xp / 100)).floor() + 1;
 }
 
 class LeaderboardScreen extends StatefulWidget {
@@ -86,12 +88,14 @@ class LeaderboardScreen extends StatefulWidget {
 class _LeaderboardScreenState extends State<LeaderboardScreen> {
   List<_LeaderboardEntry> _entries = [];
   bool _loading = true;
+  bool _isBackgroundRefreshing = false;
   String _error = '';
   String _sortType = 'elo';
   int _myRank = 0;
   int _activeFetchId = 0;
   String? _bountyUserId;
   Timer? _refreshTimer;
+  StreamSubscription? _lobbySubscription;
 
   @override
   void initState() {
@@ -99,10 +103,21 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     final authState = context.read<AuthBloc>().state;
     if (authState is AuthAuthenticatedState) {
       _fetchLeaderboard();
-      // Auto-refresh leaderboard every 30 seconds to sync player name changes
-      _refreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      
+      // Real-time push connection: Listen to lobby updates to trigger smooth refreshes
+      final multiplayerService = di.sl<MultiplayerService>();
+      _lobbySubscription = multiplayerService.lobbyUpdates.listen((event) {
+        if (!mounted) return;
+        // Trigger background refresh on lobby updates or XP transfers
+        if (event['type'] == 'LOBBY_UPDATE' || event['type'] == 'XP_TRANSFERRED') {
+          _fetchLeaderboard(background: true);
+        }
+      });
+
+      // Regular polling as fallback and for non-online stats
+      _refreshTimer = Timer.periodic(const Duration(seconds: 45), (_) {
         if (mounted) {
-          _fetchLeaderboard();
+          _fetchLeaderboard(background: true);
         }
       });
     } else {
@@ -114,18 +129,26 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   @override
   void dispose() {
     _refreshTimer?.cancel();
+    _lobbySubscription?.cancel();
     super.dispose();
   }
 
-  Future<void> _fetchLeaderboard() async {
+  Future<void> _fetchLeaderboard({bool background = false}) async {
     final requestedSortType = _sortType;
     final fetchId = ++_activeFetchId;
 
-    setState(() {
-      _loading = true;
-      _error = '';
-      _myRank = 0;
-    });
+    if (!background) {
+      setState(() {
+        _loading = true;
+        _error = '';
+        _myRank = 0;
+      });
+    } else {
+      setState(() {
+        _isBackgroundRefreshing = true;
+      });
+    }
+
     try {
       final dio = di.sl<Dio>();
       final response = await dio.get('/api/leaderboard',
@@ -135,10 +158,14 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
       if (!mounted || fetchId != _activeFetchId) return;
 
       if (response.statusCode != 200) {
-        setState(() {
-          _loading = false;
-          _error = 'Leaderboard is temporarily unavailable';
-        });
+        if (!background) {
+          setState(() {
+            _loading = false;
+            _error = 'Leaderboard is temporarily unavailable';
+          });
+        } else {
+          setState(() => _isBackgroundRefreshing = false);
+        }
         return;
       }
 
@@ -146,21 +173,27 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
       final list = (data['leaderboard'] is List)
           ? data['leaderboard'] as List
           : const [];
+      
       setState(() {
         _entries = list
             .map(_asStringKeyedMap)
             .map(_LeaderboardEntry.fromJson)
             .toList();
         _loading = false;
+        _isBackgroundRefreshing = false;
       });
       _fetchMyRank(sortType: requestedSortType, fetchId: fetchId);
       _fetchBountyTarget();
     } catch (_) {
       if (!mounted || fetchId != _activeFetchId) return;
-      setState(() {
-        _loading = false;
-        _error = 'Failed to load leaderboard';
-      });
+      if (!background) {
+        setState(() {
+          _loading = false;
+          _error = 'Failed to load leaderboard';
+        });
+      } else {
+        setState(() => _isBackgroundRefreshing = false);
+      }
     }
   }
 
@@ -204,14 +237,23 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: Text('🏆 Leaderboard',
-            style: GoogleFonts.fredoka(
-                color: AppTheme.textPrimary,
-                fontWeight: FontWeight.w700,
-                fontSize: 24)),
+        title: Column(
+          children: [
+            Text('🏆 Leaderboard',
+                style: GoogleFonts.fredoka(
+                    color: AppTheme.textPrimary,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 24)),
+            if (_isBackgroundRefreshing)
+              Text('Syncing...',
+                style: GoogleFonts.baloo2(color: AppTheme.goldPrimary, fontSize: 10))
+                .animate(onPlay: (c) => c.repeat())
+                .fadeIn(duration: 500.ms)
+                .fadeOut(delay: 500.ms),
+          ],
+        ),
         centerTitle: true,
         actions: [
-          // Refresh button to sync latest player names
           IconButton(
             icon: Icon(_loading ? null : Icons.refresh, color: AppTheme.accentCyan),
             onPressed: _loading ? null : () => _fetchLeaderboard(),
@@ -234,9 +276,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 
   Widget _buildSortTabs() {
     final tabs = [
-      {'id': 'elo', 'label': '⭐ Rating', 'color': AppTheme.lavender},
-      {'id': 'xp', 'label': '🔥 XP', 'color': AppTheme.goldPrimary},
-      {'id': 'wins', 'label': '🏆 Wins', 'color': AppTheme.accentCyan},
+      {'id': 'elo', 'label': '⭐ ILO Rating', 'color': AppTheme.lavender},
+      {'id': 'xp', 'label': '🔥 XP Power', 'color': AppTheme.goldPrimary},
+      {'id': 'wins', 'label': '🏆 Victories', 'color': AppTheme.accentCyan},
     ];
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -267,7 +309,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                       style: GoogleFonts.fredoka(
                         color: isSelected ? color : AppTheme.textMuted,
                         fontWeight: FontWeight.w700,
-                        fontSize: 14,
+                        fontSize: 12,
                       )),
                 ),
               ),
@@ -304,15 +346,22 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
               const Icon(Icons.emoji_events_rounded,
                   color: AppTheme.midnight, size: 26),
               const SizedBox(width: 12),
-              Text('Your Rank: #$_myRank',
-                  style: GoogleFonts.fredoka(
-                    color: AppTheme.midnight,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                  )),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Your Global Identity',
+                      style: GoogleFonts.baloo2(color: AppTheme.midnight.withValues(alpha: 0.6), fontSize: 10, fontWeight: FontWeight.bold)),
+                  Text('RANKED #$_myRank',
+                      style: GoogleFonts.fredoka(
+                        color: AppTheme.midnight,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                      )),
+                ],
+              ),
             ],
           ),
-          if (myXp <= 0) // Only show if user has low/minus XP
+          if (myXp <= 0)
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.midnight,
@@ -355,7 +404,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                 if (success) {
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                       content: Text(
-                          'XP Request broadcasted! If accepted, you will recive XP.')));
+                          'XP Request broadcasted! If accepted, you will receive XP.')));
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                       content: Text('Failed to broadcast request.')));
@@ -417,7 +466,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
       onRefresh: _fetchLeaderboard,
       color: AppTheme.goldPrimary,
       child: ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
         itemCount: _entries.length,
         itemBuilder: (context, index) =>
             _buildPlayerTile(_entries[index], index),
@@ -446,169 +495,183 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
       rankIcon = '#${entry.rank}';
     }
 
-    final statValue = _sortType == 'elo'
-        ? '${entry.eloRating} ⭐'
-        : _sortType == 'wins'
-            ? '${entry.wins} 🏆'
-            : '${entry.xp} 🔥';
-
     return GestureDetector(
       onTap: isMe ? null : () => _showDonationDialog(context, entry),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           gradient: isMe
               ? LinearGradient(colors: [
-                  AppTheme.goldPrimary.withValues(alpha: 0.12),
-                  AppTheme.goldPrimary.withValues(alpha: 0.04)
+                  AppTheme.goldPrimary.withValues(alpha: 0.15),
+                  AppTheme.goldPrimary.withValues(alpha: 0.05)
                 ])
               : AppTheme.cardGradient,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(24),
           border: Border.all(
               color: isMe
-                  ? AppTheme.goldPrimary.withValues(alpha: 0.4)
+                  ? AppTheme.goldPrimary.withValues(alpha: 0.5)
                   : Colors.white.withValues(alpha: 0.05),
               width: isMe ? 2 : 1),
+          boxShadow: isMe ? [
+            BoxShadow(color: AppTheme.goldPrimary.withValues(alpha: 0.1), blurRadius: 10, spreadRadius: 1)
+          ] : null,
         ),
-        child: Row(
+        child: Column(
           children: [
-            // Rank badge
-            SizedBox(
-              width: 42,
-              child: entry.rank <= 3
-                  ? Text(rankIcon,
-                      style: const TextStyle(fontSize: 26),
-                      textAlign: TextAlign.center)
-                  : Text(rankIcon,
-                      style: GoogleFonts.fredoka(
-                          color: rankColor,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700),
-                      textAlign: TextAlign.center),
-            ),
-            const SizedBox(width: 12),
-            // Avatar
-            Stack(
+            Row(
               children: [
-                CircleAvatar(
-                  radius: 22,
-                  backgroundColor: AppTheme.goldPrimary.withValues(alpha: 0.12),
-                  child: Text(
-                    entry.username.isNotEmpty
-                        ? entry.username[0].toUpperCase()
-                        : '?',
-                    style: GoogleFonts.fredoka(
-                        color: AppTheme.goldPrimary,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700),
-                  ),
+                // Rank
+                SizedBox(
+                  width: 42,
+                  child: entry.rank <= 3
+                      ? Text(rankIcon,
+                          style: const TextStyle(fontSize: 28),
+                          textAlign: TextAlign.center)
+                      : Text(rankIcon,
+                          style: GoogleFonts.fredoka(
+                              color: rankColor,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700),
+                          textAlign: TextAlign.center),
                 ),
-                if (entry.isOnline)
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        color: AppTheme.accentGreen,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: AppTheme.midnight, width: 2),
+                const SizedBox(width: 8),
+                // Avatar
+                Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 24,
+                      backgroundColor: AppTheme.goldPrimary.withValues(alpha: 0.12),
+                      child: Text(
+                        entry.username.isNotEmpty
+                            ? entry.username[0].toUpperCase()
+                            : '?',
+                        style: GoogleFonts.fredoka(
+                            color: AppTheme.goldPrimary,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w700),
                       ),
                     ),
+                    if (entry.isOnline)
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Container(
+                          width: 14,
+                          height: 14,
+                          decoration: BoxDecoration(
+                            color: AppTheme.accentGreen,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: AppTheme.midnight, width: 2.5),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(width: 14),
+                // Name & Level
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              entry.username,
+                              style: GoogleFonts.fredoka(
+                                color: isMe
+                                    ? AppTheme.goldPrimary
+                                    : AppTheme.textPrimary,
+                                fontSize: 17,
+                                fontWeight: FontWeight.w700,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (isMe) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                  color: AppTheme.goldPrimary.withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(6)),
+                              child: Text('YOU',
+                                  style: GoogleFonts.fredoka(
+                                      color: AppTheme.goldPrimary,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w900)),
+                            ),
+                          ],
+                        ],
+                      ),
+                      Text(
+                        'LEVEL ${entry.level}',
+                        style: GoogleFonts.baloo2(
+                            color: AppTheme.goldPrimary.withValues(alpha: 0.8),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.5),
+                      ),
+                    ],
+                  ),
+                ),
+                // Bounty Icon
+                if (entry.id == _bountyUserId)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 8),
+                    child: Icon(Icons.stars_rounded,
+                        color: AppTheme.goldPrimary, size: 24),
                   ),
               ],
             ),
-            const SizedBox(width: 14),
-            // Name & stats
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          entry.username,
-                          style: GoogleFonts.fredoka(
-                            color: isMe
-                                ? AppTheme.goldPrimary
-                                : AppTheme.textPrimary,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (isMe) ...[
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                              color: AppTheme.goldPrimary.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(6)),
-                          child: Text('YOU',
-                              style: GoogleFonts.fredoka(
-                                  color: AppTheme.goldPrimary,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w800)),
-                        ),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${entry.gamesPlayed} games · ${entry.winRate.toStringAsFixed(0)}% win',
-                    style: GoogleFonts.baloo2(
-                        color: AppTheme.textSecondary, fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-            // Primary stat
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+            const SizedBox(height: 16),
+            // Stats Row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                if (entry.id == _bountyUserId)
-                  const Padding(
-                    padding: EdgeInsets.only(bottom: 4),
-                    child: Icon(Icons.stars_rounded,
-                        color: AppTheme.goldPrimary, size: 20),
-                  ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: AppTheme.goldPrimary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: entry.id == _bountyUserId
-                        ? Border.all(color: AppTheme.goldPrimary, width: 1.5)
-                        : null,
-                  ),
-                  child: Text(statValue,
-                      style: GoogleFonts.fredoka(
-                        color: AppTheme.goldPrimary,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                      )),
-                ),
-                if (entry.id == _bountyUserId)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Text('BOUNTY',
-                        style: GoogleFonts.fredoka(
-                            color: AppTheme.goldPrimary,
-                            fontSize: 8,
-                            fontWeight: FontWeight.bold)),
-                  ),
+                _miniStat('Rating', '${entry.eloRating}', AppTheme.lavender, Icons.trending_up_rounded),
+                _miniStat('Wins', '${entry.wins}', AppTheme.accentCyan, Icons.emoji_events_rounded),
+                _miniStat('Power', '${entry.xp}', AppTheme.goldPrimary, Icons.bolt_rounded),
               ],
             ),
           ],
         ),
       ),
-    ).animate().fadeIn(delay: (index * 50).ms).slideX(begin: 0.05);
+    ).animate().fadeIn(delay: (index * 40).ms).slideY(begin: 0.1);
+  }
+
+  Widget _miniStat(String label, String value, Color color, IconData icon) {
+    return Expanded(
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: 0.1)),
+        ),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, size: 12, color: color),
+                const SizedBox(width: 4),
+                Text(value,
+                    style: GoogleFonts.fredoka(
+                        color: color, fontSize: 14, fontWeight: FontWeight.w700)),
+              ],
+            ),
+            const SizedBox(height: 2),
+            Text(label.toUpperCase(),
+                style: GoogleFonts.baloo2(
+                    color: color.withValues(alpha: 0.6), fontSize: 9, fontWeight: FontWeight.bold)),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showDonationDialog(BuildContext context, _LeaderboardEntry entry) {
@@ -643,7 +706,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                     const SnackBar(content: Text('Donation successful! 💖')));
                 di.sl<AchievementService>().evaluateSpecialActions('donate_xp');
                 context.read<AuthBloc>().add(AuthCheckStatusEvent());
-                _fetchLeaderboard(); // Refresh to see updated XP
+                _fetchLeaderboard(background: true);
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                     content: Text(

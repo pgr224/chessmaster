@@ -131,7 +131,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     return PopScope(
       canPop: false, // Prevent default pop behavior
-      onPopInvokedWithResult: (didPop, result) => _onPopInvoked(didPop),
+      onPopInvoked: (didPop) => _onPopInvoked(didPop),
       child: BlocListener<MultiplayerBloc, MultiplayerState>(
         listener: (context, mpState) {
           // Show challenge notification dialog when challenges arrive during gameplay
@@ -1694,7 +1694,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         TextButton(
           onPressed: () {
             context.read<MultiplayerBloc>().add(MpDeclineChallengeEvent(
-              challengerId: challenge.playerId,
+              challenge.playerId,
               requestId: challenge.id,
             ));
             Navigator.of(context).pop();
@@ -1713,7 +1713,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           ),
           onPressed: () {
             context.read<MultiplayerBloc>().add(MpAcceptChallengeEvent(
-              challengerId: challenge.playerId,
+              challenge.playerId,
               requestId: challenge.id,
             ));
             Navigator.of(context).pop();
