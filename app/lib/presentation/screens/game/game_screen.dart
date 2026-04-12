@@ -98,14 +98,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     }
   }
 
-  /// Handle system back button (Android hardware or gesture back)
-  /// Returns true to prevent default pop, false/null to allow
-  Future<bool> _onPopInvoked(bool didPop) async {
-    if (didPop) return true; // Already popped, don't do anything further
-    // Show exit dialog instead of just popping
-    await _showExitDialog(context);
-    return true; // Prevent default pop (dialog handles nav)
-  }
+
 
   @override
   void dispose() {
@@ -129,10 +122,13 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      canPop: false, // Prevent default pop behavior
-      onPopInvoked: (didPop) => _onPopInvoked(didPop),
-      child: BlocListener<MultiplayerBloc, MultiplayerState>(
+    // return WillPopScope(
+    //   onWillPop: () async {
+    //     await _showExitDialog(context);
+    //     return false;
+    //   },
+    //   child: BlocListener<MultiplayerBloc, MultiplayerState>(
+    return BlocListener<MultiplayerBloc, MultiplayerState>(
         listener: (context, mpState) {
           // Show challenge notification dialog when challenges arrive during gameplay
           if (mpState.incomingChallenges.isNotEmpty) {
