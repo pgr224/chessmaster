@@ -1665,9 +1665,9 @@ class _PlayableBoardState extends State<_PlayableBoard> {
     setState(() {
       if (_selectedSquare == null) {
         final piece = _engine.pieceAt(sq);
-        if (piece != null && piece.color == _engine.turn) {
+        if (piece != null && piece.color == _engine.currentTurn) {
           _selectedSquare = sq;
-          _legalMoves = _engine.legalMovesForSquare(sq);
+          _legalMoves = _engine.legalMovesFrom(sq);
         }
       } else {
         final move = _legalMoves.firstWhere(
@@ -1677,9 +1677,9 @@ class _PlayableBoardState extends State<_PlayableBoard> {
 
         if (move.from.rank == 0 && move.from.file == 0 && move.to.rank == 0 && move.to.file == 0) {
           final piece = _engine.pieceAt(sq);
-          if (piece != null && piece.color == _engine.turn) {
+          if (piece != null && piece.color == _engine.currentTurn) {
             _selectedSquare = sq;
-            _legalMoves = _engine.legalMovesForSquare(sq);
+            _legalMoves = _engine.legalMovesFrom(sq);
           } else {
             _selectedSquare = null;
             _legalMoves = [];
@@ -1801,7 +1801,7 @@ class _PlayableBoardState extends State<_PlayableBoard> {
                 child: ChessBoardWidget(
                   board: _engine.board,
                   perspective: PieceColor.white,
-                  currentTurn: _engine.turn,
+                  currentTurn: _engine.currentTurn,
                   selectedSquare: _selectedSquare,
                   legalMoves: _legalMoves,
                   lastMove: _lastMove,

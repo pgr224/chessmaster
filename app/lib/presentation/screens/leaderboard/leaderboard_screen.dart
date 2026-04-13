@@ -318,19 +318,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
             ],
           ),
           if (myXp <= 0)
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.midnight,
-                foregroundColor: AppTheme.goldPrimary,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-              ),
-              onPressed: () => _requestXP(context),
-              child: const Text('Request XP',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
+            const SizedBox.shrink(), // XP request feature removed
         ],
       ),
     ).animate().fadeIn().slideY(begin: 0.1);
@@ -525,8 +513,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
             ),
           ],
         ),
-      ),
-    ).animate().fadeIn(delay: (index * 40).ms).slideY(begin: 0.1);
+      ).animate().fadeIn(delay: (index * 40).ms).slideY(begin: 0.1);
   }
 
   Widget _miniStat(String label, String value, Color color, IconData icon) {
