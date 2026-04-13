@@ -105,3 +105,4 @@ class EvalBarWidget extends StatelessWidget {
     );
   }
 }
+

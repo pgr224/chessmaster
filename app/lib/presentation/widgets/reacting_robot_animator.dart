@@ -319,3 +319,4 @@ extension ReactingRobotAnimator on _ReactingRobotWidgetState {
     );
   }
 }
+

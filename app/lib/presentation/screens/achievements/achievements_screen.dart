@@ -389,3 +389,4 @@ class _AchievementCard extends StatelessWidget {
     ).animate().fadeIn(delay: delay.ms).slideY(begin: 0.08);
   }
 }
+

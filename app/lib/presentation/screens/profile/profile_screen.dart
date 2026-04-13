@@ -1086,3 +1086,4 @@ class _FallbackAvatar extends StatelessWidget {
     );
   }
 }
+

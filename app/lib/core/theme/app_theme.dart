@@ -392,3 +392,4 @@ class BoardThemeData {
   const BoardThemeData(
       {required this.light, required this.dark, required this.notation});
 }
+

@@ -2,6 +2,7 @@ import type { Env } from './index'
 import { normalizeTimeControl, DEFAULT_TIME_CONTROL } from './time_control'
 import { XP_RULES } from './xp_rules'
 import { getPlayerUsername } from './player_name_sync'
+import { StatsService } from './services/stats_service'
 
 interface TournamentPlayer {
   id: string
@@ -307,42 +308,15 @@ export class TournamentRoom implements DurableObject {
 
   private async _updateUserStatsAndXP(userId: string, outcome: 'win' | 'loss' | 'draw', gameId: string) {
     if (!this.env.DB) return
-    const field = outcome === 'win' ? 'wins' : outcome === 'loss' ? 'losses' : 'draws'
-    const now = new Date().toISOString()
-
-    // 1. Stats UPSERT
-    await this.env.DB.prepare(`
-      INSERT INTO user_stats (user_id, games_played, ${field}, tournament_games, 
-                             ${outcome === 'win' ? 'tournament_wins,' : ''}
-                             current_streak, longest_streak, updated_at)
-      VALUES (?, 1, 1, 1, ${outcome === 'win' ? '1,' : ''} ?, ?, ?)
-      ON CONFLICT(user_id) DO UPDATE SET
-        games_played = user_stats.games_played + 1,
-        ${field} = user_stats.${field} + 1,
-        tournament_games = user_stats.tournament_games + 1,
-        ${outcome === 'win' ? 'tournament_wins = user_stats.tournament_wins + 1,' : ''}
-        current_streak = CASE WHEN ? = 'win' THEN user_stats.current_streak + 1 ELSE 0 END,
-        longest_streak = CASE 
-          WHEN ? = 'win' AND user_stats.current_streak + 1 > user_stats.longest_streak 
-          THEN user_stats.current_streak + 1 
-          ELSE user_stats.longest_streak 
-        END,
-        updated_at = excluded.updated_at
-    `).bind(userId, outcome === 'win' ? 1 : 0, outcome === 'win' ? 1 : 0, now, outcome, outcome).run()
-
-    // 2. Award XP
-    const user = await this.env.DB.prepare('SELECT xp FROM users WHERE id = ?').bind(userId).first<{ xp: number }>()
-    if (user) {
-      const xpChange = (outcome === 'win' ? XP_RULES.tournament.win 
-                       : (outcome === 'draw' ? XP_RULES.tournament.draw 
-                       : XP_RULES.tournament.loss))
-      const newXp = Math.max(0, user.xp + xpChange)
-      await this.env.DB.prepare('UPDATE users SET xp = ?, updated_at = ? WHERE id = ?').bind(newXp, now, userId).run()
-      
-      await this.env.DB.prepare(`
-        INSERT INTO xp_history (user_id, game_id, xp_before, xp_after, change, created_at)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `).bind(userId, gameId, user.xp, newXp, xpChange, now).run()
+    try {
+      await StatsService.updateAll(this.env.DB, {
+        userId,
+        gameId,
+        outcome,
+        mode: 'tournament'
+      })
+    } catch (e) {
+      console.error('[TournamentRoom] Stats/XP update failed:', e)
     }
   }
 
@@ -359,37 +333,35 @@ export class TournamentRoom implements DurableObject {
     await this._persist()
 
     const standings = this._standings()
-    const winner = standings[0]
-
-    // Award overall tournament winner bonus to database
-    if (winner && this.env.DB) {
-      try {
-        const user = await this.env.DB.prepare('SELECT xp FROM users WHERE id = ?').bind(winner.id).first<{ xp: number }>()
-        if (user) {
-          const bonus = XP_RULES.tournament.tournamentWinBonus
-          const newXp = user.xp + bonus
-          const now = new Date().toISOString()
-          await this.env.DB.prepare('UPDATE users SET xp = ?, updated_at = ? WHERE id = ?').bind(newXp, now, winner.id).run()
-          
-          await this.env.DB.prepare(`
-            INSERT INTO xp_history (user_id, xp_before, xp_after, change, created_at)
-            VALUES (?, ?, ?, ?, ?)
-          `).bind(winner.id, user.xp, newXp, bonus, now).run()
-        }
-      } catch (e) {
-        console.error('[TournamentRoom] Bonus award failed:', e)
-      }
-    }
-
+    // Award tournament bonuses and update rankings in database
     const xpDeltas: Record<string, number> = {}
     const eloDeltas: Record<string, number> = {}
-    for (const p of this.tournament.players) {
-      const xpBase = (p.wins * XP_RULES.tournament.win) + 
-                     (p.draws * XP_RULES.tournament.draw) + 
-                     (p.losses * XP_RULES.tournament.loss)
-      const streakMultiplier = 1 + Math.min(p.wins, 5) * 0.2
-      xpDeltas[p.id] = Math.round(xpBase * streakMultiplier) + (p.id === winner?.id ? XP_RULES.tournament.tournamentWinBonus : 0)
-      eloDeltas[p.id] = (p.wins * 20) + (p.draws * 5) + (p.losses * -15)
+    
+    if (this.env.DB) {
+      for (const p of this.tournament.players) {
+        // 1. Calculate Expected XP with streaks
+        const xpBase = (p.wins * XP_RULES.tournament.win) + 
+                       (p.draws * XP_RULES.tournament.draw) + 
+                       (p.losses * XP_RULES.tournament.loss)
+        const streakMultiplier = 1 + Math.min(p.wins, 5) * 0.2
+        const totalXpEarned = Math.round(xpBase * streakMultiplier) + (p.id === winner?.id ? XP_RULES.tournament.tournamentWinBonus : 0)
+        
+        // 2. Calculate Remainder (since we already awarded base XP during rounds)
+        const alreadyAwarded = xpBase
+        const remainderBonus = Math.max(0, totalXpEarned - alreadyAwarded)
+        
+        // 3. Define Elo Change
+        const eloDelta = (p.wins * 20) + (p.draws * 5) + (p.losses * -15)
+        
+        xpDeltas[p.id] = totalXpEarned
+        eloDeltas[p.id] = eloDelta
+
+        try {
+          await StatsService.awardTournamentBonus(this.env.DB, p.id, remainderBonus, eloDelta)
+        } catch (e) {
+          console.error(`[TournamentRoom] Failed to award bonus for ${p.id}:`, e)
+        }
+      }
     }
 
     this._broadcastAll({

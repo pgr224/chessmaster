@@ -312,3 +312,4 @@ class _TournamentResultScreenState extends State<TournamentResultScreen> {
     ).animate().fadeIn(delay: 800.ms);
   }
 }
+

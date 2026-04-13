@@ -3,6 +3,7 @@ import { parseTimeControl, DEFAULT_TIME_CONTROL } from './time_control'
 import { getPlayerUsername } from './player_name_sync'
 import { calculateMultiplayerXP } from './xp_rules'
 import { PushService } from './services/push_service'
+import { StatsService } from './services/stats_service'
 import type { Env } from './index'
 
 function normalizePromotionCode(code?: string): string | undefined {
@@ -423,8 +424,27 @@ export class GameRoom {
     player.disconnectTimer = setTimeout(async () => {
       if (player.disconnected && this.status === 'active') {
         this.status = 'finished'
-        this.broadcast({ type: 'GAME_OVER', data: { result: 'abandoned', reason: 'disconnect_timeout' } })
-        // Abandoned games don't affect stats as per requirement, but we might want to log it
+        clearInterval(this.timerInterval)
+        
+        // Find the remaining player
+        let winnerColor: 'white' | 'black' | 'draw' = 'draw'
+        for (const [id, p] of this.players.entries()) {
+          if (id !== userId) {
+            winnerColor = p.color
+            break
+          }
+        }
+
+        this.broadcast({ 
+          type: 'GAME_OVER', 
+          data: { 
+            result: winnerColor, 
+            reason: 'disconnect_timeout',
+            message: 'Opponent disconnected and timed out.'
+          } 
+        })
+        
+        await this.saveGameToDB(winnerColor)
       }
     }, 30000)
   }
@@ -484,44 +504,12 @@ export class GameRoom {
   private async updateUserStatsAndXP(userId: string, outcome: 'win' | 'loss' | 'draw') {
     if (!this.env.DB) return
     try {
-      const field = outcome === 'win' ? 'wins' : outcome === 'loss' ? 'losses' : 'draws'
-      const now = new Date().toISOString()
-
-      // 1. Update/Create User Stats (UPSERT)
-      await this.env.DB.prepare(`
-        INSERT INTO user_stats (user_id, games_played, ${field}, multiplayer_games, 
-                               ${outcome === 'win' ? 'multiplayer_wins,' : ''}
-                               current_streak, longest_streak, updated_at)
-        VALUES (?, 1, 1, 1, ${outcome === 'win' ? '1,' : ''} ?, ?, ?)
-        ON CONFLICT(user_id) DO UPDATE SET
-          games_played = user_stats.games_played + 1,
-          ${field} = user_stats.${field} + 1,
-          multiplayer_games = user_stats.multiplayer_games + 1,
-          ${outcome === 'win' ? 'multiplayer_wins = user_stats.multiplayer_wins + 1,' : ''}
-          current_streak = CASE WHEN ? = 'win' THEN user_stats.current_streak + 1 ELSE 0 END,
-          longest_streak = CASE 
-            WHEN ? = 'win' AND user_stats.current_streak + 1 > user_stats.longest_streak 
-            THEN user_stats.current_streak + 1 
-            ELSE user_stats.longest_streak 
-          END,
-          updated_at = excluded.updated_at
-      `).bind(userId, outcome === 'win' ? 1 : 0, outcome === 'win' ? 1 : 0, now, outcome, outcome).run()
-
-      // 2. Award XP
-      const user = await this.env.DB.prepare('SELECT xp FROM users WHERE id = ?').bind(userId).first<{ xp: number }>()
-      if (user) {
-        // use multiplayer rules
-        const xpChange = calculateMultiplayerXP(outcome)
-        const newXp = Math.max(0, user.xp + xpChange)
-        
-        await this.env.DB.prepare('UPDATE users SET xp = ?, updated_at = ? WHERE id = ?').bind(newXp, now, userId).run()
-        
-        // Log XP history
-        await this.env.DB.prepare(`
-          INSERT INTO xp_history (user_id, game_id, xp_before, xp_after, change, created_at)
-          VALUES (?, ?, ?, ?, ?, ?)
-        `).bind(userId, this.gameId, user.xp, newXp, xpChange, now).run()
-      }
+      await StatsService.updateAll(this.env.DB, {
+        userId,
+        gameId: this.gameId,
+        outcome,
+        mode: 'multiplayer'
+      })
     } catch (e) {
       console.error('[GameRoom] Stats/XP update failed:', e)
     }

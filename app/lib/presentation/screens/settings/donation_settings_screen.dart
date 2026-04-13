@@ -619,3 +619,4 @@ class _DonationTarget {
 enum _SourceFilter { all, leaderboard, friends }
 
 enum _PresenceFilter { all, online, offline }
+

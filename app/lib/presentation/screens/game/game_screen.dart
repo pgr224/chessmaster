@@ -937,20 +937,25 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   // Recent message bubbles (Fade out preview)
                   if (!_isChatDragging)
                     IgnorePointer(
-                      child: ConstrainedBox(
-                        constraints:
-                            const BoxConstraints(maxWidth: 250, maxHeight: 150),
-                        child: ListView.builder(
-                          shrinkWrap: true,
-                          itemCount: messages.length > 3 ? 3 : messages.length,
-                          itemBuilder: (context, index) {
-                            final msg = messages[messages.length - 1 - index];
-                            return _chatBubble(msg.message, msg.isMe)
-                                .animate()
-                                .fadeIn(duration: 400.ms)
-                                .slideY(begin: 0.2, end: 0)
-                                .fadeOut(delay: 3200.ms, duration: 800.ms);
-                          },
+                      child: Container(
+                        constraints: const BoxConstraints(maxWidth: 220, maxHeight: 60),
+                        child: ClipRect(
+                          child: BackdropFilter(
+                            filter: ColorFilter.mode(Colors.black.withValues(alpha: 0.1), BlendMode.darken),
+                            child: ListView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: messages.length > 2 ? 2 : messages.length,
+                              itemBuilder: (context, index) {
+                                final msg = messages[messages.length - 1 - index];
+                                return _chatBubble(msg.message, msg.isMe)
+                                    .animate()
+                                    .fadeIn(duration: 400.ms)
+                                    .slideX(begin: -0.1, end: 0)
+                                    .fadeOut(delay: 3200.ms, duration: 800.ms);
+                              },
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -1035,20 +1040,22 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
   Widget _chatBubble(String text, bool isMe) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.only(bottom: 4),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
-          color: (isMe ? AppTheme.goldPrimary : Colors.white).withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(16),
+          color: (isMe ? AppTheme.goldPrimary : Colors.white10).withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(10),
           border: Border.all(
-              color: (isMe ? AppTheme.goldPrimary : Colors.white)
-                  .withValues(alpha: 0.1)),
+              color: (isMe ? AppTheme.goldPrimary : Colors.white24)
+                  .withValues(alpha: 0.15)),
         ),
         child: Text(
           text,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: GoogleFonts.baloo2(
-              color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
+              color: Colors.white.withValues(alpha: 0.9), fontSize: 13, fontWeight: FontWeight.w500),
         ),
       ),
     );
@@ -1800,3 +1807,4 @@ extension StringExtension on String {
   String capitalize() =>
       isEmpty ? this : '${this[0].toUpperCase()}${substring(1)}';
 }
+

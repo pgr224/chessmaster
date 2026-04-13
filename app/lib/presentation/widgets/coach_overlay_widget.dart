@@ -549,3 +549,4 @@ class CoachEvalIndicator extends StatelessWidget {
         MoveClassification.blunder => const Color(0xFFEF4444),
       };
 }
+

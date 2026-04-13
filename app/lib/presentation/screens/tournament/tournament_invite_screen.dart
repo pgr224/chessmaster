@@ -396,3 +396,4 @@ class _TournamentInviteScreenState extends State<TournamentInviteScreen> {
     }
   }
 }
+

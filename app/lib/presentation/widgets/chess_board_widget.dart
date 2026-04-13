@@ -493,3 +493,4 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
     return (displayFile * sqSize, displayRank * sqSize);
   }
 }
+

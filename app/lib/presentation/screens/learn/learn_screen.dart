@@ -799,3 +799,4 @@ class LearnScreen extends StatelessWidget {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 }
+

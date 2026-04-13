@@ -96,6 +96,7 @@ class AchievementService {
             ),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          margin: const EdgeInsets.only(top: 50, left: 16, right: 16),
           duration: const Duration(seconds: 4),
           content: Row(
             children: [
@@ -404,3 +405,4 @@ class AchievementService {
     }
   }
 }
+

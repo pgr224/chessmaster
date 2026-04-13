@@ -5,6 +5,7 @@ import type { Env } from '../index'
 import { authMiddleware } from '../middleware/auth'
 import { normalizeTimeControl, DEFAULT_TIME_CONTROL } from '../time_control'
 import { calculateMultiplayerXP, calculateAIGameXP } from '../xp_rules'
+import { StatsService } from '../services/stats_service'
 
 const game = new Hono<{ Bindings: Env; Variables: { user: any } }>()
 game.use('*', authMiddleware)
@@ -301,86 +302,35 @@ game.post('/abandon', async (c) => {
 // HELPERS
 // ────────────────────────────────────────
 async function updateXP(db: D1Database, gameRow: Record<string, unknown>, result: string) {
-  const mode = gameRow.mode as string;
+  const mode = gameRow.mode as any;
   const whiteId = gameRow.white_user_id as string | null;
   const blackId = gameRow.black_user_id as string | null;
 
-  const usersToUpdate = [];
-  if (whiteId) usersToUpdate.push({ id: whiteId, color: 'white' });
-  if (blackId) usersToUpdate.push({ id: blackId, color: 'black' });
+  if (whiteId) {
+    await StatsService.updateAll(db, {
+      userId: whiteId,
+      gameId: gameRow.id as string,
+      outcome: result === 'white' ? 'win' : (result === 'black' ? 'loss' : 'draw'),
+      mode,
+      aiDifficulty: gameRow.ai_difficulty as string
+    })
+  }
 
-  for (const userRef of usersToUpdate) {
-    const user = await db.prepare('SELECT xp FROM users WHERE id = ?')
-      .bind(userRef.id).first<{ xp: number }>()
-    if (!user) continue;
-
-    let xpChange = 0;
-    const isWinner = result === userRef.color;
-    const isDraw = result === 'draw';
-
-    if (mode === 'multiplayer' || mode === 'tournament') {
-      xpChange = calculateMultiplayerXP(isWinner ? 'win' : (isDraw ? 'draw' : 'loss'));
-    } else if (mode === 'singlePlayer' && isWinner) {
-      // For AI games, we use the difficulty-based reward
-      xpChange = calculateAIGameXP((gameRow.ai_difficulty as string) ?? 'medium');
-    }
-
-    if (xpChange === 0) continue;
-
-    const newXp = Math.max(0, user.xp + xpChange);
-    const now = new Date().toISOString();
-
-    await db.prepare('UPDATE users SET xp = ?, updated_at = ? WHERE id = ?')
-      .bind(newXp, now, userRef.id).run();
-
-    // Log xp history
-    await db.prepare(`
-      INSERT INTO xp_history (user_id, game_id, xp_before, xp_after, change, created_at)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).bind(userRef.id, gameRow.id, user.xp, newXp, xpChange, now).run();
+  if (blackId) {
+    await StatsService.updateAll(db, {
+      userId: blackId,
+      gameId: gameRow.id as string,
+      outcome: result === 'black' ? 'win' : (result === 'white' ? 'loss' : 'draw'),
+      mode,
+      aiDifficulty: gameRow.ai_difficulty as string
+    })
   }
 }
 
 async function updateStats(db: D1Database, userId: string, outcome: 'win' | 'loss' | 'draw', mode: string) {
-  const field = outcome === 'win' ? 'wins' : outcome === 'loss' ? 'losses' : 'draws';
-  const modeField = mode === 'multiplayer' ? 'multiplayer_games' : 
-                    mode === 'tournament' ? 'tournament_games' : 
-                    mode === 'twoPlayer' ? 'two_player_games' : 'ai_games';
-  const modeWinField = mode === 'multiplayer' ? 'multiplayer_wins' : 
-                       mode === 'tournament' ? 'tournament_wins' : 
-                       mode === 'twoPlayer' ? 'two_player_wins' : 'ai_wins';
-  
-  const isWin = outcome === 'win';
-  const now = new Date().toISOString();
-
-  // Robust update using UPSERT to handle missing rows for legacy users
-  await db.prepare(`
-    INSERT INTO user_stats (
-      user_id, games_played, ${field}, ${modeField}, 
-      ${isWin ? `${modeWinField},` : ''} 
-      current_streak, longest_streak, updated_at
-    ) 
-    VALUES (?, 1, 1, 1, ${isWin ? '1, ' : ''} ?, ?, ?)
-    ON CONFLICT(user_id) DO UPDATE SET
-      games_played = user_stats.games_played + 1,
-      ${field} = user_stats.${field} + 1,
-      ${modeField} = user_stats.${modeField} + 1,
-      ${isWin ? `${modeWinField} = user_stats.${modeWinField} + 1,` : ''}
-      current_streak = CASE WHEN ? = 'win' THEN user_stats.current_streak + 1 ELSE 0 END,
-      longest_streak = CASE 
-        WHEN ? = 'win' AND user_stats.current_streak + 1 > user_stats.longest_streak 
-        THEN user_stats.current_streak + 1 
-        ELSE user_stats.longest_streak 
-      END,
-      updated_at = EXCLUDED.updated_at
-  `).bind(
-    userId, 
-    isWin ? 1 : 0, 
-    isWin ? 1 : 0, 
-    now,
-    outcome,
-    outcome
-  ).run();
+  // Stats are now handled by updateXP via StatsService.updateAll
+  // This function is kept for backward compatibility if needed, but its logic is now redundant helper-wise.
+  // We can leave it as a no-op if updateXP is now the primary entry point.
 }
 
 export { game as gameRoutes }

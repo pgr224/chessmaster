@@ -99,3 +99,4 @@ class CapturedPiecesWidget extends StatelessWidget {
         PieceType.king => 0,
       };
 }
+

@@ -432,3 +432,4 @@ class _OnboardPage {
     required this.accentColor,
   });
 }
+

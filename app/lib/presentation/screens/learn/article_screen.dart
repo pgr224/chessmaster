@@ -1169,106 +1169,62 @@ class _ArticleScreenState extends State<ArticleScreen> {
   // ── Board Diagram Placeholder ─────────────────────────────────────────────
 
   Widget _buildBoardDiagram(BuildContext context, _ArticleData data) {
-    late List<List<ChessPiece?>> board;
-    late String caption;
-    late String boardTitle;
+    String startFen = data.boardFen ?? 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+    List<Move> lessonMoves = [];
+    String boardTitle = 'Interactive Board';
+    String caption = data.boardCaption ?? 'Analyze and play moves from this position.';
 
-    if (_selectedSequenceIndex != null &&
-        _selectedSequenceIndex! < data.keyMoves.length) {
-      final sequence = data.keyMoves[_selectedSequenceIndex!];
-      board = _getBoardAfterMoves(sequence.moves, data.boardFen);
-      boardTitle = 'Position: ${sequence.label}';
-      caption = sequence.notes;
-    } else {
-      final engine = data.boardFen != null
-          ? ChessEngine.fromFEN(data.boardFen!)
-          : ChessEngine();
-      board = engine.board;
-      boardTitle = 'Interactive Board';
-      caption = data.boardCaption ??
-          'Click on a move sequence above to see the resulting position.';
+    if (_selectedSequenceIndex != null && _selectedSequenceIndex! < data.keyMoves.length) {
+       final sequence = data.keyMoves[_selectedSequenceIndex!];
+       boardTitle = 'Lesson: ${sequence.label}';
+       caption = sequence.notes;
+       
+       // Parse the moves in the context of the start FEN
+       final tempEngine = ChessEngine.fromFEN(startFen);
+       final tokens = _parseAlgebraicTokens(sequence.moves);
+       for (var token in tokens) {
+         final move = _parseTokenToMove(tempEngine, token);
+         if (move != null) {
+           lessonMoves.add(move);
+           tempEngine.makeMove(move);
+         }
+       }
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Container(
-          decoration: BoxDecoration(
-            color: AppTheme.navyCard,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.15)),
-          ),
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(boardTitle,
-                        style: GoogleFonts.fredoka(
-                            color: AppTheme.textPrimary,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700)),
-                  ),
-                  if (_selectedSequenceIndex != null)
-                    GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _selectedSequenceIndex = null;
-                          _currentStepInSequence = 0;
-                        });
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: AppTheme.accentPurple.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text('Reset',
-                            style: GoogleFonts.baloo2(
-                              color: AppTheme.accentPurple,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                            )),
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              SizedBox(
-                height: 300,
-                child: ChessBoardWidget(
-                  board: board,
-                  perspective: PieceColor.white,
-                  currentTurn: PieceColor.white,
-                  isInteractive: true,
-                  showCoordinates: true,
-                  showSquareLabels: false,
-                  boardTheme: 'classic',
-                  pieceShape: 'classic',
-                  pieceStyle: '3d',
-                  onSquareTap: (square) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                            'Square: ${square.toAlgebraic()}. Study the position to understand key ideas.'),
-                        duration: const Duration(milliseconds: 1200),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(caption,
-                  style: GoogleFonts.baloo2(
-                      color: AppTheme.textMuted, fontSize: 12, height: 1.4)),
-            ],
-          ),
-        ),
-      ],
-    ).animate().fadeIn(delay: 250.ms);
+    return _PlayableBoard(
+      key: ValueKey('board_${_selectedSequenceIndex ?? "main"}'),
+      title: boardTitle,
+      startFen: startFen,
+      lessonMoves: lessonMoves,
+      caption: caption,
+    );
+  }
+
+  List<String> _parseAlgebraicTokens(String notation) {
+    var sanitized = notation
+        .replaceAll(RegExp(r'\d+\.\.\.|\d+\.'), ' ')
+        .replaceAll(RegExp(r'1-0|0-1|1/2-1/2'), ' ')
+        .replaceAll(RegExp(r'\$\d+'), ' ');
+
+    return sanitized
+        .split(RegExp(r'[\s]+'))
+        .where((t) => t.isNotEmpty)
+        .map((t) => t.replaceAll(RegExp(r'[+#]'), ''))
+        .toList();
+  }
+
+  Move? _parseTokenToMove(ChessEngine engine, String token) {
+     final candidateMoves = engine.allLegalMoves();
+     for (final move in candidateMoves) {
+       final algebraic = _moveToAlgebraic(engine, move).replaceAll(RegExp(r'[+#]'), '');
+       if (algebraic == token) return move;
+     }
+     
+     // Fallback for UCI format if needed
+     if (token.length >= 4) {
+       try { return Move.fromAlgebraic(token); } catch(_) {}
+     }
+     return null;
   }
 
   // ── Study Schedule ────────────────────────────────────────────────────────
@@ -1670,3 +1626,211 @@ class _ArticleScreenState extends State<ArticleScreen> {
     }
   }
 }
+
+class _PlayableBoard extends StatefulWidget {
+  final String title;
+  final String startFen;
+  final List<Move> lessonMoves;
+  final String caption;
+
+  const _PlayableBoard({
+    super.key,
+    required this.title,
+    required this.startFen,
+    required this.lessonMoves,
+    required this.caption,
+  });
+
+  @override
+  State<_PlayableBoard> createState() => _PlayableBoardState();
+}
+
+class _PlayableBoardState extends State<_PlayableBoard> {
+  late ChessEngine _engine;
+  Square? _selectedSquare;
+  List<Move> _legalMoves = [];
+  Move? _lastMove;
+  int _moveIndex = 0;
+  bool _isAutoPlaying = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _engine = ChessEngine.fromFEN(widget.startFen);
+  }
+
+  void _onSquareTap(Square sq) {
+    if (_isAutoPlaying) return;
+
+    setState(() {
+      if (_selectedSquare == null) {
+        final piece = _engine.pieceAt(sq);
+        if (piece != null && piece.color == _engine.turn) {
+          _selectedSquare = sq;
+          _legalMoves = _engine.legalMovesForSquare(sq);
+        }
+      } else {
+        final move = _legalMoves.firstWhere(
+          (m) => m.to == sq,
+          orElse: () => Move(from: Square(0, 0), to: Square(0, 0)),
+        );
+
+        if (move.from.rank == 0 && move.from.file == 0 && move.to.rank == 0 && move.to.file == 0) {
+          final piece = _engine.pieceAt(sq);
+          if (piece != null && piece.color == _engine.turn) {
+            _selectedSquare = sq;
+            _legalMoves = _engine.legalMovesForSquare(sq);
+          } else {
+            _selectedSquare = null;
+            _legalMoves = [];
+          }
+        } else {
+          // Check if it's the lesson move
+          if (widget.lessonMoves.isNotEmpty && _moveIndex < widget.lessonMoves.length) {
+            final targetMove = widget.lessonMoves[_moveIndex];
+            if (move.from == targetMove.from && move.to == targetMove.to) {
+              _applyMove(move);
+              _checkOpponentReply();
+            } else {
+              _showIncorrectMove(move);
+            }
+          } else {
+            // Free play mode
+            _applyMove(move);
+          }
+        }
+      }
+    });
+  }
+
+  void _applyMove(Move move) {
+    _engine.makeMove(move);
+    _lastMove = move;
+    _selectedSquare = null;
+    _legalMoves = [];
+    _moveIndex++;
+  }
+
+  void _checkOpponentReply() {
+    if (_moveIndex < widget.lessonMoves.length) {
+      _isAutoPlaying = true;
+      Future.delayed(const Duration(milliseconds: 600), () {
+        if (!mounted) return;
+        setState(() {
+          final reply = widget.lessonMoves[_moveIndex];
+          _applyMove(reply);
+          _isAutoPlaying = false;
+        });
+      });
+    }
+  }
+
+  void _showIncorrectMove(Move move) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Not exactly what the lesson recommends! Try again.'),
+        backgroundColor: AppTheme.accentRed,
+        duration: const Duration(seconds: 1),
+      ),
+    );
+    _selectedSquare = null;
+    _legalMoves = [];
+  }
+
+  void _reset() {
+    setState(() {
+      _engine = ChessEngine.fromFEN(widget.startFen);
+      _selectedSquare = null;
+      _legalMoves = [];
+      _lastMove = null;
+      _moveIndex = 0;
+      _isAutoPlaying = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isLessonFinished = widget.lessonMoves.isNotEmpty && _moveIndex >= widget.lessonMoves.length;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          margin: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: AppTheme.navyCard,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: isLessonFinished ? AppTheme.accentGreen : AppTheme.goldPrimary.withValues(alpha: 0.15),
+              width: isLessonFinished ? 2 : 1,
+            ),
+          ),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Text(widget.title,
+                            style: GoogleFonts.fredoka(
+                                color: AppTheme.textPrimary,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700)),
+                        if (isLessonFinished) ...[
+                          const SizedBox(width: 8),
+                          const Icon(Icons.check_circle_rounded, color: AppTheme.accentGreen, size: 20),
+                        ],
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.refresh_rounded, color: AppTheme.accentPurple, size: 20),
+                    onPressed: _reset,
+                    tooltip: 'Reset Board',
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                height: 300,
+                child: ChessBoardWidget(
+                  board: _engine.board,
+                  perspective: PieceColor.white,
+                  currentTurn: _engine.turn,
+                  selectedSquare: _selectedSquare,
+                  legalMoves: _legalMoves,
+                  lastMove: _lastMove,
+                  status: _engine.status,
+                  isInteractive: true,
+                  showCoordinates: true,
+                  showSquareLabels: false,
+                  boardTheme: 'classic',
+                  pieceShape: 'classic',
+                  pieceStyle: '3d',
+                  onSquareTap: _onSquareTap,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                isLessonFinished ? 'Lesson complete! You have verified the sequence.' : widget.caption,
+                style: GoogleFonts.baloo2(
+                  color: isLessonFinished ? AppTheme.accentGreen : AppTheme.textMuted,
+                  fontSize: 13,
+                  fontWeight: isLessonFinished ? FontWeight.w700 : FontWeight.w400,
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ).animate().fadeIn(delay: 250.ms);
+  }
+}
+
+

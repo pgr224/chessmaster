@@ -78,35 +78,40 @@ pushRoutes.get('/settings', async (c) => {
     return c.json({ error: 'userId is required' }, 400)
   }
 
-  const user = await c.env.DB.prepare(
-    'SELECT push_enabled FROM users WHERE id = ?'
-  ).bind(userId).first<{ push_enabled: number }>()
+  try {
+    const user = await c.env.DB.prepare(
+      'SELECT push_enabled FROM users WHERE id = ?'
+    ).bind(userId).first<{ push_enabled: number }>()
 
-  if (!user) {
-    return c.json({ error: 'User not found' }, 404)
+    if (!user) {
+      return c.json({ error: 'User not found' }, 404)
+    }
+
+    const prefs = await c.env.DB.prepare(
+      `SELECT challenge_notifications, community_notifications,
+              tournament_notifications, system_notifications
+       FROM user_notification_preferences
+       WHERE user_id = ?`
+    ).bind(userId).first<{
+      challenge_notifications: number
+      community_notifications: number
+      tournament_notifications: number
+      system_notifications: number
+    }>()
+
+    return c.json({
+      enabled: user.push_enabled === 1,
+      categories: {
+        challenges: prefs ? prefs.challenge_notifications === 1 : true,
+        community: prefs ? prefs.community_notifications === 1 : true,
+        tournaments: prefs ? prefs.tournament_notifications === 1 : true,
+        system: prefs ? prefs.system_notifications === 1 : true,
+      },
+    })
+  } catch (err: any) {
+    console.error(`Push settings GET failed for ${userId}:`, err)
+    return c.json({ error: 'Database error fetching push settings', message: err.message }, 500)
   }
-
-  const prefs = await c.env.DB.prepare(
-    `SELECT challenge_notifications, community_notifications,
-            tournament_notifications, system_notifications
-     FROM user_notification_preferences
-     WHERE user_id = ?`
-  ).bind(userId).first<{
-    challenge_notifications: number
-    community_notifications: number
-    tournament_notifications: number
-    system_notifications: number
-  }>()
-
-  return c.json({
-    enabled: user.push_enabled === 1,
-    categories: {
-      challenges: prefs ? prefs.challenge_notifications === 1 : true,
-      community: prefs ? prefs.community_notifications === 1 : true,
-      tournaments: prefs ? prefs.tournament_notifications === 1 : true,
-      system: prefs ? prefs.system_notifications === 1 : true,
-    },
-  })
 })
 
 pushRoutes.put('/settings', async (c) => {

@@ -43,13 +43,18 @@ class _ChatWidgetState extends State<ChatWidget> {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppTheme.midnight.withValues(alpha: 0.95),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        color: Colors.white.withValues(alpha: 0.1),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 20),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 30),
         ],
       ),
-      child: Column(
+      child: ClipRRect(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        child: BackdropFilter(
+          filter: ColorFilter.mode(Colors.black.withValues(alpha: 0.2), BlendMode.darken),
+          child: Column(
         children: [
           // Header
           Padding(
@@ -91,8 +96,10 @@ class _ChatWidgetState extends State<ChatWidget> {
           // Input field
           _buildInput(),
         ],
-      ),
-    );
+            ),
+          ),
+        ),
+      );
   }
 
   Widget _buildMessage(ChatMessage msg) {
@@ -146,9 +153,9 @@ class _ChatWidgetState extends State<ChatWidget> {
     return Container(
       padding: EdgeInsets.fromLTRB(
           16, 8, 16, 16 + MediaQuery.of(context).viewInsets.bottom),
-      decoration: const BoxDecoration(
-        color: AppTheme.surface,
-        border: Border(top: BorderSide(color: Colors.white12)),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.05),
+        border: const Border(top: BorderSide(color: Colors.white10)),
       ),
       child: Row(
         children: [
@@ -164,20 +171,22 @@ class _ChatWidgetState extends State<ChatWidget> {
                     borderRadius: BorderRadius.circular(25),
                     borderSide: BorderSide.none),
                 filled: true,
-                fillColor: AppTheme.midnight.withValues(alpha: 0.5),
+                fillColor: Colors.black.withValues(alpha: 0.2),
                 contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               ),
               onSubmitted: (_) => _send(),
             ),
           ),
-          const SizedBox(width: 8),
-          Container(
-            decoration: const BoxDecoration(
-                shape: BoxShape.circle, color: AppTheme.goldPrimary),
-            child: IconButton(
-              onPressed: _send,
-              icon: const Icon(Icons.send_rounded, color: AppTheme.midnight),
+          const SizedBox(width: 12),
+          GestureDetector(
+            onTap: _send,
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: const BoxDecoration(
+                  shape: BoxShape.circle, gradient: AppTheme.goldGradient),
+              child: const Icon(Icons.send_rounded,
+                  color: AppTheme.midnight, size: 20),
             ),
           ),
         ],

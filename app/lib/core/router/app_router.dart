@@ -375,3 +375,4 @@ class _NavItem {
   final String path;
   const _NavItem({required this.icon, required this.label, required this.path});
 }
+

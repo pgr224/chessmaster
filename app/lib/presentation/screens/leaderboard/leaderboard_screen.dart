@@ -21,6 +21,8 @@ class _LeaderboardEntry {
   final int xp;
   final int eloRating;
   final int wins;
+  final int losses;
+  final int draws;
   final int gamesPlayed;
   final double winRate;
   final int longestStreak;
@@ -34,6 +36,8 @@ class _LeaderboardEntry {
     required this.xp,
     required this.eloRating,
     required this.wins,
+    required this.losses,
+    required this.draws,
     required this.gamesPlayed,
     required this.winRate,
     required this.longestStreak,
@@ -69,6 +73,8 @@ class _LeaderboardEntry {
       xp: parseInt(json['xp']),
       eloRating: parseInt(json['elo_rating'], 1200),
       wins: parseInt(json['wins']),
+      losses: parseInt(json['losses']),
+      draws: parseInt(json['draws']),
       gamesPlayed: parseInt(json['games_played']),
       winRate: parseDouble(json['win_rate']),
       longestStreak: parseInt(json['longest_streak']),
@@ -92,7 +98,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   bool _loading = true;
   bool _isBackgroundRefreshing = false;
   String _error = '';
-  String _sortType = 'elo';
+  String _sortType = 'xp'; // Primary metric switched to XP as per user request
   int _myRank = 0;
   int _activeFetchId = 0;
   String? _bountyUserId;
@@ -241,7 +247,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
         elevation: 0,
         title: Column(
           children: [
-            Text('🏆 Leaderboard',
+            Text('🏆 Global Rankings',
                 style: GoogleFonts.fredoka(
                     color: AppTheme.textPrimary,
                     fontWeight: FontWeight.w700,
@@ -255,19 +261,11 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
           ],
         ),
         centerTitle: true,
-        actions: [
-          IconButton(
-            icon: Icon(_loading ? null : Icons.refresh, color: AppTheme.accentCyan),
-            onPressed: _loading ? null : () => _fetchLeaderboard(),
-            tooltip: 'Refresh leaderboard',
-          ),
-        ],
       ),
       body: Container(
         decoration: const BoxDecoration(gradient: AppTheme.backgroundGradient),
         child: Column(
           children: [
-            _buildSortTabs(),
             if (_myRank > 0) _buildMyRankBanner(),
             Expanded(child: _buildContent()),
           ],
@@ -276,51 +274,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     );
   }
 
-  Widget _buildSortTabs() {
-    final tabs = [
-      {'id': 'elo', 'label': '⭐ ILO Rating', 'color': AppTheme.lavender},
-      {'id': 'xp', 'label': '🔥 XP Power', 'color': AppTheme.goldPrimary},
-      {'id': 'wins', 'label': '🏆 Victories', 'color': AppTheme.accentCyan},
-    ];
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      child: Row(
-        children: tabs.map((t) {
-          final isSelected = _sortType == t['id'];
-          final color = t['color'] as Color;
-          return Expanded(
-            child: GestureDetector(
-              onTap: () {
-                setState(() => _sortType = t['id'] as String);
-                _fetchLeaderboard();
-              },
-              child: AnimatedContainer(
-                duration: 250.ms,
-                margin: const EdgeInsets.symmetric(horizontal: 4),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? color.withValues(alpha: 0.2)
-                      : AppTheme.surface.withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                      color: isSelected ? color : Colors.transparent, width: 2),
-                ),
-                child: Center(
-                  child: Text(t['label'] as String,
-                      style: GoogleFonts.fredoka(
-                        color: isSelected ? color : AppTheme.textMuted,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 12,
-                      )),
-                ),
-              ),
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
+
 
   Widget _buildMyRankBanner() {
     final authState = context.read<AuthBloc>().state;
@@ -382,48 +336,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     ).animate().fadeIn().slideY(begin: 0.1);
   }
 
-  void _requestXP(BuildContext context) async {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.navyCard,
-        title: Text('Request XP',
-            style: GoogleFonts.fredoka(color: AppTheme.goldPrimary)),
-        content: const Text(
-            'You are out of XP! Would you like to request 100 XP from the community network?'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          ElevatedButton(
-            style:
-                ElevatedButton.styleFrom(backgroundColor: AppTheme.goldPrimary),
-            onPressed: () async {
-              Navigator.pop(ctx);
-              final authRepo = di.sl<AuthRepository>();
-              try {
-                final success = await authRepo.requestXP(amount: 100);
-                if (!context.mounted) return;
-                if (success) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                      content: Text(
-                          'XP Request broadcasted! If accepted, you will receive XP.')));
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                      content: Text('Failed to broadcast request.')));
-                }
-              } catch (e) {
-                if (!context.mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed to broadcast request: $e')));
-              }
-            },
-            child: const Text('Request 100 XP',
-                style: TextStyle(color: Colors.black)),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   Widget _buildContent() {
     if (_loading) {
@@ -497,81 +410,61 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
       rankIcon = '#${entry.rank}';
     }
 
-    return GestureDetector(
-      onTap: isMe ? null : () => _showDonationDialog(context, entry),
-      child: Container(
+    final isPodium = entry.rank <= 3;
+
+    return Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          gradient: isMe
-              ? LinearGradient(colors: [
-                  AppTheme.goldPrimary.withValues(alpha: 0.15),
-                  AppTheme.goldPrimary.withValues(alpha: 0.05)
-                ])
-              : AppTheme.cardGradient,
-          borderRadius: BorderRadius.circular(24),
+          gradient: isPodium 
+            ? LinearGradient(
+                colors: [
+                  rankColor.withValues(alpha: 0.15),
+                  AppTheme.surface.withValues(alpha: 0.4)
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : null,
+          color: isMe
+              ? AppTheme.accentCyan.withValues(alpha: 0.1)
+              : (isPodium ? null : AppTheme.surface.withValues(alpha: 0.4)),
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(
-              color: isMe
-                  ? AppTheme.goldPrimary.withValues(alpha: 0.5)
-                  : Colors.white.withValues(alpha: 0.05),
-              width: isMe ? 2 : 1),
-          boxShadow: isMe ? [
-            BoxShadow(color: AppTheme.goldPrimary.withValues(alpha: 0.1), blurRadius: 10, spreadRadius: 1)
-          ] : null,
+              color: isMe 
+                ? AppTheme.accentCyan 
+                : (isPodium ? rankColor.withValues(alpha: 0.3) : Colors.white.withValues(alpha: 0.05))),
         ),
         child: Column(
           children: [
             Row(
               children: [
-                // Rank
                 SizedBox(
-                  width: 42,
-                  child: entry.rank <= 3
-                      ? Text(rankIcon,
-                          style: const TextStyle(fontSize: 28),
-                          textAlign: TextAlign.center)
-                      : Text(rankIcon,
-                          style: GoogleFonts.fredoka(
-                              color: rankColor,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700),
-                          textAlign: TextAlign.center),
-                ),
-                const SizedBox(width: 8),
-                // Avatar
-                Stack(
-                  children: [
-                    CircleAvatar(
-                      radius: 24,
-                      backgroundColor: AppTheme.goldPrimary.withValues(alpha: 0.12),
-                      child: Text(
-                        entry.username.isNotEmpty
-                            ? entry.username[0].toUpperCase()
-                            : '?',
-                        style: GoogleFonts.fredoka(
-                            color: AppTheme.goldPrimary,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w700),
+                  width: 40,
+                  child: Center(
+                    child: Text(
+                      rankIcon,
+                      style: GoogleFonts.fredoka(
+                        fontSize: isPodium ? 28 : 16,
+                        color: rankColor,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                    if (entry.isOnline)
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: Container(
-                          width: 14,
-                          height: 14,
-                          decoration: BoxDecoration(
-                            color: AppTheme.accentGreen,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: AppTheme.midnight, width: 2.5),
-                          ),
-                        ),
-                      ),
-                  ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                CircleAvatar(
+                  radius: isPodium ? 24 : 20,
+                  backgroundColor: rankColor.withValues(alpha: 0.2),
+                  child: Text(
+                    entry.username.isNotEmpty ? entry.username.characters.first.toUpperCase() : '?',
+                    style: GoogleFonts.fredoka(
+                        color: rankColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: isPodium ? 18 : 16),
+                  ),
                 ),
                 const SizedBox(width: 14),
-                // Name & Level
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -585,7 +478,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                                 color: isMe
                                     ? AppTheme.goldPrimary
                                     : AppTheme.textPrimary,
-                                fontSize: 17,
+                                fontSize: isPodium ? 19 : 17,
                                 fontWeight: FontWeight.w700,
                               ),
                               overflow: TextOverflow.ellipsis,
@@ -619,23 +512,15 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                     ],
                   ),
                 ),
-                // Bounty Icon
-                if (entry.id == _bountyUserId)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 8),
-                    child: Icon(Icons.stars_rounded,
-                        color: AppTheme.goldPrimary, size: 24),
-                  ),
               ],
             ),
             const SizedBox(height: 16),
-            // Stats Row
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
+                _miniStat('Power XP', '${entry.xp}', AppTheme.goldPrimary, Icons.bolt_rounded),
                 _miniStat('Rating', '${entry.eloRating}', AppTheme.lavender, Icons.trending_up_rounded),
-                _miniStat('Wins', '${entry.wins}', AppTheme.accentCyan, Icons.emoji_events_rounded),
-                _miniStat('Power', '${entry.xp}', AppTheme.goldPrimary, Icons.bolt_rounded),
+                _miniStat('Win Rate', '${entry.winRate}%', AppTheme.accentCyan, Icons.pie_chart_rounded),
               ],
             ),
           ],
@@ -676,52 +561,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     );
   }
 
-  void _showDonationDialog(BuildContext context, _LeaderboardEntry entry) {
-    if (entry.xp >= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${entry.username} is doing fine on XP!')));
-      return;
-    }
 
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.navyCard,
-        title: Text('Donate XP to ${entry.username}?',
-            style: GoogleFonts.fredoka(color: AppTheme.goldPrimary)),
-        content: Text(
-            'They currently have ${entry.xp} XP. Donate 100 XP to help them out?'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          ElevatedButton(
-            style:
-                ElevatedButton.styleFrom(backgroundColor: AppTheme.goldPrimary),
-            onPressed: () async {
-              Navigator.pop(ctx);
-              final authRepo = di.sl<AuthRepository>();
-              final success =
-                  await authRepo.donateXP(recipientId: entry.id, amount: 100);
-              if (!context.mounted) return;
-              if (success) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Donation successful! 💖')));
-                di.sl<AchievementService>().evaluateSpecialActions('donate_xp');
-                context.read<AuthBloc>().add(AuthCheckStatusEvent());
-                _fetchLeaderboard(background: true);
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                    content: Text(
-                        'Donation failed. Not enough XP or server error.')));
-              }
-            },
-            child: const Text('Donate 100 XP',
-                style: TextStyle(color: Colors.black)),
-          ),
-        ],
-      ),
-    );
-  }
 
   Map<String, dynamic> _asStringKeyedMap(dynamic raw) {
     if (raw is Map<String, dynamic>) return raw;
@@ -731,3 +571,4 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     return const <String, dynamic>{};
   }
 }
+
