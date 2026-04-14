@@ -12,6 +12,7 @@ import '../../../data/services/achievement_service.dart';
 import '../../../data/services/multiplayer_service.dart';
 import '../../blocs/auth/auth_bloc.dart';
 import '../../../data/repositories/auth_repository.dart';
+import '../../../data/services/elo_service.dart';
 import '../../../data/services/mission_service.dart';
 
 class _LeaderboardEntry {
@@ -98,7 +99,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   bool _loading = true;
   bool _isBackgroundRefreshing = false;
   String _error = '';
-  String _sortType = 'xp'; // Primary metric switched to XP as per user request
+  String _sortType = 'elo'; // Global ranking by ELO rating
   int _myRank = 0;
   int _activeFetchId = 0;
   String? _bountyUserId;
@@ -400,7 +401,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 
     final isPodium = entry.rank <= 3;
 
-    return Container(
+    return GestureDetector(
+      onTap: () => _showPlayerDetailsDialog(entry),
+      child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -490,7 +493,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                         ],
                       ),
                       Text(
-                        'LEVEL ${entry.level}',
+                        EloService.getRankTitle(entry.eloRating).toUpperCase(),
                         style: GoogleFonts.baloo2(
                             color: AppTheme.goldPrimary.withValues(alpha: 0.8),
                             fontSize: 11,
@@ -506,14 +509,134 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _miniStat('Power XP', '${entry.xp}', AppTheme.goldPrimary, Icons.bolt_rounded),
-                _miniStat('Rating', '${entry.eloRating}', AppTheme.lavender, Icons.trending_up_rounded),
-                _miniStat('Win Rate', '${entry.winRate}%', AppTheme.accentCyan, Icons.pie_chart_rounded),
+                _miniStat('Rating', '${entry.eloRating}', AppTheme.lavender, Icons.stars_rounded),
+                _miniStat('Wins', '${entry.wins}', AppTheme.goldPrimary, Icons.emoji_events_rounded),
+                _miniStat('Win Rate', '${entry.winRate.toStringAsFixed(0)}%', AppTheme.accentCyan, Icons.insights_rounded),
+                _miniStat('Matches', '${entry.gamesPlayed}', AppTheme.skyBlue, Icons.sports_esports_rounded),
               ],
             ),
           ],
         ),
-      ).animate().fadeIn(delay: (index * 40).ms).slideY(begin: 0.1);
+      ).animate().fadeIn(delay: (index * 40).ms).slideY(begin: 0.1),
+    );
+  }
+
+  void _showPlayerDetailsDialog(_LeaderboardEntry entry) {
+    final rankColor = entry.rank == 1
+        ? const Color(0xFFFFD700)
+        : entry.rank == 2
+            ? const Color(0xFFC0C0C0)
+            : entry.rank == 3
+                ? const Color(0xFFCD7F32)
+                : AppTheme.textMuted;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: AppTheme.midnight,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            gradient: AppTheme.backgroundGradient,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.1)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 30,
+                    backgroundColor: rankColor.withValues(alpha: 0.2),
+                    child: Text(
+                      entry.username.isNotEmpty ? entry.username.characters.first.toUpperCase() : '?',
+                      style: GoogleFonts.fredoka(
+                          color: rankColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 24),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          entry.username,
+                          style: GoogleFonts.fredoka(
+                            color: AppTheme.textPrimary,
+                            fontSize: 24,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        Text(
+                          EloService.getRankTitle(entry.eloRating).toUpperCase(),
+                          style: GoogleFonts.baloo2(
+                              color: AppTheme.goldPrimary.withValues(alpha: 0.8),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1.2),
+                        ),
+                        Text(
+                          'RANK #${entry.rank}',
+                          style: GoogleFonts.fredoka(
+                            color: rankColor,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              // Stats Grid
+              GridView.count(
+                crossAxisCount: 2,
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                children: [
+                  _dialogStatTile('ELO Rating', '${entry.eloRating}', AppTheme.lavender, Icons.stars_rounded),
+                  _dialogStatTile('Wins', '${entry.wins}', AppTheme.goldPrimary, Icons.emoji_events_rounded),
+                  _dialogStatTile('Losses', '${entry.losses}', AppTheme.accentRed, Icons.cancel_rounded),
+                  _dialogStatTile('Draws', '${entry.draws}', AppTheme.textMuted, Icons.handshake_rounded),
+                  _dialogStatTile('Win Rate', '${entry.winRate.toStringAsFixed(1)}%', AppTheme.accentCyan, Icons.insights_rounded),
+                  _dialogStatTile('Matches', '${entry.gamesPlayed}', AppTheme.skyBlue, Icons.sports_esports_rounded),
+                  _dialogStatTile('Longest Streak', '${entry.longestStreak}', AppTheme.accentPurple, Icons.local_fire_department_rounded),
+                  _dialogStatTile('Power XP', '${entry.xp}', AppTheme.goldPrimary, Icons.bolt_rounded),
+                ],
+              ),
+              const SizedBox(height: 24),
+              // Close Button
+              ElevatedButton(
+                onPressed: () => Navigator.pop(ctx),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.goldPrimary,
+                  foregroundColor: AppTheme.midnight,
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                child: Text(
+                  'Close',
+                  style: GoogleFonts.fredoka(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _miniStat(String label, String value, Color color, IconData icon) {
@@ -548,7 +671,41 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     );
   }
 
-
+  Widget _dialogStatTile(String label, String value, Color color, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.navyCard.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: color, size: 24),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: GoogleFonts.fredoka(
+              color: AppTheme.textPrimary,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: GoogleFonts.baloo2(
+              color: AppTheme.textSecondary,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
 
   Map<String, dynamic> _asStringKeyedMap(dynamic raw) {
     if (raw is Map<String, dynamic>) return raw;

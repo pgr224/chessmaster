@@ -15,27 +15,6 @@ leaderboard.get('/', async (c) => {
 
   try {
     const rows = await c.env.DB.prepare(`
-      WITH player_stats AS (
-        SELECT 
-          u.id, 
-          u.username, 
-          u.avatar_url, 
-          u.xp, 
-          u.is_online,
-          COALESCE(s.wins, 0) as wins,
-          COALESCE(s.losses, 0) as losses,
-          COALESCE(s.draws, 0) as draws,
-          COALESCE(s.games_played, 0) as games_played,
-          COALESCE(s.longest_streak, 0) as longest_streak,
-          COALESCE(s.elo_rating, 1200) as elo_rating,
-          CASE 
-            WHEN COALESCE(s.games_played, 0) > 0 
-            THEN ROUND(CAST(s.wins AS REAL) / s.games_played * 100, 1)
-            ELSE 0 
-          END as win_rate
-        FROM users u
-        LEFT JOIN user_stats s ON u.id = s.user_id
-      )
       SELECT 
         *,
         CASE
@@ -48,10 +27,10 @@ leaderboard.get('/', async (c) => {
                 WHEN ? = 'elo' THEN elo_rating
                 ELSE xp 
               END DESC,
-              xp DESC -- Secondary sort by total XP for tie-breaking
+              xp DESC 
           ) 
         END as rank
-      FROM player_stats
+      FROM unified_player_scoring
       ORDER BY 
         CASE WHEN games_played >= 1 THEN 0 ELSE 1 END,
         CASE 

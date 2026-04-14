@@ -97,7 +97,22 @@ app.get('/multiplayer/tournament/:tournamentId', async (c) => {
   return stub.fetch(c.req.raw)
 })
 
+import { MaintenanceService } from './services/maintenance_service'
+
+// ... (previous routes)
+
 // Health check
 app.get('/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }))
 
-export default app
+// ════════════════════════════════════════
+// CLOUDFLARE WORKER EXPORTS
+// ════════════════════════════════════════
+export default {
+  // Handle HTTP requests via Hono
+  fetch: app.fetch,
+
+  // Handle scheduled tasks (Cron)
+  async scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext) {
+    ctx.waitUntil(MaintenanceService.cleanupAndRefresh(env))
+  }
+}

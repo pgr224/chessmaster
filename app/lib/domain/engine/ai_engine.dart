@@ -2,6 +2,7 @@ import 'dart:isolate';
 import 'dart:math';
 import '../engine/chess_engine.dart';
 import '../../data/models/game_config.dart';
+import './personality_engine.dart';
 
 class AIEngine {
   static const Map<AIDifficulty, _AIConfig> _configs = {
@@ -31,13 +32,14 @@ class AIEngine {
     ChessEngine engine,
     AIDifficulty difficulty, {
     Duration timeout = const Duration(seconds: 5),
+    AIPersonality personality = AIPersonality.coach,
   }) async {
     // Run AI search on a background isolate so UI actions stay responsive.
     final fenSnapshot = engine.toFEN();
     final bestMoveAlg = await Isolate.run<String?>(() {
       final isolatedEngine = ChessEngine.fromFEN(fenSnapshot);
-      final move =
-          _getBestMoveSync(isolatedEngine, difficulty, timeout: timeout);
+      final move = _getBestMoveSync(isolatedEngine, difficulty,
+          timeout: timeout, personality: personality);
       return move?.toAlgebraic();
     });
 
@@ -51,6 +53,7 @@ class AIEngine {
     ChessEngine engine,
     AIDifficulty difficulty, {
     int count = 3,
+    AIPersonality personality = AIPersonality.coach,
   }) async {
     final fenSnapshot = engine.toFEN();
     final results = await Isolate.run<List<(String, int)>>(() {
@@ -63,7 +66,7 @@ class AIEngine {
       for (final move in moves) {
         isolatedEngine.applyMoveInternal(move);
         final score = -_search(isolatedEngine, config.depth, -999999, 999999,
-                DateTime.now(), const Duration(seconds: 10))
+                DateTime.now(), const Duration(seconds: 10), personality)
             .score;
         isolatedEngine.undoMove();
         scored.add((move.toAlgebraic(), score));
@@ -93,6 +96,7 @@ class AIEngine {
     ChessEngine engine,
     AIDifficulty difficulty, {
     Duration timeout = const Duration(seconds: 5),
+    AIPersonality personality = AIPersonality.coach,
   }) {
     final startTime = DateTime.now();
     final config = _configs[difficulty]!;
@@ -106,9 +110,10 @@ class AIEngine {
           moves.first;
     }
 
-    // 2. Iterative Deepening
+    // 2. Iterative Deepening with Humanoid Selection
     Move? bestMove;
     int currentDepth = 1;
+    List<(Move, int)> topCandidates = [];
 
     // Clear TT occasionally to avoid memory issues on web
     if (_tt.length > 50000) _tt.clear();
@@ -117,21 +122,48 @@ class AIEngine {
       final elapsed = DateTime.now().difference(startTime);
       if (elapsed > timeout && currentDepth > 1) break;
 
-      final result =
-          _search(engine, currentDepth, -999999, 999999, startTime, timeout);
-      if (result.move != null) bestMove = result.move;
+      final moves = engine.allLegalMoves();
+      final List<(Move, int)> scored = [];
+
+      for (final move in moves) {
+        engine.applyMoveInternal(move);
+        final res = _search(engine, currentDepth - 1, -999999, 999999,
+            startTime, timeout, personality);
+        engine.undoMove();
+        scored.add((move, -res.score));
+      }
+
+      scored.sort((a, b) => b.$2.compareTo(a.$2));
+
+      if (scored.isNotEmpty) {
+        bestMove = scored.first.$1;
+        topCandidates = scored;
+      }
 
       currentDepth++;
+    }
+
+    // 3. Apply Multi-Choice Randomness (Humanization)
+    if (config.randomness > 0 && topCandidates.length > 1) {
+      final rand = Random().nextDouble();
+      if (rand < config.randomness) {
+        // Pick one of the top 3 moves instead of #1
+        final count = min(topCandidates.length, 3);
+        final idx = Random().nextInt(count);
+        return topCandidates[idx].$1;
+      }
     }
 
     return bestMove ?? engine.allLegalMoves().firstOrNull;
   }
 
   static _SearchResult _search(ChessEngine engine, int depth, int alpha,
-      int beta, DateTime startTime, Duration timeout) {
+      int beta, DateTime startTime, Duration timeout,
+      [AIPersonality personality = AIPersonality.coach]) {
     if (depth == 0) {
       return _SearchResult(
-          score: _quiescence(engine, alpha, beta, startTime, timeout));
+          score:
+              _quiescence(engine, alpha, beta, startTime, timeout, personality));
     }
 
     final fen = engine.toFEN();
@@ -168,8 +200,9 @@ class AIEngine {
       }
 
       engine.applyMoveInternal(move);
-      final score =
-          -_search(engine, depth - 1, -beta, -alpha, startTime, timeout).score;
+      final score = -_search(
+              engine, depth - 1, -beta, -alpha, startTime, timeout, personality)
+          .score;
       engine.undoMove();
 
       if (score > bestScore) {
@@ -185,8 +218,9 @@ class AIEngine {
   }
 
   static int _quiescence(ChessEngine engine, int alpha, int beta,
-      DateTime startTime, Duration timeout) {
-    int standPat = _evaluate(engine);
+      DateTime startTime, Duration timeout,
+      [AIPersonality personality = AIPersonality.coach]) {
+    int standPat = _evaluate(engine, personality);
     if (standPat >= beta) return beta;
     if (alpha < standPat) alpha = standPat;
 
@@ -207,7 +241,7 @@ class AIEngine {
     return alpha;
   }
 
-  static int _evaluate(ChessEngine engine) {
+  static int _evaluate(ChessEngine engine, [AIPersonality personality = AIPersonality.coach]) {
     if (engine.status == GameStatus.checkmate) return -100000;
     if (engine.status == GameStatus.stalemate ||
         engine.status == GameStatus.draw) return 0;
@@ -220,7 +254,22 @@ class AIEngine {
         final piece = board[r][f];
         if (piece == null) continue;
 
-        final value = _pieceValue(piece.type) + _positionalBonus(piece, f, r);
+        int value = _pieceValue(piece.type) + _positionalBonus(piece, f, r);
+        
+        // --- Personality Bias ---
+        if (personality == AIPersonality.aggressive) {
+          // Favor forward development and attacking squares
+          if (piece.type == PieceType.knight || piece.type == PieceType.bishop) {
+            final homeRank = piece.color == PieceColor.white ? 7 : 0;
+            if (r != homeRank) value += 10; // Bonus for developed pieces
+          }
+          if (engine.status == GameStatus.check) value += 15;
+        } else if (personality == AIPersonality.defensive) {
+          // Favor king safety and solid structures
+          if (piece.type == PieceType.king) value += 20;
+          if (piece.type == PieceType.pawn) value += 5; // Favor pawn chains
+        }
+
         score += piece.color == PieceColor.white ? value : -value;
       }
     }

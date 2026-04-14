@@ -29,6 +29,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<List<GameModel>>? _recentGamesFuture;
   String? _recentForUser;
   String? _lastActiveGameId;
+  bool _notificationsExpanded = false;
 
   @override
   void initState() {
@@ -402,95 +403,237 @@ class _HomeScreenState extends State<HomeScreen> {
     required int outgoingPending,
     required MultiplayerState multiplayerState,
   }) {
-    final total = incomingPending + outgoingPending;
-    final latestPending = [
-      ...multiplayerState.incomingChallenges
-          .where((request) => request.status == 'pending'),
-      ...multiplayerState.outgoingChallenges.where((request) =>
-          request.status == 'pending' || request.status == 'queued'),
-    ]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    // FILTER: Only show active incoming challenges from online players
+    final activeIncoming = multiplayerState.incomingChallenges.where((req) {
+      if (req.status != 'pending') return false;
+      final player = multiplayerState.availablePlayers.firstWhere(
+        (p) => p.id == req.playerId,
+        orElse: () => OnlineLobbyUser(id: req.playerId, name: req.playerName, xp: 0, presence: LobbyPresence.offline),
+      );
+      return player.presence != LobbyPresence.offline;
+    }).toList()..sort((a,b) => b.createdAt.compareTo(a.createdAt));
 
-    final current = latestPending.isNotEmpty ? latestPending.first : null;
-    final currentLabel = current == null
-        ? 'No pending notification right now.'
-        : current.isIncoming
-            ? '${current.playerName} sent a ${current.mode.toUpperCase()} request (${current.timeControl}).'
-            : 'Waiting on ${current.playerName} for your ${current.mode.toUpperCase()} request (${current.timeControl}).';
+    final totalActive = activeIncoming.length + outgoingPending;
+    if (totalActive == 0 && !_notificationsExpanded) return const SizedBox.shrink();
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        gradient: AppTheme.cardGradient,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.notifications_active_rounded,
-              color: AppTheme.accentCyan, size: 20),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(22),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOutExpo,
+        margin: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+        decoration: BoxDecoration(
+          gradient: AppTheme.cardGradient,
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.2),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // HEADER (Clickable to expand)
+            InkWell(
+              onTap: () => setState(() => _notificationsExpanded = !_notificationsExpanded),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                child: Row(
                   children: [
-                    Text(
-                      'Notifications',
-                      style: GoogleFonts.fredoka(
-                        color: AppTheme.textPrimary,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppTheme.accentCyan.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        _notificationsExpanded ? Icons.expand_less_rounded : Icons.notifications_active_rounded,
+                        color: AppTheme.accentCyan,
+                        size: 20,
                       ),
                     ),
-                    if (total > 0) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: AppTheme.accentCyan.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(999),
-                          border: Border.all(
-                            color: AppTheme.accentCyan.withValues(alpha: 0.3),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                'Multiplayer Requests',
+                                style: GoogleFonts.fredoka(
+                                  color: AppTheme.textPrimary,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              if (totalActive > 0) ...[
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    gradient: AppTheme.rainbowGradient,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    '$totalActive',
+                                    style: GoogleFonts.fredoka(
+                                      color: AppTheme.midnight,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
-                        ),
-                        child: Text(
-                          '$total',
-                          style: GoogleFonts.fredoka(
-                            color: AppTheme.accentCyan,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
+                          if (!_notificationsExpanded && activeIncoming.isNotEmpty)
+                            Text(
+                              'Challenge from ${activeIncoming.first.playerName}...',
+                              style: GoogleFonts.baloo2(
+                                color: AppTheme.textSecondary,
+                                fontSize: 12,
+                              ),
+                            ),
+                          if (!_notificationsExpanded && activeIncoming.isEmpty && outgoingPending > 0)
+                            Text(
+                              'Outbound request pending...',
+                              style: GoogleFonts.baloo2(
+                                color: AppTheme.textSecondary,
+                                fontSize: 12,
+                              ),
+                            ),
+                        ],
                       ),
-                    ],
+                    ),
+                    const Icon(Icons.keyboard_arrow_down_rounded, color: AppTheme.textMuted),
                   ],
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  currentLabel,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.baloo2(
-                    color: AppTheme.textSecondary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
+              ),
+            ),
+            
+            // EXPANDED CONTENT
+            if (_notificationsExpanded) ...[
+              const Divider(height: 1, color: Colors.white10),
+              if (activeIncoming.isEmpty && outgoingPending == 0)
+                Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Text(
+                    'No active requests. Head to the Lobby to find players!',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.baloo2(color: AppTheme.textMuted),
+                  ),
+                ),
+              
+              ...activeIncoming.map((req) => _buildChallengeItem(req, isIncoming: true)),
+              ...multiplayerState.outgoingChallenges
+                  .where((r) => r.status == 'pending' || r.status == 'queued')
+                  .map((req) => _buildChallengeItem(req, isIncoming: false)),
+              
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: TextButton(
+                  onPressed: () => context.push('/lobby'),
+                  child: const Text('Go to Lobby 🌍'),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    ).animate().fadeIn(delay: 150.ms).slideY(begin: 0.1);
+  }
+
+  Widget _buildChallengeItem(ChallengeRequest req, {required bool isIncoming}) {
+    final player = context.read<MultiplayerBloc>().state.availablePlayers.firstWhere(
+      (p) => p.id == req.playerId,
+      orElse: () => OnlineLobbyUser(id: req.playerId, name: req.playerName, xp: 0, presence: LobbyPresence.offline),
+    );
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.03),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              // Tiny presence indicator
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: player.presence == LobbyPresence.offline ? Colors.grey : AppTheme.accentCyan,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          req.playerName,
+                          style: GoogleFonts.fredoka(
+                            color: AppTheme.textPrimary,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '(${player.presenceLabel})',
+                          style: GoogleFonts.baloo2(
+                            color: player.isAvailable ? AppTheme.accentCyan : AppTheme.textMuted,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      req.summary,
+                      style: GoogleFonts.baloo2(
+                        color: AppTheme.textSecondary,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (isIncoming) ...[
+                IconButton(
+                  onPressed: () => context.read<MultiplayerBloc>().add(MpAcceptChallengeEvent(req.playerId, requestId: req.id)),
+                  icon: const Icon(Icons.check_circle_rounded, color: AppTheme.accentCyan, size: 28),
+                ),
+                IconButton(
+                  onPressed: () => context.read<MultiplayerBloc>().add(MpDeclineChallengeEvent(req.playerId, requestId: req.id)),
+                  icon: const Icon(Icons.cancel_rounded, color: AppTheme.accentRed, size: 28),
+                ),
+              ] else ...[
+                const Padding(
+                  padding: EdgeInsets.only(right: 8),
+                  child: SizedBox(
+                    width: 16, height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.accentCyan),
                   ),
                 ),
               ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          TextButton.icon(
-            onPressed: () => context.push('/settings'),
-            icon: const Icon(Icons.tune_rounded, size: 16),
-            label: const Text('Manage'),
+            ],
           ),
         ],
       ),
-    ).animate().fadeIn(delay: 180.ms).slideY(begin: 0.06);
+    );
   }
 
   Widget _buildLowXPWarning(UserModel user) {

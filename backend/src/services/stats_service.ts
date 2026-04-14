@@ -53,13 +53,14 @@ export class StatsService {
     
     const isWin = outcome === 'win'
 
+    // Update user_stats (now unified scoring table)
     await db.prepare(`
       INSERT INTO user_stats (
         user_id, games_played, ${field}, ${modeField}, 
         ${isWin ? `${modeWinField},` : ''} 
-        current_streak, longest_streak, elo_rating, updated_at
+        current_streak, longest_streak, elo_rating, xp, updated_at
       ) 
-      VALUES (?, 1, 1, 1, ${isWin ? '1, ' : ''} ?, ?, ?, ?)
+      VALUES (?, 1, 1, 1, ${isWin ? '1, ' : ''} ?, ?, ?, ?, ?)
       ON CONFLICT(user_id) DO UPDATE SET
         games_played = user_stats.games_played + 1,
         ${field} = user_stats.${field} + 1,
@@ -72,29 +73,31 @@ export class StatsService {
           ELSE user_stats.longest_streak 
         END,
         elo_rating = user_stats.elo_rating + ?,
+        xp = user_stats.xp + ?,
         updated_at = EXCLUDED.updated_at
     `).bind(
       userId, 
       isWin ? 1 : 0, 
       isWin ? 1 : 0, 
       1200 + eloChange,
+      xpChange,
       now,
       outcome,
       outcome,
-      eloChange
+      eloChange,
+      xpChange
     ).run()
 
-    // 3. Update User XP Atomically
+    // 3. Keep legacy users table in sync for now (transition period)
     if (xpChange !== 0) {
-      // Get current XP for logging history accurately
-      const user = await db.prepare('SELECT xp FROM users WHERE id = ?').bind(userId).first<{ xp: number }>()
-      const currentXp = user?.xp ?? 0
-      const nextXp = Math.max(0, currentXp + xpChange)
-
-      await db.prepare('UPDATE users SET xp = ?, updated_at = ? WHERE id = ?')
-        .bind(nextXp, now, userId).run()
+      await db.prepare('UPDATE users SET xp = xp + ?, updated_at = ? WHERE id = ?')
+        .bind(xpChange, now, userId).run()
 
       // Log XP history
+      const userResult = await db.prepare('SELECT xp FROM user_stats WHERE user_id = ?').bind(userId).first<{ xp: number }>()
+      const nextXp = userResult?.xp ?? 0
+      const currentXp = nextXp - xpChange
+
       await db.prepare(`
         INSERT INTO xp_history (user_id, game_id, xp_before, xp_after, change, created_at)
         VALUES (?, ?, ?, ?, ?, ?)

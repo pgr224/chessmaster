@@ -177,25 +177,14 @@ class AIEngineController {
 
           // ADAPTIVE ACCURACY MULTIPLIER: Only for AI Mode
           double accuracyMult = 1.0;
-          if (_difficulty == AIDifficulty.aiMode && playerAccuracy != null) {
-            if (playerAccuracy >= 95.0) {
-              accuracyMult = 1.5; // 50% more time for masters
-            } else if (playerAccuracy >= 90.0) {
-              accuracyMult = 1.3; // 30% more for experts
-            } else if (playerAccuracy >= 80.0) {
-              accuracyMult = 1.1; // 10% more for good players
-            } else if (playerAccuracy < 70.0) {
-              accuracyMult = 0.8; // Reduce time for struggling players
-            }
-          }
-
           final bool isAIMode = _difficulty == AIDifficulty.aiMode;
+          
           if (isAIMode && playerAccuracy != null) {
             final normalizedAccuracy = playerAccuracy.clamp(0.0, 100.0);
             if (normalizedAccuracy >= 95.0) {
-              accuracyMult = 1.8;
+              accuracyMult = 2.0; // More time for very strong players
             } else if (normalizedAccuracy >= 90.0) {
-              accuracyMult = 1.6;
+              accuracyMult = 1.7;
             } else if (normalizedAccuracy >= 80.0) {
               accuracyMult = 1.4;
             } else if (normalizedAccuracy >= 70.0) {
@@ -207,21 +196,25 @@ class AIEngineController {
             accuracyMult = 1.5;
           }
 
-          final int baseTime = (800 + (complexity * 50)).toInt();
+          final int baseTime = (800 + (complexity * 60)).toInt();
           dynamicMoveTime =
-              (baseTime * personalityMult * accuracyMult).toInt().clamp(500, cap);
+              (baseTime * personalityMult * accuracyMult).toInt().clamp(1000, cap);
 
+          // For AI Mode, we ensure it takes at least 1.5s for non-forced moves 
+          // to maintain a "thinking" presence, but no longer 8s hardcoded.
           if (isAIMode) {
-            dynamicMoveTime = dynamicMoveTime.clamp(8000, cap);
+            dynamicMoveTime = dynamicMoveTime.clamp(1500, cap);
           }
 
           // SET DYNAMIC THINKING MESSAGE
           if (pieceCount < 10) {
             _latestThinkingMessage = "Endgame time! Let's see... 🔍";
-          } else if (complexity > 40) {
-            _latestThinkingMessage = "Hmm, this is tricky! 🧠";
+          } else if (complexity > 45) {
+            _latestThinkingMessage = "Hmm, this is extremely complex! 🧠💻";
+          } else if (complexity > 30) {
+            _latestThinkingMessage = "Analyzing all variations... ⚙️";
           } else if (engine.isInCheck) {
-            _latestThinkingMessage = "Check! I need to move! 🛡️";
+            _latestThinkingMessage = "Check! Evaluating escapes... 🛡️";
           } else {
             _latestThinkingMessage = "Calculating... ⚙️";
           }

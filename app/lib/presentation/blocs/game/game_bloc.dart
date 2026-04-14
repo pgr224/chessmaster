@@ -16,6 +16,7 @@ import '../../../data/models/tutorial_model.dart';
 import '../../../data/models/puzzle_model.dart';
 import '../../../data/services/audio_service.dart';
 import '../../../data/services/elo_service.dart';
+import '../../../data/services/mastery_service.dart';
 import '../../../data/models/xp_rules.dart';
 import '../../../data/repositories/auth_repository.dart';
 import '../../../data/repositories/puzzle_repository.dart';
@@ -282,6 +283,8 @@ class GameState extends Equatable {
   final HintResult? activeHint;
   final CoachSettings coachSettings;
   final List<CoachFeedback> gameCoachHistory;
+  final double masteryRating;
+  final String? masteryRecommendation;
 
   // Puzzle Overhaul
   final int puzzleStreak;
@@ -386,6 +389,8 @@ class GameState extends Equatable {
     this.activeHint,
     this.coachSettings = const CoachSettings(),
     this.gameCoachHistory = const [],
+    this.masteryRating = 1000.0,
+    this.masteryRecommendation,
     this.puzzleStreak = 0,
     this.puzzleRushStrikes = 0,
     this.puzzleRushTime = 180, // 3 minutes
@@ -493,6 +498,8 @@ class GameState extends Equatable {
     HintResult? activeHint,
     CoachSettings? coachSettings,
     List<CoachFeedback>? gameCoachHistory,
+    double? masteryRating,
+    String? masteryRecommendation,
     int? puzzleStreak,
     int? puzzleRushStrikes,
     int? puzzleRushTime,
@@ -602,6 +609,8 @@ class GameState extends Equatable {
       activeHint: clearActiveHint ? null : (activeHint ?? this.activeHint),
       coachSettings: coachSettings ?? this.coachSettings,
       gameCoachHistory: gameCoachHistory ?? this.gameCoachHistory,
+      masteryRating: masteryRating ?? this.masteryRating,
+      masteryRecommendation: clearExplanation ? null : (masteryRecommendation ?? this.masteryRecommendation),
       puzzleStreak: puzzleStreak ?? this.puzzleStreak,
       puzzleRushStrikes: puzzleRushStrikes ?? this.puzzleRushStrikes,
       puzzleRushTime: puzzleRushTime ?? this.puzzleRushTime,
@@ -927,7 +936,21 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       puzzle: config.puzzle,
       parsedPuzzleMoves: parsedPuzzleMoves,
     );
-    emit(initialState);
+    
+    // --- LOAD PERSISTENT MASTERY FOR AI MODE ---
+    GameState finalInitialState = initialState;
+    if (difficulty == AIDifficulty.aiMode) {
+      final masteryService = MasteryService();
+      await masteryService.init(); // Refresh from storage
+      final initialPersonality = masteryService.suggestPersonality(masteryService.masteryRating > 1500 ? 'positional' : 'aggressive');
+      
+      finalInitialState = initialState.copyWith(
+        activePersonality: initialPersonality,
+        masteryRating: masteryService.masteryRating,
+      );
+    }
+    
+    emit(finalInitialState);
 
     // Initialize time control
     if (config.timeControl != null && config.timeControl! > 0) {
@@ -1539,48 +1562,44 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       }
     }
 
-    // BACKGROUND LEELA ANALYSIS: Adapt AI personality based on player style
-    if (shouldAnalyze && state.mode == GameMode.singlePlayer) {
-      // Run in background without blocking UI
-      Future.delayed(const Duration(milliseconds: 100), () async {
-        try {
-          final recentMoves = state.moveHistory
-              .take(10) // Last 10 moves
-              .map((m) => m.algebraic ?? m.toAlgebraic())
-              .toList();
+    // DYNAMIC PERSONALITY ADAPTATION (ONLY FOR DYNAMIC AI MODE)
+    final isDynamicAI = state.aiDifficulty == AIDifficulty.aiMode;
+    if (shouldAnalyze && isDynamicAI) {
+      final moveCount = state.moveHistory.length;
+      // Analyze every 5 moves to create a "stable" but evolving personality
+      if (moveCount > 0 && moveCount % 5 == 0) {
+        Future.delayed(const Duration(milliseconds: 200), () async {
+          try {
+            final recentHistory = state.moveHistory
+                .map((m) => m.toAlgebraic())
+                .toList();
+            
+            final analysis = await _engineController.analyzePlayerStyle(
+              _engine.toFEN(),
+              recentHistory.length > 10 ? recentHistory.sublist(recentHistory.length - 10) : recentHistory,
+            );
 
-          // Use Leela for style analysis (currently heuristic-based)
-          final analysis = await _engineController.analyzePlayerStyle(
-            _engine.toFEN(),
-            recentMoves,
-          );
+            if (!isClosed && analysis['style'] != null) {
+              final newPersonality = MasteryService().suggestPersonality(analysis['style']);
+              
+              if (newPersonality != state.activePersonality) {
+                // Determine a flavor message based on style
+                String msg = "Adapting strategy...";
+                if (analysis['style'] == 'pawn_storm') msg = "I see your pawn storm coming... going defensive! 🛡️";
+                if (analysis['style'] == 'aggressive') msg = "You're playing sharp! I'll need to be more solid. 🥊";
+                if (analysis['style'] == 'solid') msg = "Quite the fortress you have there... I'll try to find a crack! 🔨";
 
-          if (!isClosed && analysis['style'] != null) {
-            // Update AI personality based on analysis
-            AIPersonality newPersonality;
-            switch (analysis['style']) {
-              case 'aggressive':
-                newPersonality = AIPersonality.aggressive;
-                break;
-              case 'defensive':
-                newPersonality = AIPersonality.defensive;
-                break;
-              default:
-                newPersonality = AIPersonality.tricky;
+                add(GameUpdatePersonalityEvent(
+                  personality: newPersonality,
+                  message: msg,
+                ));
+              }
             }
-
-            // Only change if confidence is high enough
-            if ((analysis['confidence'] as double? ?? 0) > 0.6) {
-              add(GameUpdatePersonalityEvent(
-                personality: newPersonality,
-                message: 'Adapting to your style...',
-              ));
-            }
+          } catch (e) {
+            debugPrint('[Dynamic Personality Adaptation Error] $e');
           }
-        } catch (e) {
-          debugPrint('[Background Analysis Error] $e');
-        }
-      });
+        });
+      }
     }
 
     // Note: We avoid Future.delayed here as it can cause late emits after bloc closure.
@@ -2817,8 +2836,6 @@ class GameBloc extends Bloc<GameEvent, GameState> {
 
   Future<void> _finalizeGameAnalysis(Emitter<GameState> emit) async {
     if (state.moveHistory.isEmpty) return;
-
-    // Only perform deep analysis for finished games
     if (!state.isGameOver) return;
 
     try {
@@ -2828,61 +2845,66 @@ class GameBloc extends Bloc<GameEvent, GameState> {
             'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
       );
 
-        final isWhite = state.playerColor == PieceColor.white;
-
-      final fallbackPlayerAcc = state.accuracy;
-      final fallbackOpponentAcc = state.opponentAccuracy;
+      final isWhite = state.playerColor == PieceColor.white;
+      final won = (isWhite && state.result == GameResult.whiteWins) || 
+                  (!isWhite && state.result == GameResult.blackWins);
 
       final whiteAccuracy = _toClampedAccuracy(
         analysis['whiteAccuracy'],
-        fallback: isWhite ? fallbackPlayerAcc : fallbackOpponentAcc,
+        fallback: state.accuracy,
       );
       final blackAccuracy = _toClampedAccuracy(
         analysis['blackAccuracy'],
-        fallback: isWhite ? fallbackOpponentAcc : fallbackPlayerAcc,
+        fallback: state.accuracy,
       );
+      
+      final whiteMistakes = _toNonNegativeInt(analysis['whiteMistakes']);
+      final blackMistakes = _toNonNegativeInt(analysis['blackMistakes']);
+      final whiteBlunders = _toNonNegativeInt(analysis['whiteBlunders']);
+      final blackBlunders = _toNonNegativeInt(analysis['blackBlunders']);
 
-        final whiteMistakes = _toNonNegativeInt(analysis['whiteMistakes']);
-        final blackMistakes = _toNonNegativeInt(analysis['blackMistakes']);
-        final whiteBlunders = _toNonNegativeInt(analysis['whiteBlunders']);
-        final blackBlunders = _toNonNegativeInt(analysis['blackBlunders']);
+      final bool mapAsWhiteVsBlack = state.mode == GameMode.twoPlayer;
 
-        final bool mapAsWhiteVsBlack = state.mode == GameMode.twoPlayer;
-
-        final playerAccuracy =
+      final playerAcc =
           mapAsWhiteVsBlack ? whiteAccuracy : (isWhite ? whiteAccuracy : blackAccuracy);
-        final opponentAccuracy =
+      final oppAcc =
           mapAsWhiteVsBlack ? blackAccuracy : (isWhite ? blackAccuracy : whiteAccuracy);
 
-        final playerMistakes =
+      final playerMistakes =
           mapAsWhiteVsBlack ? whiteMistakes : (isWhite ? whiteMistakes : blackMistakes);
-        final opponentMistakes =
+      final oppMistakes =
           mapAsWhiteVsBlack ? blackMistakes : (isWhite ? blackMistakes : whiteMistakes);
-
-        final playerBlunders =
+      final playerBlunders =
           mapAsWhiteVsBlack ? whiteBlunders : (isWhite ? whiteBlunders : blackBlunders);
-        final opponentBlunders =
+      final oppBlunders =
           mapAsWhiteVsBlack ? blackBlunders : (isWhite ? blackBlunders : whiteBlunders);
 
-        if (_kLogGameOverMetrics && !_hasLoggedGameOverMetrics) {
-          debugPrint(
-            '[GameOverMetrics] mode=${state.mode.name} result=${state.result.name} '
-            'white=(acc:${whiteAccuracy.toStringAsFixed(1)},mist:$whiteMistakes,bl:$whiteBlunders) '
-            'black=(acc:${blackAccuracy.toStringAsFixed(1)},mist:$blackMistakes,bl:$blackBlunders) '
-            'player=(acc:${playerAccuracy.toStringAsFixed(1)},mist:$playerMistakes,bl:$playerBlunders) '
-            'opponent=(acc:${opponentAccuracy.toStringAsFixed(1)},mist:$opponentMistakes,bl:$opponentBlunders)',
-          );
-          _hasLoggedGameOverMetrics = true;
-        }
+      // Adaptive Mastery Analysis
+      final masteryResult = MasteryService().updateMastery(
+        accuracy: playerAcc,
+        won: won,
+        difficulty: state.aiDifficulty ?? AIDifficulty.intermediate,
+      );
 
       emit(state.copyWith(
-        accuracy: playerAccuracy,
-        opponentAccuracy: opponentAccuracy,
+        accuracy: playerAcc,
+        opponentAccuracy: oppAcc,
         mistakes: playerMistakes,
-        opponentMistakes: opponentMistakes,
+        opponentMistakes: oppMistakes,
         blunders: playerBlunders,
-        opponentBlunders: opponentBlunders,
+        opponentBlunders: oppBlunders,
+        masteryRating: (masteryResult['newRating'] as double?) ?? 1000.0,
+        masteryRecommendation: masteryResult['recommendation'] as String?,
       ));
+
+      if (_kLogGameOverMetrics && !_hasLoggedGameOverMetrics) {
+        debugPrint(
+          '[GameOverMetrics] mode=${state.mode.name} result=${state.result.name} '
+          'player=(acc:${playerAcc.toStringAsFixed(1)},mist:$playerMistakes,bl:$playerBlunders) '
+          'mastery=${masteryResult['newRating']}',
+        );
+        _hasLoggedGameOverMetrics = true;
+      }
     } catch (e) {
       debugPrint('[Game Analysis Error] $e');
     }

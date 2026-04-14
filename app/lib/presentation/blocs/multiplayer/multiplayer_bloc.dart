@@ -17,6 +17,8 @@ abstract class MultiplayerEvent extends Equatable {
   List<Object?> get props => [];
 }
 
+class MpOpponentJoinedEvent extends MultiplayerEvent {}
+
 class MpConnectLobbyEvent extends MultiplayerEvent {
   final String userId;
   final String username;
@@ -574,6 +576,7 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
   StreamSubscription? _lobbySub;
   StreamSubscription? _gameSub;
   String? _myUserId;
+  Timer? _joinTimer;
 
   /// Exposed so screens can call service methods not wrapped in events.
   MultiplayerService get mpService => _service;
@@ -601,6 +604,10 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
     on<MpOpponentUndoEvent>((event, emit) => emit(state.copyWith(
           opponentUndoCount: state.opponentUndoCount + 1,
         )));
+    on<MpOpponentJoinedEvent>((event, emit) {
+      _joinTimer?.cancel();
+      emit(state.copyWith(opponentConnected: true));
+    });
     on<MpSendChatEvent>(_onSendChat);
     on<MpChatReceivedEvent>(_onChatReceived);
     on<MpResignEvent>((event, emit) => _service.resign());
@@ -1150,11 +1157,36 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
       timeControl: event.timeControl ?? state.selectedTimeControl,
       variantId: event.variantId ?? state.selectedVariantId,
     );
+
+    emit(state.copyWith(
+      status: MultiplayerStatus.inGame,
+      gameId: event.gameId,
+      playerColor: event.color,
+      opponentName: event.opponentName,
+      opponentAvatarUrl: event.opponentAvatarUrl,
+      opponentLocalAvatar: event.opponentLocalAvatar,
+      variantId: event.variantId ?? 'standard',
+      timeControl: event.timeControl ?? '10+0',
+      opponentConnected: false,
+    ));
+
+    // Opponent join timeout
+    _joinTimer?.cancel();
+    _joinTimer = Timer(const Duration(seconds: 22), () {
+      if (state.status == MultiplayerStatus.inGame && !state.opponentConnected) {
+        add(const MpGameOverEvent('draw', 'opponent_timeout'));
+      }
+    });
+
     _gameSub?.cancel();
     _gameSub = _service.gameUpdates.listen((msg) {
       final msgType = msg['type']?.toString();
       final data = _asMap(msg['data']);
       switch (msgType) {
+        case 'OPPONENT_JOINED':
+        case 'GAME_STARTED':
+          add(MpOpponentJoinedEvent());
+          break;
         case 'MOVE_UPDATE':
           if (data['undo'] == true) {
             add(MpOpponentUndoEvent());
@@ -1164,7 +1196,6 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
               break;
             }
             add(MpOpponentMoveEvent(data));
-            // Update timers immediately from move update to prevent visual skip
             if (data['whiteTime'] != null) {
               add(MpTimerSyncEvent(
                 _toDouble(data['whiteTime']),
@@ -1180,26 +1211,22 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
           ));
           break;
         case 'CHAT':
-          final chatData = data;
           add(MpChatReceivedEvent(ChatMessage(
-            userId: chatData['userId']?.toString() ?? '',
-            username: chatData['username']?.toString() ?? 'Unknown',
-            message:
-                '${chatData['message']?.toString() ?? ''} ${chatData['emoji']?.toString() ?? ''}',
+            userId: data['userId']?.toString() ?? '',
+            username: data['username']?.toString() ?? 'Unknown',
+            message: '${data['message']?.toString() ?? ''} ${data['emoji']?.toString() ?? ''}',
             timestamp: DateTime.fromMillisecondsSinceEpoch(
-                _toInt(chatData['ts'],
-                    fallback: DateTime.now().millisecondsSinceEpoch)),
-            isMe: chatData['userId']?.toString() == _myUserId,
+                _toInt(data['ts'], fallback: DateTime.now().millisecondsSinceEpoch)),
+            isMe: data['userId']?.toString() == _myUserId,
           )));
           break;
         case 'GAME_OVER':
-          final gameOverData = data;
           add(MpGameOverEvent(
-            gameOverData['result']?.toString() ?? 'draw',
-            gameOverData['reason']?.toString() ?? 'unknown',
-            xpDelta: _toIntOrNull(gameOverData['xpDelta']) ??
-                _toIntOrNull(gameOverData['xp']) ??
-                _toIntOrNull(gameOverData['xpChange']),
+            data['result']?.toString() ?? 'draw',
+            data['reason']?.toString() ?? 'unknown',
+            xpDelta: _toIntOrNull(data['xpDelta']) ??
+                _toIntOrNull(data['xp']) ??
+                _toIntOrNull(data['xpChange']),
           ));
           break;
         case 'DRAW_OFFER':
@@ -1219,9 +1246,6 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
           break;
         case 'GAME_SAVED':
           add(MpGameSavedEvent());
-          break;
-        case 'OPPONENT_JOINED':
-          emit(state.copyWith(opponentConnected: true));
           break;
       }
     });

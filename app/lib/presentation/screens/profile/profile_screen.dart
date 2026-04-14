@@ -17,6 +17,7 @@ import 'package:chess_master/presentation/blocs/auth/auth_bloc.dart';
 import '../../../data/models/user_model.dart';
 import '../../../data/models/game_record_model.dart';
 import '../../../data/repositories/auth_repository.dart';
+import '../../../data/services/elo_service.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -229,7 +230,7 @@ class _ProfileContent extends StatelessWidget {
                     color: AppTheme.goldPrimary, size: 18),
                 const SizedBox(width: 6),
                 Text(
-                  'GRANDMASTER STRATEGIST',
+                  EloService.getRankTitle(user.stats.eloRating).toUpperCase(),
                   style: GoogleFonts.baloo2(
                     color: AppTheme.goldPrimary.withValues(alpha: 0.8),
                     fontSize: 14,
@@ -394,7 +395,7 @@ class _ProfileContent extends StatelessWidget {
         crossAxisSpacing: 16,
         childAspectRatio: 1.6,
         children: [
-          _statTile('Rating (ILO)', '${user.stats.eloRating}', AppTheme.lavender,
+          _statTile('ELO Rating', '${user.stats.eloRating}', AppTheme.lavender,
               Icons.stars_rounded),
           _statTile('Wins', '${user.stats.wins}', AppTheme.goldPrimary,
               Icons.emoji_events_rounded),

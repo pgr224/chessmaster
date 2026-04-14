@@ -278,6 +278,50 @@
       return activeEngineType;
     },
 
+    analyzeStyle(fen, recentMoves) {
+      if (!recentMoves || recentMoves.length === 0) {
+        return { style: 'unknown', confidence: 0, suggested_personality: 'balanced' };
+      }
+
+      let aggressiveCount = 0;
+      let captureCount = 0;
+      let checkCount = 0;
+      let pawnMoveCount = 0;
+
+      recentMoves.forEach(m => {
+        if (m.includes('+') || m.includes('#')) checkCount++;
+        if (m.includes('x')) captureCount++;
+        // Detect moves into enemy territory (Rank 5-8 for white, 1-4 for black)
+        if (/[a-h][5-8]/.test(m) || /[a-h][1-4]/.test(m)) aggressiveCount++;
+        // Detect early pawn pushes
+        if (/^[a-h][3-6]/.test(m) && !m.includes('x')) pawnMoveCount++;
+      });
+
+      const total = recentMoves.length;
+      const aggressionScore = (checkCount * 3 + captureCount * 1.5 + aggressiveCount);
+      const pawnStormScore = pawnMoveCount / total;
+
+      let style = 'positional';
+      let confidence = 0.5;
+
+      if (pawnStormScore > 0.4 && aggressionScore > 5) {
+        style = 'pawn_storm';
+        confidence = 0.85;
+      } else if (aggressionScore > (total * 1.2)) {
+        style = 'aggressive';
+        confidence = 0.8;
+      } else if (aggressionScore < (total * 0.4)) {
+        style = 'solid';
+        confidence = 0.7;
+      }
+
+      return {
+        style,
+        confidence,
+        aggressionScore
+      };
+    },
+
     dispose() {
       if (pendingResolve) {
         pendingResolve(null);

@@ -288,25 +288,28 @@ profileRoutes.post('/:id/xp', async (c) => {
       c.env.DB.prepare('UPDATE users SET xp = xp + ?, updated_at = datetime("now") WHERE id = ?')
         .bind(xpDelta, userId),
       
-      // 2. Update stats
+      // 2. Update stats and unified XP
       c.env.DB.prepare(`
         UPDATE user_stats 
         SET 
           wins = wins + ?,
           losses = losses + ?,
           draws = draws + ?,
+          games_played = games_played + ?,
           multiplayer_wins = multiplayer_wins + ?,
           tournament_wins = tournament_wins + ?,
           total_moves = total_moves + ?,
           hints_used = hints_used + ?,
           puzzles_solved = puzzles_solved + ?,
           puzzle_rating = CASE WHEN ? > 0 THEN ? ELSE puzzle_rating END,
+          xp = xp + ?,
           updated_at = datetime('now')
         WHERE user_id = ?
       `).bind(
         stats.wins || 0,
         stats.losses || 0,
         stats.draws || 0,
+        (stats.wins || 0) + (stats.losses || 0) + (stats.draws || 0),
         stats.multiplayer_wins || 0,
         stats.tournament_wins || 0,
         stats.total_moves || 0,
@@ -314,6 +317,7 @@ profileRoutes.post('/:id/xp', async (c) => {
         stats.puzzles_solved || 0,
         stats.puzzle_rating || 0,
         stats.puzzle_rating || 0,
+        xpDelta,
         userId
       )
     ]
@@ -384,6 +388,8 @@ profileRoutes.post('/xp/transfer', async (c) => {
 
     await c.env.DB.batch([
       c.env.DB.prepare('UPDATE users SET xp = xp + ? WHERE id = ?').bind(normalizedAmount, recipientId),
+      c.env.DB.prepare('UPDATE user_stats SET xp = xp + ? WHERE user_id = ?').bind(normalizedAmount, recipientId),
+      c.env.DB.prepare('UPDATE user_stats SET xp = xp - ? WHERE user_id = ?').bind(normalizedAmount, donorId),
       c.env.DB.prepare('INSERT INTO xp_transfers (donor_id, recipient_id, amount) VALUES (?, ?, ?)')
         .bind(donorId, recipientId, normalizedAmount)
     ])
@@ -800,22 +806,7 @@ profileRoutes.get('/:id', async (c) => {
 // Helper function to build profile data without returning Response
 async function buildProfileData(c: any, userId: string) {
   try {
-    // Get user data
-    const userQuery = c.env.DB.prepare(
-      'SELECT id, username, avatar_url, is_ghibli, local_avatar, username_changes, last_username_change, xp, created_at FROM users WHERE id = ?'
-    ).bind(userId)
-    
-    const userResult = await userQuery.all()
-    const userRes = userResult.results || userResult
-    
-    if (!userRes || !Array.isArray(userRes) || userRes.length === 0) {
-      console.warn('[buildProfileData] User not found for userId:', userId)
-      return null
-    }
-
-    const user = userRes[0]
-
-    // Ensure user_stats exists
+    // 1. Ensure user_stats exists (safety for new users)
     try {
       await c.env.DB.prepare(
         'INSERT OR IGNORE INTO user_stats (user_id) VALUES (?)'
@@ -824,19 +815,29 @@ async function buildProfileData(c: any, userId: string) {
       console.warn('[buildProfileData] Could not ensure user_stats:', statsErr)
     }
 
-    // Get stats (with safe defaults if fails)
-    let stats = {}
-    try {
-      const statsResult = await c.env.DB.prepare(
-        'SELECT * FROM user_stats WHERE user_id = ?'
-      ).bind(userId).all()
-      const statsRes = statsResult.results || statsResult
-      if (statsRes && statsRes.length > 0) {
-        stats = statsRes[0]
-      }
-    } catch (statsErr) {
-      console.warn('[buildProfileData] Could not fetch user_stats:', statsErr)
+    // 2. Get Unified Profile & Stats — The single source of truth
+    const profileResult = await c.env.DB.prepare(
+      'SELECT * FROM unified_player_scoring WHERE id = ?'
+    ).bind(userId).all()
+    
+    const rows = profileResult.results || profileResult
+    if (!rows || !Array.isArray(rows) || rows.length === 0) {
+      console.warn('[buildProfileData] User not found for userId:', userId)
+      return null
     }
+
+    const unified = rows[0]
+
+    // 3. Get extra account info not in the scoring view
+    const userAccount = await c.env.DB.prepare(
+      'SELECT is_ghibli, local_avatar, username_changes, last_username_change, created_at FROM users WHERE id = ?'
+    ).bind(userId).first<{ 
+      is_ghibli: number; 
+      local_avatar: string | null; 
+      username_changes: number; 
+      last_username_change: string | null;
+      created_at: string;
+    }>()
 
     // Get recent games (with safe defaults if fails)
     let recentGames = []
@@ -871,20 +872,20 @@ async function buildProfileData(c: any, userId: string) {
     }
 
     const profile = {
-      id: user.id,
-      username: user.username,
-      avatar_url: user.avatar_url,
-      is_ghibli: user.is_ghibli,
-      local_avatar: user.local_avatar,
-      username_changes: user.username_changes || 0,
-      last_username_change: user.last_username_change,
-      xp: user.xp,
-      created_at: user.created_at,
-      stats,
+      id: unified.id,
+      username: unified.username,
+      avatar_url: unified.avatar_url,
+      is_ghibli: userAccount?.is_ghibli || 0,
+      local_avatar: userAccount?.local_avatar || null,
+      username_changes: userAccount?.username_changes || 0,
+      last_username_change: userAccount?.last_username_change,
+      xp: unified.xp,
+      created_at: userAccount?.created_at,
+      stats: unified, // The unified object contains all stats including wins, elo, etc.
       recent_games: recentGames,
       // Calculate rate limit info for frontend
-      remainingNameChanges: Math.max(0, 3 - (user.username_changes || 0)),
-      canChangeNameNow: !user.last_username_change || (Date.now() - new Date(user.last_username_change).getTime() >= 24 * 60 * 60 * 1000)
+      remainingNameChanges: Math.max(0, 3 - (userAccount?.username_changes || 0)),
+      canChangeNameNow: !userAccount?.last_username_change || (Date.now() - new Date(userAccount.last_username_change).getTime() >= 24 * 60 * 60 * 1000)
     }
     
     return profile
