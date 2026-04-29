@@ -839,23 +839,55 @@ class ChessEngine {
 
   bool _isThreefoldRepetition() {
     if (_positionHistory.length < 9) return false;
-    final current = _positionHistory.last;
-    int count = _positionHistory.where((p) => p == current).length;
+    final current = toFEN(includeClocks: false);
+    int count = 0;
+    for (final fen in _positionHistory) {
+      // Position history should ideally store minimal FENs, but if it stores full FENs, 
+      // we must strip them here for comparison.
+      if (_stripFENClocks(fen) == current) {
+        count++;
+      }
+    }
     return count >= 3;
   }
 
+  String _stripFENClocks(String fen) {
+    final parts = fen.split(' ');
+    if (parts.length < 4) return fen;
+    return '${parts[0]} ${parts[1]} ${parts[2]} ${parts[3]}';
+  }
+
   bool _isInsufficientMaterial() {
-    final pieces = <ChessPiece>[];
+    final pieces = <(ChessPiece, Square)>[];
     for (int r = 0; r < 8; r++) {
       for (int f = 0; f < 8; f++) {
-        if (_board[r][f] != null) pieces.add(_board[r][f]!);
+        if (_board[r][f] != null) {
+          pieces.add((_board[r][f]!, Square(f, r)));
+        }
       }
     }
-    if (pieces.length == 2) return true; // K vs K
+    
+    // King vs King
+    if (pieces.length == 2) return true; 
+
+    // King + Minor Piece vs King
     if (pieces.length == 3) {
-      return pieces
-          .any((p) => p.type == PieceType.knight || p.type == PieceType.bishop);
+      return pieces.any((p) => p.$1.type == PieceType.knight || p.$1.type == PieceType.bishop);
     }
+
+    // King + Bishop vs King + Bishop (Same color bishops)
+    if (pieces.length == 4) {
+      final whiteBishops = pieces.where((p) => p.$1.color == PieceColor.white && p.$1.type == PieceType.bishop).toList();
+      final blackBishops = pieces.where((p) => p.$1.color == PieceColor.black && p.$1.type == PieceType.bishop).toList();
+      
+      if (whiteBishops.length == 1 && blackBishops.length == 1) {
+        final wSq = whiteBishops.first.$2;
+        final bSq = blackBishops.first.$2;
+        // Same color if (file + rank) % 2 is the same
+        return (wSq.file + wSq.rank) % 2 == (bSq.file + bSq.rank) % 2;
+      }
+    }
+
     return false;
   }
 
@@ -896,7 +928,7 @@ class ChessEngine {
   // ═══════════════════════════════════════════
   // FEN
   // ═══════════════════════════════════════════
-  String toFEN() {
+  String toFEN({bool includeClocks = true}) {
     final buf = StringBuffer();
     for (int r = 7; r >= 0; r--) {
       int empty = 0;
@@ -928,7 +960,10 @@ class ChessEngine {
 
     buf.write(' ');
     buf.write(_enPassantTarget?.toAlgebraic() ?? '-');
-    buf.write(' $_halfMoveClock $_fullMoveNumber');
+    
+    if (includeClocks) {
+      buf.write(' $_halfMoveClock $_fullMoveNumber');
+    }
     return buf.toString();
   }
 

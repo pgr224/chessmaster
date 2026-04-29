@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/extensions.dart';
 import '../../../core/router/app_router.dart';
 import '../../blocs/theme/theme_bloc.dart';
 
@@ -578,8 +579,5 @@ class _MiniKingPainter extends CustomPainter {
   }
 }
 
-extension on String {
-  String capitalize() =>
-      isEmpty ? this : '${this[0].toUpperCase()}${substring(1)}';
-}
+
 

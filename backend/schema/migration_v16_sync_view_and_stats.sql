@@ -24,10 +24,8 @@ SELECT
     u.avatar_url,
     u.is_ghibli,
     u.created_at,
-    u.last_login,
     u.device_model,
     u.last_username_change,
-    u.remaining_name_changes,
     u.is_online,
     u.last_seen,
     u.xp, -- Master XP from users table
@@ -36,15 +34,20 @@ SELECT
     COALESCE(s.losses, 0) as losses,
     COALESCE(s.draws, 0) as draws,
     COALESCE(s.games_played, 0) as games_played,
-    COALESCE(s.win_rate, 0.0) as win_rate,
+    CASE 
+        WHEN COALESCE(s.games_played, 0) > 0 
+        THEN ROUND(CAST(COALESCE(s.wins, 0) AS REAL) / s.games_played * 100, 1)
+        ELSE 0.0 
+    END as win_rate,
     COALESCE(s.longest_streak, 0) as longest_streak,
-    COALESCE(s.puzzle_rating, 1000) as puzzle_rating,
+    COALESCE(s.puzzle_rating, 1200) as puzzle_rating,
     COALESCE(s.puzzles_solved, 0) as puzzles_solved,
     COALESCE(s.total_time_played, 0) as total_time_played,
     COALESCE(s.tournaments_won, 0) as tournaments_won,
     COALESCE(s.pieces_captured, 0) as pieces_captured,
     COALESCE(s.checkmates_delivered, 0) as checkmates_delivered,
     COALESCE(s.best_win_elo, 0) as best_win_elo,
-    RANK() OVER (ORDER BY u.xp DESC, s.elo_rating DESC) as rank
+    RANK() OVER (ORDER BY u.xp DESC, COALESCE(s.elo_rating, 1200) DESC) as rank
 FROM users u
 LEFT JOIN user_stats s ON s.user_id = u.id;
+

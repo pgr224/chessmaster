@@ -2225,12 +2225,15 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       if (_engine.moveHistory.isNotEmpty) _engine.undoMove();
     }
 
+    final captured = _collectCaptured();
     emit(state.copyWith(
       board: _engine.board,
       currentTurn: _engine.currentTurn,
       moveHistory: _engine.moveHistory,
       status: _engine.status,
       result: _engine.result,
+      capturedWhite: captured.$1,
+      capturedBlack: captured.$2,
       currentFEN: _engine.toFEN(),
       clearSelected: true,
       clearCoachMove: true,
@@ -2588,36 +2591,16 @@ class GameBloc extends Bloc<GameEvent, GameState> {
   (List<ChessPiece>, List<ChessPiece>) _collectCaptured() {
     final capturedWhite = <ChessPiece>[];
     final capturedBlack = <ChessPiece>[];
-    final initialPieces = {
-      PieceType.pawn: 8,
-      PieceType.rook: 2,
-      PieceType.knight: 2,
-      PieceType.bishop: 2,
-      PieceType.queen: 1,
-    };
-    final onBoardWhite = <PieceType, int>{};
-    final onBoardBlack = <PieceType, int>{};
 
-    for (final row in _engine.board) {
-      for (final p in row) {
-        if (p == null || p.type == PieceType.king) continue;
-        if (p.color == PieceColor.white) {
-          onBoardWhite[p.type] = (onBoardWhite[p.type] ?? 0) + 1;
+    for (final move in _engine.moveHistory) {
+      if (move.capturedPiece != null) {
+        if (move.capturedPiece!.color == PieceColor.white) {
+          capturedWhite.add(move.capturedPiece!);
         } else {
-          onBoardBlack[p.type] = (onBoardBlack[p.type] ?? 0) + 1;
+          capturedBlack.add(move.capturedPiece!);
         }
       }
     }
-
-    for (final entry in initialPieces.entries) {
-      final wCount = (entry.value) - (onBoardWhite[entry.key] ?? 0);
-      final bCount = (entry.value) - (onBoardBlack[entry.key] ?? 0);
-      capturedWhite.addAll(List.generate(
-          wCount, (_) => ChessPiece(type: entry.key, color: PieceColor.white)));
-      capturedBlack.addAll(List.generate(
-          bCount, (_) => ChessPiece(type: entry.key, color: PieceColor.black)));
-    }
-
     return (capturedWhite, capturedBlack);
   }
 

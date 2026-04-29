@@ -13,6 +13,8 @@ class AuthRepository {
   static const _tokenKey = 'auth_token';
   static const _userKey = 'user_data';
   static const _deviceIdKey = 'device_id';
+  static const _lastUsernameKey = 'last_logged_out_username';
+  static const _explicitLogoutKey = 'is_explicit_logout';
   static final RegExp _usernamePattern = RegExp(r'^[a-zA-Z0-9_]{3,30}$');
   final _uuid = const Uuid();
 
@@ -55,6 +57,12 @@ class AuthRepository {
     // Even if we have a token, if we want to refresh or if we only have deviceId,
     // try to silent login to get latest user data
     if (token == null || forceRefresh) {
+      final isExplicitLogout = prefs.getBool(_explicitLogoutKey) ?? false;
+      if (isExplicitLogout && !forceRefresh) {
+        // User explicitly logged out, don't auto-login unless forced
+        return null;
+      }
+
       try {
         final user = await login();
         return user;
@@ -82,8 +90,11 @@ class AuthRepository {
     final response = await _dio.post(
       '/api/auth/login',
       data: {'deviceId': deviceId},
-      options:
-          Options(validateStatus: (status) => status == 200 || status == 404),
+      options: Options(
+        validateStatus: (status) => status == 200 || status == 404,
+        connectTimeout: const Duration(seconds: 5),
+        receiveTimeout: const Duration(seconds: 5),
+      ),
     );
 
     if (response.statusCode == 404) {
@@ -113,6 +124,11 @@ class AuthRepository {
     );
 
     await prefs.setString(_userKey, jsonEncode(profile.toJson()));
+    
+    // Success! Clear logout flag and store last username for potential future use
+    await prefs.setBool(_explicitLogoutKey, false);
+    await prefs.setString(_lastUsernameKey, profile.username);
+    
     return profile;
   }
 
@@ -213,6 +229,11 @@ class AuthRepository {
 
     final userJson = jsonEncode(profile.toJson());
     await prefs.setString(_userKey, userJson);
+    
+    // Success! Clear logout flag and store last username
+    await prefs.setBool(_explicitLogoutKey, false);
+    await prefs.setString(_lastUsernameKey, profile.username);
+
     return profile;
   }
 
@@ -673,9 +694,27 @@ class AuthRepository {
 
   Future<void> signOut() async {
     final prefs = await SharedPreferences.getInstance();
+    
+    // Store last username before clearing user data
+    final userData = prefs.getString(_userKey);
+    if (userData != null) {
+      try {
+        final data = jsonDecode(userData);
+        if (data['username'] != null) {
+          await prefs.setString(_lastUsernameKey, data['username']);
+        }
+      } catch (_) {}
+    }
+
     await prefs.remove(_tokenKey);
     await prefs.remove(_userKey);
+    await prefs.setBool(_explicitLogoutKey, true); // Mark as explicitly logged out
     _dio.options.headers.remove('Authorization');
+  }
+
+  Future<String?> getLastLoggedOutUsername() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_lastUsernameKey);
   }
 
   Future<String?> getToken() async {

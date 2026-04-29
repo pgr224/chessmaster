@@ -20,19 +20,22 @@ class _SplashScreenState extends State<SplashScreen>
     super.initState();
     _controller = AnimationController(vsync: this, duration: 2.seconds);
     _controller.forward();
-    _navigate();
   }
 
-  Future<void> _navigate() async {
-    // Extended delay to ensure AuthInitializeEvent completes before redirect
-    // This prevents race condition where redirect fires before auth state resolves
-    await Future.delayed(const Duration(seconds: 5));
-    if (mounted) context.go('/home');
+  void _onAuthStateChanged(BuildContext context, AuthState state) {
+    if (state is! AuthInitialState && state is! AuthLoadingState) {
+      // Small delay to let the branding animation breathe
+      Future.delayed(1500.ms, () {
+        if (mounted) context.go('/home');
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return BlocListener<AuthBloc, AuthState>(
+      listener: _onAuthStateChanged,
+      child: Scaffold(
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -138,7 +141,8 @@ class _SplashScreenState extends State<SplashScreen>
           ),
         ),
       ),
-    );
+    ),
+   );
   }
 
   @override

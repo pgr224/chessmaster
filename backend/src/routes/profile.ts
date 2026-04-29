@@ -845,6 +845,8 @@ profileRoutes.get('/:id', async (c) => {
 // Helper function to build profile data without returning Response
 async function buildProfileData(c: any, userId: string) {
   try {
+    console.log(`[buildProfileData] Building profile for userId: ${userId}`)
+    
     // 1. Ensure user_stats exists (safety for new users)
     try {
       await c.env.DB.prepare(
@@ -854,31 +856,54 @@ async function buildProfileData(c: any, userId: string) {
       console.warn('[buildProfileData] Could not ensure user_stats:', statsErr)
     }
 
-    // 2. Get Unified Profile & Stats — The single source of truth
+    // 2. Get Unified Profile & Stats
     const profileResult = await c.env.DB.prepare(
       'SELECT * FROM unified_player_scoring WHERE id = ?'
-    ).bind(userId).all()
+    ).bind(userId).first()
     
-    const rows = profileResult.results || profileResult
-    if (!rows || !Array.isArray(rows) || rows.length === 0) {
-      console.warn('[buildProfileData] User not found for userId:', userId)
-      return null
+    if (!profileResult) {
+      console.warn('[buildProfileData] User not found in unified_player_scoring for userId:', userId)
+      
+      // Fallback: Try to get at least basic user data from users table if view fails
+      const fallbackUser = await c.env.DB.prepare(
+        'SELECT id, username, avatar_url, xp, is_online, last_seen, device_id, device_model FROM users WHERE id = ?'
+      ).bind(userId).first()
+      
+      if (!fallbackUser) {
+        console.error('[buildProfileData] Critical: User not found in users table either:', userId)
+        return null
+      }
+      
+      console.log('[buildProfileData] Using fallback user data from users table')
+      // Map fallback fields to look like the unified object
+      return {
+        id: fallbackUser.id,
+        username: fallbackUser.username,
+        avatarUrl: fallbackUser.avatar_url,
+        xp: fallbackUser.xp,
+        isOnline: fallbackUser.is_online === 1,
+        lastSeen: fallbackUser.last_seen,
+        stats: {},
+        recentGames: [],
+        achievements: []
+      }
     }
 
-    const unified = rows[0]
+    const unified = profileResult as any
 
-    // 3. Get extra account info not in the scoring view
+    // 3. Get extra account info
     const userAccount = await c.env.DB.prepare(
-      'SELECT is_ghibli, local_avatar, username_changes, last_username_change, created_at FROM users WHERE id = ?'
+      'SELECT is_ghibli, local_avatar, username_changes, last_username_change, created_at, device_model FROM users WHERE id = ?'
     ).bind(userId).first<{ 
       is_ghibli: number; 
       local_avatar: string | null; 
       username_changes: number; 
       last_username_change: string | null;
       created_at: string;
+      device_model: string | null;
     }>()
 
-    // Get recent games (with safe defaults if fails)
+    // Get recent games
     let recentGames = []
     try {
       const gamesResult = await c.env.DB.prepare(`
@@ -902,19 +927,22 @@ async function buildProfileData(c: any, userId: string) {
         ORDER BY g.created_at DESC
         LIMIT 5
       `).bind(userId, userId, userId, userId, userId).all()
-      const gamesRes = gamesResult.results || gamesResult
-      if (gamesRes && Array.isArray(gamesRes)) {
-        recentGames = gamesRes
-      }
+      
+      recentGames = gamesResult.results || []
     } catch (gamesErr) {
       console.warn('[buildProfileData] Could not fetch recent games:', gamesErr)
     }
 
     // 4. Get achievements
-    const achievementRes = await c.env.DB.prepare(
-      'SELECT achievement_id FROM user_achievements WHERE user_id = ?'
-    ).bind(userId).all<{ achievement_id: string }>()
-    const achievements = (achievementRes.results || []).map(a => a.achievement_id)
+    let achievements: string[] = []
+    try {
+      const achievementRes = await c.env.DB.prepare(
+        'SELECT achievement_id FROM user_achievements WHERE user_id = ?'
+      ).bind(userId).all<{ achievement_id: string }>()
+      achievements = (achievementRes.results || []).map(a => a.achievement_id)
+    } catch (achErr) {
+      console.warn('[buildProfileData] Could not fetch achievements:', achErr)
+    }
 
     const profile = {
       id: unified.id,
@@ -926,12 +954,11 @@ async function buildProfileData(c: any, userId: string) {
       lastUsernameChange: userAccount?.last_username_change,
       xp: unified.xp,
       createdAt: userAccount?.created_at,
-      lastLogin: unified.last_login,
-      deviceModel: unified.device_model,
-      stats: unified, // The unified object contains all stats including wins, elo, etc.
+      lastLogin: unified.last_seen, // Fixed: use last_seen from view
+      deviceModel: userAccount?.device_model || unified.device_model, // Pull from users table
+      stats: unified,
       recentGames: recentGames,
       achievements: achievements,
-      // Calculate rate limit info for frontend
       remainingNameChanges: Math.max(0, 3 - (userAccount?.username_changes || 0)),
       canChangeNameNow: !userAccount?.last_username_change || (Date.now() - new Date(userAccount.last_username_change).getTime() >= 24 * 60 * 60 * 1000)
     }
@@ -939,8 +966,6 @@ async function buildProfileData(c: any, userId: string) {
     return profile
   } catch (err) {
     console.error('[buildProfileData] Unexpected error:', err)
-    const errorMessage = err instanceof Error ? err.message : String(err)
-    console.error('[buildProfileData] Error message:', errorMessage)
     throw err
   }
 }

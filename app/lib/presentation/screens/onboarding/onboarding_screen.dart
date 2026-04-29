@@ -23,8 +23,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final Random _random = Random();
   int _currentPage = 0;
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLastUsername();
+  }
+
+  Future<void> _loadLastUsername() async {
+    final username = await context.read<AuthBloc>().authRepository.getLastLoggedOutUsername();
+    if (mounted) {
+      setState(() => _lastUsername = username);
+    }
+  }
   String? _usernameErrorText;
   bool _hasRetriedSuggestedUsername = false;
+  String? _lastUsername;
 
   final List<_OnboardPage> _pages = const [
     _OnboardPage(
@@ -351,6 +365,29 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               .fadeIn(delay: 100.ms)
               .scale(begin: const Offset(0.95, 0.95)),
 
+          // ── Quick Start / Continue As ──
+          if (_currentPage == 0 && _lastUsername != null) ...[
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              height: 54,
+              child: OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: AppTheme.goldPrimary, width: 2),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20)),
+                  foregroundColor: AppTheme.goldPrimary,
+                ),
+                onPressed: _isLoading ? null : _silentLogin,
+                child: Text(
+                  'Continue as $_lastUsername',
+                  style: GoogleFonts.fredoka(
+                      fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ).animate().fadeIn(delay: 600.ms).slideY(begin: 0.5),
+          ],
+
           // ── Skip ──
           if (!isLast)
             TextButton(
@@ -385,6 +422,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       _hasRetriedSuggestedUsername = false;
     });
     context.read<AuthBloc>().add(AuthRegisterEvent(username: username));
+  }
+
+  void _silentLogin() {
+    setState(() {
+      _isLoading = true;
+    });
+    context.read<AuthBloc>().add(const AuthSilentLoginEvent());
   }
 
   bool _isRegisterConflict(String message) {

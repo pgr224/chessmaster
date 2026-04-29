@@ -43,6 +43,10 @@ class AuthClearAllDataEvent extends AuthEvent {
 
 class AuthCheckStatusEvent extends AuthEvent {}
 
+class AuthSilentLoginEvent extends AuthEvent {
+  const AuthSilentLoginEvent();
+}
+
 // ═══════════════════════════════════════════
 // STATES
 // ═══════════════════════════════════════════
@@ -88,6 +92,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthSignOutEvent>(_onSignOut);
     on<AuthClearAllDataEvent>(_onClearAllData);
     on<AuthCheckStatusEvent>(_onCheckStatus);
+    on<AuthSilentLoginEvent>(_onSilentLogin);
   }
 
   void _syncUserAchievements(UserModel user) {
@@ -133,6 +138,22 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       } catch (_) {}
       // No cached data available — genuinely unauthenticated
       emit(AuthUnauthenticatedState());
+    }
+  }
+
+  Future<void> _onSilentLogin(
+      AuthSilentLoginEvent event, Emitter<AuthState> emit) async {
+    emit(AuthLoadingState());
+    try {
+      final user = await _repository.getCurrentUser(forceRefresh: true);
+      if (user != null) {
+        _syncUserAchievements(user);
+        emit(AuthAuthenticatedState(user));
+      } else {
+        emit(AuthUnauthenticatedState());
+      }
+    } catch (e) {
+      emit(AuthErrorState(e.toString()));
     }
   }
 

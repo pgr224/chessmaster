@@ -10,6 +10,7 @@ import 'package:confetti/confetti.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/extensions.dart';
 import '../../../core/router/app_router.dart';
 import '../../../data/models/game_config.dart';
 import '../../../data/models/tutorial_model.dart';
@@ -1803,8 +1804,5 @@ class DecorationOverlay extends StatelessWidget {
   }
 }
 
-extension StringExtension on String {
-  String capitalize() =>
-      isEmpty ? this : '${this[0].toUpperCase()}${substring(1)}';
-}
+
 

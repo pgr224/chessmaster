@@ -588,6 +588,7 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
   StreamSubscription? _gameSub;
   String? _myUserId;
   Timer? _joinTimer;
+  Timer? _reconnectTimer;
 
   /// Exposed so screens can call service methods not wrapped in events.
   MultiplayerService get mpService => _service;
@@ -596,8 +597,17 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
     on<MpConnectLobbyEvent>(_onConnectLobby);
     on<MpReconnectEvent>((event, emit) {
       if (_service.isLobbyConnected) return;
-      // Reconnect will be triggered by MpConnectLobbyEvent from the UI
-      emit(state.copyWith(connectionError: 'Reconnecting...'));
+      
+      final authState = _authBloc.state;
+      if (authState is AuthAuthenticatedState) {
+        add(MpConnectLobbyEvent(
+          authState.user.id,
+          authState.user.username,
+          rating: authState.user.stats.eloRating,
+        ));
+      } else {
+        emit(state.copyWith(connectionError: 'Unable to reconnect: User not authenticated'));
+      }
     });
     on<MpDrawReceivedEvent>(
         (event, emit) => emit(state.copyWith(drawOfferPending: true)));
@@ -1106,7 +1116,13 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
           amount: _toInt(d['amount']),
         ));
       } else if (msgType == 'CONNECTION_LOST') {
-        add(MpLobbyNoticeEvent('Connection lost. Please check your internet.'));
+        add(MpLobbyNoticeEvent('Connection lost. Reconnecting...'));
+        _reconnectTimer?.cancel();
+        _reconnectTimer = Timer(const Duration(seconds: 5), () {
+          if (_myUserId != null && state.status != MultiplayerStatus.disconnected) {
+             add(MpReconnectEvent());
+          }
+        });
       } else if (msgType == 'PRESENCE_SYNC') {
         final presence = LobbyPresence.normalize(data['status']?.toString());
         add(MpSetPresenceEvent(
@@ -1117,14 +1133,24 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
       }
     }, onError: (err) {
       add(MpLobbyNoticeEvent('Network error: ${err.toString()}'));
+      _scheduleReconnect();
     }, onDone: () {
-      add(MpLobbyNoticeEvent('Disconnected from lobby.'));
+      _scheduleReconnect();
     });
     emit(state.copyWith(
       status: MultiplayerStatus.inLobby,
       connectionError: null,
     ));
     _service.sendPresence(state.myPresence, context: 'lobby_connected');
+  }
+
+  void _scheduleReconnect() {
+    _reconnectTimer?.cancel();
+    _reconnectTimer = Timer(const Duration(seconds: 5), () {
+      if (_myUserId != null && state.status != MultiplayerStatus.disconnected) {
+        add(MpReconnectEvent());
+      }
+    });
   }
 
   void _onSetPresence(
@@ -1422,5 +1448,13 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
             ? request.copyWith(status: status, isQueued: request.isQueued)
             : request)
         .toList(growable: false);
+  }
+  @override
+  Future<void> close() {
+    _lobbySub?.cancel();
+    _gameSub?.cancel();
+    _joinTimer?.cancel();
+    _reconnectTimer?.cancel();
+    return super.close();
   }
 }

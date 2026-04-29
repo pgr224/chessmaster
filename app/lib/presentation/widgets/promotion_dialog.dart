@@ -2,15 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/extensions.dart';
 import '../../../domain/engine/chess_engine.dart';
+import 'chess_piece_widget.dart';
 
 class PromotionDialog extends StatelessWidget {
   final PieceColor color;
+  final String shape;
+  final String style;
+  final Color whitePieceColor;
+  final Color blackPieceColor;
   final void Function(PieceType) onSelect;
 
   const PromotionDialog({
     super.key,
     required this.color,
+    required this.shape,
+    required this.style,
+    required this.whitePieceColor,
+    required this.blackPieceColor,
     required this.onSelect,
   });
 
@@ -107,7 +117,14 @@ class PromotionDialog extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(piece.unicodeSymbol, style: const TextStyle(fontSize: 48)),
+            ChessPieceWidget(
+              piece: piece,
+              shape: shape,
+              style: style,
+              size: 56,
+              whitePieceColor: whitePieceColor,
+              blackPieceColor: blackPieceColor,
+            ),
             const SizedBox(height: 4),
             Text(
               type.name.capitalize(),
@@ -127,8 +144,5 @@ class PromotionDialog extends StatelessWidget {
   }
 }
 
-extension on String {
-  String capitalize() =>
-      isEmpty ? this : '${this[0].toUpperCase()}${substring(1)}';
-}
+
 

@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS users (
   push_enabled      INTEGER NOT NULL DEFAULT 1, -- 0=disabled, 1=enabled
   is_online     INTEGER NOT NULL DEFAULT 0, -- 0=offline, 1=online
   last_seen     TEXT,                       -- ISO8601
+  last_username_change TEXT,                -- ISO8601
   created_at    TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -76,6 +77,11 @@ CREATE TABLE IF NOT EXISTS user_stats (
   elo_rating        INTEGER NOT NULL DEFAULT 1200,
   two_player_games  INTEGER NOT NULL DEFAULT 0,
   two_player_wins   INTEGER NOT NULL DEFAULT 0,
+  total_time_played INTEGER NOT NULL DEFAULT 0,
+  tournaments_won   INTEGER NOT NULL DEFAULT 0,
+  pieces_captured   INTEGER NOT NULL DEFAULT 0,
+  checkmates_delivered INTEGER NOT NULL DEFAULT 0,
+  best_win_elo      INTEGER NOT NULL DEFAULT 0,
   updated_at        TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -357,32 +363,35 @@ CREATE TABLE IF NOT EXISTS xp_history (
 -- Single source of truth for profile + stats, queried by buildProfileData()
 CREATE VIEW IF NOT EXISTS unified_player_scoring AS
 SELECT
-  u.id,
-  u.username,
-  u.avatar_url,
-  u.xp,
-  u.is_online,
-  u.last_seen,
-  u.device_id,
-  COALESCE(s.games_played, 0)      AS games_played,
-  COALESCE(s.wins, 0)              AS wins,
-  COALESCE(s.losses, 0)            AS losses,
-  COALESCE(s.draws, 0)             AS draws,
-  COALESCE(s.ai_games, 0)          AS ai_games,
-  COALESCE(s.ai_wins, 0)           AS ai_wins,
-  COALESCE(s.multiplayer_games, 0) AS multiplayer_games,
-  COALESCE(s.multiplayer_wins, 0)  AS multiplayer_wins,
-  COALESCE(s.tournament_games, 0)  AS tournament_games,
-  COALESCE(s.tournament_wins, 0)   AS tournament_wins,
-  COALESCE(s.longest_streak, 0)    AS longest_streak,
-  COALESCE(s.current_streak, 0)    AS current_streak,
-  COALESCE(s.hints_used, 0)        AS hints_used,
-  COALESCE(s.total_moves, 0)       AS total_moves,
-  COALESCE(s.puzzles_solved, 0)    AS puzzles_solved,
-  COALESCE(s.puzzle_rating, 1200)  AS puzzle_rating,
-  COALESCE(s.elo_rating, 1200)     AS elo_rating,
-  COALESCE(s.two_player_games, 0)  AS two_player_games,
-  COALESCE(s.two_player_wins, 0)   AS two_player_wins
+    u.id,
+    u.username,
+    u.avatar_url,
+    u.is_ghibli,
+    u.created_at,
+    u.device_model,
+    u.last_username_change,
+    u.is_online,
+    u.last_seen,
+    u.xp, -- Master XP from users table
+    COALESCE(s.elo_rating, 1200) as elo_rating,
+    COALESCE(s.wins, 0) as wins,
+    COALESCE(s.losses, 0) as losses,
+    COALESCE(s.draws, 0) as draws,
+    COALESCE(s.games_played, 0) as games_played,
+    CASE 
+        WHEN COALESCE(s.games_played, 0) > 0 
+        THEN ROUND(CAST(COALESCE(s.wins, 0) AS REAL) / s.games_played * 100, 1)
+        ELSE 0.0 
+    END as win_rate,
+    COALESCE(s.longest_streak, 0) as longest_streak,
+    COALESCE(s.puzzle_rating, 1200) as puzzle_rating,
+    COALESCE(s.puzzles_solved, 0) as puzzles_solved,
+    COALESCE(s.total_time_played, 0) as total_time_played,
+    COALESCE(s.tournaments_won, 0) as tournaments_won,
+    COALESCE(s.pieces_captured, 0) as pieces_captured,
+    COALESCE(s.checkmates_delivered, 0) as checkmates_delivered,
+    COALESCE(s.best_win_elo, 0) as best_win_elo,
+    RANK() OVER (ORDER BY u.xp DESC, COALESCE(s.elo_rating, 1200) DESC) as rank
 FROM users u
 LEFT JOIN user_stats s ON s.user_id = u.id;
 

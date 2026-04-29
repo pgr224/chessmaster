@@ -301,8 +301,13 @@ extension _GameScreenOverlays on _GameScreenState {
   Widget _buildPromotionOverlay(BuildContext context, GameState state) {
     if (!state.showPromotionDialog) return const SizedBox.shrink();
 
+    final themeState = context.watch<ThemeBloc>().state;
     return PromotionDialog(
       color: state.currentTurn,
+      shape: themeState.pieceShape,
+      style: themeState.pieceStyle,
+      whitePieceColor: state.whitePieceColor,
+      blackPieceColor: state.blackPieceColor,
       onSelect: (type) {
         context.read<GameBloc>().add(GameMakeMoveEvent(
               state.promotionFrom!,

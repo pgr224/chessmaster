@@ -12,7 +12,9 @@
     "db:create": "wrangler d1 create chessmaster-real4",
     "db:migrate": "wrangler d1 execute chessmaster-real4 --local --file=./schema/d1-schema.sql",
     "db:migrate:remote": "wrangler d1 execute chessmaster-real4 --remote --file=./schema/d1-schema.sql",
+    "db:migrate:v17": "wrangler d1 execute chessmaster-real4 --remote --file=./schema/migration_v17_fix_push_and_cleanup.sql",
     "db:migrate:staging": "wrangler d1 execute chessmaster-real4 --env staging --remote --file=./schema/d1-schema.sql",
+
     "db:migrate:xp": "wrangler d1 execute chessmaster-real4 --local --file=./schema/migration_v5_xp_p2p.sql",
     "db:backfill": "wrangler d1 execute chessmaster-real4 --local --file=./schema/backfill_stats.sql",
     "db:backfill:remote": "wrangler d1 execute chessmaster-real4 --remote --file=./schema/backfill_stats.sql",
