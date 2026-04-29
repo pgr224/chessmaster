@@ -1451,5 +1451,4 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
             : request)
         .toList(growable: false);
   }
-  }
 }
