@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../blocs/auth/auth_bloc.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});

@@ -1351,6 +1351,8 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
   Future<void> close() {
     _lobbySub?.cancel();
     _gameSub?.cancel();
+    _joinTimer?.cancel();
+    _reconnectTimer?.cancel();
     _service.dispose();
     return super.close();
   }
@@ -1449,12 +1451,5 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
             : request)
         .toList(growable: false);
   }
-  @override
-  Future<void> close() {
-    _lobbySub?.cancel();
-    _gameSub?.cancel();
-    _joinTimer?.cancel();
-    _reconnectTimer?.cancel();
-    return super.close();
   }
 }
