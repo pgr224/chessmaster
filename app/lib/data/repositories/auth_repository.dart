@@ -13,7 +13,7 @@ class AuthRepository {
   static const _tokenKey = 'auth_token';
   static const _userKey = 'user_data';
   static const _deviceIdKey = 'device_id';
-  static final RegExp _usernamePattern = RegExp(r'^[a-zA-Z0-9_]{2,30}$');
+  static final RegExp _usernamePattern = RegExp(r'^[a-zA-Z0-9_]{3,30}$');
   final _uuid = const Uuid();
 
   AuthRepository(this._dio);
@@ -59,12 +59,14 @@ class AuthRepository {
         final user = await login();
         return user;
       } catch (_) {
-        if (!forceRefresh) return null;
+        // Server unreachable or device not registered.
+        // Fall through to check locally cached data below instead of
+        // immediately returning null (which forces re-onboarding).
       }
     }
 
     final userData = prefs.getString(_userKey);
-    if (token == null || userData == null) return null;
+    if (userData == null) return null;
 
     try {
       final Map<String, dynamic> data = jsonDecode(userData);
@@ -161,7 +163,7 @@ class AuthRepository {
     final normalizedUsername = _normalizeUsername(username);
     if (!_usernamePattern.hasMatch(normalizedUsername)) {
       throw Exception(
-          'Username must be 2-30 characters and use only letters, numbers, or underscore.');
+          'Username must be 3-30 characters and use only letters, numbers, or underscore.');
     }
 
     final deviceId = await getDeviceId();
@@ -291,7 +293,7 @@ class AuthRepository {
         }
       }
     }
-    return 'Invalid registration data. Use 2-30 characters with letters, numbers, or underscore.';
+    return 'Invalid registration data. Use 3-30 characters with letters, numbers, or underscore.';
   }
 
   String _normalizeUsername(String username) {
@@ -597,6 +599,26 @@ class AuthRepository {
       return response.statusCode == 200 && response.data['success'] == true;
     } catch (e) {
       print('Failed to send friend request: $e');
+      return false;
+    }
+  }
+
+  Future<bool> unlockAchievement({
+    required String userId,
+    required String achievementId,
+    required int points,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/profile/$userId/unlock-achievement',
+        data: {
+          'achievementId': achievementId,
+          'points': points,
+        },
+      );
+      return response.statusCode == 200 && response.data['success'] == true;
+    } catch (e) {
+      print('Failed to unlock achievement on server: $e');
       return false;
     }
   }

@@ -24,8 +24,6 @@ Future<void> init() async {
   final prefs = await SharedPreferences.getInstance();
   sl.registerSingleton<SharedPreferences>(prefs);
 
-  sl.registerSingleton<AchievementService>(
-      AchievementService(sl<SharedPreferences>()));
 
   // ── External services ──
   sl.registerLazySingleton<Dio>(() {
@@ -58,13 +56,30 @@ Future<void> init() async {
           if (hasAuthHeader && !isRecoveringFrom401) {
             isRecoveringFrom401 = true;
             try {
-              // Manual cleanup to avoid dependencies
+              // Clear the stale token but keep user_data so we can recover
               await sl<SharedPreferences>().remove('auth_token');
-              await sl<SharedPreferences>().remove('user_data');
               
+              // Attempt silent re-login using device ID
+              try {
+                final authRepo = sl<AuthRepository>();
+                await authRepo.login();
+                // Re-login succeeded — retry the original request
+                final token = await authRepo.getToken();
+                if (token != null) {
+                  e.requestOptions.headers['Authorization'] = 'Bearer $token';
+                  final retryResponse = await dio.fetch(e.requestOptions);
+                  return handler.resolve(retryResponse);
+                }
+              } catch (_) {
+                // Re-login failed — fall through to redirect
+              }
+              
+              // Only redirect to onboarding if re-login failed completely
               final isResumingMatch = AppRouter.router.state.matchedLocation == '/game';
               
               if (!isResumingMatch && AppRouter.router.state.matchedLocation != '/onboarding') {
+                // Also clear user_data since we can't recover
+                await sl<SharedPreferences>().remove('user_data');
                 AppRouter.router.go('/onboarding?reason=session_expired');
               }
             } finally {
@@ -80,6 +95,8 @@ Future<void> init() async {
 
   // ── Repositories ──
   sl.registerLazySingleton<AuthRepository>(() => AuthRepository(sl<Dio>()));
+  sl.registerSingleton<AchievementService>(
+      AchievementService(sl<SharedPreferences>(), sl<AuthRepository>()));
   sl.registerLazySingleton<GameRepository>(() => GameRepository(sl<Dio>()));
   sl.registerLazySingleton<PuzzleRepository>(() => PuzzleRepository());
   sl.registerLazySingleton<TournamentRepository>(
@@ -89,7 +106,7 @@ Future<void> init() async {
       MissionService(sl<SharedPreferences>(), sl<AuthRepository>()));
 
   // ── BLoCs ──
-  sl.registerLazySingleton<AuthBloc>(() => AuthBloc(sl<AuthRepository>()));
+  sl.registerFactory<AuthBloc>(() => AuthBloc(sl<AuthRepository>(), sl<AchievementService>()));
   sl.registerFactory<GameBloc>(() => GameBloc(
         sl<GameRepository>(),
         sl<AuthRepository>(),

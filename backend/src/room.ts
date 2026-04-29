@@ -526,9 +526,9 @@ export class GameRoom {
 
       await this.env.DB.prepare(`
         INSERT INTO games (id, white_user_id, black_user_id, mode, status, result, pgn, final_fen, move_count, created_at, updated_at)
-        VALUES (?, ?, ?, 'multiplayer', 'active', 'ongoing', ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, 'multiplayer', 'active', NULL, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET 
-          status = 'active', result = 'ongoing', pgn = excluded.pgn, 
+          status = 'active', result = NULL, pgn = excluded.pgn, 
           final_fen = excluded.final_fen, move_count = excluded.move_count,
           updated_at = excluded.updated_at
       `).bind(

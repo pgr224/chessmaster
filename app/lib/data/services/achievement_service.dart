@@ -8,12 +8,14 @@ import '../models/achievement_model.dart';
 import '../models/user_model.dart';
 import '../../presentation/blocs/game/game_bloc.dart';
 import '../../domain/engine/chess_engine.dart'; // For PieceType
+import '../repositories/auth_repository.dart';
 
 class AchievementService {
   final SharedPreferences _prefs;
+  final AuthRepository? _authRepository;
   List<Achievement> _achievements = [];
 
-  AchievementService(this._prefs) {
+  AchievementService(this._prefs, [this._authRepository]) {
     _loadAchievements();
   }
 
@@ -60,6 +62,50 @@ class AchievementService {
       );
       _saveAchievements();
       _showUnlockNotification(_achievements[index]);
+
+      // NEW: Sync with server if repository is available
+      _syncUnlockWithServer(_achievements[index]);
+    }
+  }
+
+  Future<void> _syncUnlockWithServer(Achievement achievement) async {
+    if (_authRepository == null) return;
+
+    try {
+      final userData = _prefs.getString('user_data');
+      if (userData == null) return;
+
+      final userMap = jsonDecode(userData);
+      final userId = userMap['id'] as String;
+
+      await _authRepository.unlockAchievement(
+        userId: userId,
+        achievementId: achievement.id,
+        points: achievement.points,
+      );
+    } catch (e) {
+      debugPrint('Error syncing achievement to server: $e');
+    }
+  }
+
+  /// Reconciles local achievements with those stored on the server.
+  /// Called after successful login/profile fetch.
+  void syncAchievements(List<String> serverAchievementIds) {
+    bool changed = false;
+    for (final id in serverAchievementIds) {
+      final index = _achievements.indexWhere((a) => a.id == id);
+      if (index != -1 && !_achievements[index].isUnlocked) {
+        _achievements[index] = _achievements[index].copyWith(
+          isUnlocked: true,
+          unlockedAt: DateTime.now(),
+          currentProgress: _achievements[index].requiredCount ?? 0,
+        );
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      _saveAchievements();
     }
   }
 
@@ -170,7 +216,11 @@ class AchievementService {
     if (stats.wins > 0) {
       unlockAchievement('first_win');
     }
-    if (state.capturedWhite.isNotEmpty || state.capturedBlack.isNotEmpty) {
+    // first_capture: check that the PLAYER captured an opponent piece
+    final playerCapturedOpponent = state.playerColor == PieceColor.white
+        ? state.capturedBlack.isNotEmpty
+        : state.capturedWhite.isNotEmpty;
+    if (playerCapturedOpponent) {
       unlockAchievement('first_capture');
     }
     final playerMoves = state.moveHistory.asMap().entries
@@ -212,6 +262,15 @@ class AchievementService {
       if (playerLostQueen) {
         unlockAchievement('queen_sacrifice');
       }
+
+      // Strategy: no_pieces_lost — works in ALL modes, not just singlePlayer
+      if (state.playerColor == PieceColor.white &&
+          state.capturedWhite.isEmpty) {
+        unlockAchievement('no_pieces_lost');
+      } else if (state.playerColor == PieceColor.black &&
+          state.capturedBlack.isEmpty) {
+        unlockAchievement('no_pieces_lost');
+      }
     }
     
     // Bounty Hunter (Capture Opposition Queen in Multiplayer)
@@ -251,7 +310,6 @@ class AchievementService {
 
     // Beating AIs
     if (isPlayerWin && state.mode == GameMode.singlePlayer) {
-      // Player won!
       if (state.aiDifficulty == AIDifficulty.basic) {
         unlockAchievement('beat_ai_basic');
       }
@@ -263,15 +321,6 @@ class AchievementService {
       }
       if (state.aiDifficulty == AIDifficulty.impossible) {
         unlockAchievement('beat_ai_impossible');
-      }
-
-      // Strategy
-      if (state.playerColor == PieceColor.white &&
-          state.capturedWhite.isEmpty) {
-        unlockAchievement('no_pieces_lost');
-      } else if (state.playerColor == PieceColor.black &&
-          state.capturedBlack.isEmpty) {
-        unlockAchievement('no_pieces_lost');
       }
     }
 
@@ -286,23 +335,39 @@ class AchievementService {
       unlockAchievement('zero_blunders');
     }
 
-    // Promotions
-    for (final move in state.moveHistory) {
+    // Promotions — only credit the PLAYER's promotions, not opponent's
+    for (final entry in state.moveHistory.asMap().entries) {
+      if (!_isPlayerMove(entry.key, state.playerColor)) continue;
+      final move = entry.value;
       if (move.promotion == PieceType.queen) {
         unlockAchievement('pawn_promotion');
       } else if (move.promotion == PieceType.knight) {
         unlockAchievement('promote_knight');
       }
+      // En passant detection
+      if (move.isEnPassant) {
+        unlockAchievement('en_passant');
+      }
     }
 
-    // Fast checkmate
-    if (state.status == GameStatus.checkmate) {
+    // Fast checkmate — MUST be player's win, not opponent's
+    if (state.status == GameStatus.checkmate && isPlayerWin) {
       if (state.moveHistory.length <= 40) {
         unlockAchievement('checkmate_fast'); // Under 20 full moves
       }
       if (state.moveHistory.length <= 8) {
         unlockAchievement('scholars_mate'); // Under 4 full moves
       }
+    }
+
+    // Long game — 100+ total moves (200 half-moves)
+    if (state.moveHistory.length >= 200) {
+      unlockAchievement('long_game');
+    }
+
+    // Depth Over Speed — Win a game with 50+ moves (100 half-moves)
+    if (isPlayerWin && state.moveHistory.length >= 100) {
+      unlockAchievement('tc_depth_over_speed');
     }
 
     // Social / Multiplayer
@@ -330,14 +395,29 @@ class AchievementService {
       updateProgress('daily_warrior', dailyMpCount);
     }
     
-    // Speed Demon (Win MP in under 2 minutes)
-    // Note: We'll assume the evaluation happens if the game lasted < 120 seconds
+    // Speed Demon (Win any MP game in under 2 minutes)
     if (state.mode == GameMode.multiplayer && isPlayerWin && state.gameDurationSeconds > 0 && state.gameDurationSeconds < 120) {
        unlockAchievement('speed_demon_mp');
     }
 
+    // Win on time — opponent ran out of clock
+    if (isPlayerWin && state.gameReason != null && state.gameReason!.toLowerCase().contains('time')) {
+      unlockAchievement('win_on_time');
+    }
+
+    // Survive low time — Win with less than 10 seconds remaining
+    if (isPlayerWin && state.mode != GameMode.twoPlayer) {
+      final playerTimeMs = state.playerColor == PieceColor.white
+          ? state.whiteTimeMs
+          : state.blackTimeMs;
+      if (playerTimeMs > 0 && playerTimeMs < 10000) {
+        unlockAchievement('survive_low_time');
+      }
+    }
+
     // Mastery
-    if (stats.eloRating >= 1200) {
+    // elo_1200: use > 1200 since default starting ELO IS 1200
+    if (stats.eloRating > 1200) {
       unlockAchievement('elo_1200');
     }
     if (stats.eloRating >= 1500) {

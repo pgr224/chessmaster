@@ -252,6 +252,8 @@ export class Lobby implements DurableObject {
             `DELETE FROM challenges WHERE challenger_id = ? AND challenged_id = ? AND status = 'pending'`
           ).bind(meta.id, opponentId).run()
 
+          const deliveryStatus: ChallengeDelivery = (opponent && isOpponentReady) ? 'live' : 'queued'
+
           await this.upsertChallenge({
             id: requestId,
             challengerId: meta.id,

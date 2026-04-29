@@ -270,6 +270,49 @@ profileRoutes.put('/:id', async (c) => {
   }
 })
 
+// Unlock Achievement & Award XP
+profileRoutes.post('/:id/unlock-achievement', async (c) => {
+  const userId = c.get('user').sub
+  const targetId = c.req.param('id')
+  
+  if (userId !== targetId) {
+    return c.json({ error: 'Unauthorized' }, 403)
+  }
+
+  const { achievementId, points } = await c.req.json() as { achievementId: string, points: number }
+  
+  try {
+    // 1. Check if already unlocked to prevent double-dipping XP
+    const existing = await c.env.DB.prepare(
+      'SELECT 1 FROM user_achievements WHERE user_id = ? AND achievement_id = ?'
+    ).bind(userId, achievementId).first()
+
+    if (existing) {
+      return c.json({ success: true, message: 'Already unlocked' })
+    }
+
+    // 2. Atomic update: Record achievement and award XP
+    await c.env.DB.batch([
+      c.env.DB.prepare('INSERT INTO user_achievements (user_id, achievement_id) VALUES (?, ?)')
+        .bind(userId, achievementId),
+      c.env.DB.prepare('UPDATE users SET xp = xp + ?, updated_at = datetime("now") WHERE id = ?')
+        .bind(points, userId),
+      // Also update user_stats xp for consistency (though users.xp is the master)
+      c.env.DB.prepare('UPDATE user_stats SET xp = xp + ?, updated_at = datetime("now") WHERE user_id = ?')
+        .bind(points, userId)
+    ])
+
+    return c.json({ 
+      success: true, 
+      achievementId,
+      xpAwarded: points 
+    })
+  } catch (err: any) {
+    console.error('Achievement unlock failed:', err)
+    return c.json({ error: 'Database error', message: err.message }, 500)
+  }
+})
+
 // Update User XP & Stats
 profileRoutes.post('/:id/xp', async (c) => {
   const userId = c.get('user').sub
@@ -302,7 +345,6 @@ profileRoutes.post('/:id/xp', async (c) => {
           hints_used = hints_used + ?,
           puzzles_solved = puzzles_solved + ?,
           puzzle_rating = CASE WHEN ? > 0 THEN ? ELSE puzzle_rating END,
-          xp = xp + ?,
           updated_at = datetime('now')
         WHERE user_id = ?
       `).bind(
@@ -317,7 +359,6 @@ profileRoutes.post('/:id/xp', async (c) => {
         stats.puzzles_solved || 0,
         stats.puzzle_rating || 0,
         stats.puzzle_rating || 0,
-        xpDelta,
         userId
       )
     ]
@@ -388,8 +429,6 @@ profileRoutes.post('/xp/transfer', async (c) => {
 
     await c.env.DB.batch([
       c.env.DB.prepare('UPDATE users SET xp = xp + ? WHERE id = ?').bind(normalizedAmount, recipientId),
-      c.env.DB.prepare('UPDATE user_stats SET xp = xp + ? WHERE user_id = ?').bind(normalizedAmount, recipientId),
-      c.env.DB.prepare('UPDATE user_stats SET xp = xp - ? WHERE user_id = ?').bind(normalizedAmount, donorId),
       c.env.DB.prepare('INSERT INTO xp_transfers (donor_id, recipient_id, amount) VALUES (?, ?, ?)')
         .bind(donorId, recipientId, normalizedAmount)
     ])
@@ -871,18 +910,27 @@ async function buildProfileData(c: any, userId: string) {
       console.warn('[buildProfileData] Could not fetch recent games:', gamesErr)
     }
 
+    // 4. Get achievements
+    const achievementRes = await c.env.DB.prepare(
+      'SELECT achievement_id FROM user_achievements WHERE user_id = ?'
+    ).bind(userId).all<{ achievement_id: string }>()
+    const achievements = (achievementRes.results || []).map(a => a.achievement_id)
+
     const profile = {
       id: unified.id,
       username: unified.username,
-      avatar_url: unified.avatar_url,
-      is_ghibli: userAccount?.is_ghibli || 0,
-      local_avatar: userAccount?.local_avatar || null,
-      username_changes: userAccount?.username_changes || 0,
-      last_username_change: userAccount?.last_username_change,
+      avatarUrl: unified.avatar_url,
+      isGhibli: (userAccount?.is_ghibli || 0) === 1,
+      localAvatar: userAccount?.local_avatar || null,
+      usernameChanges: userAccount?.username_changes || 0,
+      lastUsernameChange: userAccount?.last_username_change,
       xp: unified.xp,
-      created_at: userAccount?.created_at,
+      createdAt: userAccount?.created_at,
+      lastLogin: unified.last_login,
+      deviceModel: unified.device_model,
       stats: unified, // The unified object contains all stats including wins, elo, etc.
-      recent_games: recentGames,
+      recentGames: recentGames,
+      achievements: achievements,
       // Calculate rate limit info for frontend
       remainingNameChanges: Math.max(0, 3 - (userAccount?.username_changes || 0)),
       canChangeNameNow: !userAccount?.last_username_change || (Date.now() - new Date(userAccount.last_username_change).getTime() >= 24 * 60 * 60 * 1000)

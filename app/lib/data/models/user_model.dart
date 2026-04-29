@@ -16,6 +16,7 @@ class UserModel {
   final String? lastUsernameChange;
   final bool canChangeNameNow;
   final int remainingNameChanges;
+  final List<String> achievements;
 
   const UserModel({
     required this.id,
@@ -32,6 +33,7 @@ class UserModel {
     this.lastUsernameChange,
     this.canChangeNameNow = true,
     this.remainingNameChanges = 3,
+    this.achievements = const [],
   });
 
   int get level => UserStats.calculateLevel(xp);
@@ -70,6 +72,9 @@ class UserModel {
       recentGames: (json['recent_games'] as List? ?? [])
           .map((g) => GameRecord.fromJson(g as Map<String, dynamic>))
           .toList(),
+      achievements: (json['achievements'] as List? ?? [])
+          .map((a) => a.toString())
+          .toList(),
     );
   }
 
@@ -106,6 +111,7 @@ class UserModel {
           'puzzle_rating': stats.puzzleRating,
         },
         'recent_games': recentGames.map((g) => g.toJson()).toList(),
+        'achievements': achievements,
       };
 
   UserModel copyWith({
@@ -123,6 +129,7 @@ class UserModel {
     String? lastUsernameChange,
     bool? canChangeNameNow,
     int? remainingNameChanges,
+    List<String>? achievements,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -139,6 +146,7 @@ class UserModel {
       lastUsernameChange: lastUsernameChange ?? this.lastUsernameChange,
       canChangeNameNow: canChangeNameNow ?? this.canChangeNameNow,
       remainingNameChanges: remainingNameChanges ?? this.remainingNameChanges,
+      achievements: achievements ?? this.achievements,
     );
   }
 }
@@ -158,6 +166,9 @@ class UserStats {
   final int twoPlayerGames;
   final int twoPlayerWins;
   final int tournamentWins;
+  final int piecesCaptured;
+  final int checkmatesDelivered;
+  final int bestWinElo;
   final double practiceDifficulty;
   final int eloRating;
   final int puzzlesSolved;
@@ -181,6 +192,9 @@ class UserStats {
     this.twoPlayerGames = 0,
     this.twoPlayerWins = 0,
     this.tournamentWins = 0,
+    this.piecesCaptured = 0,
+    this.checkmatesDelivered = 0,
+    this.bestWinElo = 0,
     this.practiceDifficulty = 1.0,
     this.eloRating = 1200,
     this.puzzlesSolved = 0,
@@ -212,14 +226,17 @@ class UserStats {
       draws: parseInt(json['draws']),
       longestStreak: parseInt(json['longest_streak']),
       currentStreak: parseInt(json['current_streak']),
-      totalPlaytimeMins: parseInt(json['total_playtime_mins']),
       aiGames: parseInt(json['ai_games']),
       aiWins: parseInt(json['ai_wins']),
       multiplayerGames: parseInt(json['multiplayer_games']),
       multiplayerWins: parseInt(json['multiplayer_wins']),
       twoPlayerGames: parseInt(json['two_player_games']),
       twoPlayerWins: parseInt(json['two_player_wins']),
-      tournamentWins: parseInt(json['tournament_wins']),
+      tournamentWins: parseInt(json['tournament_wins'] ?? json['tournaments_won']),
+      piecesCaptured: parseInt(json['pieces_captured']),
+      checkmatesDelivered: parseInt(json['checkmates_delivered']),
+      bestWinElo: parseInt(json['best_win_elo']),
+      totalPlaytimeMins: parseInt(json['total_time_played'] ?? json['total_playtime_mins']),
       practiceDifficulty:
           (json['practice_difficulty'] as num?)?.toDouble() ?? 1.0,
       eloRating: parseInt(json['elo_rating'], 1200),
@@ -247,6 +264,10 @@ class UserStats {
         'two_player_games': twoPlayerGames,
         'two_player_wins': twoPlayerWins,
         'tournament_wins': tournamentWins,
+        'pieces_captured': piecesCaptured,
+        'checkmates_delivered': checkmatesDelivered,
+        'best_win_elo': bestWinElo,
+        'total_time_played': totalPlaytimeMins,
         'practice_difficulty': practiceDifficulty,
         'elo_rating': eloRating,
         'puzzles_solved': puzzlesSolved,

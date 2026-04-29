@@ -2,6 +2,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../data/repositories/auth_repository.dart';
 import '../../../data/models/user_model.dart';
+import '../../../data/services/achievement_service.dart';
 
 // ═══════════════════════════════════════════
 // EVENTS
@@ -76,16 +77,21 @@ class AuthErrorState extends AuthState {
 // ═══════════════════════════════════════════
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final AuthRepository _repository;
+  final AchievementService _achievementService;
 
   AuthRepository get authRepository => _repository;
 
-  AuthBloc(this._repository) : super(AuthInitialState()) {
+  AuthBloc(this._repository, this._achievementService) : super(AuthInitialState()) {
     on<AuthInitializeEvent>(_onInitialize);
     on<AuthRegisterEvent>(_onRegister);
     on<AuthUpdateProfileEvent>(_onUpdateProfile);
     on<AuthSignOutEvent>(_onSignOut);
     on<AuthClearAllDataEvent>(_onClearAllData);
     on<AuthCheckStatusEvent>(_onCheckStatus);
+  }
+
+  void _syncUserAchievements(UserModel user) {
+    _achievementService.syncAchievements(user.achievements);
   }
 
   Future<void> _onCheckStatus(
@@ -95,6 +101,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     try {
       final user = await _repository.getCurrentUser();
       if (user != null) {
+        _syncUserAchievements(user);
         emit(AuthAuthenticatedState(user));
       }
     } catch (e) {
@@ -108,12 +115,24 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     try {
       final user = await _repository.getCurrentUser();
       if (user != null) {
+        _syncUserAchievements(user);
         emit(AuthAuthenticatedState(user));
       } else {
         emit(AuthUnauthenticatedState());
       }
     } catch (e) {
-      emit(AuthErrorState(e.toString()));
+      // Network error during init should not block login if we have cached data.
+      // Try to get cached user data directly.
+      try {
+        final cachedUser = await _repository.getCurrentUser(forceRefresh: false);
+        if (cachedUser != null) {
+          _syncUserAchievements(cachedUser);
+          emit(AuthAuthenticatedState(cachedUser));
+          return;
+        }
+      } catch (_) {}
+      // No cached data available — genuinely unauthenticated
+      emit(AuthUnauthenticatedState());
     }
   }
 
@@ -125,6 +144,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         username: event.username,
         avatarPath: event.avatarPath,
       );
+      _syncUserAchievements(user);
       emit(AuthAuthenticatedState(user));
     } catch (e) {
       emit(AuthErrorState(e.toString()));
@@ -143,6 +163,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         localAvatar: event.localAvatar,
         isGhibli: event.isGhibli,
       );
+      _syncUserAchievements(updated);
       emit(AuthAuthenticatedState(updated));
     } catch (e) {
       final errorMsg = e.toString();

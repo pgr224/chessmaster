@@ -66,7 +66,7 @@ class ChessApp extends StatelessWidget {
             multiplayerBloc.add(MpConnectLobbyEvent(
               authState.user.id,
               authState.user.username,
-              rating: authState.user.xp,
+              rating: authState.user.stats.eloRating,
             ));
           } else {
             multiplayerBloc.add(MpDisconnectLobbyEvent());

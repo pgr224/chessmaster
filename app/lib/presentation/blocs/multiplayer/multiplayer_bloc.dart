@@ -10,6 +10,17 @@ import '../../../domain/engine/chess_engine.dart';
 // RE-EXPORT MODELS
 export '../../../data/models/multiplayer_models.dart';
 
+/// Normalize promotion piece code to single lowercase letter (matches backend logic)
+String? normalizePromotionCode(String? code) {
+  if (code == null || code.isEmpty) return null;
+  final value = code.toLowerCase();
+  if (value == 'q' || value == 'queen') return 'q';
+  if (value == 'r' || value == 'rook') return 'r';
+  if (value == 'b' || value == 'bishop') return 'b';
+  if (value == 'n' || value == 'knight') return 'n';
+  return null;
+}
+
 // EVENTS
 abstract class MultiplayerEvent extends Equatable {
   const MultiplayerEvent();
