@@ -123,42 +123,60 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       AuthInitializeEvent event, Emitter<AuthState> emit) async {
     emit(AuthLoadingState());
     try {
-      final user = await _repository.getCurrentUser();
+      // Try server-aware getCurrentUser with a hard timeout
+      final user = await _repository.getCurrentUser()
+          .timeout(const Duration(seconds: 8), onTimeout: () => null);
       if (user != null) {
         _syncUserAchievements(user);
         emit(AuthAuthenticatedState(user));
-      } else {
-        emit(AuthUnauthenticatedState());
+        return;
       }
-    } catch (e) {
-      // Network error during init should not block login if we have cached data.
-      // Try to get cached user data directly.
-      try {
-        final cachedUser = await _repository.getCurrentUser(forceRefresh: false);
-        if (cachedUser != null) {
-          _syncUserAchievements(cachedUser);
-          emit(AuthAuthenticatedState(cachedUser));
-          return;
-        }
-      } catch (_) {}
-      // No cached data available — genuinely unauthenticated
-      emit(AuthUnauthenticatedState());
+    } catch (_) {
+      // Network error — try local cache only
     }
+
+    // Fallback: read ONLY from local cache (no network)
+    try {
+      final cachedUser = await _repository.getCachedUser();
+      if (cachedUser != null) {
+        _syncUserAchievements(cachedUser);
+        emit(AuthAuthenticatedState(cachedUser));
+        return;
+      }
+    } catch (_) {}
+
+    // No cached data available — genuinely unauthenticated
+    emit(AuthUnauthenticatedState());
   }
 
   Future<void> _onSilentLogin(
       AuthSilentLoginEvent event, Emitter<AuthState> emit) async {
     emit(AuthLoadingState());
     try {
-      final user = await _repository.getCurrentUser(forceRefresh: true);
+      final user = await _repository.getCurrentUser(forceRefresh: true)
+          .timeout(const Duration(seconds: 8), onTimeout: () => null);
       if (user != null) {
         _syncUserAchievements(user);
         emit(AuthAuthenticatedState(user));
       } else {
-        emit(AuthUnauthenticatedState());
+        // Try cache as last resort
+        final cached = await _repository.getCachedUser();
+        if (cached != null) {
+          _syncUserAchievements(cached);
+          emit(AuthAuthenticatedState(cached));
+        } else {
+          emit(AuthUnauthenticatedState());
+        }
       }
     } catch (e) {
-      emit(AuthErrorState(e.toString()));
+      // Even on error, try cache
+      final cached = await _repository.getCachedUser();
+      if (cached != null) {
+        _syncUserAchievements(cached);
+        emit(AuthAuthenticatedState(cached));
+      } else {
+        emit(AuthErrorState(e.toString()));
+      }
     }
   }
 
@@ -192,7 +210,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     );
     emit(AuthAuthenticatedState(guestUser));
   }
-
 
   Future<void> _onUpdateProfile(
       AuthUpdateProfileEvent event, Emitter<AuthState> emit) async {

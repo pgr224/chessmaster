@@ -106,7 +106,7 @@ Future<void> init() async {
       MissionService(sl<SharedPreferences>(), sl<AuthRepository>()));
 
   // ── BLoCs ──
-  sl.registerFactory<AuthBloc>(() => AuthBloc(sl<AuthRepository>(), sl<AchievementService>()));
+  sl.registerLazySingleton<AuthBloc>(() => AuthBloc(sl<AuthRepository>(), sl<AchievementService>()));
   sl.registerFactory<GameBloc>(() => GameBloc(
         sl<GameRepository>(),
         sl<AuthRepository>(),

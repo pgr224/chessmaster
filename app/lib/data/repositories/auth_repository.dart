@@ -50,12 +50,31 @@ class AuthRepository {
     return hash;
   }
 
+  /// Read ONLY from local cache — never touches network.
+  /// This is the safe fallback when network is unavailable.
+  Future<UserModel?> getCachedUser() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userData = prefs.getString(_userKey);
+    if (userData == null) return null;
+    try {
+      final Map<String, dynamic> data = jsonDecode(userData);
+      return UserModel.fromJson(data);
+    } catch (e) {
+      print('User session decode error: $e');
+      return null;
+    }
+  }
+
   Future<UserModel?> getCurrentUser({bool forceRefresh = false}) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString(_tokenKey);
 
-    // Even if we have a token, if we want to refresh or if we only have deviceId,
-    // try to silent login to get latest user data
+    // If we have a token and don't need refresh, just return cached data
+    if (token != null && !forceRefresh) {
+      return getCachedUser();
+    }
+
+    // No token or force refresh — try server login
     if (token == null || forceRefresh) {
       final isExplicitLogout = prefs.getBool(_explicitLogoutKey) ?? false;
       if (isExplicitLogout && !forceRefresh) {
@@ -68,21 +87,12 @@ class AuthRepository {
         return user;
       } catch (_) {
         // Server unreachable or device not registered.
-        // Fall through to check locally cached data below instead of
-        // immediately returning null (which forces re-onboarding).
+        // Fall through to check locally cached data below.
       }
     }
 
-    final userData = prefs.getString(_userKey);
-    if (userData == null) return null;
-
-    try {
-      final Map<String, dynamic> data = jsonDecode(userData);
-      return UserModel.fromJson(data);
-    } catch (e) {
-      print('User session decode error: $e');
-      return null;
-    }
+    // Final fallback: return whatever is in local cache
+    return getCachedUser();
   }
 
   Future<UserModel> login() async {
@@ -131,6 +141,7 @@ class AuthRepository {
     
     return profile;
   }
+
   Future<bool> checkUsername(String username) async {
     try {
       final response = await _dio.get('/api/auth/check-username',

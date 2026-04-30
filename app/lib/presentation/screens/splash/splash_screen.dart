@@ -16,23 +16,33 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
+  bool _hasNavigated = false;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(vsync: this, duration: 2.seconds);
     _controller.forward();
+
+    // SAFETY NET: If auth takes longer than 10 seconds, force navigate
+    Future.delayed(const Duration(seconds: 10), () {
+      if (!_hasNavigated && mounted) {
+        _navigateTo('/onboarding');
+      }
+    });
+  }
+
+  void _navigateTo(String route) {
+    if (_hasNavigated || !mounted) return;
+    _hasNavigated = true;
+    context.go(route);
   }
 
   void _onAuthStateChanged(BuildContext context, AuthState state) {
     if (state is AuthAuthenticatedState) {
-      Future.delayed(1500.ms, () {
-        if (mounted) context.go('/home');
-      });
+      Future.delayed(1200.ms, () => _navigateTo('/home'));
     } else if (state is AuthUnauthenticatedState || state is AuthErrorState) {
-      Future.delayed(1500.ms, () {
-        if (mounted) context.go('/onboarding');
-      });
+      Future.delayed(1200.ms, () => _navigateTo('/onboarding'));
     }
   }
 
@@ -156,4 +166,3 @@ class _SplashScreenState extends State<SplashScreen>
     super.dispose();
   }
 }
-
