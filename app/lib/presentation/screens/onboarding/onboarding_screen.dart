@@ -392,11 +392,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
             ).animate().fadeIn(delay: 600.ms).slideY(begin: 0.5),
           ],
-
-            ),
           const SizedBox(height: 8),
           TextButton(
-            onPressed: () => context.read<AuthBloc>().add(const AuthGuestLoginEvent()),
+            onPressed: () =>
+                context.read<AuthBloc>().add(const AuthGuestLoginEvent()),
             child: Text(
               '🎮 Play Offline as Guest',
               style: GoogleFonts.fredoka(

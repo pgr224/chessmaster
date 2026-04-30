@@ -131,7 +131,11 @@ class AuthRepository {
     
     return profile;
   }
-
+  Future<bool> checkUsername(String username) async {
+    try {
+      final response = await _dio.get('/api/auth/check-username',
+          queryParameters: {'username': username});
+      return response.data['available'] == true;
     } catch (_) {
       return false;
     }
@@ -146,6 +150,8 @@ class AuthRepository {
   Future<Map<String, dynamic>> checkUsernameAvailability(String username) async {
     try {
       final normalized = username.trim();
+      final response = await _dio.get(
+        '/api/profile/check-username/$normalized',
         options: Options(
           validateStatus: (_) => true,
           connectTimeout: const Duration(seconds: 5),
