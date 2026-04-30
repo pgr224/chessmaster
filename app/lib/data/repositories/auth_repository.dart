@@ -132,37 +132,40 @@ class AuthRepository {
     return profile;
   }
 
-  Future<bool> checkUsername(String username) async {
-    try {
-      final response = await _dio.get('/api/auth/check-username',
-          queryParameters: {'username': username});
-      return response.data['available'] == true;
     } catch (_) {
       return false;
     }
+  }
+
+  Map<String, dynamic> _asMap(dynamic data) {
+    if (data is Map<String, dynamic>) return data;
+    return {};
   }
 
   /// Check username availability with detailed rate limit information
   Future<Map<String, dynamic>> checkUsernameAvailability(String username) async {
     try {
       final normalized = username.trim();
-      final response = await _dio.get(
-        '/api/profile/check-username/$normalized',
-        options: Options(validateStatus: (_) => true),
+        options: Options(
+          validateStatus: (_) => true,
+          connectTimeout: const Duration(seconds: 5),
+          receiveTimeout: const Duration(seconds: 5),
+        ),
       );
       
+      final data = _asMap(response.data);
       if (response.statusCode == 200) {
         return {
-          'available': response.data['available'] == true,
-          'canChangeNow': response.data['canChangeNow'] == true,
-          'remainingLifetimeChanges': response.data['remainingLifetimeChanges'] ?? 3,
-          'nextChangeTime': response.data['nextChangeTime'],
-          'reason': response.data['reason'],
+          'available': data['available'] == true,
+          'canChangeNow': data['canChangeNow'] == true,
+          'remainingLifetimeChanges': data['remainingLifetimeChanges'] ?? 3,
+          'nextChangeTime': data['nextChangeTime'],
+          'reason': data['reason'],
         };
       } else {
         return {
           'available': null,
-          'error': response.data['error'] ?? 'Check failed',
+          'error': data['error'] ?? 'Check failed',
           'statusCode': response.statusCode,
         };
       }
@@ -187,10 +190,14 @@ class AuthRepository {
     final response = await _dio.post(
       '/api/auth/register',
       data: {'username': normalizedUsername, 'deviceId': deviceId},
-      options: Options(validateStatus: (status) {
-        if (status == null) return false;
-        return status >= 200 && status < 500;
-      }),
+      options: Options(
+        validateStatus: (status) {
+          if (status == null) return false;
+          return status >= 200 && status < 500;
+        },
+        connectTimeout: const Duration(seconds: 10),
+        receiveTimeout: const Duration(seconds: 10),
+      ),
     );
 
     if (response.statusCode == 400) {
@@ -338,10 +345,14 @@ class AuthRepository {
         if (isGhibli != null) 'isGhibli': isGhibli,
         if (localAvatar != null) 'localAvatar': localAvatar,
       },
-      options: Options(validateStatus: (status) {
-        if (status == null) return false;
-        return status >= 200 && status < 500;
-      }),
+      options: Options(
+        validateStatus: (status) {
+          if (status == null) return false;
+          return status >= 200 && status < 500;
+        },
+        connectTimeout: const Duration(seconds: 8),
+        receiveTimeout: const Duration(seconds: 8),
+      ),
     );
 
     // Handle specific error responses for username changes

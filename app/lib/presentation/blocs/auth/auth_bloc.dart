@@ -47,6 +47,10 @@ class AuthSilentLoginEvent extends AuthEvent {
   const AuthSilentLoginEvent();
 }
 
+class AuthGuestLoginEvent extends AuthEvent {
+  const AuthGuestLoginEvent();
+}
+
 // ═══════════════════════════════════════════
 // STATES
 // ═══════════════════════════════════════════
@@ -93,6 +97,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthClearAllDataEvent>(_onClearAllData);
     on<AuthCheckStatusEvent>(_onCheckStatus);
     on<AuthSilentLoginEvent>(_onSilentLogin);
+    on<AuthGuestLoginEvent>(_onGuestLogin);
   }
 
   void _syncUserAchievements(UserModel user) {
@@ -171,6 +176,23 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       emit(AuthErrorState(e.toString()));
     }
   }
+
+  Future<void> _onGuestLogin(
+      AuthGuestLoginEvent event, Emitter<AuthState> emit) async {
+    emit(AuthLoadingState());
+    final deviceId = await _repository.getDeviceId();
+    final guestUser = UserModel(
+      id: 'guest_${DateTime.now().millisecondsSinceEpoch}',
+      username: 'Guest_${deviceId.substring(0, 4)}',
+      xp: 0,
+      isOnline: false,
+      stats: const UserStats(),
+      deviceId: deviceId,
+      isGuest: true,
+    );
+    emit(AuthAuthenticatedState(guestUser));
+  }
+
 
   Future<void> _onUpdateProfile(
       AuthUpdateProfileEvent event, Emitter<AuthState> emit) async {

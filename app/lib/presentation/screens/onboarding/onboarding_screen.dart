@@ -131,6 +131,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     : state.message,
                 style: GoogleFonts.baloo2(),
               ),
+              action: SnackBarAction(
+                label: 'Play Offline',
+                onPressed: () => context.read<AuthBloc>().add(const AuthGuestLoginEvent()),
+                textColor: AppTheme.goldPrimary,
+              ),
             ),
           );
         }
@@ -388,16 +393,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ).animate().fadeIn(delay: 600.ms).slideY(begin: 0.5),
           ],
 
-          // ── Skip ──
-          if (!isLast)
-            TextButton(
-              onPressed: () => _pageController.jumpToPage(_pages.length - 1),
-              child: Text(
-                'Skip ⏩',
-                style:
-                    GoogleFonts.baloo2(color: AppTheme.textMuted, fontSize: 16),
-              ),
             ),
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: () => context.read<AuthBloc>().add(const AuthGuestLoginEvent()),
+            child: Text(
+              '🎮 Play Offline as Guest',
+              style: GoogleFonts.fredoka(
+                  color: AppTheme.goldPrimary.withValues(alpha: 0.8),
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600),
+            ),
+          ).animate().fadeIn(delay: 800.ms),
         ],
       ),
     );

@@ -65,7 +65,7 @@ class ChessApp extends StatelessWidget {
             current is! AuthInitialState,
         listener: (context, authState) {
           final multiplayerBloc = context.read<MultiplayerBloc>();
-          if (authState is AuthAuthenticatedState) {
+          if (authState is AuthAuthenticatedState && !authState.user.isGuest) {
             multiplayerBloc.add(MpConnectLobbyEvent(
               authState.user.id,
               authState.user.username,

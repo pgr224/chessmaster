@@ -17,6 +17,8 @@ class UserModel {
   final bool canChangeNameNow;
   final int remainingNameChanges;
   final List<String> achievements;
+  final bool isGuest;
+
 
   const UserModel({
     required this.id,
@@ -34,7 +36,9 @@ class UserModel {
     this.canChangeNameNow = true,
     this.remainingNameChanges = 3,
     this.achievements = const [],
+    this.isGuest = false,
   });
+
 
   int get level => UserStats.calculateLevel(xp);
   double get levelProgress => UserStats.progressToNextLevel(xp);
@@ -75,7 +79,9 @@ class UserModel {
       achievements: (json['achievements'] as List? ?? [])
           .map((a) => a.toString())
           .toList(),
+      isGuest: parseBool(json['is_guest'], false),
     );
+
   }
 
   Map<String, dynamic> toJson() => {
@@ -112,7 +118,9 @@ class UserModel {
         },
         'recent_games': recentGames.map((g) => g.toJson()).toList(),
         'achievements': achievements,
+        'is_guest': isGuest,
       };
+
 
   UserModel copyWith({
     String? id,
@@ -130,7 +138,9 @@ class UserModel {
     bool? canChangeNameNow,
     int? remainingNameChanges,
     List<String>? achievements,
+    bool? isGuest,
   }) {
+
     return UserModel(
       id: id ?? this.id,
       username: username ?? this.username,
@@ -147,7 +157,9 @@ class UserModel {
       canChangeNameNow: canChangeNameNow ?? this.canChangeNameNow,
       remainingNameChanges: remainingNameChanges ?? this.remainingNameChanges,
       achievements: achievements ?? this.achievements,
+      isGuest: isGuest ?? this.isGuest,
     );
+
   }
 }
 
