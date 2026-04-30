@@ -595,16 +595,20 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
 
   MultiplayerBloc(this._service, this._authBloc) : super(const MultiplayerState()) {
     on<MpConnectLobbyEvent>(_onConnectLobby);
-    on<MpReconnectEvent>((event, emit) {
+    on<MpReconnectEvent>((event, emit) async {
       if (_service.isLobbyConnected) return;
       
       final authState = _authBloc.state;
       if (authState is AuthAuthenticatedState) {
-        add(MpConnectLobbyEvent(
-          authState.user.id,
-          authState.user.username,
-          rating: authState.user.stats.eloRating,
-        ));
+        try {
+          await _service.connectLobby(
+            authState.user.id,
+            authState.user.username,
+            rating: authState.user.stats.eloRating,
+          );
+        } catch (e) {
+          emit(state.copyWith(connectionError: 'Failed to reconnect: $e'));
+        }
       } else {
         emit(state.copyWith(connectionError: 'Unable to reconnect: User not authenticated'));
       }
@@ -775,8 +779,11 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
       ));
     });
     on<MpDisconnectLobbyEvent>((event, emit) {
+      _reconnectTimer?.cancel();
+      _reconnectTimer = null;
       _lobbySub?.cancel();
       _gameSub?.cancel();
+      _myUserId = null;
       _service.dispose();
       emit(const MultiplayerState());
     });
@@ -945,8 +952,16 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
   Future<void> _onConnectLobby(
       MpConnectLobbyEvent event, Emitter<MultiplayerState> emit) async {
     _myUserId = event.userId;
-    await _service.connectLobby(event.userId, event.username,
-        rating: event.rating);
+    try {
+      await _service.connectLobby(event.userId, event.username,
+          rating: event.rating);
+    } catch (e) {
+      emit(state.copyWith(
+        status: MultiplayerStatus.disconnected,
+        connectionError: 'Failed to connect to lobby: $e',
+      ));
+      return;
+    }
     _lobbySub?.cancel();
     _lobbySub = _service.lobbyUpdates.listen((msg) {
       final msgType = msg['type']?.toString();

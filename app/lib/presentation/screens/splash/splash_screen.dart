@@ -25,10 +25,13 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   void _onAuthStateChanged(BuildContext context, AuthState state) {
-    if (state is! AuthInitialState && state is! AuthLoadingState) {
-      // Small delay to let the branding animation breathe
+    if (state is AuthAuthenticatedState) {
       Future.delayed(1500.ms, () {
         if (mounted) context.go('/home');
+      });
+    } else if (state is AuthUnauthenticatedState || state is AuthErrorState) {
+      Future.delayed(1500.ms, () {
+        if (mounted) context.go('/onboarding');
       });
     }
   }

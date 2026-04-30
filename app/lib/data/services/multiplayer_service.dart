@@ -14,6 +14,7 @@ class MultiplayerService {
   String? _userId;
   String? _username;
   int _rating = 1200;
+  Timer? _lobbyHeartbeat;
 
   // Lazy stream getters — re-create if closed
   Stream<Map<String, dynamic>> get lobbyUpdates {
@@ -64,30 +65,64 @@ class MultiplayerService {
         '$baseUrl/multiplayer/lobby?userId=$userId&username=$username&rating=$rating';
 
     // Close existing lobby connection gracefully
+    _stopLobbyHeartbeat();
     try {
       await _lobbyChannel?.sink.close();
     } catch (_) {}
 
-    _lobbyChannel = WebSocketChannel.connect(Uri.parse(url));
-    _lobbyChannel!.stream.listen((msg) {
-      final data = _decodeMessage(msg);
-      if (data == null) return;
-      if (!(_lobbyStreamCtrl?.isClosed ?? true)) {
-        _lobbyStreamCtrl!.add(data);
-      }
-    }, onDone: () {
+    try {
+      _lobbyChannel = WebSocketChannel.connect(Uri.parse(url));
+      _lobbyChannel!.stream.listen((msg) {
+        final data = _decodeMessage(msg);
+        if (data == null) return;
+        if (!(_lobbyStreamCtrl?.isClosed ?? true)) {
+          _lobbyStreamCtrl!.add(data);
+        }
+      }, onDone: () {
+        _lobbyChannel = null;
+        _stopLobbyHeartbeat();
+        if (!(_lobbyStreamCtrl?.isClosed ?? true)) {
+          _lobbyStreamCtrl!.add({'type': 'CONNECTION_LOST'});
+        }
+        debugPrint('Lobby WS closed');
+      }, onError: (err) {
+        _lobbyChannel = null;
+        _stopLobbyHeartbeat();
+        if (!(_lobbyStreamCtrl?.isClosed ?? true)) {
+          _lobbyStreamCtrl!
+              .add({'type': 'CONNECTION_LOST', 'error': err.toString()});
+        }
+      });
+
+      // Start heartbeat to keep connection alive (Cloudflare DO idle timeout)
+      _startLobbyHeartbeat();
+    } catch (e) {
       _lobbyChannel = null;
+      debugPrint('Lobby connect error: $e');
       if (!(_lobbyStreamCtrl?.isClosed ?? true)) {
-        _lobbyStreamCtrl!.add({'type': 'CONNECTION_LOST'});
+        _lobbyStreamCtrl!.add({'type': 'CONNECTION_LOST', 'error': e.toString()});
       }
-      debugPrint('Lobby disconnected');
-    }, onError: (err) {
-      _lobbyChannel = null;
-      if (!(_lobbyStreamCtrl?.isClosed ?? true)) {
-        _lobbyStreamCtrl!
-            .add({'type': 'CONNECTION_LOST', 'error': err.toString()});
+    }
+  }
+
+  void _startLobbyHeartbeat() {
+    _lobbyHeartbeat?.cancel();
+    _lobbyHeartbeat = Timer.periodic(const Duration(seconds: 25), (_) {
+      if (_lobbyChannel != null) {
+        try {
+          _lobbyChannel!.sink.add(jsonEncode({'type': 'PING'}));
+        } catch (_) {
+          _stopLobbyHeartbeat();
+        }
+      } else {
+        _stopLobbyHeartbeat();
       }
     });
+  }
+
+  void _stopLobbyHeartbeat() {
+    _lobbyHeartbeat?.cancel();
+    _lobbyHeartbeat = null;
   }
 
   /// Start matchmaking
@@ -271,6 +306,7 @@ class MultiplayerService {
 
   /// Disconnect lobby only — keeps streams alive for reconnection
   void disconnectLobby() {
+    _stopLobbyHeartbeat();
     try {
       _lobbyChannel?.sink.close();
     } catch (_) {}
@@ -396,6 +432,7 @@ class MultiplayerService {
 
   /// Full dispose — closes everything, streams can be re-created on next connect
   void dispose() {
+    _stopLobbyHeartbeat();
     try {
       _lobbyChannel?.sink.close();
     } catch (_) {}

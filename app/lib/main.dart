@@ -59,7 +59,10 @@ class ChessApp extends StatelessWidget {
             create: (_) => di.sl<SettingsBloc>()..add(SettingsLoadEvent())),
       ],
       child: BlocListener<AuthBloc, AuthState>(
-        listenWhen: (previous, current) => previous.runtimeType != current.runtimeType,
+        listenWhen: (previous, current) =>
+            previous.runtimeType != current.runtimeType &&
+            current is! AuthLoadingState &&
+            current is! AuthInitialState,
         listener: (context, authState) {
           final multiplayerBloc = context.read<MultiplayerBloc>();
           if (authState is AuthAuthenticatedState) {
@@ -68,7 +71,7 @@ class ChessApp extends StatelessWidget {
               authState.user.username,
               rating: authState.user.stats.eloRating,
             ));
-          } else {
+          } else if (authState is AuthUnauthenticatedState) {
             multiplayerBloc.add(MpDisconnectLobbyEvent());
           }
         },

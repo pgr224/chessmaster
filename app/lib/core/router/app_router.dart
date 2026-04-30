@@ -50,7 +50,7 @@ class AppRouter {
 
   static final GoRouter router = GoRouter(
     navigatorKey: rootNavigatorKey,
-    initialLocation: '/home',
+    initialLocation: '/splash',
     redirect: (context, state) {
       final authBloc = di.sl<AuthBloc>();
       final isAuthenticated = authBloc.state is AuthAuthenticatedState;
