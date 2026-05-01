@@ -915,10 +915,10 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
     on<MpXpTransferUpdateEvent>((event, emit) {
       final updatedPlayers = state.availablePlayers.map((player) {
         if (player.id == event.donorId) {
-          return player.copyWith(xp: event.donorXp);
+          return player.copyWith(rating: event.donorXp);
         }
         if (player.id == event.recipientId) {
-          return player.copyWith(xp: event.recipientXp);
+          return player.copyWith(rating: event.recipientXp);
         }
         return player;
       }).toList();
@@ -979,7 +979,7 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
                   return OnlineLobbyUser(
                     id: player['id']?.toString() ?? '',
                     name: player['name']?.toString() ?? 'Unknown',
-                    xp: (player['rating'] is int)
+                    rating: (player['rating'] is int)
                         ? player['rating'] as int
                         : int.tryParse(player['rating']?.toString() ?? '0') ??
                             1200,

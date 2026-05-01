@@ -66,14 +66,14 @@ class LobbyPresence {
 class OnlineLobbyUser extends Equatable {
   final String id;
   final String name;
-  final int xp;
+  final int rating;
   final String presence;
   final String flair;
 
   const OnlineLobbyUser({
     required this.id,
     required this.name,
-    required this.xp,
+    required this.rating,
     this.presence = LobbyPresence.online,
     this.flair = 'Ready to play',
   });
@@ -87,21 +87,21 @@ class OnlineLobbyUser extends Equatable {
   OnlineLobbyUser copyWith({
     String? id,
     String? name,
-    int? xp,
+    int? rating,
     String? presence,
     String? flair,
   }) {
     return OnlineLobbyUser(
       id: id ?? this.id,
       name: name ?? this.name,
-      xp: xp ?? this.xp,
+      rating: rating ?? this.rating,
       presence: presence ?? this.presence,
       flair: flair ?? this.flair,
     );
   }
 
   @override
-  List<Object?> get props => [id, name, xp, presence, flair];
+  List<Object?> get props => [id, name, rating, presence, flair];
 }
 
 class ChallengeRequest extends Equatable {

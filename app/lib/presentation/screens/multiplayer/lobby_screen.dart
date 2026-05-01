@@ -51,7 +51,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       context.read<MultiplayerBloc>().add(MpConnectLobbyEvent(
             authState.user.id,
             authState.user.username,
-            rating: authState.user.xp,
+            rating: authState.user.stats.eloRating,
           ));
       context
           .read<MultiplayerBloc>()
@@ -266,7 +266,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   context.read<MultiplayerBloc>().add(MpConnectLobbyEvent(
                         authState.user.id,
                         authState.user.username,
-                        rating: authState.user.xp,
+                        rating: authState.user.stats.eloRating,
                       ));
                 }
               },
@@ -1091,7 +1091,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         color: AppTheme.textPrimary,
                         fontSize: 16,
                         fontWeight: FontWeight.w600)),
-                Text('${player.xp} XP • ${player.flair}',
+                Text('${player.rating} Rating • ${player.flair}',
                     style: GoogleFonts.baloo2(
                         color: AppTheme.textSecondary, fontSize: 13)),
               ],
@@ -1498,7 +1498,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                             color: AppTheme.textPrimary,
                             fontSize: 18,
                             fontWeight: FontWeight.w700)),
-                    Text('${player.xp} XP • ${player.flair}',
+                    Text('${player.rating} Rating • ${player.flair}',
                         style: GoogleFonts.baloo2(
                             color: AppTheme.textSecondary, fontSize: 14)),
                   ],
@@ -1906,20 +1906,24 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final authState = context.read<auth.AuthBloc>().state;
     if (authState is! auth.AuthAuthenticatedState) return;
 
-    final requests = await context
-        .read<auth.AuthBloc>()
-        .authRepository
-        .getActiveBroadcastRequests();
-    if (!mounted) return;
+    try {
+      final requests = await context
+          .read<auth.AuthBloc>()
+          .authRepository
+          .getActiveBroadcastRequests();
+      if (!mounted) return;
 
-    final normalized = requests
-        .whereType<Map>()
-        .map((e) => Map<String, dynamic>.from(e))
-        .toList(growable: false);
+      final normalized = requests
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList(growable: false);
 
-    context
-        .read<MultiplayerBloc>()
-        .add(MpSetXpBroadcastRequestsEvent(normalized));
+      context
+          .read<MultiplayerBloc>()
+          .add(MpSetXpBroadcastRequestsEvent(normalized));
+    } catch (_) {
+      // Silently ignore network timeouts — broadcast requests are non-critical
+    }
   }
 
   Future<void> _handleDeepLinkedXpRequest(String requestIdRaw) async {

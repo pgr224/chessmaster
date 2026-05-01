@@ -557,12 +557,18 @@ class AuthRepository {
 
   Future<List<dynamic>> getActiveBroadcastRequests() async {
     try {
-      final response = await _dio.get('/api/profile/xp/broadcast-requests');
+      final response = await _dio.get(
+        '/api/profile/xp/broadcast-requests',
+        options: Options(
+          connectTimeout: const Duration(seconds: 5),
+          receiveTimeout: const Duration(seconds: 5),
+        ),
+      );
       if (response.statusCode == 200) {
         return response.data['requests'] as List<dynamic>;
       }
-    } catch (e) {
-      print('Failed to fetch broadcast requests: $e');
+    } catch (_) {
+      // Non-critical endpoint — silently fail on timeout/network errors
     }
     return [];
   }
