@@ -93,7 +93,7 @@ export class Lobby implements DurableObject {
 
     const userId = url.searchParams.get('userId') ?? 'anon'
     const queryUsername = url.searchParams.get('username') ?? 'Player'
-    const rating = parseInt(url.searchParams.get('rating') ?? '1200')
+    const rating = parseInt(url.searchParams.get('rating') ?? '0')
 
     const dbUser = await this.env.DB.prepare('SELECT username FROM users WHERE id = ?')
       .bind(userId)
@@ -646,17 +646,26 @@ export class Lobby implements DurableObject {
   }
 
   private async sendPendingChallenges(ws: WebSocket, userId: string) {
+    // Clean up challenges older than 1 hour (autoclear)
+    await this.env.DB.prepare(
+      `DELETE FROM challenges WHERE status = 'pending' AND created_at < datetime('now', '-1 hour')`
+    ).run()
+
+    // Fetch both incoming and outgoing challenges to sync full state
     const { results } = await this.env.DB.prepare(
       `SELECT c.id, c.challenger_id, c.challenged_id, c.time_control, c.mode, c.variant_id,
-              c.delivery_status, c.created_at, u.username as challenger_name
+              c.delivery_status, c.created_at, c.status,
+              cu.username as challenger_name,
+              tu.username as challenged_name
        FROM challenges c
-       JOIN users u ON u.id = c.challenger_id
-       WHERE c.challenged_id = ? AND c.status = 'pending'
+       JOIN users cu ON cu.id = c.challenger_id
+       JOIN users tu ON tu.id = c.challenged_id
+       WHERE (c.challenged_id = ? OR c.challenger_id = ?) AND c.status = 'pending'
        ORDER BY c.created_at DESC
-       LIMIT 20`
+       LIMIT 40`
     )
-      .bind(userId)
-      .all<StoredChallengeRow>()
+      .bind(userId, userId)
+      .all<StoredChallengeRow & { challenger_name: string, challenged_name: string, status: string }>()
 
     if (!results.length) {
       return
@@ -665,16 +674,21 @@ export class Lobby implements DurableObject {
     ws.send(JSON.stringify({
       type: 'PENDING_CHALLENGES_SYNC',
       data: {
-        requests: results.map((challenge) => ({
-          requestId: challenge.id,
-          challengerId: challenge.challenger_id,
-          challengerName: challenge.challenger_name ?? 'Opponent',
-          mode: challenge.mode,
-          timeControl: challenge.time_control,
-          variantId: challenge.variant_id,
-          queued: challenge.delivery_status === 'queued',
-          ts: challenge.created_at ? Date.parse(challenge.created_at) : Date.now(),
-        })),
+        requests: results.map((challenge) => {
+          const isIncoming = challenge.challenged_id === userId
+          return {
+            requestId: challenge.id,
+            playerId: isIncoming ? challenge.challenger_id : challenge.challenged_id,
+            playerName: isIncoming ? (challenge.challenger_name ?? 'Opponent') : (challenge.challenged_name ?? 'Opponent'),
+            mode: challenge.mode,
+            timeControl: challenge.time_control,
+            variantId: challenge.variant_id,
+            isIncoming,
+            queued: challenge.delivery_status === 'queued',
+            status: challenge.status,
+            ts: challenge.created_at ? Date.parse(challenge.created_at) : Date.now(),
+          }
+        }),
       },
     }))
   }

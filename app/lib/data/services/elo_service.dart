@@ -34,7 +34,10 @@ class EloService {
 
   /// Calculate expected score based on rating difference.
   static double _expectedScore(int rating1, int rating2) {
-    return 1.0 / (1.0 + _pow10((rating2 - rating1) / 400.0));
+    int diff = rating2 - rating1;
+    if (diff > 400) diff = 400;
+    if (diff < -400) diff = -400;
+    return 1.0 / (1.0 + _pow10(diff / 400.0));
   }
 
   static double _pow10(double exponent) {

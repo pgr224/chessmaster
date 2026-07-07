@@ -15,6 +15,8 @@ class AuthRepository {
   static const _deviceIdKey = 'device_id';
   static const _lastUsernameKey = 'last_logged_out_username';
   static const _explicitLogoutKey = 'is_explicit_logout';
+  static const _achievementSyncDisabledKey = 'achievement_sync_disabled';
+  static const _achievementSyncRetryAfterKey = 'achievement_sync_retry_after';
   static final RegExp _usernamePattern = RegExp(r'^[a-zA-Z0-9_]{3,30}$');
   final _uuid = const Uuid();
 
@@ -664,13 +666,63 @@ class AuthRepository {
     required int points,
   }) async {
     try {
+      // Update local cache first
+      final prefs = await SharedPreferences.getInstance();
+      final userData = prefs.getString(_userKey);
+      if (userData != null) {
+        final current = jsonDecode(userData) as Map<String, dynamic>;
+        current['xp'] = (current['xp'] as int? ?? 0) + points;
+        
+        final achievements = (current['achievements'] as List? ?? [])
+            .map((a) => a.toString())
+            .toList();
+        if (!achievements.contains(achievementId)) {
+          achievements.add(achievementId);
+        }
+        current['achievements'] = achievements;
+        
+        final stats = current['stats'] as Map<String, dynamic>? ?? {};
+        stats['xp'] = (stats['xp'] as int? ?? 0) + points;
+        current['stats'] = stats;
+        
+        await prefs.setString(_userKey, jsonEncode(current));
+      }
+
+      final retryAfter =
+          prefs.getInt(_achievementSyncRetryAfterKey) ?? 0;
+      if (DateTime.now().millisecondsSinceEpoch < retryAfter) {
+        return false;
+      }
+
       final response = await _dio.post(
         '/api/profile/$userId/unlock-achievement',
         data: {
           'achievementId': achievementId,
           'points': points,
         },
+        options: Options(
+          validateStatus: (status) {
+            if (status == null) return false;
+            return status >= 200 && status < 500;
+          },
+          connectTimeout: const Duration(seconds: 5),
+          receiveTimeout: const Duration(seconds: 5),
+        ),
       );
+
+      if (response.statusCode == 404 || response.statusCode == 405) {
+        await prefs.remove(_achievementSyncDisabledKey);
+        await prefs.setInt(
+          _achievementSyncRetryAfterKey,
+          DateTime.now()
+              .add(const Duration(hours: 6))
+              .millisecondsSinceEpoch,
+        );
+        debugPrint(
+            'Achievement sync endpoint unavailable; keeping unlocks local.');
+        return false;
+      }
+
       return response.statusCode == 200 && response.data['success'] == true;
     } catch (e) {
       print('Failed to unlock achievement on server: $e');

@@ -43,7 +43,7 @@ export const XP_RULES = {
   // SPECIAL ACHIEVEMENTS
   milestones: {
     mateIn5: 500,
-    perfectGame: 10000,
+    perfectGame: 1000,
     every100thWin: 1000,
   },
 

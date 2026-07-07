@@ -22,7 +22,48 @@ const Map<String, Map<String, int>> xpRules = {
     'takeback': -25,
     'hintUsage': -10,
   },
+
+  // VS COMPUTER (Difficulty-based)
+  'computerAI': {
+    'easyWin': 100,
+    'mediumWin': 250,
+    'hardWin': 400,
+    'impossibleWin': 700,
+    'aiModeWin': 1000,
+  },
+
+  // SPECIAL ACHIEVEMENTS
+  'milestones': {
+    'mateIn5': 500,
+    'perfectGame': 5000,
+    'every100thWin': 1000,
+  },
 };
+
+/// Calculate XP for a computer AI game result
+int calculateAIGameXP(String difficulty) {
+  final rules = xpRules['computerAI'];
+  if (rules == null) return 0;
+
+  switch (difficulty.toLowerCase()) {
+    case 'basic':
+    case 'easy':
+      return rules['easyWin'] ?? 0;
+    case 'intermediate':
+    case 'medium':
+      return rules['mediumWin'] ?? 0;
+    case 'advanced':
+    case 'hard':
+      return rules['hardWin'] ?? 0;
+    case 'impossible':
+      return rules['impossibleWin'] ?? 0;
+    case 'ai':
+    case 'aimode':
+      return rules['aiModeWin'] ?? 0;
+    default:
+      return 0;
+  }
+}
 
 /// Calculate XP for a multiplayer game result
 int calculateMultiplayerXP(String result) {

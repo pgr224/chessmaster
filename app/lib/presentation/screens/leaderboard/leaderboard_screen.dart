@@ -72,7 +72,7 @@ class _LeaderboardEntry {
       username: json['username'] as String? ?? 'Player',
       avatarUrl: json['avatar_url'] as String?,
       xp: parseInt(json['xp']),
-      eloRating: parseInt(json['elo_rating'], 1200),
+      eloRating: parseInt(json['elo_rating'], 0),
       wins: parseInt(json['wins']),
       losses: parseInt(json['losses']),
       draws: parseInt(json['draws']),

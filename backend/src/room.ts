@@ -359,10 +359,33 @@ export class GameRoom {
 
       case 'RESIGN':
         this.status = 'finished'
+        clearInterval(this.timerInterval)
+        if (this.nameSyncInterval) clearInterval(this.nameSyncInterval)
         const winner = this.players.get(userId)?.color === 'white' ? 'black' : 'white'
         this.broadcast({ type: 'GAME_OVER', data: { result: winner, reason: 'resignation' } })
         await this.saveGameToDB(winner)
         break
+
+      case 'LEAVE_GAME': {
+        // Explicit leave = immediate resignation + cleanup
+        if (this.status !== 'active') break
+        this.status = 'finished'
+        clearInterval(this.timerInterval)
+        if (this.nameSyncInterval) clearInterval(this.nameSyncInterval)
+        const leaveWinner = this.players.get(userId)?.color === 'white' ? 'black' : 'white'
+        this.broadcast({
+          type: 'GAME_OVER',
+          data: {
+            result: leaveWinner,
+            reason: 'resignation_user_quit',
+            message: 'Opponent left the game.',
+          }
+        })
+        await this.saveGameToDB(leaveWinner)
+        // Close the leaving player's socket
+        try { this.players.get(userId)?.socket.close(1000, 'Player left') } catch (_) {}
+        break
+      }
 
       case 'DRAW_OFFER':
         // Forward draw offer to the opponent only
@@ -417,14 +440,26 @@ export class GameRoom {
     const player = this.players.get(userId)
     if (!player) return
 
+    // If game is already finished, just clean up
+    if (this.status === 'finished') {
+      player.disconnected = true
+      return
+    }
+
     player.disconnected = true
     this.broadcast({ type: 'PLAYER_DISCONNECTED', data: { userId } })
+
+    // Cancel any existing disconnect timer for this player
+    if (player.disconnectTimer) {
+      clearTimeout(player.disconnectTimer)
+    }
 
     // Start 30s timer
     player.disconnectTimer = setTimeout(async () => {
       if (player.disconnected && this.status === 'active') {
         this.status = 'finished'
         clearInterval(this.timerInterval)
+        if (this.nameSyncInterval) clearInterval(this.nameSyncInterval)
         
         // Find the remaining player
         let winnerColor: 'white' | 'black' | 'draw' = 'draw'
@@ -473,6 +508,7 @@ export class GameRoom {
       }
 
       const moveCount = this.validator.getMoveCount()
+      const now = new Date().toISOString()
 
       await this.env.DB.prepare(`
         INSERT INTO games (id, white_user_id, black_user_id, mode, status, result, pgn, final_fen, move_count, completed_at, created_at, updated_at)
@@ -484,8 +520,21 @@ export class GameRoom {
       `).bind(
         this.gameId, whiteUserId, blackUserId, winner,
         this.validator.getPgn(), this.validator.getFen(), moveCount,
-        new Date().toISOString(), new Date().toISOString(), new Date().toISOString()
+        now, now, now
       ).run()
+
+      // Mark the associated challenge as 'completed' so it never shows as pending/resumable
+      if (this.gameId) {
+        await this.env.DB.prepare(
+          `UPDATE challenges SET status = 'completed', updated_at = ? WHERE game_id = ? AND status IN ('pending', 'accepted')`
+        ).bind(now, this.gameId).run()
+      }
+
+      // Also clear any 'active' (paused/saved) game records for this game
+      // to prevent it from appearing in the resume list
+      await this.env.DB.prepare(
+        `UPDATE games SET status = 'completed', result = ?, completed_at = ?, updated_at = ? WHERE id = ? AND status = 'active'`
+      ).bind(winner ?? 'abandoned', now, now, this.gameId).run()
 
       // Update user stats and XP
       if (whiteUserId) {

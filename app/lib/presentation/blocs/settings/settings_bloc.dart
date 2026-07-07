@@ -107,6 +107,13 @@ class SettingsAutoQueenEvent extends SettingsEvent {
   List<Object?> get props => [enabled];
 }
 
+class SettingsAIDifficultyLevelEvent extends SettingsEvent {
+  final int level;
+  const SettingsAIDifficultyLevelEvent(this.level);
+  @override
+  List<Object?> get props => [level];
+}
+
 class SettingsBackgroundEvent extends SettingsEvent {
   final String theme;
   const SettingsBackgroundEvent(this.theme);
@@ -131,6 +138,7 @@ class SettingsState extends Equatable {
   final bool confirmDrawOffer;
   final bool confirmMoves;
   final bool autoQueen;
+  final int aiDifficultyLevel;
   final String backgroundTheme;
   final bool isLoaded;
 
@@ -151,6 +159,7 @@ class SettingsState extends Equatable {
     this.confirmDrawOffer = true,
     this.confirmMoves = false,
     this.autoQueen = false,
+    this.aiDifficultyLevel = 8,
     this.backgroundTheme = 'midnight',
     this.isLoaded = false,
   });
@@ -172,6 +181,7 @@ class SettingsState extends Equatable {
     bool? confirmDrawOffer,
     bool? confirmMoves,
     bool? autoQueen,
+    int? aiDifficultyLevel,
     String? backgroundTheme,
     bool? isLoaded,
   }) =>
@@ -194,6 +204,7 @@ class SettingsState extends Equatable {
         confirmDrawOffer: confirmDrawOffer ?? this.confirmDrawOffer,
         confirmMoves: confirmMoves ?? this.confirmMoves,
         autoQueen: autoQueen ?? this.autoQueen,
+        aiDifficultyLevel: aiDifficultyLevel ?? this.aiDifficultyLevel,
         backgroundTheme: backgroundTheme ?? this.backgroundTheme,
         isLoaded: isLoaded ?? this.isLoaded,
       );
@@ -216,6 +227,7 @@ class SettingsState extends Equatable {
         confirmDrawOffer,
         confirmMoves,
         autoQueen,
+        aiDifficultyLevel,
         backgroundTheme,
         isLoaded,
       ];
@@ -313,6 +325,12 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
       (await SharedPreferences.getInstance()).setBool('auto_queen', e.enabled);
       emit(state.copyWith(autoQueen: e.enabled));
     });
+    on<SettingsAIDifficultyLevelEvent>((e, emit) async {
+      final level = e.level.clamp(0, 20);
+      (await SharedPreferences.getInstance())
+          .setInt('ai_difficulty_level', level);
+      emit(state.copyWith(aiDifficultyLevel: level));
+    });
     on<SettingsBackgroundEvent>((e, emit) async {
       (await SharedPreferences.getInstance())
           .setString('background_theme', e.theme);
@@ -340,6 +358,7 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
       confirmDrawOffer: prefs.getBool('confirm_draw_offer') ?? true,
       confirmMoves: prefs.getBool('confirm_moves') ?? false,
       autoQueen: prefs.getBool('auto_queen') ?? false,
+      aiDifficultyLevel: prefs.getInt('ai_difficulty_level') ?? 8,
       backgroundTheme: prefs.getString('background_theme') ?? 'midnight',
       isLoaded: true,
     );

@@ -325,11 +325,7 @@ class _GameRoomScreenState extends State<GameRoomScreen> {
 
   Widget _buildEngagementOverlay() {
     if (_engagement.feed.isEmpty) {
-      return Positioned(
-        top: 94,
-        right: 12,
-        child: _notifyToggleChip(),
-      );
+      return const SizedBox.shrink();
     }
 
     return Positioned(
@@ -340,7 +336,7 @@ class _GameRoomScreenState extends State<GameRoomScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            _notifyToggleChip(),
+            const SizedBox(height: 8),
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.all(10),
@@ -402,46 +398,6 @@ class _GameRoomScreenState extends State<GameRoomScreen> {
     );
   }
 
-  Widget _notifyToggleChip() {
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _engagement.toggleNotify();
-        });
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.55),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: Colors.white24),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              _engagement.notifyEnabled
-                  ? Icons.notifications_active
-                  : Icons.notifications_off,
-              size: 15,
-              color: _engagement.notifyEnabled
-                  ? AppTheme.accentGreen
-                  : AppTheme.textMuted,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              _engagement.notifyEnabled ? 'Alerts On' : 'Alerts Off',
-              style: GoogleFonts.fredoka(
-                color: AppTheme.textPrimary,
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   void _showDrawOfferDialog(BuildContext context) {
     showDialog(

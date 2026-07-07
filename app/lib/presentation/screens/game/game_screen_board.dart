@@ -141,8 +141,8 @@ extension GameScreenBoard on _GameScreenState {
                 ),
 
               // AI COACH TALKING WINDOW
-              // Disabled in multiplayer to avoid hint/coach overlays during online play.
-              if (state.mode != GameMode.multiplayer &&
+              // Disabled in multiplayer and local two-player matches to avoid coach overlays in non-AI games.
+              if (state.mode != GameMode.multiplayer && state.mode != GameMode.twoPlayer &&
                   ((state.isAIThinking && state.mode != GameMode.practice) ||
                       state.coachFeedback != null ||
                       state.activeHint != null))

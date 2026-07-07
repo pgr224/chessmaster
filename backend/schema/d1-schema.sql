@@ -74,7 +74,7 @@ CREATE TABLE IF NOT EXISTS user_stats (
   total_moves       INTEGER NOT NULL DEFAULT 0,
   puzzles_solved    INTEGER NOT NULL DEFAULT 0,
   puzzle_rating     INTEGER NOT NULL DEFAULT 1200,
-  elo_rating        INTEGER NOT NULL DEFAULT 1200,
+  elo_rating        INTEGER NOT NULL DEFAULT 0,
   two_player_games  INTEGER NOT NULL DEFAULT 0,
   two_player_wins   INTEGER NOT NULL DEFAULT 0,
   total_time_played INTEGER NOT NULL DEFAULT 0,
@@ -373,7 +373,7 @@ SELECT
     u.is_online,
     u.last_seen,
     u.xp, -- Master XP from users table
-    COALESCE(s.elo_rating, 1200) as elo_rating,
+    COALESCE(s.elo_rating, 0) as elo_rating,
     COALESCE(s.wins, 0) as wins,
     COALESCE(s.losses, 0) as losses,
     COALESCE(s.draws, 0) as draws,
@@ -391,7 +391,7 @@ SELECT
     COALESCE(s.pieces_captured, 0) as pieces_captured,
     COALESCE(s.checkmates_delivered, 0) as checkmates_delivered,
     COALESCE(s.best_win_elo, 0) as best_win_elo,
-    RANK() OVER (ORDER BY u.xp DESC, COALESCE(s.elo_rating, 1200) DESC) as rank
+    RANK() OVER (ORDER BY u.xp DESC, COALESCE(s.elo_rating, 0) DESC) as rank
 FROM users u
 LEFT JOIN user_stats s ON s.user_id = u.id;
 

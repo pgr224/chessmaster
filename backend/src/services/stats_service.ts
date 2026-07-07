@@ -79,7 +79,7 @@ export class StatsService {
       userId, 
       isWin ? 1 : 0, 
       isWin ? 1 : 0, 
-      1200 + eloChange,
+      0 + eloChange,
       xpChange,
       now,
       outcome,

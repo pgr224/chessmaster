@@ -27,7 +27,7 @@ import '../../../domain/engine/personality_engine.dart';
 import '../../../domain/engine/candidate_model.dart';
 
 const bool _kLogGameOverMetrics =
-  bool.fromEnvironment('LOG_GAME_OVER_METRICS', defaultValue: false);
+    bool.fromEnvironment('LOG_GAME_OVER_METRICS', defaultValue: false);
 
 // ═══════════════════════════════════════════
 // EVENTS
@@ -196,7 +196,8 @@ class MpGameOverSyncEvent extends GameEvent {
   final DrawReason? reason;
   final int xpGained;
   final String? gameReason;
-  const MpGameOverSyncEvent(this.result, this.reason, this.xpGained, {this.gameReason});
+  const MpGameOverSyncEvent(this.result, this.reason, this.xpGained,
+      {this.gameReason});
   @override
   List<Object?> get props => [result, reason, xpGained, gameReason];
 }
@@ -610,7 +611,9 @@ class GameState extends Equatable {
       coachSettings: coachSettings ?? this.coachSettings,
       gameCoachHistory: gameCoachHistory ?? this.gameCoachHistory,
       masteryRating: masteryRating ?? this.masteryRating,
-      masteryRecommendation: clearExplanation ? null : (masteryRecommendation ?? this.masteryRecommendation),
+      masteryRecommendation: clearExplanation
+          ? null
+          : (masteryRecommendation ?? this.masteryRecommendation),
       puzzleStreak: puzzleStreak ?? this.puzzleStreak,
       puzzleRushStrikes: puzzleRushStrikes ?? this.puzzleRushStrikes,
       puzzleRushTime: puzzleRushTime ?? this.puzzleRushTime,
@@ -846,9 +849,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     if (isDraw) {
       updates['draws'] = 1;
       return (
-        xpDelta: syncedXpDelta != 0
-            ? syncedXpDelta
-            : calculateMultiplayerXP('draw'),
+        xpDelta:
+            syncedXpDelta != 0 ? syncedXpDelta : calculateMultiplayerXP('draw'),
         statUpdates: updates,
       );
     }
@@ -936,20 +938,26 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       puzzle: config.puzzle,
       parsedPuzzleMoves: parsedPuzzleMoves,
     );
-    
+
     // --- LOAD PERSISTENT MASTERY FOR AI MODE ---
     GameState finalInitialState = initialState;
     if (difficulty == AIDifficulty.aiMode) {
       final masteryService = MasteryService();
       await masteryService.init(); // Refresh from storage
-      final initialPersonality = masteryService.suggestPersonality(masteryService.masteryRating > 1500 ? 'positional' : 'aggressive');
-      
+      masteryService.startAdaptiveSession();
+      final profile = masteryService.profile;
+      final initialPersonality = profile.counterPersonality;
+      final initialMessage = profile.openingMemoryMessage ??
+          (profile.sampleSize > 0 ? profile.adaptationMessage : null);
+      PersonalityEngine().forcePersonality(initialPersonality);
+
       finalInitialState = initialState.copyWith(
         activePersonality: initialPersonality,
         masteryRating: masteryService.masteryRating,
+        aiMessage: initialMessage,
       );
     }
-    
+
     emit(finalInitialState);
 
     // Initialize time control
@@ -1329,6 +1337,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
 
     final success = _engine.makeMove(move);
     if (!success && !(event.from == event.to)) return; // Invalid move
+    final appliedMove =
+        _engine.moveHistory.isNotEmpty ? _engine.moveHistory.last : move;
 
     final captured = _collectCaptured();
 
@@ -1352,8 +1362,10 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       pendingMove: null, // Clear any pending move UI
       clearHint: true,
       clearCoachMove: true,
-      clearCoachMessage: (state.playerColor == null) || (state.currentTurn == state.playerColor),
-      clearCoachFeedback: (state.playerColor == null) || (state.currentTurn == state.playerColor),
+      clearCoachMessage: (state.playerColor == null) ||
+          (state.currentTurn == state.playerColor),
+      clearCoachFeedback: (state.playerColor == null) ||
+          (state.currentTurn == state.playerColor),
     ));
 
     // Update Evaluation asynchronously to not block the UI
@@ -1438,6 +1450,9 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       shouldAnalyze = false;
     }
 
+    double? adaptiveMoveAccuracy;
+    int? adaptiveCentipawnLoss;
+
     if (shouldAnalyze && state.coachSettings.enableRealTimeCoaching) {
       int mistakes = state.mistakes;
       int blunders = state.blunders;
@@ -1487,6 +1502,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         final moveCountTotal = state.moveHistory.length + 1;
         final double moveAccuracy =
             (100.0 - (feedback.centipawnLoss / 10.0)).clamp(0.0, 100.0);
+        adaptiveMoveAccuracy = moveAccuracy;
+        adaptiveCentipawnLoss = feedback.centipawnLoss;
         accuracy = (state.accuracy * (moveCountTotal - 1) + moveAccuracy) /
             moveCountTotal;
 
@@ -1529,7 +1546,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
           missedWins: missedWins,
           coachFeedback: feedback,
           aiMessage: reactionMsg, // Personality-driven reaction
-          showMiniLesson: (state.mode != GameMode.multiplayer) && (feedback.classification == MoveClassification.blunder),
+          showMiniLesson: (state.mode != GameMode.multiplayer) &&
+              (feedback.classification == MoveClassification.blunder),
           gameCoachHistory: updatedHistory,
           coachMove: coachMove,
           hintedIndices: newHintedIndices,
@@ -1539,7 +1557,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         // Dynamic duration based on text length (base 4s + 65ms per character)
         // Max duration is 20s for Practice Mode and 10s for other modes.
         final totalTextLength =
-          reactionMsg.length + (feedback.explanation?.length ?? 0);
+            reactionMsg.length + (feedback.explanation?.length ?? 0);
         final baseDurationMs = 4000;
         final perCharMs = 65;
         final maxDurationMs = state.mode == GameMode.practice ? 20000 : 10000;
@@ -1565,40 +1583,34 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     // DYNAMIC PERSONALITY ADAPTATION (ONLY FOR DYNAMIC AI MODE)
     final isDynamicAI = state.aiDifficulty == AIDifficulty.aiMode;
     if (shouldAnalyze && isDynamicAI) {
-      final moveCount = state.moveHistory.length;
-      // Analyze every 5 moves to create a "stable" but evolving personality
-      if (moveCount > 0 && moveCount % 5 == 0) {
-        Future.delayed(const Duration(milliseconds: 200), () async {
-          try {
-            final recentHistory = state.moveHistory
-                .map((m) => m.toAlgebraic())
-                .toList();
-            
-            final analysis = await _engineController.analyzePlayerStyle(
-              _engine.toFEN(),
-              recentHistory.length > 10 ? recentHistory.sublist(recentHistory.length - 10) : recentHistory,
-            );
+      try {
+        final masteryService = MasteryService();
+        final previousPersonality = state.activePersonality;
+        final profile = await masteryService.recordPlayerMove(
+          move: appliedMove,
+          engineAfterMove: _engine,
+          playerColor: state.playerColor ?? justMovedColor,
+          moveNumber: state.moveHistory.length,
+          moveAccuracy: adaptiveMoveAccuracy ?? state.accuracy,
+          centipawnLoss: adaptiveCentipawnLoss,
+        );
 
-            if (!isClosed && analysis['style'] != null) {
-              final newPersonality = MasteryService().suggestPersonality(analysis['style']);
-              
-              if (newPersonality != state.activePersonality) {
-                // Determine a flavor message based on style
-                String msg = "Adapting strategy...";
-                if (analysis['style'] == 'pawn_storm') msg = "I see your pawn storm coming... going defensive! 🛡️";
-                if (analysis['style'] == 'aggressive') msg = "You're playing sharp! I'll need to be more solid. 🥊";
-                if (analysis['style'] == 'solid') msg = "Quite the fortress you have there... I'll try to find a crack! 🔨";
+        final personalityChanged =
+            previousPersonality != profile.counterPersonality;
+        final showPeriodicShift = !state.coachSettings.enableRealTimeCoaching &&
+            (masteryService.sessionMoveCount <= 2 ||
+                masteryService.sessionMoveCount % 4 == 0);
 
-                add(GameUpdatePersonalityEvent(
-                  personality: newPersonality,
-                  message: msg,
-                ));
-              }
-            }
-          } catch (e) {
-            debugPrint('[Dynamic Personality Adaptation Error] $e');
-          }
-        });
+        if (personalityChanged || showPeriodicShift) {
+          emit(state.copyWith(
+            activePersonality: profile.counterPersonality,
+            aiMessage: profile.adaptationMessage,
+          ));
+        } else if (state.activePersonality != profile.counterPersonality) {
+          emit(state.copyWith(activePersonality: profile.counterPersonality));
+        }
+      } catch (e) {
+        debugPrint('[Dynamic Personality Adaptation Error] $e');
       }
     }
 
@@ -1832,14 +1844,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
               if (isWin) {
                 // 1. Mode/Difficulty based XP
                 if (state.mode == GameMode.singlePlayer) {
-                  xpDelta += switch (state.aiDifficulty) {
-                    AIDifficulty.basic => 100,
-                    AIDifficulty.intermediate => 250,
-                    AIDifficulty.advanced => 400,
-                    AIDifficulty.impossible => 700,
-                    AIDifficulty.aiMode => 1000,
-                    _ => 100,
-                  };
+                  xpDelta +=
+                      calculateAIGameXP(state.aiDifficulty?.name ?? 'easy');
                 } else if (state.mode == GameMode.practice) {
                   xpDelta += 50;
                 }
@@ -1848,7 +1854,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
                 // Mate in 5 moves (10 half-moves)
                 if (state.status == GameStatus.checkmate &&
                     state.moveHistory.length <= 10) {
-                  xpDelta += 500;
+                  xpDelta += xpRules['milestones']?['mateIn5'] ?? 500;
                 }
 
                 // Perfect Game (No pieces lost)
@@ -1856,7 +1862,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
                     ? state.capturedBlack
                     : state.capturedWhite;
                 if (myCaptured.isEmpty && state.moveHistory.length > 10) {
-                  xpDelta += 1000;
+                  xpDelta += xpRules['milestones']?['perfectGame'] ?? 10000;
                 }
 
                 // Underdog Bonus (Tiered)
@@ -1884,7 +1890,12 @@ class GameBloc extends Bloc<GameEvent, GameState> {
                   }
                 }
 
-                // 5. Streak Multiplier (10% per streak point, max 2.0x)
+                // 5. Milestones (e.g. 100th Win)
+                if (user.stats.wins > 0 && (user.stats.wins + 1) % 100 == 0) {
+                  xpDelta += xpRules['milestones']?['every100thWin'] ?? 1000;
+                }
+
+                // 6. Streak Multiplier (10% per streak point, max 2.0x)
                 final double streakMultiplier =
                     1.0 + (user.stats.currentStreak * 0.1).clamp(0.0, 1.0);
                 xpDelta = (xpDelta * streakMultiplier).round();
@@ -1901,10 +1912,10 @@ class GameBloc extends Bloc<GameEvent, GameState> {
                 mapUpdates['draws'] = 1;
               }
 
-              xpReward =
-                  (xpDelta > 0 ? xpDelta : 0) + (state.xpGained > 0 ? state.xpGained : 0);
-              xpPenalty =
-                  (xpDelta < 0 ? -xpDelta : 0) + (state.xpGained < 0 ? -state.xpGained : 0);
+              xpReward = (xpDelta > 0 ? xpDelta : 0) +
+                  (state.xpGained > 0 ? state.xpGained : 0);
+              xpPenalty = (xpDelta < 0 ? -xpDelta : 0) +
+                  (state.xpGained < 0 ? -state.xpGained : 0);
               xp = xpReward - xpPenalty;
             }
 
@@ -1954,7 +1965,11 @@ class GameBloc extends Bloc<GameEvent, GameState> {
               (state.result == GameResult.blackWins &&
                   state.playerColor == PieceColor.black);
 
-          _achievementService.evaluatePostGame(state, updatedUser.stats);
+          final achievementXP =
+              _achievementService.evaluatePostGame(state, updatedUser.stats);
+          if (achievementXP > 0) {
+            emit(state.copyWith(xpGained: state.xpGained + achievementXP));
+          }
 
           // Trigger Mission updates
           _missionService.updateProgress('daily_games');
@@ -2157,7 +2172,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         undoMessage =
             '⏪ Take back applied! (${takebackPenalty > 0 ? '+' : ''}$takebackPenalty XP)';
       } else if (state.mode == GameMode.multiplayer && event.fromOpponent) {
-        undoMessage = '⏪ Opponent used take back. Your turn will resume normally.';
+        undoMessage =
+            '⏪ Opponent used take back. Your turn will resume normally.';
       }
 
       emit(state.copyWith(
@@ -2328,12 +2344,10 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       return;
     }
 
-    final isLocalMode =
-        state.mode == GameMode.practice ||
+    final isLocalMode = state.mode == GameMode.practice ||
         state.mode == GameMode.twoPlayer ||
         state.mode == GameMode.tutorial;
-    final isLearningMode =
-        state.mode == GameMode.practice ||
+    final isLearningMode = state.mode == GameMode.practice ||
         state.mode == GameMode.tutorial ||
         state.mode == GameMode.puzzle;
     if (!isLocalMode && state.hintsRemaining <= 0) return;
@@ -2631,6 +2645,9 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         engine: _engine,
         moveNumber: state.moveHistory.length,
         playerAccuracy: state.accuracy,
+        adaptiveProfile: state.aiDifficulty == AIDifficulty.aiMode
+            ? MasteryService().profile
+            : null,
       );
 
       if (isClosed || aiRequestEpoch != _aiRequestEpoch) return;
@@ -2790,7 +2807,10 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       final capturedTarget = _engine.pieceAt(move.to);
       if (capturedTarget != null) score += 30;
 
-      if (move.to.file >= 2 && move.to.file <= 5 && move.to.rank >= 2 && move.to.rank <= 5) {
+      if (move.to.file >= 2 &&
+          move.to.file <= 5 &&
+          move.to.rank >= 2 &&
+          move.to.rank <= 5) {
         score += 8;
       }
 
@@ -2829,8 +2849,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       );
 
       final isWhite = state.playerColor == PieceColor.white;
-      final won = (isWhite && state.result == GameResult.whiteWins) || 
-                  (!isWhite && state.result == GameResult.blackWins);
+      final won = (isWhite && state.result == GameResult.whiteWins) ||
+          (!isWhite && state.result == GameResult.blackWins);
 
       final whiteAccuracy = _toClampedAccuracy(
         analysis['whiteAccuracy'],
@@ -2840,7 +2860,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         analysis['blackAccuracy'],
         fallback: state.accuracy,
       );
-      
+
       final whiteMistakes = _toNonNegativeInt(analysis['whiteMistakes']);
       final blackMistakes = _toNonNegativeInt(analysis['blackMistakes']);
       final whiteBlunders = _toNonNegativeInt(analysis['whiteBlunders']);
@@ -2848,19 +2868,25 @@ class GameBloc extends Bloc<GameEvent, GameState> {
 
       final bool mapAsWhiteVsBlack = state.mode == GameMode.twoPlayer;
 
-      final playerAcc =
-          mapAsWhiteVsBlack ? whiteAccuracy : (isWhite ? whiteAccuracy : blackAccuracy);
-      final oppAcc =
-          mapAsWhiteVsBlack ? blackAccuracy : (isWhite ? blackAccuracy : whiteAccuracy);
+      final playerAcc = mapAsWhiteVsBlack
+          ? whiteAccuracy
+          : (isWhite ? whiteAccuracy : blackAccuracy);
+      final oppAcc = mapAsWhiteVsBlack
+          ? blackAccuracy
+          : (isWhite ? blackAccuracy : whiteAccuracy);
 
-      final playerMistakes =
-          mapAsWhiteVsBlack ? whiteMistakes : (isWhite ? whiteMistakes : blackMistakes);
-      final oppMistakes =
-          mapAsWhiteVsBlack ? blackMistakes : (isWhite ? blackMistakes : whiteMistakes);
-      final playerBlunders =
-          mapAsWhiteVsBlack ? whiteBlunders : (isWhite ? whiteBlunders : blackBlunders);
-      final oppBlunders =
-          mapAsWhiteVsBlack ? blackBlunders : (isWhite ? blackBlunders : whiteBlunders);
+      final playerMistakes = mapAsWhiteVsBlack
+          ? whiteMistakes
+          : (isWhite ? whiteMistakes : blackMistakes);
+      final oppMistakes = mapAsWhiteVsBlack
+          ? blackMistakes
+          : (isWhite ? blackMistakes : whiteMistakes);
+      final playerBlunders = mapAsWhiteVsBlack
+          ? whiteBlunders
+          : (isWhite ? whiteBlunders : blackBlunders);
+      final oppBlunders = mapAsWhiteVsBlack
+          ? blackBlunders
+          : (isWhite ? blackBlunders : whiteBlunders);
 
       // Adaptive Mastery Analysis
       final masteryResult = MasteryService().updateMastery(
@@ -2902,7 +2928,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
   }
 
   int _toNonNegativeInt(dynamic value, {int fallback = 0}) {
-    final parsed = value is num ? value.toInt() : int.tryParse(value?.toString() ?? '');
+    final parsed =
+        value is num ? value.toInt() : int.tryParse(value?.toString() ?? '');
     final safe = parsed ?? fallback;
     return safe < 0 ? 0 : safe;
   }

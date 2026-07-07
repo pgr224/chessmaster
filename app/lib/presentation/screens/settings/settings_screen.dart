@@ -156,6 +156,96 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const SizedBox(height: 14),
                 _sectionCard(
+                  title: 'AI Strength',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Adjust how aggressively the AI thinks and how much time it spends on each turn.',
+                        style: GoogleFonts.baloo2(
+                          color: AppTheme.textMuted,
+                          fontSize: 13,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: AppTheme.surface.withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: AppTheme.goldPrimary.withValues(alpha: 0.22),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    _aiStrengthLabel(settings.aiDifficultyLevel),
+                                    style: GoogleFonts.fredoka(
+                                      color: AppTheme.textPrimary,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.goldPrimary.withValues(alpha: 0.18),
+                                    borderRadius: BorderRadius.circular(999),
+                                  ),
+                                  child: Text(
+                                    '${settings.aiDifficultyLevel}/20',
+                                    style: GoogleFonts.fredoka(
+                                      color: AppTheme.goldPrimary,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SliderTheme(
+                              data: SliderTheme.of(context).copyWith(
+                                activeTrackColor: AppTheme.goldPrimary,
+                                inactiveTrackColor: AppTheme.surface,
+                                thumbColor: AppTheme.accentCyan,
+                                overlayColor: AppTheme.accentCyan.withValues(alpha: 0.16),
+                                trackHeight: 8,
+                              ),
+                              child: Slider(
+                                min: 0,
+                                max: 20,
+                                divisions: 20,
+                                value: settings.aiDifficultyLevel.toDouble(),
+                                label: '${settings.aiDifficultyLevel}',
+                                onChanged: (value) => context.read<SettingsBloc>().add(
+                                      SettingsAIDifficultyLevelEvent(value.round()),
+                                    ),
+                              ),
+                            ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text('Easy', style: GoogleFonts.baloo2(color: AppTheme.textMuted)),
+                                Text('Medium', style: GoogleFonts.baloo2(color: AppTheme.textMuted)),
+                                Text('Hard', style: GoogleFonts.baloo2(color: AppTheme.textMuted)),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+                _sectionCard(
                   title: 'Board & Play',
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -741,6 +831,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
         );
       }).toList(),
     );
+  }
+
+  String _aiStrengthLabel(int level) {
+    if (level <= 6) return 'Easy • Friendly practice';
+    if (level <= 12) return 'Balanced • Solid challenge';
+    if (level <= 16) return 'Hard • Strong positional play';
+    return 'Impossible • Deep, ruthless analysis';
   }
 
   Widget _buildAnimationSpeedChips(String selectedSpeed) {

@@ -22,10 +22,11 @@
 
   // Depth config per difficulty
   const DEPTH_CONFIG = {
-    basic: 4,
-    advanced: 20,
-    impossible: 40,
-    aiMode: 64,
+    basic: 3,
+    intermediate: 5,
+    advanced: 0,      // 0 = use movetime only (no artificial depth cap)
+    impossible: 0,    // 0 = use movetime only
+    aiMode: 0,        // 0 = use movetime only
   };
 
   // Timeout budget per difficulty (ms)
@@ -33,13 +34,13 @@
   const TIMEOUT_CONFIG = {
     basic: 2250,
     intermediate: 4000,
-    advanced: 5000,
-    impossible: 10000, // Grandmaster level (10s)
-    aiMode: 15000,     // Max deep analysis (15s)
+    advanced: 7000,      // Strong club player (7s)
+    impossible: 12000,   // Near-master level (12s)
+    aiMode: 18000,       // GM-level deep analysis (18s)
   };
 
   const FALLBACK_BUFFER_MS = 500; // Stockfish buffer before sunfish fallback
-  const HEARTBEAT_TIMEOUT_MS = 12000; // Hard limit for any search
+  const HEARTBEAT_TIMEOUT_MS = 22000; // Hard limit for any search (must exceed aiMode timeout)
   const STOCKFISH_INIT_TIMEOUT_MS = 7000; // Max time to wait for WASM load
 
   // ═══════════════════════════════════════
@@ -136,9 +137,11 @@
         return; // Ignore stale resolves
       }
       clearTimeout(pendingTimeout);
+      if (globalHeartbeatTimer) clearTimeout(globalHeartbeatTimer);
       const resolve = pendingResolve;
       pendingResolve = null;
       pendingTimeout = null;
+      globalHeartbeatTimer = null;
 
       // Return both move and candidates if available (for humanoid selection)
       if (msg.candidates && msg.candidates.length > 0) {
@@ -153,6 +156,7 @@
       const resolve = pendingResolve;
       pendingResolve = null;
       pendingTimeout = null;
+      globalHeartbeatTimer = null;
       resolve(null);
     }
   }
@@ -191,14 +195,15 @@
         if (globalHeartbeatTimer) clearTimeout(globalHeartbeatTimer);
       }
 
-      // Hard Heartbeat: Total Search Limit 12s
+      // Hard heartbeat: total search limit for any engine request.
       globalHeartbeatTimer = setTimeout(() => {
         if (pendingResolve) {
-          console.error(`[EngineService] Global 12s Heartbeat Timeout - Killing Workers`);
+          console.error(`[EngineService] Global ${HEARTBEAT_TIMEOUT_MS}ms Heartbeat Timeout - Killing Workers`);
           terminateWorker(ENGINE_STOCKFISH);
           terminateWorker(ENGINE_SUNFISH);
           const res = pendingResolve;
           pendingResolve = null;
+          globalHeartbeatTimer = null;
           res(null);
         }
       }, HEARTBEAT_TIMEOUT_MS);
@@ -223,10 +228,14 @@
                 
                 const res = pendingResolve;
                 pendingResolve = null;
+                if (globalHeartbeatTimer) clearTimeout(globalHeartbeatTimer);
+                globalHeartbeatTimer = null;
                 res(null);
               } else {
                 const res = pendingResolve;
                 pendingResolve = null;
+                if (globalHeartbeatTimer) clearTimeout(globalHeartbeatTimer);
+                globalHeartbeatTimer = null;
                 res(null);
               }
             }
@@ -234,14 +243,17 @@
 
           if (engineType === ENGINE_SUNFISH) {
             const worker = createWorker(ENGINE_SUNFISH);
-            worker.postMessage({ type: 'search', fen, depth: isFallback ? 3 : depth, timeout: timeoutMs - 200, id });
+            const sunfishDepth = isFallback ? 2 : Math.max(1, Math.min(depth, 3));
+            worker.postMessage({ type: 'search', fen, depth: sunfishDepth, timeout: Math.max(250, timeoutMs - 250), id });
           } else if (engineType === ENGINE_STOCKFISH) {
             await waitForStockfishReady();
             if (pendingResolve === resolve) {
               // Enable MultiPV 3 for high difficulties
               const multipv = (currentDifficulty === 'advanced' || currentDifficulty === 'impossible' || currentDifficulty === 'aiMode') ? 3 : 1;
               const stockfishTime = Math.max(500, timeoutMs - FALLBACK_BUFFER_MS);
-              stockfishWorker.postMessage({ type: 'search', fen, depth, timeoutMs: stockfishTime, multipv, id });
+              // Graded Skill Level: Advanced=16 (slight imprecisions), Impossible/AI=20 (full strength)
+              const skillLevel = currentDifficulty === 'advanced' ? 16 : 20;
+              stockfishWorker.postMessage({ type: 'search', fen, depth, timeoutMs: stockfishTime, multipv, id, skillLevel });
             }
           }
         };

@@ -21,6 +21,15 @@ export class MaintenanceService {
 
       console.log(`[Maintenance] Cleanup: Marked ${gamesResult.meta.changes || 0} stale games as abandoned.`)
 
+      // 1.5 Mark stale challenges as expired (older than 24 hours)
+      const challengesResult = await env.DB.prepare(`
+        UPDATE challenges
+        SET status = 'expired', updated_at = datetime('now')
+        WHERE status = 'pending'
+          AND datetime(created_at) < datetime('now', '-1 day')
+      `).run()
+      console.log(`[Maintenance] Cleanup: Marked ${challengesResult.meta.changes || 0} stale challenges as expired.`)
+
       // 2. Refresh user statistics based on the latest game history
       // This is a simplified version of refresh_userdata.sql for periodic maintenance
       await env.DB.batch([
@@ -46,7 +55,17 @@ export class MaintenanceService {
             draws = (
               SELECT COUNT(*) FROM games 
               WHERE (white_user_id = user_stats.user_id OR black_user_id = user_stats.user_id)
-                AND result = 'draw' AND status IN ('completed', 'draw')
+                AND result = 'draw' AND status IN ('completed', 'draw', 'abandoned')
+            ),
+            multiplayer_wins = (
+              SELECT COUNT(*) FROM games 
+              WHERE ((white_user_id = user_stats.user_id AND result = 'white') OR (black_user_id = user_stats.user_id AND result = 'black'))
+                AND mode = 'multiplayer' AND status = 'completed'
+            ),
+            tournament_wins = (
+              SELECT COUNT(*) FROM games 
+              WHERE ((white_user_id = user_stats.user_id AND result = 'white') OR (black_user_id = user_stats.user_id AND result = 'black'))
+                AND mode = 'tournament' AND status = 'completed'
             )
         `),
         // Recalculate XP from the master users table to keep user_stats in sync

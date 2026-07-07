@@ -1,15 +1,33 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 
 import 'package:chess_master/presentation/blocs/multiplayer/multiplayer_bloc.dart';
 import 'package:chess_master/presentation/blocs/game/game_bloc.dart';
+import 'package:chess_master/presentation/blocs/auth/auth_bloc.dart';
 import 'package:chess_master/data/services/multiplayer_service.dart';
 
+class _MockAuthBloc extends Mock implements AuthBloc {}
+
 void main() {
+  late AuthBloc authBloc;
+
+  setUpAll(() {
+    registerFallbackValue(AuthInitializeEvent());
+  });
+
+  setUp(() {
+    authBloc = _MockAuthBloc();
+    when(() => authBloc.state).thenReturn(AuthUnauthenticatedState());
+    when(() => authBloc.add(any())).thenReturn(null);
+  });
+
+  MultiplayerBloc buildBloc() => MultiplayerBloc(MultiplayerService(), authBloc);
+
   group('MultiplayerBloc game over XP', () {
     blocTest<MultiplayerBloc, MultiplayerState>(
       'applies standardized win XP when result is win',
-      build: () => MultiplayerBloc(MultiplayerService()),
+      build: buildBloc,
       act: (bloc) => bloc.add(const MpGameOverEvent('win', 'checkmate')),
       expect: () => [
         isA<MultiplayerState>()
@@ -21,7 +39,7 @@ void main() {
 
     blocTest<MultiplayerBloc, MultiplayerState>(
       'applies standardized loss XP when result is loss',
-      build: () => MultiplayerBloc(MultiplayerService()),
+      build: buildBloc,
       act: (bloc) => bloc.add(const MpGameOverEvent('loss', 'resign')),
       expect: () => [
         isA<MultiplayerState>()
@@ -33,7 +51,7 @@ void main() {
 
     blocTest<MultiplayerBloc, MultiplayerState>(
       'uses server XP delta override when provided',
-      build: () => MultiplayerBloc(MultiplayerService()),
+      build: buildBloc,
       act: (bloc) =>
           bloc.add(const MpGameOverEvent('draw', 'agreement', xpDelta: 45)),
       expect: () => [
@@ -48,7 +66,7 @@ void main() {
   group('MultiplayerBloc presence and challenge inbox', () {
     blocTest<MultiplayerBloc, MultiplayerState>(
       'tracks queued outgoing challenge when opponent is busy',
-      build: () => MultiplayerBloc(MultiplayerService()),
+      build: buildBloc,
       act: (bloc) => bloc.add(
         MpSendChallengeEvent(
           opponent: const OnlineLobbyUser(
@@ -76,7 +94,7 @@ void main() {
 
     blocTest<MultiplayerBloc, MultiplayerState>(
       'updates local presence even before lobby socket is connected',
-      build: () => MultiplayerBloc(MultiplayerService()),
+      build: buildBloc,
       act: (bloc) => bloc.add(
         const MpSetPresenceEvent(
           LobbyPresence.offlineGame,

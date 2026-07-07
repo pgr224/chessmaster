@@ -14,8 +14,10 @@ import 'native_engine_bridge_stub.dart'
     if (dart.library.js_interop) 'js_engine_bridge.dart' as js_bridge;
 
 import '../../core/services/logging_service.dart';
+import 'adaptive_ai_profile.dart';
 import 'personality_engine.dart';
 import 'candidate_model.dart';
+import 'move_selector.dart';
 
 class AIEngineController {
   GameMode _mode = GameMode.singlePlayer;
@@ -30,12 +32,10 @@ class AIEngineController {
   static const Map<AIDifficulty, int> _maxTimeMs = {
     AIDifficulty.basic: 2250,
     AIDifficulty.intermediate: 4000,
-    AIDifficulty.advanced: 5000,
-    AIDifficulty.impossible: 5000, // Reduced from 17000 to keep it engaging
-    AIDifficulty.aiMode: 10500, // Increased to make AI Mode significantly stronger
+    AIDifficulty.advanced: 7000,
+    AIDifficulty.impossible: 12000, // Near-master level search time
+    AIDifficulty.aiMode: 18000, // GM-level deep analysis
   };
-
-  static const int _fallbackBufferMs = 2000; // reserved for retry logic
 
   /// Tracks active request to allow cancellation
   int _activeRequestId = 0;
@@ -58,18 +58,23 @@ class AIEngineController {
   void clearThinkingMessage() => _latestThinkingMessage = null;
 
   /// Analyze player style for adaptive AI
-  Future<Map<String, dynamic>> analyzePlayerStyle(String fen, List<String> recentMoves) async {
+  Future<Map<String, dynamic>> analyzePlayerStyle(
+      String fen, List<String> recentMoves) async {
     // Use Leela if available, otherwise heuristic analysis
     try {
       return await js_bridge.jsEngineAnalyzeStyle(fen, recentMoves);
     } catch (_) {
       // Fallback heuristic
-      bool aggressive = recentMoves.any((m) => m.contains('+') || m.contains('#'));
+      bool aggressive =
+          recentMoves.any((m) => m.contains('+') || m.contains('#'));
       bool defensive = recentMoves.length > 5 && !aggressive;
-      bool positional = !aggressive && !defensive;
 
       return {
-        'style': aggressive ? 'aggressive' : defensive ? 'defensive' : 'positional',
+        'style': aggressive
+            ? 'aggressive'
+            : defensive
+                ? 'defensive'
+                : 'positional',
         'confidence': 0.7,
         'suggested_personality': aggressive ? 'aggressive' : 'defensive',
       };
@@ -88,21 +93,27 @@ class AIEngineController {
 
   /// Get the best move for the current position with robust timeout handling
   Future<String?> getBestMove(String fen,
-      {ChessEngine? engine, bool humanized = true, int moveNumber = 0, double? playerAccuracy}) async {
+      {ChessEngine? engine,
+      bool humanized = true,
+      int moveNumber = 0,
+      double? playerAccuracy,
+      AdaptiveAIProfile? adaptiveProfile}) async {
     if (!_initialized) return null;
-    if (_mode == GameMode.twoPlayer || _mode == GameMode.multiplayer)
+    if (_mode == GameMode.twoPlayer || _mode == GameMode.multiplayer) {
       return null;
+    }
 
     _lastMoveSource = 'none';
 
     final requestId = ++_activeRequestId;
 
     // ── SMART/HUMANOID AI PIPELINE (Advanced, Impossible, AI Mode) ──
-    if (_difficulty == AIDifficulty.aiMode ||
-        _difficulty == AIDifficulty.impossible ||
-        _difficulty == AIDifficulty.advanced) {
+    if (_difficulty == AIDifficulty.aiMode) {
       return _getSmartMove(fen, requestId,
-          engine: engine, moveNumber: moveNumber, playerAccuracy: playerAccuracy);
+          engine: engine,
+          moveNumber: moveNumber,
+          playerAccuracy: playerAccuracy,
+          adaptiveProfile: adaptiveProfile);
     }
 
     final maxTime = _maxTimeMs[_difficulty] ?? 2000;
@@ -149,7 +160,10 @@ class AIEngineController {
 
   /// SMART AI System: MultiPV candidates -> Opening randomness -> Quality filtering
   Future<String?> _getSmartMove(String fen, int requestId,
-      {ChessEngine? engine, int moveNumber = 0, double? playerAccuracy}) async {
+      {ChessEngine? engine,
+      int moveNumber = 0,
+      double? playerAccuracy,
+      AdaptiveAIProfile? adaptiveProfile}) async {
     try {
       List<MoveCandidate> candidates = [];
       String? bestFound;
@@ -178,7 +192,7 @@ class AIEngineController {
           // ADAPTIVE ACCURACY MULTIPLIER: Only for AI Mode
           double accuracyMult = 1.0;
           final bool isAIMode = _difficulty == AIDifficulty.aiMode;
-          
+
           if (isAIMode && playerAccuracy != null) {
             final normalizedAccuracy = playerAccuracy.clamp(0.0, 100.0);
             if (normalizedAccuracy >= 95.0) {
@@ -196,18 +210,26 @@ class AIEngineController {
             accuracyMult = 1.5;
           }
 
-          final int baseTime = (800 + (complexity * 60)).toInt();
-          dynamicMoveTime =
-              (baseTime * personalityMult * accuracyMult).toInt().clamp(1000, cap);
+          if (isAIMode && adaptiveProfile != null) {
+            accuracyMult *= adaptiveProfile.timeMultiplier;
+          }
 
-          // For AI Mode, we ensure it takes at least 1.5s for non-forced moves 
+          final int baseTime = (800 + (complexity * 60)).toInt();
+          dynamicMoveTime = (baseTime * personalityMult * accuracyMult)
+              .toInt()
+              .clamp(1000, cap)
+              .toInt();
+
+          // For AI Mode, we ensure it takes at least 1.5s for non-forced moves
           // to maintain a "thinking" presence, but no longer 8s hardcoded.
           if (isAIMode) {
-            dynamicMoveTime = dynamicMoveTime.clamp(1500, cap);
+            dynamicMoveTime = dynamicMoveTime.clamp(1500, cap).toInt();
           }
 
           // SET DYNAMIC THINKING MESSAGE
-          if (pieceCount < 10) {
+          if (isAIMode && adaptiveProfile != null) {
+            _latestThinkingMessage = adaptiveProfile.adaptationMessage;
+          } else if (pieceCount < 10) {
             _latestThinkingMessage = "Endgame time! Let's see... 🔍";
           } else if (complexity > 45) {
             _latestThinkingMessage = "Hmm, this is extremely complex! 🧠💻";
@@ -250,7 +272,8 @@ class AIEngineController {
                     final uciRaw = c['uci'];
                     final scoreRaw = c['score'];
                     if (uciRaw is String && scoreRaw is num) {
-                      return MoveCandidate(uci: uciRaw, score: scoreRaw.toInt());
+                      return MoveCandidate(
+                          uci: uciRaw, score: scoreRaw.toInt());
                     }
                   }
                   return null;
@@ -268,19 +291,65 @@ class AIEngineController {
 
       // ── 1. OPENING RANDOMIZATION (First 10 moves) ──
       if (moveNumber < 10 && candidates.length > 1) {
+        // AI Mode prefers safe remembered player patterns before engine purity.
         if (_difficulty == AIDifficulty.aiMode) {
+          final remembered = adaptiveProfile?.chooseSignatureCandidate(
+            candidates,
+            moveNumber: moveNumber,
+          );
+          if (remembered != null) {
+            _latestThinkingMessage =
+                "I remember this shape from your games. Borrowing the idea.";
+            return remembered.uci;
+          }
+        }
+
+        if (_difficulty == AIDifficulty.impossible) {
           return candidates.first.uci;
         }
-        final rand = math.Random().nextDouble();
-        if (rand > 0.6) {
-          return candidates[math.Random().nextInt(candidates.length)].uci;
+        // Advanced: 20% chance to pick from top-2 (slight variety, not weakness)
+        if (_difficulty == AIDifficulty.advanced) {
+          final rand = math.Random().nextDouble();
+          if (rand > 0.8) {
+            final count = math.min(2, candidates.length);
+            return candidates[math.Random().nextInt(count)].uci;
+          }
         }
       }
 
       // ── 2. QUALITY FILTER (Reject repetitive edge pawn spam e.g., a6, h6) ──
-      String move = _difficulty == AIDifficulty.aiMode
-          ? candidates.first.uci
-          : _pickSmartMove(candidates);
+      String move;
+      if (_difficulty == AIDifficulty.aiMode) {
+        final remembered = adaptiveProfile?.chooseSignatureCandidate(
+          candidates,
+          moveNumber: moveNumber,
+        );
+        if (remembered != null) {
+          _latestThinkingMessage =
+              "That is one of your signature ideas. Let's see how you answer it.";
+          move = remembered.uci;
+        } else {
+          final personality = adaptiveProfile?.counterPersonality ??
+              PersonalityEngine().currentPersonality;
+          final maxLoss = adaptiveProfile?.maxCentipawnLoss ?? 45;
+          final errorChance = adaptiveProfile?.errorChance ?? 0.02;
+          move = MoveSelector()
+              .select(
+                candidates,
+                personality,
+                errorChance: errorChance,
+                maxCentipawnLoss: maxLoss,
+              )
+              .uci;
+        }
+      } else if (_difficulty == AIDifficulty.advanced ||
+          _difficulty == AIDifficulty.impossible) {
+        final personality = adaptiveProfile?.counterPersonality ??
+            PersonalityEngine().currentPersonality;
+        move = _pickPersonalityMove(candidates, personality, moveNumber);
+      } else {
+        move = _pickSmartMove(candidates);
+      }
 
       if (_lastMoveSource == 'none') {
         _lastMoveSource =
@@ -291,6 +360,50 @@ class AIEngineController {
     } catch (e) {
       LoggingService.error('[SmartAI] Error', e);
       return engine != null ? await fallbackMove(fen, engine: engine) : null;
+    }
+  }
+
+  String _pickPersonalityMove(
+    List<MoveCandidate> candidates,
+    AIPersonality personality,
+    int moveNumber,
+  ) {
+    if (candidates.isEmpty) return 'none';
+
+    final tactical = candidates.where((candidate) {
+      final move = candidate.uci;
+      return move.contains('x') || move.contains('+') || move.contains('#');
+    }).toList();
+    final quiet = candidates.where((candidate) {
+      final move = candidate.uci;
+      return !move.contains('x') && !move.contains('+') && !move.contains('#');
+    }).toList();
+
+    switch (personality) {
+      case AIPersonality.aggressive:
+        if (tactical.isNotEmpty && moveNumber <= 12) {
+          return tactical.first.uci;
+        }
+        return candidates.first.uci;
+      case AIPersonality.defensive:
+        if (quiet.isNotEmpty) {
+          return quiet.first.uci;
+        }
+        return candidates.first.uci;
+      case AIPersonality.tricky:
+        if (candidates.length > 1 && moveNumber <= 10) {
+          return candidates[1].uci;
+        }
+        return candidates.first.uci;
+      case AIPersonality.lazy:
+        if (candidates.length > 2 && moveNumber >= 8) {
+          return candidates[2].uci;
+        }
+        return candidates.first.uci;
+      case AIPersonality.random:
+        return candidates[math.Random().nextInt(candidates.length)].uci;
+      case AIPersonality.coach:
+        return candidates.first.uci;
     }
   }
 
@@ -416,8 +529,9 @@ class AIEngineController {
   }
 
   bool _isDevelopingMove(ChessPiece piece, Move move) {
-    if (piece.type != PieceType.knight && piece.type != PieceType.bishop)
+    if (piece.type != PieceType.knight && piece.type != PieceType.bishop) {
       return false;
+    }
     final fromRank = move.from.rank;
     final toRank = move.to.rank;
     if (piece.color == PieceColor.white) return fromRank <= 1 && toRank >= 2;

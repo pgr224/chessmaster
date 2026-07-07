@@ -56,7 +56,7 @@ export class TournamentRoom implements DurableObject {
     const url = new URL(request.url)
     const userId = url.searchParams.get('userId') ?? 'anon'
     const username = url.searchParams.get('username') ?? 'Player'
-    const rating = parseInt(url.searchParams.get('rating') ?? '1200')
+    const rating = parseInt(url.searchParams.get('rating') ?? '0')
     const totalRounds = parseInt(url.searchParams.get('totalRounds') ?? '3')
     const timeControl = normalizeTimeControl(url.searchParams.get('timeControl') ?? DEFAULT_TIME_CONTROL)
     const type = (url.searchParams.get('type') ?? 'private') as 'public' | 'private'
@@ -333,6 +333,7 @@ export class TournamentRoom implements DurableObject {
     await this._persist()
 
     const standings = this._standings()
+    const winner = standings.length > 0 ? standings[0] : null
     // Award tournament bonuses and update rankings in database
     const xpDeltas: Record<string, number> = {}
     const eloDeltas: Record<string, number> = {}

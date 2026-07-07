@@ -894,14 +894,14 @@ async function buildProfileData(c: any, userId: string) {
     // 3. Get extra account info
     const userAccount = await c.env.DB.prepare(
       'SELECT is_ghibli, local_avatar, username_changes, last_username_change, created_at, device_model FROM users WHERE id = ?'
-    ).bind(userId).first<{ 
+    ).bind(userId).first() as { 
       is_ghibli: number; 
       local_avatar: string | null; 
       username_changes: number; 
       last_username_change: string | null;
       created_at: string;
       device_model: string | null;
-    }>()
+    } | null
 
     // Get recent games
     let recentGames = []
@@ -938,8 +938,9 @@ async function buildProfileData(c: any, userId: string) {
     try {
       const achievementRes = await c.env.DB.prepare(
         'SELECT achievement_id FROM user_achievements WHERE user_id = ?'
-      ).bind(userId).all<{ achievement_id: string }>()
-      achievements = (achievementRes.results || []).map(a => a.achievement_id)
+      ).bind(userId).all()
+      achievements = ((achievementRes.results || []) as { achievement_id: string }[])
+        .map((a) => a.achievement_id)
     } catch (achErr) {
       console.warn('[buildProfileData] Could not fetch achievements:', achErr)
     }

@@ -4,7 +4,7 @@ import { authMiddleware } from '../middleware/auth'
 import { normalizeLeaderboardSortType } from './leaderboard.rank-utils'
 
 const leaderboard = new Hono<{ Bindings: Env }>()
-leaderboard.use('*', authMiddleware)
+leaderboard.use('/rank/*', authMiddleware)
 
 // ────────────────────────────────────────
 // GLOBAL LEADERBOARD
@@ -84,7 +84,7 @@ leaderboard.get('/rank/:userId', async (c) => {
              COALESCE(s.wins, 0) as wins,
              COALESCE(s.losses, 0) as losses,
              COALESCE(s.games_played, 0) as games_played,
-             COALESCE(s.elo_rating, 1200) as elo_rating,
+             COALESCE(s.elo_rating, 0) as elo_rating,
              COALESCE(s.longest_streak, 0) as longest_streak
       FROM users u
       LEFT JOIN user_stats s ON u.id = s.user_id
@@ -117,7 +117,7 @@ leaderboard.get('/rank/:userId', async (c) => {
       sqlCondition = 'COALESCE(s.longest_streak, 0) > ? OR (COALESCE(s.longest_streak, 0) = ? AND u.xp > ?)'
     } else if (type === 'elo') {
       sortValue = me.elo_rating
-      sqlCondition = 'COALESCE(s.elo_rating, 1200) > ? OR (COALESCE(s.elo_rating, 1200) = ? AND u.xp > ?)'
+      sqlCondition = 'COALESCE(s.elo_rating, 0) > ? OR (COALESCE(s.elo_rating, 0) = ? AND u.xp > ?)'
     } else {
       sortValue = me.xp
       sqlCondition = 'u.xp > ?'

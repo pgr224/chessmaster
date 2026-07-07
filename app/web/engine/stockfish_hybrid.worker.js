@@ -76,7 +76,7 @@ async function loadStockfish() {
 
     sendUCI('uci');
     sendUCI('setoption name Threads value 1');
-    sendUCI('setoption name Hash value 64');
+    sendUCI('setoption name Hash value 256');
     sendUCI('ucinewgame');
     sendUCI('isready');
 
@@ -122,14 +122,20 @@ function handleUCIOutput(line) {
   }
 }
 
-function executeSearch(fen, depth, timeoutMs, multipv = 1, searchId = null) {
+function executeSearch(fen, depth, timeoutMs, multipv = 1, searchId = null, skillLevel = 20) {
   isSearching = true;
   currentSearchId = searchId;
   candidates = []; // Reset for new search
   
+  // Set skill level for difficulty scaling (0-20, 20 = strongest)
+  sendUCI(`setoption name Skill Level value ${skillLevel}`);
   sendUCI(`setoption name MultiPV value ${multipv}`);
   sendUCI(`position fen ${fen}`);
-  if (timeoutMs) {
+  
+  // When depth is 0 or not set, use movetime only for uncapped search depth
+  if (!depth || depth <= 0) {
+    sendUCI(`go movetime ${timeoutMs || 5000}`);
+  } else if (timeoutMs) {
     sendUCI(`go depth ${depth} movetime ${timeoutMs}`);
   } else {
     sendUCI(`go depth ${depth}`);
@@ -145,7 +151,7 @@ self.addEventListener('message', async (e) => {
       break;
 
     case 'search': {
-      const { fen, depth = 12, timeoutMs = 14000, multipv = 1, id } = msg;
+      const { fen, depth = 12, timeoutMs = 14000, multipv = 1, id, skillLevel = 20 } = msg;
 
       if (!stockfishEngine) {
         await loadStockfish();
@@ -156,9 +162,9 @@ self.addEventListener('message', async (e) => {
       }
 
       if (isReady) {
-        executeSearch(fen, depth, timeoutMs, multipv, id);
+        executeSearch(fen, depth, timeoutMs, multipv, id, skillLevel);
       } else {
-        pendingSearch = { fen, depth, timeoutMs, multipv, searchId: id };
+        pendingSearch = { fen, depth, timeoutMs, multipv, searchId: id, skillLevel };
         sendUCI('isready');
       }
       break;

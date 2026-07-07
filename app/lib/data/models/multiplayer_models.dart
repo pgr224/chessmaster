@@ -69,13 +69,15 @@ class OnlineLobbyUser extends Equatable {
   final int rating;
   final String presence;
   final String flair;
+  final int xp;
 
   const OnlineLobbyUser({
     required this.id,
     required this.name,
-    required this.rating,
+    this.rating = 0,
     this.presence = LobbyPresence.online,
     this.flair = 'Ready to play',
+    this.xp = 0,
   });
 
   bool get isAvailable => LobbyPresence.isReady(presence);
@@ -90,6 +92,7 @@ class OnlineLobbyUser extends Equatable {
     int? rating,
     String? presence,
     String? flair,
+    int? xp,
   }) {
     return OnlineLobbyUser(
       id: id ?? this.id,
@@ -97,11 +100,12 @@ class OnlineLobbyUser extends Equatable {
       rating: rating ?? this.rating,
       presence: presence ?? this.presence,
       flair: flair ?? this.flair,
+      xp: xp ?? this.xp,
     );
   }
 
   @override
-  List<Object?> get props => [id, name, rating, presence, flair];
+  List<Object?> get props => [id, name, rating, presence, flair, xp];
 }
 
 class ChallengeRequest extends Equatable {

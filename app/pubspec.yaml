@@ -125,3 +125,10 @@ flutter:
     - assets/themes/
     - assets/tutorials/
     - .env
+  fonts:
+    - family: NotoSans
+      fonts:
+        - asset: assets/fonts/NotoSans-Regular.ttf
+    - family: ChessMerida
+      fonts:
+        - asset: assets/fonts/chess_merida.ttf

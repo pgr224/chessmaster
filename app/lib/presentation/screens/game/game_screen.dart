@@ -60,6 +60,15 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   bool _showCheckmateIntro = false;
   bool _showGameOverDetails = false;
 
+  Future<void> _playSound(String fileName) async {
+    try {
+      await _audioPlayer.stop();
+      await _audioPlayer.play(AssetSource('sounds/$fileName'));
+    } catch (e) {
+      debugPrint('Audio playback skipped: $e');
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -211,14 +220,14 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             if (isWin) {
               _confettiController.play();
               if (settings.soundEnabled) {
-                _audioPlayer.play(AssetSource('sounds/win.wav'));
+                unawaited(_playSound('win.wav'));
               }
             }
           }
           if (state.showPuzzleCelebration) {
             _confettiController.play();
             if (settings.soundEnabled) {
-              _audioPlayer.play(AssetSource('sounds/win.wav'));
+              unawaited(_playSound('win.wav'));
             }
           }
           if (state.status == GameStatus.check) {
@@ -228,14 +237,14 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           // Move Sound
           if (state.moveHistory.isNotEmpty) {
             if (settings.soundEnabled) {
-              _audioPlayer.play(AssetSource('sounds/move.wav'));
+              unawaited(_playSound('move.wav'));
             }
           }
 
           // Warning Sound for wrong puzzle moves
           if (state.tutorialMessage?.startsWith('❌') ?? false) {
             if (settings.soundEnabled) {
-              _audioPlayer.play(AssetSource('sounds/warning.wav'));
+              unawaited(_playSound('warning.wav'));
             }
           }
 
@@ -700,32 +709,115 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildClockPanel(BuildContext context, GameState state) {
-    final showClock = state.whiteTimeMs > 0 || state.blackTimeMs > 0;
-    if (!showClock) return const SizedBox.shrink();
+    final isWhite = state.playerColor == PieceColor.white;
+    final whiteName = isWhite ? 'You' : (state.opponentName ?? 'White');
+    final blackName = isWhite ? (state.opponentName ?? 'Black') : 'You';
 
-    final isWhiteActive = state.currentTurn == PieceColor.white && state.clockRunning;
-    final isBlackActive = state.currentTurn == PieceColor.black && state.clockRunning;
+    final myName = isWhite ? whiteName : blackName;
+    final oppName = isWhite ? blackName : whiteName;
+    final myTime = (isWhite ? state.whiteTimeMs : state.blackTimeMs) / 1000;
+    final oppTime = (isWhite ? state.blackTimeMs : state.whiteTimeMs) / 1000;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppTheme.midnight.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.2),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Row(
         children: [
+          // Opponent Info
           Expanded(
-            child: TimerWidget(
-              timeInSeconds: state.whiteTimeMs / 1000,
-              isActive: isWhiteActive,
-              label: 'White',
+            flex: 3,
+            child: Text(
+              oppName,
+              style: GoogleFonts.fredoka(
+                color: AppTheme.textSecondary,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
-          const SizedBox(width: 12),
+          
+          // Opponent Timer
+          _timerDisplay(oppTime, isMyTurn: !state.isPlayerTurn),
+          
+          // Player Name (Middle)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Text(
+              'VS',
+              style: GoogleFonts.fredoka(
+                color: AppTheme.goldPrimary.withValues(alpha: 0.6),
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+
+          // Player Timer
+          _timerDisplay(myTime, isMyTurn: state.isPlayerTurn),
+          
+          // Player Info
           Expanded(
-            child: TimerWidget(
-              timeInSeconds: state.blackTimeMs / 1000,
-              isActive: isBlackActive,
-              label: 'Black',
+            flex: 3,
+            child: Text(
+              myName,
+              textAlign: TextAlign.end,
+              style: GoogleFonts.fredoka(
+                color: AppTheme.goldPrimary,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _timerDisplay(double time, {required bool isMyTurn}) {
+    final minutes = (time / 60).floor();
+    final seconds = (time % 60).floor();
+    final timeStr =
+        '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+    
+    final isLowTime = time < 30;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: isMyTurn 
+            ? (isLowTime ? AppTheme.accentRed : AppTheme.goldPrimary).withValues(alpha: 0.15)
+            : Colors.black.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isMyTurn 
+              ? (isLowTime ? AppTheme.accentRed : AppTheme.goldPrimary).withValues(alpha: 0.4)
+              : Colors.white.withValues(alpha: 0.05),
+          width: 1,
+        ),
+      ),
+      child: Text(
+        timeStr,
+        style: GoogleFonts.jetBrainsMono(
+          color: isMyTurn 
+              ? (isLowTime ? AppTheme.accentRed : AppTheme.goldPrimary)
+              : AppTheme.textMuted,
+          fontSize: 14,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }
@@ -746,29 +838,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           _glassButton(
             icon: Icons.arrow_back_rounded,
             onTap: () => _showExitDialog(context),
-          ),
-          const Spacer(),
-          // Game mode label — bubbly style
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-            decoration: BoxDecoration(
-              gradient: AppTheme.rainbowGradient,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.2),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4)),
-              ],
-            ),
-            child: Text(
-              _modeName(state.mode),
-              style: GoogleFonts.fredoka(
-                color: AppTheme.midnight,
-                fontWeight: FontWeight.w700,
-                fontSize: 14,
-              ),
-            ),
           ),
           const Spacer(),
           // Undo button - show in multiplayer with conditions
@@ -1028,7 +1097,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => FractionallySizedBox(
-        heightFactor: 0.7,
+        heightFactor: 0.22,
         child: ChatWidget(
           messages: messages,
           onSendMessage: (msg) {

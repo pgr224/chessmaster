@@ -34,7 +34,7 @@ class MpConnectLobbyEvent extends MultiplayerEvent {
   final String userId;
   final String username;
   final int rating;
-  const MpConnectLobbyEvent(this.userId, this.username, {this.rating = 1200});
+  const MpConnectLobbyEvent(this.userId, this.username, {this.rating = 0});
   @override
   List<Object?> get props => [userId, username, rating];
 }
@@ -651,7 +651,7 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
         status: MultiplayerStatus.gameOver, gameReason: 'manual_save')));
 
     on<MpLeaveGameEvent>((event, emit) {
-      _service.disconnectGame();
+      _service.leaveGame();
       _gameSub?.cancel();
       emit(state.copyWith(
         status: MultiplayerStatus.inLobby,
@@ -712,6 +712,13 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
     });
 
     on<MpSendTournamentInviteEvent>((event, emit) {
+      // Cancel any existing outgoing tournament invite to the same player
+      final updatedOutgoingChallenges = state.outgoingChallenges.where((r) {
+        return !(r.playerId == event.opponent.id &&
+            r.mode == 'tournament' &&
+            (r.status == 'pending' || r.status == 'queued'));
+      }).toList();
+
       final requestId = _buildChallengeRequestId(event.opponent.id);
       final request = ChallengeRequest(
         id: requestId,
@@ -733,7 +740,7 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
       );
       emit(state.copyWith(
         outgoingChallenges: _upsertChallenge(
-          state.outgoingChallenges,
+          updatedOutgoingChallenges,
           request,
         ),
         lobbyNotice: '🏆 Tournament invite sent to ${event.opponent.name}!',
@@ -815,6 +822,7 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
         myPresence: LobbyPresence.online,
       ));
       _service.sendPresence(LobbyPresence.online, context: 'post_game');
+      _authBloc.add(AuthCheckStatusEvent());
     });
     on<MpLobbyNoticeEvent>((event, emit) => emit(state.copyWith(
           lobbyNotice: event.message,
@@ -982,7 +990,7 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
                     rating: (player['rating'] is int)
                         ? player['rating'] as int
                         : int.tryParse(player['rating']?.toString() ?? '0') ??
-                            1200,
+                            0,
                     presence: presence,
                     flair: _buildPresenceFlair(
                       presence,
@@ -1033,29 +1041,41 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
         ));
       } else if (msgType == 'PENDING_CHALLENGES_SYNC') {
         final requests = (data['requests'] as List?) ?? const [];
+        final List<ChallengeRequest> incoming = [];
+        final List<ChallengeRequest> outgoing = [];
+
         for (final request in requests.whereType<Map>()) {
           final requestMap = _asMap(request);
-          add(MpIncomingChallengeReceivedEvent(
-            ChallengeRequest(
-              id: requestMap['requestId']?.toString() ??
-                  _buildChallengeRequestId(
-                    requestMap['challengerId']?.toString() ?? '',
-                  ),
-              playerId: requestMap['challengerId']?.toString() ?? '',
-              playerName: requestMap['challengerName']?.toString() ?? 'Someone',
-              mode: requestMap['mode']?.toString() ?? 'duel',
-              timeControl: requestMap['timeControl']?.toString() ?? '10+0',
-              variantId: requestMap['variantId']?.toString() ?? 'standard',
-              isIncoming: true,
-              isQueued:
-                  requestMap['queued'] == true || requestMap['isOffline'] == true,
-              createdAt: DateTime.fromMillisecondsSinceEpoch(
-                _toInt(requestMap['ts'],
-                    fallback: DateTime.now().millisecondsSinceEpoch),
-              ),
+          final isIncoming = requestMap['isIncoming'] == true;
+          final cr = ChallengeRequest(
+            id: requestMap['requestId']?.toString() ??
+                _buildChallengeRequestId(
+                  requestMap['challengerId']?.toString() ?? '',
+                ),
+            playerId: requestMap['playerId']?.toString() ?? '',
+            playerName: requestMap['playerName']?.toString() ?? 'Someone',
+            mode: requestMap['mode']?.toString() ?? 'duel',
+            timeControl: requestMap['timeControl']?.toString() ?? '10+0',
+            variantId: requestMap['variantId']?.toString() ?? 'standard',
+            isIncoming: isIncoming,
+            isQueued:
+                requestMap['queued'] == true || requestMap['isOffline'] == true,
+            status: requestMap['status']?.toString() ?? 'pending',
+            createdAt: DateTime.fromMillisecondsSinceEpoch(
+              _toInt(requestMap['ts'],
+                  fallback: DateTime.now().millisecondsSinceEpoch),
             ),
-          ));
+          );
+          if (isIncoming) {
+            incoming.add(cr);
+          } else {
+            outgoing.add(cr);
+          }
         }
+        emit(state.copyWith(
+          incomingChallenges: incoming,
+          outgoingChallenges: outgoing,
+        ));
       } else if (msgType == 'CHALLENGE_SENT') {
         final requestId = data['requestId']?.toString() ??
             _buildChallengeRequestId(data['opponentId']?.toString() ?? '');

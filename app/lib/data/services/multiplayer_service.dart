@@ -313,6 +313,12 @@ class MultiplayerService {
     _lobbyChannel = null;
   }
 
+  /// Explicitly leave game (triggers resignation on backend)
+  void leaveGame() {
+    _gameChannel?.sink.add(jsonEncode({'type': 'LEAVE_GAME'}));
+    disconnectGame();
+  }
+
   /// Disconnect game only
   void disconnectGame() {
     try {

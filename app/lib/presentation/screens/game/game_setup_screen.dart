@@ -6,6 +6,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/extensions.dart';
 import '../../../core/router/app_router.dart';
+import '../../../data/models/game_config.dart';
+import '../../blocs/settings/settings_bloc.dart';
 import '../../blocs/theme/theme_bloc.dart';
 
 class GameSetupScreen extends StatefulWidget {
@@ -30,7 +32,9 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
     super.didChangeDependencies();
     if (_loadedThemePrefs) return;
     final themeState = context.read<ThemeBloc>().state;
+    final settingsState = context.read<SettingsBloc>().state;
     _boardTheme = themeState.boardTheme;
+    _difficulty = _difficultyFromLevel(settingsState.aiDifficultyLevel);
     _loadedThemePrefs = true;
   }
 
@@ -155,54 +159,96 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
   }
 
   Widget _buildDifficultySelector() {
+    final level = _levelFromDifficulty(_difficulty);
+    final info = _difficultyInfo(_difficulty);
+
     return Column(
-      children: AIDifficulty.values.map((d) {
-        final isSelected = d == _difficulty;
-        final info = _difficultyInfo(d);
-        return GestureDetector(
-          onTap: () => setState(() => _difficulty = d),
-          child: AnimatedContainer(
-            duration: 250.ms,
-            margin: const EdgeInsets.only(bottom: 10),
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-            decoration: BoxDecoration(
-              color: isSelected
-                  ? AppTheme.goldPrimary.withValues(alpha: 0.18)
-                  : AppTheme.surface.withValues(alpha: 0.5),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: isSelected ? AppTheme.goldPrimary : Colors.transparent,
-                width: 2,
-              ),
-            ),
-            child: Row(children: [
-              Text(info['emoji']!, style: const TextStyle(fontSize: 30)),
-              const SizedBox(width: 14),
-              Expanded(
-                  child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppTheme.surface.withValues(alpha: 0.35),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.2)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Text(info['emoji']!, style: const TextStyle(fontSize: 26)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                    Text(info['name']!,
-                        style: GoogleFonts.fredoka(
-                          color: isSelected
-                              ? AppTheme.goldPrimary
-                              : AppTheme.textPrimary,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 18,
-                        )),
-                    Text(info['desc']!,
-                        style: GoogleFonts.baloo2(
-                          color: AppTheme.textSecondary,
-                          fontSize: 14,
-                        )),
-                  ])),
-              if (isSelected)
-                const Icon(Icons.check_circle_rounded,
-                    color: AppTheme.goldPrimary, size: 26),
-            ]),
+                        Text(info['name']!, style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontWeight: FontWeight.w700, fontSize: 16)),
+                        Text(info['desc']!, style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 13)),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppTheme.goldPrimary.withValues(alpha: 0.16),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text('$level/20', style: GoogleFonts.fredoka(color: AppTheme.goldPrimary, fontWeight: FontWeight.w700)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              SliderTheme(
+                data: SliderTheme.of(context).copyWith(
+                  activeTrackColor: AppTheme.goldPrimary,
+                  inactiveTrackColor: AppTheme.surface,
+                  thumbColor: AppTheme.accentCyan,
+                  overlayColor: AppTheme.accentCyan.withValues(alpha: 0.16),
+                  trackHeight: 8,
+                ),
+                child: Slider(
+                  min: 0,
+                  max: 20,
+                  divisions: 20,
+                  value: level.toDouble(),
+                  label: '$level',
+                  onChanged: (value) {
+                    final nextDifficulty = _difficultyFromLevel(value.round());
+                    setState(() => _difficulty = nextDifficulty);
+                    context.read<SettingsBloc>().add(SettingsAIDifficultyLevelEvent(value.round()));
+                  },
+                ),
+              ),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _difficultyChip('Easy', 4, AIDifficulty.basic),
+                  _difficultyChip('Balanced', 10, AIDifficulty.intermediate),
+                  _difficultyChip('Hard', 15, AIDifficulty.advanced),
+                  _difficultyChip('Impossible', 20, AIDifficulty.impossible),
+                ],
+              ),
+            ],
           ),
-        );
-      }).toList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _difficultyChip(String label, int level, AIDifficulty difficulty) {
+    final selected = _difficulty == difficulty;
+    return ChoiceChip(
+      selected: selected,
+      onSelected: (_) {
+        setState(() => _difficulty = difficulty);
+        context.read<SettingsBloc>().add(SettingsAIDifficultyLevelEvent(level));
+      },
+      label: Text(label, style: GoogleFonts.fredoka(fontSize: 12)),
+      labelStyle: TextStyle(color: selected ? AppTheme.midnight : AppTheme.textPrimary),
+      selectedColor: AppTheme.goldPrimary,
+      backgroundColor: AppTheme.surface.withValues(alpha: 0.7),
     );
   }
 
@@ -490,6 +536,22 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
           blackPieceColor: useCustomColors ? _blackPieceColor : null,
           hintsEnabled: true, // simplified configuration
         ));
+  }
+
+  int _levelFromDifficulty(AIDifficulty difficulty) => switch (difficulty) {
+        AIDifficulty.basic => 4,
+        AIDifficulty.intermediate => 10,
+        AIDifficulty.advanced => 15,
+        AIDifficulty.impossible => 20,
+        AIDifficulty.aiMode => 20,
+      };
+
+  AIDifficulty _difficultyFromLevel(double value) {
+    final level = value.round();
+    if (level <= 6) return AIDifficulty.basic;
+    if (level <= 12) return AIDifficulty.intermediate;
+    if (level <= 16) return AIDifficulty.advanced;
+    return AIDifficulty.impossible;
   }
 
   Map<String, String> _difficultyInfo(AIDifficulty d) => switch (d) {

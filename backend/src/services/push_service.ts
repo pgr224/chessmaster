@@ -16,6 +16,7 @@ interface NotificationPayload {
 
 export type NotificationCategory =
   | 'challenges'
+  | 'games'
   | 'community'
   | 'tournaments'
   | 'system'

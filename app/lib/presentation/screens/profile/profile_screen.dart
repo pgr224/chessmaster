@@ -13,7 +13,8 @@ import 'package:image_cropper/image_cropper.dart';
 import '../../../core/di/injection_container.dart' as di;
 
 import '../../../core/theme/app_theme.dart';
-import 'package:chess_master/presentation/blocs/auth/auth_bloc.dart';
+import 'package:chess_master/presentation/blocs/auth/auth_bloc.dart' as auth;
+import 'package:chess_master/presentation/blocs/settings/settings_bloc.dart';
 import '../../../data/models/user_model.dart';
 import '../../../data/models/game_record_model.dart';
 import '../../../data/repositories/auth_repository.dart';
@@ -26,9 +27,9 @@ class ProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.midnight,
-      body: BlocConsumer<AuthBloc, AuthState>(
+      body: BlocConsumer<auth.AuthBloc, auth.AuthState>(
         listener: (context, state) {
-          if (state is AuthErrorState) {
+          if (state is auth.AuthErrorState) {
             final errorMsg = state.message;
             
             if (errorMsg.startsWith('NAME_CHANGE_COOLDOWN')) {
@@ -104,13 +105,13 @@ class ProfileScreen extends StatelessWidget {
           }
         },
         builder: (context, state) {
-          if (state is AuthLoadingState || state is AuthInitialState) {
+          if (state is auth.AuthLoadingState || state is auth.AuthInitialState) {
             return const Center(
               child: CircularProgressIndicator(color: AppTheme.goldPrimary),
             );
           }
 
-          if (state is AuthAuthenticatedState) {
+          if (state is auth.AuthAuthenticatedState) {
             return _ProfileContent(user: state.user);
           }
 
@@ -160,6 +161,7 @@ class _ProfileContent extends StatelessWidget {
           _buildActionButtons(context),
           _buildXPProgress(),
           _buildStatsGrid(),
+          _buildPreferencesSection(context),
           _buildRulesSection(),
           _buildRecentGamesSection(),
           const SliverPadding(padding: EdgeInsets.only(bottom: 60)),
@@ -386,6 +388,111 @@ class _ProfileContent extends StatelessWidget {
     );
   }
 
+  Widget _buildPreferencesSection(BuildContext context) {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+        child: BlocBuilder<auth.AuthBloc, auth.AuthState>(
+          builder: (context, authState) {
+            return BlocBuilder<SettingsBloc, SettingsState>(
+              builder: (context, settings) {
+                return Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: AppTheme.navyCard.withValues(alpha: 0.8),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                        color: AppTheme.goldPrimary.withValues(alpha: 0.1)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'PREFERENCES',
+                        style: GoogleFonts.fredoka(
+                          color: AppTheme.textSecondary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      _buildPreferenceToggle(
+                        title: 'Game Alerts',
+                        subtitle: 'Live notifications during gameplay',
+                        icon: settings.notificationsEnabled
+                            ? Icons.notifications_active_rounded
+                            : Icons.notifications_off_rounded,
+                        value: settings.notificationsEnabled,
+                        onChanged: (val) {
+                          context
+                              .read<SettingsBloc>()
+                              .add(SettingsNotificationsEvent(val));
+                        },
+                        accent: AppTheme.goldPrimary,
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPreferenceToggle({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+    required Color accent,
+  }) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: accent.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, color: accent, size: 20),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: GoogleFonts.fredoka(
+                  color: AppTheme.textPrimary,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Text(
+                subtitle,
+                style: GoogleFonts.baloo2(
+                  color: AppTheme.textMuted,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Switch.adaptive(
+          value: value,
+          onChanged: onChanged,
+          activeColor: AppTheme.goldPrimary,
+          activeTrackColor: AppTheme.goldPrimary.withValues(alpha: 0.3),
+        ),
+      ],
+    );
+  }
+
   Widget _buildStatsGrid() {
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -468,12 +575,16 @@ class _ProfileContent extends StatelessWidget {
               _ruleItem('AI Mode Win', '+1000 XP', AppTheme.goldPrimary),
               _ruleSectionTitle('⚔️ Multiplayer', Icons.language_rounded),
               _ruleItem('Victory', '+100 XP', AppTheme.goldPrimary),
+              _ruleItem('Draw', '+30 XP', AppTheme.textSecondary),
               _ruleItem('Defeat', '-20 XP', AppTheme.accentRed),
+              _ruleSectionTitle('🔥 Bonuses', Icons.local_fire_department_rounded),
+              _ruleItem('Win Streak', '+10%/game', AppTheme.accentOrange),
+              _ruleItem('Underdog Win', 'Up to +1000 XP', AppTheme.lavender),
               _ruleSectionTitle(
                   '✨ Milestones & Skills', Icons.auto_awesome_rounded),
               _ruleItem('Mate in 5 (Global)', '+500 XP', AppTheme.accentCyan),
               _ruleItem(
-                  'Perfect Game (Global)', '+10,000 XP', AppTheme.accentCyan),
+                  'Perfect Game (Global)', '+1,000 XP', AppTheme.accentCyan),
               _ruleItem('Every 100th Win', '+1,000 XP', AppTheme.goldPrimary),
               _ruleSectionTitle('🛠️ Penalties', Icons.warning_amber_rounded),
               _ruleItem('Take Back (Vs AI)', '-25 XP', AppTheme.accentRed),
@@ -974,8 +1085,8 @@ void showEditProfileModal(BuildContext context, UserModel user) {
 
                             if (builderContext.mounted) {
                               builderContext
-                                  .read<AuthBloc>()
-                                  .add(AuthCheckStatusEvent());
+                                  .read<auth.AuthBloc>()
+                                  .add(auth.AuthCheckStatusEvent());
                             }
 
                             if (ctx.mounted) Navigator.pop(ctx);
