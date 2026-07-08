@@ -45,6 +45,7 @@ void main() {
       solidity: 0.2,
       volatility: 0.1,
       sampleSize: 12,
+      recentMoveTypes: [],
       signatureMoves: ['e2e4'],
       signatureMoveCounts: {'e2e4': 4},
     );

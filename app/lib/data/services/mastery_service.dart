@@ -49,6 +49,7 @@ class MasteryService {
         solidity: _profile.solidity,
         volatility: _profile.volatility,
         sampleSize: _profile.sampleSize,
+        recentMoveTypes: _profile.recentMoveTypes,
         signatureMoves: _profile.signatureMoves,
         signatureMoveCounts: _profile.signatureMoveCounts,
       );
@@ -179,6 +180,7 @@ class MasteryService {
       solidity: _profile.solidity,
       volatility: _profile.volatility,
       sampleSize: _profile.sampleSize,
+      recentMoveTypes: _profile.recentMoveTypes,
       signatureMoves: _profile.signatureMoves,
       signatureMoveCounts: _profile.signatureMoveCounts,
     );

@@ -38,6 +38,7 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
     _difficulty = lastDiffStr == 'basic' ? AIDifficulty.basic :
                   lastDiffStr == 'intermediate' ? AIDifficulty.intermediate :
                   lastDiffStr == 'advanced' ? AIDifficulty.advanced :
+                  lastDiffStr == 'aiMode' ? AIDifficulty.aiMode :
                   AIDifficulty.impossible;
     _loadedThemePrefs = true;
   }
@@ -199,42 +200,48 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
                       ],
                     ),
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: AppTheme.goldPrimary.withValues(alpha: 0.16),
-                      borderRadius: BorderRadius.circular(999),
+                  if (_difficulty != AIDifficulty.aiMode)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppTheme.goldPrimary.withValues(alpha: 0.16),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text('$level/100', style: GoogleFonts.fredoka(color: AppTheme.goldPrimary, fontWeight: FontWeight.w700)),
                     ),
-                    child: Text('$level/100', style: GoogleFonts.fredoka(color: AppTheme.goldPrimary, fontWeight: FontWeight.w700)),
-                  ),
                 ],
               ),
-              const SizedBox(height: 10),
-              SliderTheme(
-                data: SliderTheme.of(context).copyWith(
-                  activeTrackColor: AppTheme.goldPrimary,
-                  inactiveTrackColor: AppTheme.surface,
-                  thumbColor: AppTheme.accentCyan,
-                  overlayColor: AppTheme.accentCyan.withValues(alpha: 0.16),
-                  trackHeight: 8,
+              if (_difficulty != AIDifficulty.aiMode) ...[
+                const SizedBox(height: 10),
+                SliderTheme(
+                  data: SliderTheme.of(context).copyWith(
+                    activeTrackColor: AppTheme.goldPrimary,
+                    inactiveTrackColor: AppTheme.surface,
+                    thumbColor: AppTheme.accentCyan,
+                    overlayColor: AppTheme.accentCyan.withValues(alpha: 0.16),
+                    trackHeight: 8,
+                  ),
+                  child: Slider(
+                    min: _difficulty == AIDifficulty.basic ? 0 : _difficulty == AIDifficulty.intermediate ? 10 : _difficulty == AIDifficulty.advanced ? 20 : 50,
+                    max: _difficulty == AIDifficulty.basic ? 10 : _difficulty == AIDifficulty.intermediate ? 20 : _difficulty == AIDifficulty.advanced ? 50 : 100,
+                    divisions: _difficulty == AIDifficulty.basic ? 10 : _difficulty == AIDifficulty.intermediate ? 10 : _difficulty == AIDifficulty.advanced ? 30 : 50,
+                    value: level.toDouble().clamp(
+                        _difficulty == AIDifficulty.basic ? 0.0 : _difficulty == AIDifficulty.intermediate ? 10.0 : _difficulty == AIDifficulty.advanced ? 20.0 : 50.0,
+                        _difficulty == AIDifficulty.basic ? 10.0 : _difficulty == AIDifficulty.intermediate ? 20.0 : _difficulty == AIDifficulty.advanced ? 50.0 : 100.0,
+                    ),
+                    label: '$level',
+                    onChanged: (value) {
+                      final modeName = switch (_difficulty) {
+                        AIDifficulty.basic => 'easy',
+                        AIDifficulty.intermediate => 'medium',
+                        AIDifficulty.advanced => 'hard',
+                        _ => 'impossible',
+                      };
+                      context.read<SettingsBloc>().add(SettingsAIModeLevelEvent(modeName, value.round()));
+                    },
+                  ),
                 ),
-                child: Slider(
-                  min: 1,
-                  max: 100,
-                  divisions: 100,
-                  value: level.toDouble(),
-                  label: '$level',
-                  onChanged: (value) {
-                    final modeName = switch (_difficulty) {
-                      AIDifficulty.basic => 'easy',
-                      AIDifficulty.intermediate => 'medium',
-                      AIDifficulty.advanced => 'hard',
-                      _ => 'impossible',
-                    };
-                    context.read<SettingsBloc>().add(SettingsAIModeLevelEvent(modeName, value.round()));
-                  },
-                ),
-              ),
+              ],
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
@@ -243,6 +250,7 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
                   _difficultyChip('Balanced', AIDifficulty.intermediate),
                   _difficultyChip('Hard', AIDifficulty.advanced),
                   _difficultyChip('Impossible', AIDifficulty.impossible),
+                  _difficultyChip('🧠 AI', AIDifficulty.aiMode),
                 ],
               ),
             ],
@@ -262,6 +270,7 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
           AIDifficulty.basic => 'basic',
           AIDifficulty.intermediate => 'intermediate',
           AIDifficulty.advanced => 'advanced',
+          AIDifficulty.aiMode => 'aiMode',
           _ => 'impossible',
         };
         context.read<SettingsBloc>().add(SettingsAILastDifficultyEvent(settingsModeKey));
@@ -592,18 +601,18 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
   }
 
   int _levelFromDifficulty(AIDifficulty difficulty) => switch (difficulty) {
-        AIDifficulty.basic => 10,
-        AIDifficulty.intermediate => 30,
-        AIDifficulty.advanced => 60,
+        AIDifficulty.basic => 5,
+        AIDifficulty.intermediate => 15,
+        AIDifficulty.advanced => 35,
         AIDifficulty.impossible => 100,
         AIDifficulty.aiMode => 100,
       };
 
   AIDifficulty _difficultyFromLevel(num value) {
     final level = value.round();
-    if (level <= 20) return AIDifficulty.basic;
-    if (level <= 40) return AIDifficulty.intermediate;
-    if (level <= 79) return AIDifficulty.advanced;
+    if (level <= 10) return AIDifficulty.basic;
+    if (level <= 20) return AIDifficulty.intermediate;
+    if (level <= 50) return AIDifficulty.advanced;
     return AIDifficulty.impossible;
   }
 

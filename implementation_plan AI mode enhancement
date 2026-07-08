@@ -1,0 +1,43 @@
+# AI Mode Enhancements Implementation Plan
+
+This plan details the implementation of a highly adaptive, human-like AI experience for the `aiMode`.
+
+## Open Questions
+
+> [!IMPORTANT]
+> 1. **Leela Engine Integration:** Running a true Leela Chess Zero (Lc0) engine natively on mobile and web requires downloading large neural network weights and configuring complex WASM/Native WebGL bindings, which is generally outside the scope of a standard flutter app without massive binary bloat. **Proposal:** I will build a "Leela-style" Deep Analysis module that uses our existing strong engine infrastructure (Stockfish) to deeply analyze the player's moves, extracting the requested parameters: `player_strength_eval`, `offensive_bias`, and `repetition_count`. Does this simulated approach work for you, or do you strictly need a separate Leela binary integrated?
+> 2. **Username in Chat:** Where does the app currently store the player's username? If it's in the `AuthBloc` or `ProfileBloc`, I will pull it from there. If the player is playing as a guest, I will default to "Stranger" or "Friend".
+
+## Proposed Changes
+
+### 1. Leela-Style Player Analysis & Memory Chunk
+#### [MODIFY] `adaptive_ai_profile.dart`
+- Add a new field: `List<String> recentMoveTypes` (stores the categorization of the last 5 moves, e.g., `aggressive`, `defensive`, `blunder`, `solid`).
+- Expand `observeMove` to calculate `player_strength` (based on centipawn loss of the move compared to the engine's best move) and `offensive_bias` (based on forward movement and checks).
+- Update the `recentMoveTypes` queue (push the new move type, shift the oldest out).
+
+### 2. Live Difficulty & Personality Scaling (Rubber-Banding)
+#### [MODIFY] `engine_controller.dart`
+- In `_getSmartMove`, implement **Dynamic Rubber-Banding**:
+  - **Winning (AI Eval > +300):** AI slightly lowers its guard, increasing the `errorChance` or picking a suboptimal (but natural-looking) move to give the player a fighting chance.
+  - **Losing (AI Eval < -150):** AI goes into "Defend Every Move" mode, setting `errorChance` to `0.0` and maximizing calculation time to claw back a draw/win.
+- Fetch the updated `recentMoveTypes` memory chunk. If the player has played `defensive` 3 times in a row, the AI will force an aggressive tactical line.
+
+### 3. Human-like Chat, Bluffs, & Taunts
+#### [MODIFY] `personality_engine.dart`
+- Refactor `getRandomMessage` and `getMoveReaction` to accept `String? username` and `int? thinkTimeMs`.
+- **Think Time Reactions:**
+  - If `thinkTimeMs < 1500`: "Whoa {username}, you're faster than my CPU! Slow down! ⚡"
+  - If `thinkTimeMs > 15000`: "Hey {username}, did you fall asleep? It's your turn! 😴"
+- **Bluff Dialogues:**
+  - Inject specific bluff phrases when the AI intentionally leaves a piece hanging (calculated via rubber-banding): "Go ahead {username}, take it. I dare you... 😈"
+- **Blunder Taunts:**
+  - If the player's move is classified as a blunder, trigger a unique taunt: "Hahaha! I knew you'd fall for that, {username}! 😂"
+
+#### [MODIFY] `game_screen_overlays.dart` (or wherever AI Chat is triggered)
+- Pass the player's `username` (from `AuthBloc`) and the elapsed `thinkTimeMs` into the `PersonalityEngine` calls.
+
+## Verification Plan
+1. **Chat Triggers:** Play a game in AI mode. Wait 15+ seconds before moving to verify the "lazy" chat triggers. Move instantly to verify the "fast" chat triggers.
+2. **Rubber-Banding:** Play intentionally badly to drop the evaluation to -5.00. Verify that the AI selects slightly weaker candidates. Play extremely well, and verify the AI plays optimally to defend.
+3. **Blunder Taunts:** Intentionally hang a queen and verify the AI laughs and cites the username.

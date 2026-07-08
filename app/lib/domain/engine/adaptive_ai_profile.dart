@@ -12,6 +12,7 @@ class AdaptiveAIProfile {
   final double solidity;
   final double volatility;
   final int sampleSize;
+  final List<String> recentMoveTypes; // Last 5 move types
   final List<String> signatureMoves;
   final Map<String, int> signatureMoveCounts;
 
@@ -23,6 +24,7 @@ class AdaptiveAIProfile {
     required this.solidity,
     required this.volatility,
     required this.sampleSize,
+    required this.recentMoveTypes,
     required this.signatureMoves,
     required this.signatureMoveCounts,
   });
@@ -35,6 +37,7 @@ class AdaptiveAIProfile {
         solidity: 0.45,
         volatility: 0.25,
         sampleSize: 0,
+        recentMoveTypes: [],
         signatureMoves: [],
         signatureMoveCounts: {},
       );
@@ -64,6 +67,7 @@ class AdaptiveAIProfile {
       volatility:
           _readDouble(json['volatility'], 0.25).clamp(0.0, 1.0).toDouble(),
       sampleSize: math.max(0, _readInt(json['sampleSize'], 0)),
+      recentMoveTypes: (json['recentMoveTypes'] as List?)?.map((e) => e.toString()).toList() ?? [],
       signatureMoves: signatures.take(8).toList(growable: false),
       signatureMoveCounts: counts,
     );
@@ -77,6 +81,7 @@ class AdaptiveAIProfile {
         'solidity': solidity,
         'volatility': volatility,
         'sampleSize': sampleSize,
+        'recentMoveTypes': recentMoveTypes,
         'signatureMoves': signatureMoves,
         'signatureMoveCounts': signatureMoveCounts,
       };
@@ -195,6 +200,17 @@ class AdaptiveAIProfile {
     final nextPressure = _smooth(pressure, movePressure, alpha);
     final nextSolidity = _smooth(solidity, moveSolidity, alpha);
     final nextVolatility = _smooth(volatility, moveVolatility, alpha);
+    
+    // Categorize current move type for memory chunk
+    String moveType = 'positional';
+    if (isCheck || isCapture) moveType = 'aggressive';
+    else if (isRetreat || isCastle) moveType = 'defensive';
+    else if (cpLoss > 100) moveType = 'blunder';
+    else if (isDevelopment) moveType = 'development';
+    
+    final nextMoveTypes = List<String>.from(recentMoveTypes)..add(moveType);
+    if (nextMoveTypes.length > 5) nextMoveTypes.removeAt(0);
+
     final nextCounts = Map<String, int>.from(signatureMoveCounts);
 
     if (_shouldRememberSignature(move, movedPiece, moveNumber, isCapture,
@@ -227,6 +243,7 @@ class AdaptiveAIProfile {
       solidity: nextSolidity,
       volatility: nextVolatility,
       sampleSize: nextSampleSize,
+      recentMoveTypes: nextMoveTypes,
       signatureMoves: nextSignatures,
       signatureMoveCounts: nextCounts,
     );

@@ -328,10 +328,36 @@ class AIEngineController {
             "That is one of your signature ideas. Let's see how you answer it.";
         move = remembered.uci;
       } else {
-        final personality = adaptiveProfile?.counterPersonality ??
+        var personality = adaptiveProfile?.counterPersonality ??
             PersonalityEngine().currentPersonality;
-        final maxLoss = adaptiveProfile?.maxCentipawnLoss ?? 45;
-        final errorChance = adaptiveProfile?.errorChance ?? 0.02;
+        int maxLoss = adaptiveProfile?.maxCentipawnLoss ?? 45;
+        double errorChance = adaptiveProfile?.errorChance ?? 0.02;
+
+        // RUBBER-BANDING (Live Difficulty Adjustment)
+        if (_difficulty == AIDifficulty.aiMode && candidates.isNotEmpty) {
+          final eval = candidates.first.score; // AI's perspective
+          if (eval > 300) {
+            // AI is winning heavily -> ease up to keep player engaged
+            errorChance = (errorChance * 3.0).clamp(0.0, 0.15);
+            maxLoss += 50; 
+          } else if (eval < -150) {
+            // AI is losing -> try hard to defend/win
+            errorChance = 0.0;
+            maxLoss = 10; 
+          }
+
+          // Memory Chunk logic
+          if (adaptiveProfile != null && adaptiveProfile.recentMoveTypes.length >= 3) {
+            final recents = adaptiveProfile.recentMoveTypes;
+            // If player played defensively 3 times in a row, force aggression
+            if (recents.reversed.take(3).every((t) => t == 'defensive')) {
+              personality = AIPersonality.aggressive;
+            } else if (recents.reversed.take(3).every((t) => t == 'aggressive')) {
+              personality = AIPersonality.defensive;
+            }
+          }
+        }
+
         move = MoveSelector()
             .select(
               candidates,

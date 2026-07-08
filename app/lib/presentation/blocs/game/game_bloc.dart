@@ -732,6 +732,9 @@ class GameBloc extends Bloc<GameEvent, GameState> {
   final MissionService _missionService;
   String? _gameId;
   int _aiRequestEpoch = 0;
+  String? _playerUsername;
+  DateTime? _playerTurnStartTime;
+  int? _lastPlayerThinkTimeMs;
   bool _hasLoggedGameOverMetrics = false;
   Timer? _rushTimer;
   Timer? _clockTimer;
@@ -872,6 +875,9 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     _aiRequestEpoch++;
     _hasLoggedGameOverMetrics = false;
 
+    final userObj = await _authRepository.getCurrentUser();
+    _playerUsername = userObj?.username ?? 'Guest';
+
     // Trigger shuffle if the user has chosen it
     _themeBloc.add(ThemeShuffleEvent());
 
@@ -971,6 +977,12 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         clockRunning: true,
       ));
       _startClock();
+    }
+
+    if (state.currentTurn == state.playerColor) {
+      _playerTurnStartTime = DateTime.now();
+    } else {
+      _playerTurnStartTime = null;
     }
 
     // Initialize game record
@@ -1438,6 +1450,13 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     final isHumanMove =
         (state.playerColor == null) || (justMovedColor == state.playerColor);
 
+    if (isHumanMove && _playerTurnStartTime != null) {
+      _lastPlayerThinkTimeMs = DateTime.now().difference(_playerTurnStartTime!).inMilliseconds;
+      _playerTurnStartTime = null;
+    } else {
+      _lastPlayerThinkTimeMs = null;
+    }
+
     bool shouldAnalyze = isHumanMove;
     if (state.mode == GameMode.multiplayer ||
         state.mode == GameMode.twoPlayer) {
@@ -1534,9 +1553,12 @@ class GameBloc extends Bloc<GameEvent, GameState> {
           MoveClassification.mistake => 'mistake',
           MoveClassification.blunder => 'blunder',
         };
+        final isDynamicAI = state.aiDifficulty == AIDifficulty.aiMode;
         final reactionMsg = feedback.message.isNotEmpty
             ? feedback.message
-            : personality.getMoveReaction(classKey);
+            : (isDynamicAI
+                ? personality.getMoveReaction(classKey, username: _playerUsername)
+                : personality.getMoveReaction(classKey));
 
         emit(state.copyWith(
           accuracy: accuracy,
@@ -2252,6 +2274,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       clearSelected: true,
       clearCoachMove: true,
     ));
+    _playerTurnStartTime = DateTime.now();
 
     // Reset the penalty square after a brief delay so the bubble can animate
     await Future.delayed(const Duration(seconds: 2));
@@ -2628,9 +2651,21 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     if (state.isGameOver) return;
 
     final aiRequestEpoch = ++_aiRequestEpoch;
+    
+    String? thinkingMsg;
+    if (state.aiDifficulty == AIDifficulty.aiMode) {
+      thinkingMsg = PersonalityEngine().generateNewMessage(
+        username: _playerUsername,
+        thinkTimeMs: _lastPlayerThinkTimeMs,
+      );
+      _lastPlayerThinkTimeMs = null;
+    } else {
+      thinkingMsg = _engineController.aiMessage;
+    }
+
     emit(state.copyWith(
       isAIThinking: true,
-      aiMessage: _engineController.aiMessage, // Set initial thinking message
+      aiMessage: thinkingMsg,
     ));
 
     // UI Delay for "human feel"
@@ -2672,6 +2707,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
             ));
             add(GameMakeMoveEvent(aiMove.from, aiMove.to,
                 promotion: aiMove.promotion));
+            _playerTurnStartTime = DateTime.now();
             return;
           }
         } catch (_) {
@@ -2689,6 +2725,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
                 _appendAISource(state.aiMoveSourceHistory, source),
           ));
           add(GameMakeMoveEvent(fm.from, fm.to, promotion: fm.promotion));
+          _playerTurnStartTime = DateTime.now();
         } else {
           emit(state.copyWith(
             isAIThinking: false,
