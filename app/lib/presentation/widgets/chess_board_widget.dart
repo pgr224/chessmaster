@@ -29,6 +29,7 @@ class ChessBoardWidget extends StatefulWidget {
   final PieceColor currentTurn;
   final Move? lastCorrectMove;
   final Square? lastUndoPenaltySquare;
+  final bool isTwoPlayer;
 
   const ChessBoardWidget({
     super.key,
@@ -54,6 +55,7 @@ class ChessBoardWidget extends StatefulWidget {
     this.currentTurn = PieceColor.white,
     this.lastCorrectMove,
     this.lastUndoPenaltySquare,
+    this.isTwoPlayer = false,
   });
 
   @override
@@ -339,6 +341,12 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
           whitePieceColor: widget.whitePieceColor,
           blackPieceColor: widget.blackPieceColor,
         );
+
+        final bool shouldRotate = widget.isTwoPlayer && piece.color != widget.perspective;
+        final displayChild = shouldRotate
+            ? RotatedBox(quarterTurns: 2, child: pieceChild)
+            : pieceChild;
+
         pieces.add(
           Positioned(
             key: ValueKey('${piece.color.name}${piece.type.name}$f$r'),
@@ -347,8 +355,8 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget> {
             width: sqSize,
             height: sqSize,
             child: widget.moveAnimationSpeed == 'off'
-                ? pieceChild
-                : pieceChild.animate().scale(
+                ? displayChild
+                : displayChild.animate().scale(
                       duration: animDuration,
                       curve: Curves.easeOutBack,
                     ),

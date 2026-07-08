@@ -589,6 +589,7 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
   String? _myUserId;
   Timer? _joinTimer;
   Timer? _reconnectTimer;
+  bool _gameOverHandled = false;
 
   /// Exposed so screens can call service methods not wrapped in events.
   MultiplayerService get mpService => _service;
@@ -795,6 +796,10 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
       emit(const MultiplayerState());
     });
     on<MpGameOverEvent>((event, emit) {
+      // Idempotency guard: ignore duplicate GAME_OVER for the same game session
+      if (_gameOverHandled) return;
+      _gameOverHandled = true;
+
       final normalizedResult = _normalizeGameResult(event.result);
 
       final isWin = normalizedResult == 'win' ||
@@ -820,6 +825,8 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
         gameReason: event.reason,
         xpGained: xp,
         myPresence: LobbyPresence.online,
+        drawOfferPending: false,
+        saveOfferPending: false,
       ));
       _service.sendPresence(LobbyPresence.online, context: 'post_game');
       _authBloc.add(AuthCheckStatusEvent());
@@ -1240,7 +1247,10 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
       variantId: event.variantId ?? 'standard',
       timeControl: event.timeControl ?? '10+0',
       opponentConnected: false,
+      drawOfferPending: false,
+      saveOfferPending: false,
     ));
+    _gameOverHandled = false; // Reset for new game session
 
     // Opponent join timeout
     _joinTimer?.cancel();

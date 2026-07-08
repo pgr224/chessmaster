@@ -302,7 +302,20 @@ extension _GameScreenOverlays on _GameScreenState {
     if (!state.showPromotionDialog) return const SizedBox.shrink();
 
     final themeState = context.watch<ThemeBloc>().state;
-    return PromotionDialog(
+    final settings = context.watch<SettingsBloc>().state;
+
+    final PieceColor perspective;
+    if (state.mode == GameMode.multiplayer && state.playerColor != null) {
+      perspective = state.playerColor!;
+    } else if (settings.autoFlipBoard) {
+      perspective = state.currentTurn;
+    } else {
+      perspective = state.playerColor ?? PieceColor.white;
+    }
+
+    final bool shouldRotate = state.mode == GameMode.twoPlayer && state.currentTurn != perspective;
+
+    Widget dialog = PromotionDialog(
       color: state.currentTurn,
       shape: themeState.pieceShape,
       style: themeState.pieceStyle,
@@ -316,6 +329,12 @@ extension _GameScreenOverlays on _GameScreenState {
             ));
       },
     );
+
+    if (shouldRotate) {
+      dialog = RotatedBox(quarterTurns: 2, child: dialog);
+    }
+
+    return dialog;
   }
 
   Widget _buildCheckAlert(GameState state, bool minimalMotion) {

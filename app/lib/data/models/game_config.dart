@@ -18,6 +18,7 @@ class GameConfig {
   final GameMode mode;
   final Puzzle? puzzle;
   final AIDifficulty? difficulty;
+  final int? difficultyLevel;
   final String? playerColor;
   final String? boardTheme;
   final String? pieceShape;
@@ -35,6 +36,7 @@ class GameConfig {
     required this.mode,
     this.puzzle,
     this.difficulty,
+    this.difficultyLevel,
     this.playerColor,
     this.boardTheme,
     this.pieceShape,

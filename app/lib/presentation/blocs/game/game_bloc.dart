@@ -899,7 +899,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
       }
     }
 
-    _engineController.init(config.mode, difficulty);
+    _engineController.init(config.mode, difficulty, difficultyLevel: config.difficultyLevel);
 
     final playerColor =
         config.playerColor == 'black' ? PieceColor.black : PieceColor.white;
@@ -1919,21 +1919,25 @@ class GameBloc extends Bloc<GameEvent, GameState> {
               xp = xpReward - xpPenalty;
             }
 
-            await _authRepository.updateXPProgress(
-              userId: user.id,
-              xpDelta: xp,
-              statUpdates: mapUpdates,
-              isOnlineMatch: state.mode == GameMode.multiplayer,
-            );
+            // For multiplayer, the server (room.ts → saveGameToDB) already
+            // persisted XP & stats. Only push for offline/single-player modes.
+            if (state.mode != GameMode.multiplayer) {
+              await _authRepository.updateXPProgress(
+                userId: user.id,
+                xpDelta: xp,
+                statUpdates: mapUpdates,
+                isOnlineMatch: false,
+              );
+            }
 
             // ── RATING (ELO) CALCULATION ──
-            // ONLY for online matches (Multiplayer)
+            // For multiplayer, compute display-only eloChange but do NOT
+            // push to server — room.ts handles the authoritative update.
             if (state.mode == GameMode.multiplayer) {
               final currentElo = user.stats.eloRating;
               final playerGames = user.stats.multiplayerGames;
               double score = isDraw ? 0.5 : (isWin ? 1.0 : 0.0);
 
-              // Multiplayer: assume opponent exists in state or similar rating
               final opponentElo = currentElo; // Default fallback
 
               final result = EloService.calculateNewRatings(
@@ -1946,14 +1950,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
 
               final newElo = result.$1;
               eloChange = (newElo - currentElo).toInt();
-
-              // Persist ELO
-              await _authRepository.updateXPProgress(
-                userId: user.id,
-                xpDelta: 0,
-                statUpdates: {'elo_rating': newElo},
-                isOnlineMatch: true,
-              );
+              // NOTE: Server already persists Elo via StatsService.updateAll.
+              // Just refresh local profile after this block.
             }
           }
         }

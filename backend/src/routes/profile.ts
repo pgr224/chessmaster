@@ -5,6 +5,20 @@ import { PushService } from '../services/push_service'
 
 const profileRoutes = new Hono<{ Bindings: Env; Variables: { user: any } }>()
 
+async function ensureDifficultyColumns(db: any) {
+  try {
+    // Check if one of the columns exists by querying it. If it throws, they don't exist.
+    await db.prepare('SELECT ai_easy_level FROM users LIMIT 1').run()
+  } catch (_) {
+    // If it fails, add the columns
+    try { await db.prepare('ALTER TABLE users ADD COLUMN ai_easy_level INTEGER DEFAULT 10').run() } catch (_) {}
+    try { await db.prepare('ALTER TABLE users ADD COLUMN ai_medium_level INTEGER DEFAULT 30').run() } catch (_) {}
+    try { await db.prepare('ALTER TABLE users ADD COLUMN ai_hard_level INTEGER DEFAULT 60').run() } catch (_) {}
+    try { await db.prepare('ALTER TABLE users ADD COLUMN ai_impossible_level INTEGER DEFAULT 100').run() } catch (_) {}
+    try { await db.prepare("ALTER TABLE users ADD COLUMN ai_last_difficulty TEXT DEFAULT 'intermediate'").run() } catch (_) {}
+  }
+}
+
 async function ensureXpSocialTables(c: any) {
   await c.env.DB.batch([
     c.env.DB.prepare(`
@@ -130,6 +144,7 @@ profileRoutes.get('/check-username/:username', async (c) => {
 
 // Update profile (self or specific ID if authorized)
 profileRoutes.put('/:id', async (c) => {
+  await ensureDifficultyColumns(c.env.DB)
   const userId = c.get('user').sub
   const targetId = c.req.param('id')
   
@@ -221,6 +236,11 @@ profileRoutes.put('/:id', async (c) => {
   if (body.avatarUrl) allowedUpdates.avatar_url = body.avatarUrl
   if (body.isGhibli !== undefined) allowedUpdates.is_ghibli = body.isGhibli ? 1 : 0
   if (body.localAvatar !== undefined) allowedUpdates.local_avatar = body.localAvatar
+  if (body.aiEasyLevel !== undefined) allowedUpdates.ai_easy_level = body.aiEasyLevel
+  if (body.aiMediumLevel !== undefined) allowedUpdates.ai_medium_level = body.aiMediumLevel
+  if (body.aiHardLevel !== undefined) allowedUpdates.ai_hard_level = body.aiHardLevel
+  if (body.aiImpossibleLevel !== undefined) allowedUpdates.ai_impossible_level = body.aiImpossibleLevel
+  if (body.aiLastDifficulty !== undefined) allowedUpdates.ai_last_difficulty = body.aiLastDifficulty
 
   if (Object.keys(allowedUpdates).length === 0) {
     return c.json({ error: 'No valid fields to update' }, 400)
@@ -845,6 +865,7 @@ profileRoutes.get('/:id', async (c) => {
 // Helper function to build profile data without returning Response
 async function buildProfileData(c: any, userId: string) {
   try {
+    await ensureDifficultyColumns(c.env.DB)
     console.log(`[buildProfileData] Building profile for userId: ${userId}`)
     
     // 1. Ensure user_stats exists (safety for new users)
@@ -893,7 +914,7 @@ async function buildProfileData(c: any, userId: string) {
 
     // 3. Get extra account info
     const userAccount = await c.env.DB.prepare(
-      'SELECT is_ghibli, local_avatar, username_changes, last_username_change, created_at, device_model FROM users WHERE id = ?'
+      'SELECT is_ghibli, local_avatar, username_changes, last_username_change, created_at, device_model, ai_easy_level, ai_medium_level, ai_hard_level, ai_impossible_level, ai_last_difficulty FROM users WHERE id = ?'
     ).bind(userId).first() as { 
       is_ghibli: number; 
       local_avatar: string | null; 
@@ -901,6 +922,11 @@ async function buildProfileData(c: any, userId: string) {
       last_username_change: string | null;
       created_at: string;
       device_model: string | null;
+      ai_easy_level: number | null;
+      ai_medium_level: number | null;
+      ai_hard_level: number | null;
+      ai_impossible_level: number | null;
+      ai_last_difficulty: string | null;
     } | null
 
     // Get recent games
@@ -961,7 +987,12 @@ async function buildProfileData(c: any, userId: string) {
       recentGames: recentGames,
       achievements: achievements,
       remainingNameChanges: Math.max(0, 3 - (userAccount?.username_changes || 0)),
-      canChangeNameNow: !userAccount?.last_username_change || (Date.now() - new Date(userAccount.last_username_change).getTime() >= 24 * 60 * 60 * 1000)
+      canChangeNameNow: !userAccount?.last_username_change || (Date.now() - new Date(userAccount.last_username_change).getTime() >= 24 * 60 * 60 * 1000),
+      aiEasyLevel: userAccount?.ai_easy_level ?? 10,
+      aiMediumLevel: userAccount?.ai_medium_level ?? 30,
+      aiHardLevel: userAccount?.ai_hard_level ?? 60,
+      aiImpossibleLevel: userAccount?.ai_impossible_level ?? 100,
+      aiLastDifficulty: userAccount?.ai_last_difficulty ?? 'intermediate'
     }
     
     return profile

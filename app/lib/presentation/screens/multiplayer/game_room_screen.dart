@@ -51,21 +51,31 @@ class _GameRoomScreenState extends State<GameRoomScreen> {
         }
         if (mpState.status == MultiplayerStatus.gameOver &&
             mpState.gameReason != null) {
+          // Only show SnackBar for NETWORK-level endings.
+          // Standard game-over reasons (checkmate, resignation, agreement,
+          // timeout) are already displayed by the GameScreen overlay.
+          const networkReasons = {
+            'opponent_no_show',
+            'disconnect_timeout',
+            'network_disconnect',
+            'network_disconnect_or_app_crash',
+          };
           if (mpState.gameReason == 'opponent_no_show') {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Your opponent did not join the game in time.')),
             );
-            // Navigate back to lobby after a short delay
             Future.delayed(const Duration(seconds: 2), () {
               if (context.mounted) context.go('/lobby');
             });
-          } else {
+          } else if (networkReasons.contains(mpState.gameReason)) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                   content:
                       Text('Match ended: ${_friendlyCause(mpState.gameReason)}')),
             );
           }
+          // For standard reasons (checkmate, resignation, etc.) — no SnackBar.
+          // The GameScreen's game-over overlay handles it.
         }
         if (mpState.status == MultiplayerStatus.disconnected) {
           context.go('/home');

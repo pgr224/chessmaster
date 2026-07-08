@@ -1,0 +1,102 @@
+# Multiplayer Bug Fixes — Implementation Plan
+
+## Background
+
+After a deep audit of the online multiplayer flow (backend `room.ts`, `game.ts`, `stats_service.ts`, and frontend `multiplayer_bloc.dart`), I have identified four critical bugs and several minor issues.
+
+---
+
+## Critical Bugs Found
+
+### 🐛 Bug 1 — DUPLICATE XP AWARD (Both client + server give XP)
+**Severity: Critical**
+
+**How it happens:**
+1. When a game ends (resign, checkmate, timeout, disconnect), `room.ts` calls `saveGameToDB()` → `updateUserStatsAndXP()` on the **server**.
+2. Simultaneously, the client receives a `GAME_OVER` WebSocket message, which triggers `MpGameOverEvent` in the multiplayer bloc.
+3. `MpGameOverEvent` calculates XP via `calculateMultiplayerXP()` **locally** and sets `xpGained` on the client — which is then displayed in the game-over overlay.
+4. The **`game_bloc.dart`** then calls `_authRepository.updateXPProgress()` and `_achievementService.evaluatePostGame()` — **awarding XP a SECOND time in the database** even though the server already did it.
+
+**Root Cause:** `game_bloc.dart` doesn't distinguish between single-player and multiplayer when awarding server-side XP. It runs `updateXPProgress()` for all modes.
+
+**Fix:** In `game_bloc.dart`, skip the `_authRepository.updateXPProgress()` call for `GameMode.multiplayer`. The server has already persisted the XP. The client should only refresh its local user profile via `AuthCheckStatusEvent`.
+
+---
+
+### 🐛 Bug 2 — XP LOOP EXPLOIT (Opponent quits → XP loop)
+**Severity: Critical**
+
+**How it happens:**
+1. Player A and Player B are in a game.
+2. Player B disconnects/quits (sends `LEAVE_GAME` or closes tab).
+3. Player B reconnects to the lobby within the 30-second disconnect grace period.
+4. **Because the game is already saved as `completed` on the server**, if Player A's client is still showing the game-over overlay, closing that overlay or navigating can trigger a second `GAME_OVER` event from lingering state.
+5. Worse: If Player B somehow re-joins a completed game room (e.g. the WS room is recycled in the same Durable Object session), `saveGameToDB()` uses `ON CONFLICT...DO UPDATE`, which **re-triggers `updateUserStatsAndXP()`** for both players.
+
+**Fix (Backend):** In `saveGameToDB()`, add an **idempotency guard**: before calling `updateUserStatsAndXP()`, check `xp_history` to see if an XP record already exists for this `gameId`. If it does, skip the stats update entirely.
+
+**Fix (Frontend):** In `multiplayer_bloc.dart`, add a `_gameOverHandled` boolean flag so `MpGameOverEvent` is a no-op if already processed for the current `gameId`.
+
+---
+
+### 🐛 Bug 3 — CHECKMATE DIALOGUE RACE CONDITION
+**Severity: Medium**
+
+**How it happens:**
+1. `game_bloc.dart` handles checkmate via `GameMakeMoveEvent`, detects `gameOver`, and emits `GameState` with `isGameOver = true`.
+2. Simultaneously, the server's `room.ts` broadcasts `GAME_OVER` via WebSocket, and the `multiplayer_bloc.dart` emits `MultiplayerStatus.gameOver`.
+3. The `game_screen_overlays.dart` shows the checkmate overlay based on `GameState.isGameOver`, while `game_room_screen.dart` shows a SnackBar based on `MultiplayerState.gameOver`.
+4. **Both overlays appear simultaneously**, causing a confusing doubled-up UI.
+
+**Fix:** In `game_room_screen.dart`, suppress the SnackBar for standard game-over reasons (`resignation`, `agreement`, `checkmate`, `timeout`) when `GameState.isGameOver` is already true — since the game screen handles that display. The SnackBar should only fire for **network-level** reasons (`opponent_no_show`, `disconnect_timeout`, `network_disconnect`).
+
+---
+
+### 🐛 Bug 4 — DRAW OFFER STATE NOT CLEARED AFTER GAME ENDS
+**Severity: Medium**
+
+**How it happens:**
+1. Player A sends a draw offer.
+2. Before Player B responds, the game ends via another path (e.g. checkmate, resignation).
+3. `drawOfferPending` remains `true` in `MultiplayerState`.
+4. If either player starts a new game, the **draw offer dialog appears immediately** at the start.
+
+**Fix:** In `MpGameOverEvent` handler in `multiplayer_bloc.dart`, reset `drawOfferPending` and `saveOfferPending` to `false`.
+
+---
+
+## Proposed Changes
+
+### Backend — `room.ts`
+
+#### [MODIFY] [room.ts](file:///d:/PP942920DRIVE/PROJECTS/chess/backend/src/room.ts)
+- Add idempotency check before `updateUserStatsAndXP`: query `xp_history` for `game_id`. If a record exists, skip XP/stats update.
+
+### Backend — `stats_service.ts`
+
+#### [MODIFY] [stats_service.ts](file:///d:/PP942920DRIVE/PROJECTS/chess/backend/src/services/stats_service.ts)
+- No structural changes needed; the idempotency guard lives in the caller.
+
+### Frontend — `game_bloc.dart`
+
+#### [MODIFY] [game_bloc.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/presentation/blocs/game/game_bloc.dart)
+- Skip `_authRepository.updateXPProgress()` when `state.mode == GameMode.multiplayer`. Instead, just call `AuthCheckStatusEvent` to refresh from server.
+
+### Frontend — `multiplayer_bloc.dart`
+
+#### [MODIFY] [multiplayer_bloc.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/presentation/blocs/multiplayer/multiplayer_bloc.dart)
+- Add `_gameOverHandled` bool (reset on `_onGameFound`).
+- In `MpGameOverEvent`, set `drawOfferPending: false, saveOfferPending: false` and guard against duplicate processing.
+
+### Frontend — `game_room_screen.dart`
+
+#### [MODIFY] [game_room_screen.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/presentation/screens/multiplayer/game_room_screen.dart)
+- Filter SnackBar to only show network-level reasons (not regular game-over reasons already handled by the game screen overlay).
+
+## Verification Plan
+
+### Manual Verification
+1. Play a multiplayer game to checkmate → verify only ONE game-over overlay appears and XP is correct in profile.
+2. Have one player quit mid-game → verify the staying player gets win XP exactly once, not looped.
+3. Send a draw offer → let the game end via resignation → start a new game → verify no draw dialog appears.
+4. Have one player quit and rejoin → verify no re-awarding of XP.

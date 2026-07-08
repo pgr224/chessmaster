@@ -62,12 +62,13 @@ _JSEngineService? _getService() {
 }
 
 /// Initialize the JS engine for the given mode and difficulty
-void jsEngineInit(String mode, String difficulty) {
+void jsEngineInit(String mode, String difficulty, {int? difficultyLevel}) {
   final svc = _getService();
   if (svc == null) {
     LoggingService.warn('[JSBridge] ChessEngineService not available');
     return;
   }
+  // The JS engine might not support difficultyLevel yet, so we just pass the original strings
   svc.initEngine(mode.toJS, difficulty.toJS);
 }
 

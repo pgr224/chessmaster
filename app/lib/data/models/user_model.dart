@@ -18,6 +18,11 @@ class UserModel {
   final int remainingNameChanges;
   final List<String> achievements;
   final bool isGuest;
+  final int aiEasyLevel;
+  final int aiMediumLevel;
+  final int aiHardLevel;
+  final int aiImpossibleLevel;
+  final String aiLastDifficulty;
 
 
   const UserModel({
@@ -37,6 +42,11 @@ class UserModel {
     this.remainingNameChanges = 3,
     this.achievements = const [],
     this.isGuest = false,
+    this.aiEasyLevel = 10,
+    this.aiMediumLevel = 30,
+    this.aiHardLevel = 60,
+    this.aiImpossibleLevel = 100,
+    this.aiLastDifficulty = 'intermediate',
   });
 
 
@@ -80,6 +90,11 @@ class UserModel {
           .map((a) => a.toString())
           .toList(),
       isGuest: parseBool(json['is_guest'], false),
+      aiEasyLevel: parseInt(json['aiEasyLevel'], 10),
+      aiMediumLevel: parseInt(json['aiMediumLevel'], 30),
+      aiHardLevel: parseInt(json['aiHardLevel'], 60),
+      aiImpossibleLevel: parseInt(json['aiImpossibleLevel'], 100),
+      aiLastDifficulty: (json['aiLastDifficulty'] ?? 'intermediate').toString(),
     );
 
   }
@@ -119,6 +134,11 @@ class UserModel {
         'recent_games': recentGames.map((g) => g.toJson()).toList(),
         'achievements': achievements,
         'is_guest': isGuest,
+        'aiEasyLevel': aiEasyLevel,
+        'aiMediumLevel': aiMediumLevel,
+        'aiHardLevel': aiHardLevel,
+        'aiImpossibleLevel': aiImpossibleLevel,
+        'aiLastDifficulty': aiLastDifficulty,
       };
 
 
@@ -139,6 +159,11 @@ class UserModel {
     int? remainingNameChanges,
     List<String>? achievements,
     bool? isGuest,
+    int? aiEasyLevel,
+    int? aiMediumLevel,
+    int? aiHardLevel,
+    int? aiImpossibleLevel,
+    String? aiLastDifficulty,
   }) {
 
     return UserModel(
@@ -158,6 +183,11 @@ class UserModel {
       remainingNameChanges: remainingNameChanges ?? this.remainingNameChanges,
       achievements: achievements ?? this.achievements,
       isGuest: isGuest ?? this.isGuest,
+      aiEasyLevel: aiEasyLevel ?? this.aiEasyLevel,
+      aiMediumLevel: aiMediumLevel ?? this.aiMediumLevel,
+      aiHardLevel: aiHardLevel ?? this.aiHardLevel,
+      aiImpossibleLevel: aiImpossibleLevel ?? this.aiImpossibleLevel,
+      aiLastDifficulty: aiLastDifficulty ?? this.aiLastDifficulty,
     );
 
   }

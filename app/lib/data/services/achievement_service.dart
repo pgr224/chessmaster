@@ -311,15 +311,9 @@ class AchievementService {
       totalPoints += unlockAchievement('win_100', syncToServer: syncToServer);
     }
 
-    if (stats.currentStreak >= 3) {
-      totalPoints += unlockAchievement('win_streak_3', syncToServer: syncToServer);
-    }
-    if (stats.currentStreak >= 5) {
-      totalPoints += unlockAchievement('win_streak_5', syncToServer: syncToServer);
-    }
-    if (stats.currentStreak >= 10) {
-      totalPoints += unlockAchievement('win_streak_10', syncToServer: syncToServer);
-    }
+    totalPoints += updateProgress('win_streak_3', stats.currentStreak, syncToServer: syncToServer);
+    totalPoints += updateProgress('win_streak_5', stats.currentStreak, syncToServer: syncToServer);
+    totalPoints += updateProgress('win_streak_10', stats.currentStreak, syncToServer: syncToServer);
 
     // Beating AIs
     if (isPlayerWin && state.mode == GameMode.singlePlayer) {

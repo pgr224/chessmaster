@@ -156,91 +156,125 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const SizedBox(height: 14),
                 _sectionCard(
-                  title: 'AI Strength',
+                  title: 'AI Strength & Custom Levels',
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Adjust how aggressively the AI thinks and how much time it spends on each turn.',
+                        'Set difficulty levels for Easy, Medium, Hard, and Impossible separately. Tapping a mode selects it as the active difficulty.',
                         style: GoogleFonts.baloo2(
                           color: AppTheme.textMuted,
                           fontSize: 13,
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: AppTheme.surface.withValues(alpha: 0.3),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: AppTheme.goldPrimary.withValues(alpha: 0.22),
+                      const SizedBox(height: 16),
+                      ...['easy', 'medium', 'hard', 'impossible'].map((mode) {
+                        final isActive = (mode == 'easy' && settings.aiLastDifficulty == 'basic') ||
+                                         (mode == 'medium' && settings.aiLastDifficulty == 'intermediate') ||
+                                         (mode == 'hard' && settings.aiLastDifficulty == 'advanced') ||
+                                         (mode == 'impossible' && settings.aiLastDifficulty == 'impossible');
+                        
+                        final level = mode == 'easy' ? settings.aiEasyLevel :
+                                      mode == 'medium' ? settings.aiMediumLevel :
+                                      mode == 'hard' ? settings.aiHardLevel :
+                                      settings.aiImpossibleLevel;
+                        
+                        final String emoji = mode == 'easy' ? '🌱' :
+                                            mode == 'medium' ? '⚔️' :
+                                            mode == 'hard' ? '🔥' : '🤖';
+                        
+                        final String name = mode == 'easy' ? 'Easy' :
+                                           mode == 'medium' ? 'Medium' :
+                                           mode == 'hard' ? 'Hard' : 'Impossible';
+
+                        final String settingsModeKey = mode == 'easy' ? 'basic' :
+                                                       mode == 'medium' ? 'intermediate' :
+                                                       mode == 'hard' ? 'advanced' : 'impossible';
+
+                        return GestureDetector(
+                          onTap: () {
+                            context.read<SettingsBloc>().add(SettingsAILastDifficultyEvent(settingsModeKey));
+                          },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 250),
+                            margin: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: isActive
+                                  ? AppTheme.goldPrimary.withValues(alpha: 0.12)
+                                  : AppTheme.surface.withValues(alpha: 0.35),
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(
+                                color: isActive
+                                    ? AppTheme.goldPrimary
+                                    : AppTheme.goldPrimary.withValues(alpha: 0.15),
+                                width: isActive ? 2 : 1,
+                              ),
+                              boxShadow: isActive
+                                  ? [BoxShadow(color: AppTheme.goldPrimary.withValues(alpha: 0.15), blurRadius: 8)]
+                                  : null,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(emoji, style: const TextStyle(fontSize: 22)),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        '$name Mode ${isActive ? "• Active" : ""}',
+                                        style: GoogleFonts.fredoka(
+                                          color: isActive ? AppTheme.goldPrimary : AppTheme.textPrimary,
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 15,
+                                        ),
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.goldPrimary.withValues(alpha: 0.16),
+                                        borderRadius: BorderRadius.circular(999),
+                                      ),
+                                      child: Text(
+                                        '$level/100',
+                                        style: GoogleFonts.fredoka(
+                                          color: AppTheme.goldPrimary,
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                SliderTheme(
+                                  data: SliderTheme.of(context).copyWith(
+                                    activeTrackColor: AppTheme.goldPrimary,
+                                    inactiveTrackColor: AppTheme.surface,
+                                    thumbColor: AppTheme.accentCyan,
+                                    overlayColor: AppTheme.accentCyan.withValues(alpha: 0.16),
+                                    trackHeight: 6,
+                                  ),
+                                  child: Slider(
+                                    min: mode == 'easy' ? 0 : mode == 'medium' ? 10 : mode == 'hard' ? 20 : 50,
+                                    max: mode == 'easy' ? 10 : mode == 'medium' ? 20 : mode == 'hard' ? 50 : 100,
+                                    divisions: mode == 'easy' ? 10 : mode == 'medium' ? 10 : mode == 'hard' ? 30 : 50,
+                                    value: level.toDouble().clamp(
+                                        mode == 'easy' ? 0.0 : mode == 'medium' ? 10.0 : mode == 'hard' ? 20.0 : 50.0,
+                                        mode == 'easy' ? 10.0 : mode == 'medium' ? 20.0 : mode == 'hard' ? 50.0 : 100.0,
+                                    ),
+                                    onChanged: (val) {
+                                      context.read<SettingsBloc>().add(SettingsAIModeLevelEvent(mode, val.round()));
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    _aiStrengthLabel(settings.aiDifficultyLevel),
-                                    style: GoogleFonts.fredoka(
-                                      color: AppTheme.textPrimary,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 6,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.goldPrimary.withValues(alpha: 0.18),
-                                    borderRadius: BorderRadius.circular(999),
-                                  ),
-                                  child: Text(
-                                    '${settings.aiDifficultyLevel}/20',
-                                    style: GoogleFonts.fredoka(
-                                      color: AppTheme.goldPrimary,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SliderTheme(
-                              data: SliderTheme.of(context).copyWith(
-                                activeTrackColor: AppTheme.goldPrimary,
-                                inactiveTrackColor: AppTheme.surface,
-                                thumbColor: AppTheme.accentCyan,
-                                overlayColor: AppTheme.accentCyan.withValues(alpha: 0.16),
-                                trackHeight: 8,
-                              ),
-                              child: Slider(
-                                min: 0,
-                                max: 20,
-                                divisions: 20,
-                                value: settings.aiDifficultyLevel.toDouble(),
-                                label: '${settings.aiDifficultyLevel}',
-                                onChanged: (value) => context.read<SettingsBloc>().add(
-                                      SettingsAIDifficultyLevelEvent(value.round()),
-                                    ),
-                              ),
-                            ),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text('Easy', style: GoogleFonts.baloo2(color: AppTheme.textMuted)),
-                                Text('Medium', style: GoogleFonts.baloo2(color: AppTheme.textMuted)),
-                                Text('Hard', style: GoogleFonts.baloo2(color: AppTheme.textMuted)),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
+                        );
+                      }).toList(),
                     ],
                   ),
                 ),
@@ -402,41 +436,76 @@ class _SettingsScreenState extends State<SettingsScreen> {
       'royal',
       'electric'
     ];
-    final emoji = {
-      'classic': '🟫',
-      'grey': '⬜',
-      'dark': '⬛',
-      'amoled': '🌑',
-      'lewis': '📽️',
-      'cherry': '🍒',
-      'sage': '🌿',
-      'tan': '🏜️',
-      'jade': '🐉',
-      'stellar': '✨',
-      'green': '🟩',
-      'royal': '📜',
-      'electric': '⚡'
-    };
+    
     return Wrap(
-      spacing: 8,
-      runSpacing: 8,
+      spacing: 12,
+      runSpacing: 12,
       children: themes.map((t) {
         final selected = _boardTheme == t;
-        return ChoiceChip(
-          selected: selected,
-          onSelected: (_) {
+        final themeData = AppTheme.boardThemes[t] ?? AppTheme.boardThemes['classic']!;
+        
+        return GestureDetector(
+          onTap: () {
             setState(() => _boardTheme = t);
             context.read<ThemeBloc>().add(ThemeChangeEvent(
                 boardTheme: _boardTheme,
                 pieceShape: _pieceShape,
                 pieceStyle: _pieceStyle));
           },
-          label: Text('${emoji[t] ?? '♟'} ${_cap(t)}',
-              style: GoogleFonts.fredoka(fontSize: 12)),
-          labelStyle: TextStyle(
-              color: selected ? AppTheme.midnight : AppTheme.textPrimary),
-          selectedColor: AppTheme.goldPrimary,
-          backgroundColor: AppTheme.surface.withValues(alpha: 0.7),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: selected ? AppTheme.goldPrimary.withValues(alpha: 0.1) : Colors.transparent,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: selected ? AppTheme.goldPrimary : AppTheme.surface,
+                width: 2,
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Expanded(child: Container(color: themeData.light)),
+                            Expanded(child: Container(color: themeData.dark)),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Expanded(child: Container(color: themeData.dark)),
+                            Expanded(child: Container(color: themeData.light)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _cap(t),
+                  style: GoogleFonts.fredoka(
+                    fontSize: 10,
+                    color: selected ? AppTheme.goldPrimary : AppTheme.textSecondary,
+                    fontWeight: selected ? FontWeight.bold : FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
         );
       }).toList(),
     );
@@ -834,9 +903,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   String _aiStrengthLabel(int level) {
-    if (level <= 6) return 'Easy • Friendly practice';
-    if (level <= 12) return 'Balanced • Solid challenge';
-    if (level <= 16) return 'Hard • Strong positional play';
+    if (level <= 20) return 'Easy • Friendly practice';
+    if (level <= 40) return 'Medium • Solid challenge';
+    if (level <= 79) return 'Hard • Strong positional play';
     return 'Impossible • Deep, ruthless analysis';
   }
 

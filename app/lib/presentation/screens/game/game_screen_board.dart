@@ -90,6 +90,7 @@ extension GameScreenBoard on _GameScreenState {
                           blackPieceColor: state.blackPieceColor,
                           currentTurn: state.currentTurn,
                           lastUndoPenaltySquare: state.lastUndoPenaltySquare,
+                          isTwoPlayer: state.mode == GameMode.twoPlayer,
                           onSquareTap: state.isGameOver
                               ? null
                               : (sq) {
@@ -165,8 +166,17 @@ extension GameScreenBoard on _GameScreenState {
     if (state.isGameOver) return const SizedBox.shrink();
 
     final isMultiplayer = state.mode == GameMode.multiplayer;
-    final opponentLabel = isMultiplayer ? 'OPPONENT\'S TURN' : 'AI THINKING...';
-    final opponentIcon = isMultiplayer ? Icons.person_rounded : Icons.computer_rounded;
+    final isTwoPlayer = state.mode == GameMode.twoPlayer;
+    
+    final opponentLabel = isMultiplayer
+        ? 'OPPONENT\'S TURN'
+        : isTwoPlayer
+            ? (state.currentTurn == PieceColor.white ? 'WHITE\'S TURN' : 'BLACK\'S TURN')
+            : 'AI THINKING...';
+    
+    final opponentIcon = isMultiplayer || isTwoPlayer 
+        ? Icons.person_rounded 
+        : Icons.computer_rounded;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),

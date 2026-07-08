@@ -6,6 +6,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'chess_engine.dart';
+import 'ai_engine.dart';
 import '../../data/models/game_config.dart';
 
 // Conditional import: web gets the real JS bridge, mobile gets the real native bridge
@@ -81,14 +82,13 @@ class AIEngineController {
     }
   }
 
-  /// Initialize engine for the current game session
-  void init(GameMode mode, AIDifficulty? difficulty) {
+  void init(GameMode mode, AIDifficulty? difficulty, {int? difficultyLevel}) {
     _mode = mode;
     _difficulty = difficulty ?? AIDifficulty.basic;
     _initialized = true;
 
     // Both Web and Native use the unified js_bridge (aliased depending on platform)
-    js_bridge.jsEngineInit(mode.name, _difficulty.name);
+    js_bridge.jsEngineInit(mode.name, _difficulty.name, difficultyLevel: difficultyLevel);
   }
 
   /// Get the best move for the current position with robust timeout handling
@@ -319,36 +319,27 @@ class AIEngineController {
 
       // ── 2. QUALITY FILTER (Reject repetitive edge pawn spam e.g., a6, h6) ──
       String move;
-      if (_difficulty == AIDifficulty.aiMode) {
-        final remembered = adaptiveProfile?.chooseSignatureCandidate(
-          candidates,
-          moveNumber: moveNumber,
-        );
-        if (remembered != null) {
-          _latestThinkingMessage =
-              "That is one of your signature ideas. Let's see how you answer it.";
-          move = remembered.uci;
-        } else {
-          final personality = adaptiveProfile?.counterPersonality ??
-              PersonalityEngine().currentPersonality;
-          final maxLoss = adaptiveProfile?.maxCentipawnLoss ?? 45;
-          final errorChance = adaptiveProfile?.errorChance ?? 0.02;
-          move = MoveSelector()
-              .select(
-                candidates,
-                personality,
-                errorChance: errorChance,
-                maxCentipawnLoss: maxLoss,
-              )
-              .uci;
-        }
-      } else if (_difficulty == AIDifficulty.advanced ||
-          _difficulty == AIDifficulty.impossible) {
+      final remembered = adaptiveProfile?.chooseSignatureCandidate(
+        candidates,
+        moveNumber: moveNumber,
+      );
+      if (remembered != null) {
+        _latestThinkingMessage =
+            "That is one of your signature ideas. Let's see how you answer it.";
+        move = remembered.uci;
+      } else {
         final personality = adaptiveProfile?.counterPersonality ??
             PersonalityEngine().currentPersonality;
-        move = _pickPersonalityMove(candidates, personality, moveNumber);
-      } else {
-        move = _pickSmartMove(candidates);
+        final maxLoss = adaptiveProfile?.maxCentipawnLoss ?? 45;
+        final errorChance = adaptiveProfile?.errorChance ?? 0.02;
+        move = MoveSelector()
+            .select(
+              candidates,
+              personality,
+              errorChance: errorChance,
+              maxCentipawnLoss: maxLoss,
+            )
+            .uci;
       }
 
       if (_lastMoveSource == 'none') {
@@ -363,89 +354,38 @@ class AIEngineController {
     }
   }
 
-  String _pickPersonalityMove(
-    List<MoveCandidate> candidates,
-    AIPersonality personality,
-    int moveNumber,
-  ) {
-    if (candidates.isEmpty) return 'none';
 
-    final tactical = candidates.where((candidate) {
-      final move = candidate.uci;
-      return move.contains('x') || move.contains('+') || move.contains('#');
-    }).toList();
-    final quiet = candidates.where((candidate) {
-      final move = candidate.uci;
-      return !move.contains('x') && !move.contains('+') && !move.contains('#');
-    }).toList();
 
-    switch (personality) {
-      case AIPersonality.aggressive:
-        if (tactical.isNotEmpty && moveNumber <= 12) {
-          return tactical.first.uci;
-        }
-        return candidates.first.uci;
-      case AIPersonality.defensive:
-        if (quiet.isNotEmpty) {
-          return quiet.first.uci;
-        }
-        return candidates.first.uci;
-      case AIPersonality.tricky:
-        if (candidates.length > 1 && moveNumber <= 10) {
-          return candidates[1].uci;
-        }
-        return candidates.first.uci;
-      case AIPersonality.lazy:
-        if (candidates.length > 2 && moveNumber >= 8) {
-          return candidates[2].uci;
-        }
-        return candidates.first.uci;
-      case AIPersonality.random:
-        return candidates[math.Random().nextInt(candidates.length)].uci;
-      case AIPersonality.coach:
-        return candidates.first.uci;
-    }
-  }
-
-  /// Selects the best move while avoiding "bad" repetitive patterns
-  String _pickSmartMove(List<MoveCandidate> candidates) {
-    if (candidates.isEmpty) return 'none';
-
-    // Heuristic: Avoid moves that look like edge pawn spam (a, h pawns moving 1 square repetitively)
-    // if best move is a bad/useless pawn push, try the second best if it's within a reasonable CP margin
-    for (var i = 0; i < candidates.length; i++) {
-      final m = candidates[i].uci;
-      final isEdgePawn = m.startsWith('a') || m.startsWith('h');
-
-      if (!isEdgePawn) return m; // Prefer non-edge moves
-
-      // If it is edge pawn, but it's much better than the next move (> 80cp), we might have to take it
-      if (i < candidates.length - 1 &&
-          (candidates[i].score - candidates[i + 1].score) > 80) {
-        return m;
-      }
-
-      // Otherwise, keep looking for a better "smart" move
-    }
-
-    return candidates.first.uci;
-  }
-
-  /// Immediate fallback move generation using Sunfish (Dart side)
+  /// Fallback move generation using Sunfish (Dart side)
   Future<String?> fallbackMove(String fen,
       {required ChessEngine engine}) async {
     final moves = engine.allLegalMoves();
     if (moves.isEmpty) return null;
 
-    final ranked = _rankFallbackMoves(engine, moves);
-    if (ranked.isEmpty) return moves.first.toAlgebraic();
+    Duration timeout = const Duration(seconds: 2);
+    if (_difficulty == AIDifficulty.impossible || _difficulty == AIDifficulty.aiMode) {
+      timeout = const Duration(milliseconds: 2400); // 20% increase over standard 2s
+    } else if (_difficulty == AIDifficulty.advanced) {
+      timeout = const Duration(seconds: 2);
+    } else if (_difficulty == AIDifficulty.intermediate) {
+      timeout = const Duration(seconds: 1);
+    } else {
+      timeout = const Duration(milliseconds: 500);
+    }
 
-    // Pick from top 2-3 to keep play natural while staying strong enough.
-    final topWindow = ranked.length >= 3 ? 3 : ranked.length;
-    final pick = ranked[math.Random().nextInt(topWindow)];
-    _lastFallbackFrom = pick.from.toAlgebraic();
-    _lastMoveSource = 'dart-fallback';
-    return pick.toAlgebraic();
+    final bestMove = await AIEngine.getBestMove(
+      engine,
+      _difficulty,
+      timeout: timeout,
+      personality: PersonalityEngine().currentPersonality,
+    );
+
+    if (bestMove != null) {
+      _lastMoveSource = 'dart-sunfish';
+      return bestMove.toAlgebraic();
+    }
+
+    return moves.first.toAlgebraic();
   }
 
   String _normalizeMoveSource(String raw) {
@@ -453,100 +393,6 @@ class AIEngineController {
     if (v.contains('sunfish')) return 'sunfish';
     if (v.contains('stockfish')) return 'stockfish';
     return 'stockfish';
-  }
-
-  List<Move> _rankFallbackMoves(ChessEngine engine, List<Move> moves) {
-    final scored = <(Move, double)>[];
-
-    for (final m in moves) {
-      final piece = engine.pieceAt(m.from);
-      if (piece == null) continue;
-
-      double score = 0;
-
-      // Tactical priorities
-      if (m.capturedPiece != null) {
-        score += 80;
-        score += _pieceValue(m.capturedPiece!.type) * 1.5;
-      }
-      if (_givesCheck(engine, m)) score += 70;
-
-      // Strategic shape: prefer central influence and development.
-      score += _centerBonus(m.to) * 4;
-      if (_isDevelopingMove(piece, m)) score += 18;
-
-      // Keep the king safer in fallback mode (unless forced).
-      if (piece.type == PieceType.king && m.capturedPiece == null) score -= 12;
-
-      // Anti-repeat: avoid moving same source square if alternatives exist.
-      if (_lastFallbackFrom != null &&
-          m.from.toAlgebraic() == _lastFallbackFrom) {
-        score -= 30;
-      }
-
-      scored.add((m, score));
-    }
-
-    scored.sort((a, b) => b.$2.compareTo(a.$2));
-
-    // If every top option comes from the same square, allow it (forced-like positions).
-    if (scored.length > 1 && _lastFallbackFrom != null) {
-      final diversified = scored
-          .where((s) => s.$1.from.toAlgebraic() != _lastFallbackFrom)
-          .map((s) => s.$1)
-          .toList();
-      if (diversified.isNotEmpty) {
-        return [...diversified, ...scored.map((s) => s.$1)];
-      }
-    }
-
-    return scored.map((s) => s.$1).toList();
-  }
-
-  bool _givesCheck(ChessEngine engine, Move move) {
-    try {
-      final clone = ChessEngine.fromFEN(engine.toFEN());
-      final applied = clone.makeMove(Move.fromAlgebraic(move.toAlgebraic()));
-      if (!applied) return false;
-      return clone.status == GameStatus.check ||
-          clone.status == GameStatus.checkmate;
-    } catch (_) {
-      return false;
-    }
-  }
-
-  double _centerBonus(Square sq) {
-    final center = const [
-      Square(3, 3),
-      Square(4, 3),
-      Square(3, 4),
-      Square(4, 4)
-    ];
-    if (center.contains(sq)) return 2.0;
-    final nearCenter =
-        (sq.file >= 2 && sq.file <= 5 && sq.rank >= 2 && sq.rank <= 5);
-    return nearCenter ? 1.0 : 0.0;
-  }
-
-  bool _isDevelopingMove(ChessPiece piece, Move move) {
-    if (piece.type != PieceType.knight && piece.type != PieceType.bishop) {
-      return false;
-    }
-    final fromRank = move.from.rank;
-    final toRank = move.to.rank;
-    if (piece.color == PieceColor.white) return fromRank <= 1 && toRank >= 2;
-    return fromRank >= 6 && toRank <= 5;
-  }
-
-  int _pieceValue(PieceType t) {
-    return switch (t) {
-      PieceType.pawn => 1,
-      PieceType.knight => 3,
-      PieceType.bishop => 3,
-      PieceType.rook => 5,
-      PieceType.queen => 9,
-      PieceType.king => 100,
-    };
   }
 
   /// Background analysis of user move (AI Mode)

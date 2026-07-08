@@ -114,6 +114,41 @@ class SettingsAIDifficultyLevelEvent extends SettingsEvent {
   List<Object?> get props => [level];
 }
 
+/// Updates the fine-grained level for a specific difficulty mode.
+class SettingsAIModeLevelEvent extends SettingsEvent {
+  final String mode; // 'easy', 'medium', 'hard', 'impossible'
+  final int level;
+  const SettingsAIModeLevelEvent(this.mode, this.level);
+  @override
+  List<Object?> get props => [mode, level];
+}
+
+/// Sets which difficulty mode was last selected.
+class SettingsAILastDifficultyEvent extends SettingsEvent {
+  final String difficulty; // 'basic', 'intermediate', 'advanced', 'impossible'
+  const SettingsAILastDifficultyEvent(this.difficulty);
+  @override
+  List<Object?> get props => [difficulty];
+}
+
+/// Bulk-loads AI difficulty settings from the server profile.
+class SettingsLoadAIDifficultyFromProfile extends SettingsEvent {
+  final int aiEasyLevel;
+  final int aiMediumLevel;
+  final int aiHardLevel;
+  final int aiImpossibleLevel;
+  final String aiLastDifficulty;
+  const SettingsLoadAIDifficultyFromProfile({
+    required this.aiEasyLevel,
+    required this.aiMediumLevel,
+    required this.aiHardLevel,
+    required this.aiImpossibleLevel,
+    required this.aiLastDifficulty,
+  });
+  @override
+  List<Object?> get props => [aiEasyLevel, aiMediumLevel, aiHardLevel, aiImpossibleLevel, aiLastDifficulty];
+}
+
 class SettingsBackgroundEvent extends SettingsEvent {
   final String theme;
   const SettingsBackgroundEvent(this.theme);
@@ -139,6 +174,11 @@ class SettingsState extends Equatable {
   final bool confirmMoves;
   final bool autoQueen;
   final int aiDifficultyLevel;
+  final int aiEasyLevel;
+  final int aiMediumLevel;
+  final int aiHardLevel;
+  final int aiImpossibleLevel;
+  final String aiLastDifficulty; // 'basic', 'intermediate', 'advanced', 'impossible'
   final String backgroundTheme;
   final bool isLoaded;
 
@@ -160,9 +200,23 @@ class SettingsState extends Equatable {
     this.confirmMoves = false,
     this.autoQueen = false,
     this.aiDifficultyLevel = 8,
+    this.aiEasyLevel = 5,
+    this.aiMediumLevel = 15,
+    this.aiHardLevel = 35,
+    this.aiImpossibleLevel = 100,
+    this.aiLastDifficulty = 'intermediate',
     this.backgroundTheme = 'midnight',
     this.isLoaded = false,
   });
+
+  /// Convenience: get the fine-grained level for the currently selected difficulty mode.
+  int get activeDifficultyLevel => switch (aiLastDifficulty) {
+    'basic' => aiEasyLevel,
+    'intermediate' => aiMediumLevel,
+    'advanced' => aiHardLevel,
+    'impossible' => aiImpossibleLevel,
+    _ => aiMediumLevel,
+  };
 
   SettingsState copyWith({
     bool? soundEnabled,
@@ -182,6 +236,11 @@ class SettingsState extends Equatable {
     bool? confirmMoves,
     bool? autoQueen,
     int? aiDifficultyLevel,
+    int? aiEasyLevel,
+    int? aiMediumLevel,
+    int? aiHardLevel,
+    int? aiImpossibleLevel,
+    String? aiLastDifficulty,
     String? backgroundTheme,
     bool? isLoaded,
   }) =>
@@ -205,6 +264,11 @@ class SettingsState extends Equatable {
         confirmMoves: confirmMoves ?? this.confirmMoves,
         autoQueen: autoQueen ?? this.autoQueen,
         aiDifficultyLevel: aiDifficultyLevel ?? this.aiDifficultyLevel,
+        aiEasyLevel: aiEasyLevel ?? this.aiEasyLevel,
+        aiMediumLevel: aiMediumLevel ?? this.aiMediumLevel,
+        aiHardLevel: aiHardLevel ?? this.aiHardLevel,
+        aiImpossibleLevel: aiImpossibleLevel ?? this.aiImpossibleLevel,
+        aiLastDifficulty: aiLastDifficulty ?? this.aiLastDifficulty,
         backgroundTheme: backgroundTheme ?? this.backgroundTheme,
         isLoaded: isLoaded ?? this.isLoaded,
       );
@@ -228,6 +292,11 @@ class SettingsState extends Equatable {
         confirmMoves,
         autoQueen,
         aiDifficultyLevel,
+        aiEasyLevel,
+        aiMediumLevel,
+        aiHardLevel,
+        aiImpossibleLevel,
+        aiLastDifficulty,
         backgroundTheme,
         isLoaded,
       ];
@@ -326,10 +395,52 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
       emit(state.copyWith(autoQueen: e.enabled));
     });
     on<SettingsAIDifficultyLevelEvent>((e, emit) async {
-      final level = e.level.clamp(0, 20);
+      final level = e.level.clamp(0, 100);
       (await SharedPreferences.getInstance())
           .setInt('ai_difficulty_level', level);
       emit(state.copyWith(aiDifficultyLevel: level));
+    });
+    on<SettingsAIModeLevelEvent>((e, emit) async {
+      final prefs = await SharedPreferences.getInstance();
+      
+      int level = e.level;
+      if (e.mode == 'easy') level = level.clamp(0, 10);
+      else if (e.mode == 'medium') level = level.clamp(10, 20);
+      else if (e.mode == 'hard') level = level.clamp(20, 50);
+      else if (e.mode == 'impossible') level = level.clamp(50, 100);
+
+      final next = switch (e.mode) {
+        'easy' => state.copyWith(aiEasyLevel: level),
+        'medium' => state.copyWith(aiMediumLevel: level),
+        'hard' => state.copyWith(aiHardLevel: level),
+        'impossible' => state.copyWith(aiImpossibleLevel: level),
+        _ => state,
+      };
+      await prefs.setInt('ai_${e.mode}_level', level);
+      emit(next);
+      _syncDifficultySettings(prefs, next);
+    });
+    on<SettingsAILastDifficultyEvent>((e, emit) async {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('ai_last_difficulty', e.difficulty);
+      final next = state.copyWith(aiLastDifficulty: e.difficulty);
+      emit(next);
+      _syncDifficultySettings(prefs, next);
+    });
+    on<SettingsLoadAIDifficultyFromProfile>((e, emit) async {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('ai_easy_level', e.aiEasyLevel);
+      await prefs.setInt('ai_medium_level', e.aiMediumLevel);
+      await prefs.setInt('ai_hard_level', e.aiHardLevel);
+      await prefs.setInt('ai_impossible_level', e.aiImpossibleLevel);
+      await prefs.setString('ai_last_difficulty', e.aiLastDifficulty);
+      emit(state.copyWith(
+        aiEasyLevel: e.aiEasyLevel,
+        aiMediumLevel: e.aiMediumLevel,
+        aiHardLevel: e.aiHardLevel,
+        aiImpossibleLevel: e.aiImpossibleLevel,
+        aiLastDifficulty: e.aiLastDifficulty,
+      ));
     });
     on<SettingsBackgroundEvent>((e, emit) async {
       (await SharedPreferences.getInstance())
@@ -359,6 +470,11 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
       confirmMoves: prefs.getBool('confirm_moves') ?? false,
       autoQueen: prefs.getBool('auto_queen') ?? false,
       aiDifficultyLevel: prefs.getInt('ai_difficulty_level') ?? 8,
+      aiEasyLevel: (prefs.getInt('ai_easy_level') ?? 5).clamp(0, 10),
+      aiMediumLevel: (prefs.getInt('ai_medium_level') ?? 15).clamp(10, 20),
+      aiHardLevel: (prefs.getInt('ai_hard_level') ?? 35).clamp(20, 50),
+      aiImpossibleLevel: (prefs.getInt('ai_impossible_level') ?? 100).clamp(50, 100),
+      aiLastDifficulty: prefs.getString('ai_last_difficulty') ?? 'intermediate',
       backgroundTheme: prefs.getString('background_theme') ?? 'midnight',
       isLoaded: true,
     );
@@ -418,6 +534,26 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
       });
     } catch (e) {
       LoggingService.error('Failed to sync notification settings', e);
+    }
+  }
+
+  Future<void> _syncDifficultySettings(
+    SharedPreferences prefs,
+    SettingsState next,
+  ) async {
+    final userId = _resolveUserIdFromPrefs(prefs);
+    if (userId == null || dio == null) return;
+
+    try {
+      await dio!.put('/api/profile/$userId', data: {
+        'aiEasyLevel': next.aiEasyLevel,
+        'aiMediumLevel': next.aiMediumLevel,
+        'aiHardLevel': next.aiHardLevel,
+        'aiImpossibleLevel': next.aiImpossibleLevel,
+        'aiLastDifficulty': next.aiLastDifficulty,
+      });
+    } catch (e) {
+      LoggingService.error('Failed to sync difficulty settings', e);
     }
   }
 

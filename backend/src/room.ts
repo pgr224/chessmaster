@@ -536,14 +536,24 @@ export class GameRoom {
         `UPDATE games SET status = 'completed', result = ?, completed_at = ?, updated_at = ? WHERE id = ? AND status = 'active'`
       ).bind(winner ?? 'abandoned', now, now, this.gameId).run()
 
-      // Update user stats and XP
-      if (whiteUserId) {
-        const outcome = winner === 'white' ? 'win' : winner === 'black' ? 'loss' : 'draw'
-        await this.updateUserStatsAndXP(whiteUserId, outcome)
-      }
-      if (blackUserId) {
-        const outcome = winner === 'black' ? 'win' : winner === 'white' ? 'loss' : 'draw'
-        await this.updateUserStatsAndXP(blackUserId, outcome)
+      // Update user stats and XP (with idempotency guard)
+      // Check if XP was already awarded for this game to prevent duplicate awards
+      // on reconnect, re-save, or Durable Object replay.
+      const existingXp = await this.env.DB.prepare(
+        `SELECT COUNT(*) as cnt FROM xp_history WHERE game_id = ?`
+      ).bind(this.gameId).first<{ cnt: number }>()
+
+      if (existingXp && existingXp.cnt > 0) {
+        console.log(`[GameRoom] XP already awarded for game ${this.gameId}, skipping stats update.`)
+      } else {
+        if (whiteUserId) {
+          const outcome = winner === 'white' ? 'win' : winner === 'black' ? 'loss' : 'draw'
+          await this.updateUserStatsAndXP(whiteUserId, outcome)
+        }
+        if (blackUserId) {
+          const outcome = winner === 'black' ? 'win' : winner === 'white' ? 'loss' : 'draw'
+          await this.updateUserStatsAndXP(blackUserId, outcome)
+        }
       }
     } catch (e) {
       console.error('[GameRoom] DB Save Failed:', e)

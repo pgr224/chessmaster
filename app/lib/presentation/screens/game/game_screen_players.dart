@@ -6,11 +6,11 @@ extension GameScreenPlayers on _GameScreenState {
     final bool isMultiplayer = state.mode == GameMode.multiplayer;
     final bool isWhite = state.playerColor == PieceColor.white;
 
-    // Resolve opponent info
     String opponentName = 'Robot Master';
     String? opponentAvatar;
     String? opponentLocal;
     bool isOpponentThinking = false;
+    bool isTwoPlayer = state.mode == GameMode.twoPlayer;
 
     if (isMultiplayer && multiplayerState.opponentName != null) {
       opponentName = multiplayerState.opponentName!;
@@ -18,21 +18,33 @@ extension GameScreenPlayers on _GameScreenState {
       opponentLocal = multiplayerState.opponentLocalAvatar;
       // Don't show AI thinking indicator for human opponents
       isOpponentThinking = false;
+    } else if (isTwoPlayer) {
+      opponentName = isWhite ? 'Black' : 'White';
+      isOpponentThinking = false;
     } else {
       opponentName = _aiName(state.aiDifficulty);
       isOpponentThinking = state.currentTurn != state.playerColor &&
           state.status == GameStatus.active;
     }
 
-    return PlayerInfoWidget(
+    Widget playerInfo = PlayerInfoWidget(
       name: opponentName,
       color: isWhite ? PieceColor.black : PieceColor.white,
       isActive: state.currentTurn != state.playerColor,
-      isAI: !isMultiplayer,
+      isAI: !isMultiplayer && !isTwoPlayer,
       isThinking: isOpponentThinking,
       avatarUrl: opponentAvatar,
       localAvatar: opponentLocal,
     );
+
+    if (isTwoPlayer) {
+      playerInfo = RotatedBox(
+        quarterTurns: 2,
+        child: playerInfo,
+      );
+    }
+
+    return playerInfo;
   }
 
   Widget _buildPlayerInfo(GameState state) {

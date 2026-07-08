@@ -34,7 +34,11 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
     final themeState = context.read<ThemeBloc>().state;
     final settingsState = context.read<SettingsBloc>().state;
     _boardTheme = themeState.boardTheme;
-    _difficulty = _difficultyFromLevel(settingsState.aiDifficultyLevel);
+    final lastDiffStr = settingsState.aiLastDifficulty;
+    _difficulty = lastDiffStr == 'basic' ? AIDifficulty.basic :
+                  lastDiffStr == 'intermediate' ? AIDifficulty.intermediate :
+                  lastDiffStr == 'advanced' ? AIDifficulty.advanced :
+                  AIDifficulty.impossible;
     _loadedThemePrefs = true;
   }
 
@@ -159,7 +163,14 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
   }
 
   Widget _buildDifficultySelector() {
-    final level = _levelFromDifficulty(_difficulty);
+    final settings = context.watch<SettingsBloc>().state;
+    final level = switch (_difficulty) {
+      AIDifficulty.basic => settings.aiEasyLevel,
+      AIDifficulty.intermediate => settings.aiMediumLevel,
+      AIDifficulty.advanced => settings.aiHardLevel,
+      AIDifficulty.impossible => settings.aiImpossibleLevel,
+      AIDifficulty.aiMode => settings.aiImpossibleLevel,
+    };
     final info = _difficultyInfo(_difficulty);
 
     return Column(
@@ -194,7 +205,7 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
                       color: AppTheme.goldPrimary.withValues(alpha: 0.16),
                       borderRadius: BorderRadius.circular(999),
                     ),
-                    child: Text('$level/20', style: GoogleFonts.fredoka(color: AppTheme.goldPrimary, fontWeight: FontWeight.w700)),
+                    child: Text('$level/100', style: GoogleFonts.fredoka(color: AppTheme.goldPrimary, fontWeight: FontWeight.w700)),
                   ),
                 ],
               ),
@@ -208,15 +219,19 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
                   trackHeight: 8,
                 ),
                 child: Slider(
-                  min: 0,
-                  max: 20,
-                  divisions: 20,
+                  min: 1,
+                  max: 100,
+                  divisions: 100,
                   value: level.toDouble(),
                   label: '$level',
                   onChanged: (value) {
-                    final nextDifficulty = _difficultyFromLevel(value.round());
-                    setState(() => _difficulty = nextDifficulty);
-                    context.read<SettingsBloc>().add(SettingsAIDifficultyLevelEvent(value.round()));
+                    final modeName = switch (_difficulty) {
+                      AIDifficulty.basic => 'easy',
+                      AIDifficulty.intermediate => 'medium',
+                      AIDifficulty.advanced => 'hard',
+                      _ => 'impossible',
+                    };
+                    context.read<SettingsBloc>().add(SettingsAIModeLevelEvent(modeName, value.round()));
                   },
                 ),
               ),
@@ -224,10 +239,10 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  _difficultyChip('Easy', 4, AIDifficulty.basic),
-                  _difficultyChip('Balanced', 10, AIDifficulty.intermediate),
-                  _difficultyChip('Hard', 15, AIDifficulty.advanced),
-                  _difficultyChip('Impossible', 20, AIDifficulty.impossible),
+                  _difficultyChip('Easy', AIDifficulty.basic),
+                  _difficultyChip('Balanced', AIDifficulty.intermediate),
+                  _difficultyChip('Hard', AIDifficulty.advanced),
+                  _difficultyChip('Impossible', AIDifficulty.impossible),
                 ],
               ),
             ],
@@ -237,13 +252,19 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
     );
   }
 
-  Widget _difficultyChip(String label, int level, AIDifficulty difficulty) {
+  Widget _difficultyChip(String label, AIDifficulty difficulty) {
     final selected = _difficulty == difficulty;
     return ChoiceChip(
       selected: selected,
       onSelected: (_) {
         setState(() => _difficulty = difficulty);
-        context.read<SettingsBloc>().add(SettingsAIDifficultyLevelEvent(level));
+        final settingsModeKey = switch (difficulty) {
+          AIDifficulty.basic => 'basic',
+          AIDifficulty.intermediate => 'intermediate',
+          AIDifficulty.advanced => 'advanced',
+          _ => 'impossible',
+        };
+        context.read<SettingsBloc>().add(SettingsAILastDifficultyEvent(settingsModeKey));
       },
       label: Text(label, style: GoogleFonts.fredoka(fontSize: 12)),
       labelStyle: TextStyle(color: selected ? AppTheme.midnight : AppTheme.textPrimary),
@@ -459,19 +480,14 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
   }
 
   Widget _buildThemeSelector() {
-    final themes = ['classic', 'stellar', 'green', 'royal', 'electric'];
-    final themeEmoji = {
-      'classic': '🟫',
-      'stellar': '✨',
-      'green': '🟩',
-      'royal': '📜',
-      'electric': '⚡'
-    };
+    final themes = ['classic', 'stellar', 'green', 'royal', 'electric', 'cherry', 'sage', 'amoled'];
+    
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
           children: themes.map((theme) {
         final isSelected = _boardTheme == theme;
+        final themeData = AppTheme.boardThemes[theme] ?? AppTheme.boardThemes['classic']!;
         return GestureDetector(
           onTap: () {
             setState(() => _boardTheme = theme);
@@ -486,7 +502,7 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
           child: AnimatedContainer(
             duration: 250.ms,
             margin: const EdgeInsets.only(right: 12),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
               color: isSelected
                   ? AppTheme.goldPrimary.withValues(alpha: 0.2)
@@ -499,8 +515,34 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
             ),
             child: Row(
               children: [
-                Text(themeEmoji[theme] ?? '',
-                    style: const TextStyle(fontSize: 18)),
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Expanded(child: Container(color: themeData.light)),
+                            Expanded(child: Container(color: themeData.dark)),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Expanded(child: Container(color: themeData.dark)),
+                            Expanded(child: Container(color: themeData.light)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 const SizedBox(width: 8),
                 Text(theme.capitalize(),
                     style: GoogleFonts.fredoka(
@@ -508,8 +550,9 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
                           ? AppTheme.goldPrimary
                           : AppTheme.textSecondary,
                       fontWeight: FontWeight.w600,
-                      fontSize: 16,
+                      fontSize: 14,
                     )),
+                const SizedBox(width: 8),
               ],
             ),
           ),
@@ -523,11 +566,21 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
     final resolvedColor = useCustomColors ? _customStartColor : _playerColor;
 
     final themeState = context.read<ThemeBloc>().state;
+    final settingsState = context.read<SettingsBloc>().state;
+
+    final finalLevel = switch (_difficulty) {
+      AIDifficulty.basic => settingsState.aiEasyLevel,
+      AIDifficulty.intermediate => settingsState.aiMediumLevel,
+      AIDifficulty.advanced => settingsState.aiHardLevel,
+      AIDifficulty.impossible => settingsState.aiImpossibleLevel,
+      AIDifficulty.aiMode => settingsState.aiImpossibleLevel,
+    };
 
     context.go('/game/play',
         extra: GameConfig(
           mode: GameMode.singlePlayer,
           difficulty: _difficulty,
+          difficultyLevel: finalLevel,
           playerColor: resolvedColor,
           boardTheme: _boardTheme,
           pieceShape: themeState.pieceShape,
@@ -539,18 +592,18 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
   }
 
   int _levelFromDifficulty(AIDifficulty difficulty) => switch (difficulty) {
-        AIDifficulty.basic => 4,
-        AIDifficulty.intermediate => 10,
-        AIDifficulty.advanced => 15,
-        AIDifficulty.impossible => 20,
-        AIDifficulty.aiMode => 20,
+        AIDifficulty.basic => 10,
+        AIDifficulty.intermediate => 30,
+        AIDifficulty.advanced => 60,
+        AIDifficulty.impossible => 100,
+        AIDifficulty.aiMode => 100,
       };
 
-  AIDifficulty _difficultyFromLevel(double value) {
+  AIDifficulty _difficultyFromLevel(num value) {
     final level = value.round();
-    if (level <= 6) return AIDifficulty.basic;
-    if (level <= 12) return AIDifficulty.intermediate;
-    if (level <= 16) return AIDifficulty.advanced;
+    if (level <= 20) return AIDifficulty.basic;
+    if (level <= 40) return AIDifficulty.intermediate;
+    if (level <= 79) return AIDifficulty.advanced;
     return AIDifficulty.impossible;
   }
 
