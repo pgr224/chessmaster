@@ -24,6 +24,7 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
   Color _whitePieceColor = Colors.white;
   Color _blackPieceColor = Colors.black;
   String _boardTheme = 'classic';
+  String _pieceStyle = '3d';
   int? _timeControl;
   bool _loadedThemePrefs = false;
 
@@ -34,6 +35,7 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
     final themeState = context.read<ThemeBloc>().state;
     final settingsState = context.read<SettingsBloc>().state;
     _boardTheme = themeState.boardTheme;
+    _pieceStyle = themeState.pieceStyle;
     final lastDiffStr = settingsState.aiLastDifficulty;
     _difficulty = lastDiffStr == 'basic' ? AIDifficulty.basic :
                   lastDiffStr == 'intermediate' ? AIDifficulty.intermediate :
@@ -94,6 +96,14 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
                       title: '🎨 Board Theme',
                       child: _buildThemeSelector(),
                     ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.1),
+
+                    const SizedBox(height: 18),
+
+                    // ── PIECES STYLE ──
+                    _sectionCard(
+                      title: '♟️ Pieces Style',
+                      child: _buildPieceStyleSelector(),
+                    ).animate().fadeIn(delay: 350.ms).slideY(begin: 0.1),
 
                     const SizedBox(height: 18),
 
@@ -570,6 +580,69 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
     );
   }
 
+  Widget _buildPieceStyleSelector() {
+    final styles = [
+      {'id': '3d', 'name': 'Classic 3D', 'icon': '♟️'},
+      {'id': 'neon', 'name': 'Neon', 'icon': '✨'},
+      {'id': 'metal', 'name': 'Metallic Gold', 'icon': '🪙'},
+      {'id': 'flat', 'name': 'Minimal Flat', 'icon': '平'},
+      {'id': 'glass', 'name': 'Glass / Crystal', 'icon': '💎'},
+      {'id': 'wood', 'name': 'Classic Wood', 'icon': '🪵'},
+      {'id': 'luxury', 'name': 'Luxury Gold & Black', 'icon': '👑'},
+      {'id': 'royal', 'name': 'Royal', 'icon': '⚜️'},
+    ];
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+          children: styles.map((s) {
+        final id = s['id']!;
+        final isSelected = _pieceStyle == id;
+        return GestureDetector(
+          onTap: () {
+            setState(() => _pieceStyle = id);
+            context.read<ThemeBloc>().add(
+                  ThemeChangeEvent(
+                    boardTheme: _boardTheme,
+                    pieceShape: context.read<ThemeBloc>().state.pieceShape,
+                    pieceStyle: _pieceStyle,
+                  ),
+                );
+          },
+          child: AnimatedContainer(
+            duration: 250.ms,
+            margin: const EdgeInsets.only(right: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? AppTheme.goldPrimary.withValues(alpha: 0.2)
+                  : AppTheme.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isSelected ? AppTheme.goldPrimary : Colors.transparent,
+                width: 2,
+              ),
+            ),
+            child: Row(
+              children: [
+                Text(s['icon']!, style: const TextStyle(fontSize: 18)),
+                const SizedBox(width: 8),
+                Text(s['name']!,
+                    style: GoogleFonts.fredoka(
+                      color: isSelected
+                          ? AppTheme.goldPrimary
+                          : AppTheme.textSecondary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    )),
+              ],
+            ),
+          ),
+        );
+      }).toList()),
+    );
+  }
+
   void _startGame() {
     final useCustomColors = _playerColor == 'custom';
     final resolvedColor = useCustomColors ? _customStartColor : _playerColor;
@@ -593,7 +666,7 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
           playerColor: resolvedColor,
           boardTheme: _boardTheme,
           pieceShape: themeState.pieceShape,
-          pieceStyle: themeState.pieceStyle,
+          pieceStyle: _pieceStyle,
           whitePieceColor: useCustomColors ? _whitePieceColor : null,
           blackPieceColor: useCustomColors ? _blackPieceColor : null,
           hintsEnabled: true, // simplified configuration

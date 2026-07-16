@@ -28,7 +28,6 @@ import '../../widgets/game_over_overlay.dart';
 import '../../widgets/player_info_widget.dart';
 
 import '../../widgets/reacting_robot_widget.dart';
-import '../../widgets/timer_widget.dart';
 import '../../widgets/game_rules_dialog.dart';
 import '../../widgets/eval_bar_widget.dart';
 import '../../widgets/chat_widget.dart';
@@ -944,7 +943,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               children: [
                 _buildOpponentInfo(state),
                 _buildCapturedPieces(state, PieceColor.black),
-                _buildClockPanel(context, state),
+                if (state.mode == GameMode.multiplayer)
+                  _buildClockPanel(context, state),
                 Expanded(
                   child: Center(
                     child: _buildBoardFrame(
@@ -1304,7 +1304,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             child: Column(
               children: [
                 _buildTopBar(context, state),
-                _buildClockPanel(context, state),
+                if (state.mode == GameMode.multiplayer)
+                  _buildClockPanel(context, state),
                 const SizedBox(height: 8),
                 Expanded(
                   child: Center(

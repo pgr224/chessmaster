@@ -6,16 +6,24 @@ import { PushService } from '../services/push_service'
 const profileRoutes = new Hono<{ Bindings: Env; Variables: { user: any } }>()
 
 async function ensureDifficultyColumns(db: any) {
-  try {
-    // Check if one of the columns exists by querying it. If it throws, they don't exist.
-    await db.prepare('SELECT ai_easy_level FROM users LIMIT 1').run()
-  } catch (_) {
-    // If it fails, add the columns
-    try { await db.prepare('ALTER TABLE users ADD COLUMN ai_easy_level INTEGER DEFAULT 10').run() } catch (_) {}
-    try { await db.prepare('ALTER TABLE users ADD COLUMN ai_medium_level INTEGER DEFAULT 30').run() } catch (_) {}
-    try { await db.prepare('ALTER TABLE users ADD COLUMN ai_hard_level INTEGER DEFAULT 60').run() } catch (_) {}
-    try { await db.prepare('ALTER TABLE users ADD COLUMN ai_impossible_level INTEGER DEFAULT 100').run() } catch (_) {}
-    try { await db.prepare("ALTER TABLE users ADD COLUMN ai_last_difficulty TEXT DEFAULT 'intermediate'").run() } catch (_) {}
+  const columns = [
+    { name: 'ai_easy_level', type: 'INTEGER DEFAULT 10' },
+    { name: 'ai_medium_level', type: 'INTEGER DEFAULT 30' },
+    { name: 'ai_hard_level', type: 'INTEGER DEFAULT 60' },
+    { name: 'ai_impossible_level', type: 'INTEGER DEFAULT 100' },
+    { name: 'ai_last_difficulty', type: "TEXT DEFAULT 'intermediate'" }
+  ];
+
+  for (const col of columns) {
+    try {
+      await db.prepare(`SELECT ${col.name} FROM users LIMIT 1`).run();
+    } catch (_) {
+      try {
+        await db.prepare(`ALTER TABLE users ADD COLUMN ${col.name} ${col.type}`).run();
+      } catch (err) {
+        console.error(`Failed to add column ${col.name}:`, err);
+      }
+    }
   }
 }
 

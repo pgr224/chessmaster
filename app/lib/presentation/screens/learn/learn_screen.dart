@@ -191,6 +191,24 @@ class LearnScreen extends StatelessWidget {
       url: 'https://www.chess.com/learn-chess',
     ),
     _Resource(
+      icon: '🏛️',
+      name: 'FIDE Official Website',
+      description: 'Official portal of the International Chess Federation',
+      url: 'https://www.fide.com',
+    ),
+    _Resource(
+      icon: '📜',
+      name: 'FIDE Laws of Chess 2023',
+      description: 'The official laws and regulations governing chess play',
+      url: 'https://handbook.fide.com/chapter/E012023',
+    ),
+    _Resource(
+      icon: '📰',
+      name: 'Chess News (TWIC)',
+      description: 'The Week in Chess — news, chess games, and results',
+      url: 'https://theweekinchess.com',
+    ),
+    _Resource(
       icon: '🏅',
       name: 'FIDE Handbook',
       description: 'Official rules, ratings & arbiters\' regulations',
@@ -711,26 +729,19 @@ class LearnScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Contact & Curriculum Sources',
+          Text('📬 Contact',
               style: GoogleFonts.fredoka(
                 color: AppTheme.textPrimary,
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
               )),
           const SizedBox(height: 16),
-          _contactRow(Icons.language_rounded, 'FIDE Official', 'fide.com',
-              'https://www.fide.com'),
-          _contactRow(Icons.email_rounded, 'Chess Academy Support',
-              'academy@chessmaster.app', 'mailto:academy@chessmaster.app'),
-          _contactRow(
-              Icons.school_rounded,
-              'Curriculum Based On',
-              'FIDE Laws of Chess 2023',
-              'https://handbook.fide.com/chapter/E012023'),
-          _contactRow(Icons.people_rounded, 'Community Discord',
-              'discord.gg/chessmaster', 'https://discord.gg/chessmaster'),
-          _contactRow(Icons.feed_rounded, 'Chess News (TWIC)',
-              'theweekinchess.com', 'https://theweekinchess.com'),
+          _contactRow(Icons.person_rounded, 'Contact Person', 'Prashant', null),
+          _contactRow(Icons.phone_rounded, 'Phone', '8980804665', 'tel:8980804665'),
+          _contactRow(Icons.email_rounded, 'Email', 'pp942920@gmail.com', 'mailto:pp942920@gmail.com'),
+          _contactRow(Icons.camera_alt_outlined, 'Instagram', '', null),
+          _contactRow(Icons.facebook_outlined, 'Facebook', '', null),
+          _contactRow(Icons.discord_rounded, 'Discord', '', null),
           const SizedBox(height: 14),
           Container(
             padding: const EdgeInsets.all(14),
@@ -762,9 +773,10 @@ class LearnScreen extends StatelessWidget {
     ).animate().fadeIn(delay: 200.ms);
   }
 
-  Widget _contactRow(IconData icon, String label, String value, String url) {
+  Widget _contactRow(IconData icon, String label, String value, String? url) {
+    final hasUrl = url != null && url.isNotEmpty;
     return GestureDetector(
-      onTap: () => _launchUrl(url),
+      onTap: hasUrl ? () => _launchUrl(url) : null,
       child: Padding(
         padding: const EdgeInsets.only(bottom: 12),
         child: Row(
@@ -777,14 +789,19 @@ class LearnScreen extends StatelessWidget {
                     fontSize: 13,
                     fontWeight: FontWeight.w600)),
             Flexible(
-              child: Text(value,
-                  style: const TextStyle(
+              child: Text(value.isEmpty ? '—' : value,
+                  style: TextStyle(
                     color: AppTheme.accentPurple,
                     fontSize: 13,
-                    decoration: TextDecoration.underline,
+                    decoration: hasUrl ? TextDecoration.underline : TextDecoration.none,
                     decorationColor: AppTheme.accentPurple,
                   )),
             ),
+            if (hasUrl) ...[
+              const SizedBox(width: 4),
+              const Icon(Icons.open_in_new_rounded,
+                  color: AppTheme.accentPurple, size: 12),
+            ],
           ],
         ),
       ),

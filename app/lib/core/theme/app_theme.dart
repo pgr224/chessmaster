@@ -5,24 +5,24 @@ class AppTheme {
   // ═══════════════════════════════════════════
   // COLOR PALETTE — Warm, Vibrant, Child-Friendly
   // ═══════════════════════════════════════════
-  static const Color midnight = Color(0xFF1A1A2E); // soft dark navy
-  static const Color deepSpace = Color(0xFF16213E);
-  static const Color navyCard = Color(0xFF1F2B4D);
-  static const Color surface = Color(0xFF263159);
-  static const Color surfaceAlt = Color(0xFF2D3A6A);
+  static const Color midnight = Color(0xFF0F0F23); // deep dark navy
+  static const Color deepSpace = Color(0xFF151532);
+  static const Color navyCard = Color(0xFF1E1E46);
+  static const Color surface = Color(0xFF27275B);
+  static const Color surfaceAlt = Color(0xFF323275);
 
-  static const Color goldPrimary = Color(0xFFFFD93D); // sunshine yellow
-  static const Color goldLight = Color(0xFFFFE66D);
-  static const Color goldDark = Color(0xFFF0C929);
+  static const Color goldPrimary = Color(0xFFFFD600); // sunshine yellow
+  static const Color goldLight = Color(0xFFFFEA79);
+  static const Color goldDark = Color(0xFFE5A900);
 
-  static const Color accentCyan = Color(0xFF6BCB77); // fresh mint green
-  static const Color accentPurple = Color(0xFFFF6B9D); // candy pink
-  static const Color accentGreen = Color(0xFF4ECDC4); // teal
-  static const Color accentRed = Color(0xFFFF8A5C); // warm coral
-  static const Color accentOrange = Color(0xFFFFB347); // soft orange
+  static const Color accentCyan = Color(0xFF00FF88); // electric green
+  static const Color accentPurple = Color(0xFFFA2E76); // electric magenta/pink
+  static const Color accentGreen = Color(0xFF00F5D4); // electric teal
+  static const Color accentRed = Color(0xFFFF4757); // bright cherry red
+  static const Color accentOrange = Color(0xFFFF9F0A); // vibrant orange
 
-  static const Color skyBlue = Color(0xFF74B9FF);
-  static const Color lavender = Color(0xFFA29BFE);
+  static const Color skyBlue = Color(0xFF00D2FF);
+  static const Color lavender = Color(0xFFB1A2FF);
   static const Color peach = Color(0xFFFFCCBC);
 
   static const Color textPrimary = Color(0xFFF8F9FF);
@@ -99,7 +99,7 @@ class AppTheme {
   static const LinearGradient backgroundGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF1A1A2E), Color(0xFF16213E), Color(0xFF0F3460)],
+    colors: [Color(0xFF0F0F23), Color(0xFF151532), Color(0xFF11224D)],
   );
 
   static const Map<String, LinearGradient> backgroundGradients = {
@@ -131,25 +131,25 @@ class AppTheme {
 
   static const LinearGradient goldGradient = LinearGradient(
     colors: [
-      Color(0xFFF0C929),
-      Color(0xFFFFD93D),
-      Color(0xFFFFE66D),
-      Color(0xFFFFD93D)
+      Color(0xFFE5A900),
+      Color(0xFFFFD600),
+      Color(0xFFFFEA79),
+      Color(0xFFFFD600)
     ],
   );
 
   static const LinearGradient cardGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF1F2B4D), Color(0xFF16213E)],
+    colors: [Color(0xFF1E1E46), Color(0xFF121228)],
   );
 
   static const LinearGradient cyanGradient = LinearGradient(
-    colors: [Color(0xFF6BCB77), Color(0xFF4ECDC4)],
+    colors: [Color(0xFF00FF88), Color(0xFF00F5D4)],
   );
 
   static const LinearGradient pinkGradient = LinearGradient(
-    colors: [Color(0xFFFF6B9D), Color(0xFFA29BFE)],
+    colors: [Color(0xFFFA2E76), Color(0xFFB1A2FF)],
   );
 
   static const LinearGradient rainbowGradient = LinearGradient(

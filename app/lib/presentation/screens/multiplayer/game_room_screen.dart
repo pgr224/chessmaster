@@ -229,6 +229,17 @@ class _GameRoomScreenState extends State<GameRoomScreen> {
                     .add(GameSetOpponentNameEvent(state.opponentName!));
               },
             ),
+            BlocListener<MultiplayerBloc, MultiplayerState>(
+              listenWhen: (prev, current) =>
+                  prev.whiteTime != current.whiteTime ||
+                  prev.blackTime != current.blackTime,
+              listener: (context, state) {
+                context.read<GameBloc>().add(GameTimerSyncEvent(
+                      state.whiteTime,
+                      state.blackTime,
+                    ));
+              },
+            ),
           ],
           child: Scaffold(
             backgroundColor: Colors.transparent,

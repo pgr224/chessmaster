@@ -807,10 +807,18 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     });
     on<GameClockTickEvent>(_onClockTick);
     on<GameUpdatePersonalityEvent>(_onUpdatePersonality);
-    on<GameTimerSyncEvent>((e, emit) => emit(state.copyWith(
-          whiteTimeMs: e.whiteTime,
-          blackTimeMs: e.blackTime,
-        )));
+    on<GameTimerSyncEvent>((e, emit) {
+      final whiteMs = e.whiteTime * 1000;
+      final blackMs = e.blackTime * 1000;
+      emit(state.copyWith(
+        whiteTimeMs: whiteMs,
+        blackTimeMs: blackMs,
+        clockRunning: true,
+      ));
+      if (_clockTimer == null && !state.isGameOver) {
+        _startClock();
+      }
+    });
   }
 
   void _onUpdatePersonality(
@@ -974,9 +982,11 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         whiteTimeMs: timeMs,
         blackTimeMs: timeMs,
         incrementMs: incMs,
-        clockRunning: true,
+        clockRunning: config.mode != GameMode.multiplayer,
       ));
-      _startClock();
+      if (config.mode != GameMode.multiplayer) {
+        _startClock();
+      }
     }
 
     if (state.currentTurn == state.playerColor) {
@@ -1107,6 +1117,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
   }
 
   void _onExit(GameExitEvent event, Emitter<GameState> emit) {
+    _stopClock();
     _rushTimer?.cancel();
     _gameRepository.setLastActiveGameId(null);
   }
@@ -1400,6 +1411,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     final theme = state.boardTheme ?? 'default';
     if (_engine.status == GameStatus.checkmate ||
         _engine.status == GameStatus.draw) {
+      _stopClock();
       AudioService().playSound('game-end', theme);
     } else if (_engine.status == GameStatus.check) {
       AudioService().playSound('check', theme);
