@@ -1013,8 +1013,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
 
     // Fetch user's persistent difficulty if in Practice Mode
     if (config.mode == GameMode.practice) {
-      final user = await _authRepository.getCurrentUser();
-      if (emit.isDone || lifecycle != _aiRequestEpoch) return;
+      final user = userObj;
       if (user != null) {
         final d = user.stats.practiceDifficulty;
         if (d < 1.0) {

@@ -84,6 +84,41 @@ void main() {
     expect(bloc.state.connectionError, isNull);
   });
 
+  test('game over carries the final server position, including on reconnect',
+      () async {
+    await game();
+    final snapshot = {
+      'gameId': 'first',
+      'result': 'white',
+      'reason': 'checkmate',
+      'moves': [
+        {'from': 'e2', 'to': 'e4'},
+        {'from': 'e7', 'to': 'e5'},
+      ],
+      'xpDelta': 10,
+      'eloDelta': 3,
+    };
+    messages.add({'type': 'GAME_OVER', 'data': snapshot});
+    await settle();
+    expect(bloc.state.serverPosition, snapshot);
+    expect(bloc.state.status, MultiplayerStatus.gameOver);
+    expect(bloc.state.eloChange, 3);
+
+    messages.add({
+      'type': 'GAME_OVER',
+      'data': {
+        'gameId': 'old',
+        'result': 'black',
+        'reason': 'checkmate',
+        'moves': [],
+        'eloDelta': 99,
+      },
+    });
+    await settle();
+    expect(bloc.state.serverPosition, snapshot);
+    expect(bloc.state.eloChange, 3);
+  });
+
   test(
       'rematch request and accept use room protocol and a new game clears old result',
       () async {

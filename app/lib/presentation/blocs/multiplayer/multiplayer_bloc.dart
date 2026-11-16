@@ -1410,7 +1410,12 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
             _toDouble(data['whiteTime']), _toDouble(data['blackTime'])));
         break;
       case 'GAME_OVER':
-        emit(state.copyWith(eloChange: _toInt(data['eloDelta'])));
+        if (data['gameId'] != null &&
+            data['gameId'].toString() != state.gameId) break;
+        emit(state.copyWith(
+          eloChange: _toInt(data['eloDelta']),
+          serverPosition: data['moves'] is List ? data : null,
+        ));
         add(MpGameOverEvent(data['result']?.toString() ?? 'draw',
             data['reason']?.toString() ?? 'unknown',
             xpDelta: _toIntOrNull(data['xpDelta']),

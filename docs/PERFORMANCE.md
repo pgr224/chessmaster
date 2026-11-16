@@ -1,5 +1,19 @@
 # Loading and consistency cleanup — 15 November 2026
 
+## Game loading and final position
+
+- Practice games reuse the user already loaded at game start instead of reading
+  it twice. Theme choices are already stored locally, and Flutter caches decoded
+  SVGs in memory.
+- Cloudflare Pages tells browsers to cache piece and theme assets for five
+  minutes. Flutter asset manifests and application code are not covered by this
+  rule, so a deployment can still update them normally. Asset URLs are not
+  versioned, so updated piece/theme artwork can take up to five minutes to
+  appear. Native app assets are already bundled on the device.
+- A checkmate leaves the final board visible for 1.2 seconds after it is
+  rendered before displaying the result. Online game-over messages also carry
+  their final server position into the board.
+
 The implementation plans describe local and online chess, Sunfish for lower AI difficulties, Stockfish for stronger play, tutorials, puzzles, adaptive coaching, and XP. The cleanup keeps those features and loads their code only when needed.
 
 ## Changes

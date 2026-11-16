@@ -28,6 +28,7 @@ import '../../widgets/captured_pieces_widget.dart';
 import '../../widgets/move_history_widget.dart';
 import '../../widgets/promotion_dialog.dart';
 import '../../widgets/game_over_overlay.dart';
+import '../../widgets/game_over_reveal.dart';
 import '../../widgets/player_info_widget.dart';
 
 import '../../widgets/reacting_robot_widget.dart';
@@ -346,7 +347,14 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                     ),
                     if (state.showPromotionDialog)
                       _buildPromotionOverlay(context, state),
-                    if (state.isGameOver) _buildGameOverOverlay(context, state),
+                    if (state.isGameOver)
+                      GameOverReveal(
+                        showFinalPosition:
+                            state.status == GameStatus.checkmate &&
+                                (state.gameReason == null ||
+                                    state.gameReason == 'checkmate'),
+                        child: _buildGameOverOverlay(context, state),
+                      ),
                     _buildConfetti(),
                     if (state.status == GameStatus.check)
                       _buildCheckAlert(state, minimalMotion),

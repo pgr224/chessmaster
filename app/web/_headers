@@ -1,3 +1,9 @@
 /*
   Cross-Origin-Embedder-Policy: require-corp
   Cross-Origin-Opener-Policy: same-origin
+
+/assets/assets/pieces/*
+  Cache-Control: public, max-age=300
+
+/assets/assets/themes/*
+  Cache-Control: public, max-age=300
