@@ -19,6 +19,7 @@ class GameOverOverlay extends StatefulWidget {
   final bool playAgainEnabled;
   final VoidCallback onGoHome;
   final VoidCallback onShare;
+  final VoidCallback? onCopyReport;
   final Puzzle? puzzle;
   final String? opponentName;
   final int? moveCount;
@@ -50,6 +51,7 @@ class GameOverOverlay extends StatefulWidget {
     this.playAgainEnabled = true,
     required this.onGoHome,
     required this.onShare,
+    this.onCopyReport,
     this.puzzle,
     this.opponentName,
     this.moveCount,
@@ -637,6 +639,12 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                             fontSize: 14,
                             fontWeight: FontWeight.w600)),
                   ).animate().fadeIn(delay: 650.ms),
+                  if (widget.onCopyReport != null)
+                    TextButton.icon(
+                      onPressed: widget.onCopyReport,
+                      icon: const Icon(Icons.copy_rounded, size: 16),
+                      label: const Text('Copy game report'),
+                    ),
                 ],
               ),
             ),

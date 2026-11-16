@@ -112,6 +112,11 @@ String jsEngineGetActiveEngine() =>
             ? 'stockfish_native'
             : 'dart-sunfish';
 
+Map<String, dynamic> jsEngineGetDiagnostics() => {
+      'platform': 'native',
+      'engine': jsEngineGetActiveEngine(),
+    };
+
 void jsEngineCancel() {
   // The wrapper settles pending work and retains the native singleton until
   // its asynchronous shutdown finishes before another search can start.

@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math' as math;
 import 'package:audioplayers/audioplayers.dart';
 
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:confetti/confetti.dart';
@@ -487,19 +489,15 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               const SizedBox(height: 32),
               ElevatedButton.icon(
                 onPressed: () {
-                  context.read<GameBloc>().add(GameDismissErrorEvent());
-                  if (widget.config.activeGameId != null &&
-                      !widget.config.isOnline) {
-                    context
-                        .read<GameBloc>()
-                        .add(GameResumeEvent(widget.config.activeGameId!));
+                  if (state.isComputerTurn) {
+                    context.read<GameBloc>().add(const GameRetryAIEvent());
                   } else {
-                    context.read<GameBloc>().add(GameStartEvent(widget.config,
-                        tutorial: widget.tutorial));
+                    context.go('/home');
                   }
                 },
                 icon: const Icon(Icons.refresh_rounded),
-                label: Text('RELOAD GAME',
+                label: Text(
+                    state.isComputerTurn ? 'RETRY MOVE' : 'BACK TO HOME',
                     style: GoogleFonts.fredoka(fontWeight: FontWeight.w600)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.goldPrimary,
@@ -510,11 +508,53 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                       borderRadius: BorderRadius.circular(16)),
                 ),
               ),
+              TextButton.icon(
+                onPressed: () => _copyGameReport(context),
+                icon: const Icon(Icons.copy_rounded),
+                label: const Text('Copy game report'),
+              ),
             ],
           ),
         ),
       ),
     ).animate().fadeIn();
+  }
+
+  Future<void> _copyGameReport(BuildContext context) async {
+    final bloc = context.read<GameBloc>();
+    final state = bloc.state;
+    final report = {
+      'revision':
+          const String.fromEnvironment('APP_REVISION', defaultValue: 'local'),
+      'capturedAt': DateTime.now().toUtc().toIso8601String(),
+      'mode': state.mode.name,
+      'difficulty': state.aiDifficulty?.name,
+      'status': state.status.name,
+      'result': state.result.name,
+      'reason': state.gameReason ?? state.drawReason?.name,
+      'engineError': state.engineError,
+      'thinking': state.isAIThinking,
+      'playerColor': state.playerColor?.name,
+      'fen': state.currentFEN,
+      'moves': state.moveHistory.map((m) => m.toAlgebraic()).toList(),
+      'clock': {
+        'running': state.clockRunning,
+        'whiteMs': state.whiteTimeMs,
+        'blackMs': state.blackTimeMs,
+      },
+      'engine': bloc.engineController.diagnostics,
+    };
+    try {
+      await Clipboard.setData(ClipboardData(
+          text: const JsonEncoder.withIndent('  ').convert(report)));
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Game report copied.')));
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Unable to copy the game report.')));
+    }
   }
 
   Widget _buildConfirmMoveOverlay(GameState state) {

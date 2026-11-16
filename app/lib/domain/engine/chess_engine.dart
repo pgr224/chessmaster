@@ -225,6 +225,9 @@ class ChessEngine {
 
   ChessEngine.fromFEN(String fen) {
     _parseFEN(fen);
+    // Imported/resumed positions need their actual terminal state. Search
+    // recursion uses make/unmake rather than constructing engines per node.
+    _updateStatus();
   }
 
   // ═══════════════════════════════════════════
@@ -569,7 +572,10 @@ class ChessEngine {
     // Kingside
     final ks =
         color == PieceColor.white ? _whiteKingsideCastle : _blackKingsideCastle;
+    final kingsideRook = _board[rank][7];
     if (ks &&
+        kingsideRook?.type == PieceType.rook &&
+        kingsideRook?.color == color &&
         _board[rank][5] == null &&
         _board[rank][6] == null &&
         !_isSquareAttacked(Square(5, rank), _opponent(color)) &&
@@ -581,7 +587,10 @@ class ChessEngine {
     final qs = color == PieceColor.white
         ? _whiteQueensideCastle
         : _blackQueensideCastle;
+    final queensideRook = _board[rank][0];
     if (qs &&
+        queensideRook?.type == PieceType.rook &&
+        queensideRook?.color == color &&
         _board[rank][3] == null &&
         _board[rank][2] == null &&
         _board[rank][1] == null &&
@@ -670,10 +679,28 @@ class ChessEngine {
       }
     }
     if (piece.type == PieceType.rook) {
-      if (move.from == const Square(7, 0)) _whiteKingsideCastle = false;
-      if (move.from == const Square(0, 0)) _whiteQueensideCastle = false;
-      if (move.from == const Square(7, 7)) _blackKingsideCastle = false;
-      if (move.from == const Square(0, 7)) _blackQueensideCastle = false;
+      _clearRookCastlingRight(piece.color, move.from);
+    }
+    final captured = move.capturedPiece;
+    if (captured?.type == PieceType.rook) {
+      _clearRookCastlingRight(captured!.color, move.to);
+    }
+  }
+
+  void _clearRookCastlingRight(PieceColor color, Square square) {
+    final rank = color == PieceColor.white ? 0 : 7;
+    if (square == Square(7, rank)) {
+      if (color == PieceColor.white) {
+        _whiteKingsideCastle = false;
+      } else {
+        _blackKingsideCastle = false;
+      }
+    } else if (square == Square(0, rank)) {
+      if (color == PieceColor.white) {
+        _whiteQueensideCastle = false;
+      } else {
+        _blackQueensideCastle = false;
+      }
     }
   }
 
@@ -681,6 +708,9 @@ class ChessEngine {
   // STATUS CHECKS
   // ═══════════════════════════════════════════
   void _updateStatus() {
+    // Undo/recalculation can return to a live position after a terminal state.
+    _result = GameResult.ongoing;
+    _drawReason = null;
     final legal = allLegalMoves();
     final inCheck = _isKingInCheck(_currentTurn);
 

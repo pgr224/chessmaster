@@ -219,6 +219,10 @@ class GameAIRequestEvent extends GameEvent {}
 
 class GameDismissErrorEvent extends GameEvent {}
 
+class GameRetryAIEvent extends GameEvent {
+  const GameRetryAIEvent();
+}
+
 // ═══════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════
@@ -711,6 +715,7 @@ class GameState extends Equatable {
         xpReward,
         xpPenalty,
         coachMessage,
+        engineError,
         showMiniLesson,
         lastAIMoveSource,
         aiMoveSourceHistory,
@@ -822,6 +827,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     on<GameAIRequestEvent>(_onAIRequest);
     on<GameDismissErrorEvent>(
         (e, emit) => emit(state.copyWith(clearEngineError: true)));
+    on<GameRetryAIEvent>(_onRetryAI);
     on<MpGameOverSyncEvent>((e, emit) async {
       _stopClock();
       final status =
@@ -1042,6 +1048,9 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     final initialState = GameState(
       board: _engine.board,
       currentTurn: _engine.currentTurn,
+      status: _engine.status,
+      result: _engine.result,
+      drawReason: _engine.drawReason,
       playerColor: (config.mode == GameMode.singlePlayer ||
               config.isOnline ||
               config.mode == GameMode.practice)
@@ -1254,6 +1263,9 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     emit(GameState(
       board: _engine.board,
       currentTurn: _engine.currentTurn,
+      status: _engine.status,
+      result: _engine.result,
+      drawReason: _engine.drawReason,
       playerColor: (mode == GameMode.singlePlayer ||
               mode == GameMode.multiplayer ||
               mode == GameMode.practice)
@@ -1454,6 +1466,8 @@ class GameBloc extends Bloc<GameEvent, GameState> {
 
   Future<void> _onMakeMove(
       GameMakeMoveEvent event, Emitter<GameState> emit) async {
+    // A queued tap/computer reply must not change a result already displayed.
+    if (state.isGameOver) return;
     final move =
         Move(from: event.from, to: event.to, promotion: event.promotion);
 
@@ -2653,19 +2667,36 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         evalScore: event.evalScore, evalHistory: updatedHistory));
   }
 
-  /// Centralized AI move generation logic now correctly handled as a Bloc event.
+  /// Retry the same computer turn without reloading or resetting the game.
+  void _onRetryAI(GameRetryAIEvent event, Emitter<GameState> emit) {
+    if (state.engineError == null || !state.isComputerTurn) return;
+    // Restart the failed engine, retaining this game's board, history and clock.
+    // Clearing the error also makes duplicate retry taps harmless.
+    _aiRequestEpoch++;
+    try {
+      _engineController.init(state.mode, state.aiDifficulty,
+          difficultyLevel: _difficultyLevel);
+      emit(state.copyWith(isAIThinking: false, clearEngineError: true));
+      add(GameAIRequestEvent());
+    } catch (error) {
+      emit(state.copyWith(
+          isAIThinking: false,
+          engineError: 'The engine could not restart. Please try again.'));
+    }
+  }
+
+  /// Centralized AI move generation guarded against stale lifecycle replies.
   Future<void> _onAIRequest(
       GameAIRequestEvent event, Emitter<GameState> emit) async {
     if (!state.isComputerTurn || state.isAIThinking) return;
 
     final aiRequestEpoch = ++_aiRequestEpoch;
-    final requestedFen = _engine.toFEN(), requestedGameId = _gameId;
+    final requestedFen = _engine.toFEN();
     bool current() =>
         !emit.isDone &&
         aiRequestEpoch == _aiRequestEpoch &&
         state.isComputerTurn &&
-        _engine.toFEN() == requestedFen &&
-        _gameId == requestedGameId;
+        _engine.toFEN() == requestedFen;
 
     String? thinkingMsg;
     if (state.aiDifficulty == AIDifficulty.aiMode) {
@@ -2746,7 +2777,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
           emit(state.copyWith(
             isAIThinking: false,
             engineError:
-                "AI engine timed out and fallback found no legal move. Please try again.",
+                'The engine could not choose a legal move. Retry this position.',
           ));
         }
       } else if (!state.isGameOver && isPlayable) {
@@ -2768,7 +2799,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
           emit(state.copyWith(
             isAIThinking: false,
             engineError:
-                "Ooops! I'm having a little trouble thinking right now. 😵‍💫 My engine stalled, please reload the game!",
+                'The engine did not respond. Retry to continue from this position.',
           ));
         }
       }
@@ -2779,7 +2810,7 @@ class GameBloc extends Bloc<GameEvent, GameState> {
         emit(state.copyWith(
           isAIThinking: false,
           engineError:
-              "Sorry! Something went wrong behind the scenes. 🤯 I can't think anymore!",
+              'The engine stopped unexpectedly. Retry to continue from this position.',
         ));
       }
     }

@@ -6,7 +6,7 @@ const vm = require('node:vm');
 
 const source = readFileSync(join(__dirname, '../../web/engine/engine_service.js'), 'utf8');
 
-function createHarness({ brokenWorkers = false } = {}) {
+function createHarness({ brokenWorkers = false, capabilities = {} } = {}) {
   const workers = [];
   const timers = new Map();
   let now = 0;
@@ -25,7 +25,7 @@ function createHarness({ brokenWorkers = false } = {}) {
     postMessage(message) { this.messages.push(message); }
     terminate() { this.terminated = true; }
     emit(data) { this.listeners.message({ data }); }
-    error() { this.listeners.error({ message: 'Worker failed' }); }
+    error(error = { message: 'Worker failed' }) { this.listeners.error(error); }
     get searches() { return this.messages.filter(message => message.type === 'search'); }
   }
   class ChessLogic {
@@ -37,6 +37,8 @@ function createHarness({ brokenWorkers = false } = {}) {
   const context = vm.createContext({
     window: {}, Worker, ChessLogic,
     document: { querySelector: () => ({ getAttribute: () => '/chess/' }) },
+    performance: { now: () => now },
+    ...capabilities,
     setTimeout(callback, delay) {
       const id = ++timerId;
       timers.set(id, { callback, time: now + delay });
@@ -294,4 +296,90 @@ test('cold Stockfish preparation has its own allowance and preserves the full se
   assert.equal(await warm, 'd2d4');
   assert.equal(timers.size, 0);
   service.dispose();
+});
+
+
+test('diagnostics distinguish readiness failures from search deadlines and retain exact budget/elapsed', async () => {
+  const { service, workers, timers, advance } = createHarness({ capabilities: {
+    isSecureContext: true, crossOriginIsolated: false, SharedArrayBuffer: undefined,
+  } });
+  service.initEngine('singlePlayer', 'advanced');
+  const result = service.getBestMove('private position');
+  advance(5000);
+  const diagnostic = service.getDiagnostics();
+  assert.equal(diagnostic.lastFault.reason, 'readiness-timeout');
+  assert.equal(diagnostic.lastFault.phase, 'preparing');
+  assert.equal(diagnostic.lastFault.engine, 'stockfish');
+  assert.equal(diagnostic.lastFault.elapsedMs, 5000);
+  assert.equal(diagnostic.currentRequest.engine, 'sunfish');
+  assert.equal(diagnostic.currentRequest.phase, 'searching');
+  assert.equal(diagnostic.currentRequest.budgetMs, 1600);
+  assert.deepEqual(JSON.parse(JSON.stringify(diagnostic.capabilities)), {
+    secureContext: true, crossOriginIsolated: false, sharedArrayBuffer: false, worker: true,
+  });
+  advance(1600);
+  assert.equal(await result, null);
+  assert.equal(service.getDiagnostics().lastFault.reason, 'search-timeout');
+  assert.equal(service.getDiagnostics().lastRequest.phase, 'failed');
+  assert.equal(service.getDiagnostics().lastRequest.elapsedMs, 6600);
+  assert.equal(timers.size, 0);
+  assert.equal(workers.every(worker => worker.terminated), true);
+});
+
+test('diagnostics preserve structured worker errors, ErrorEvents and messageerror without positions', async () => {
+  for (const kind of ['structured', 'error-event', 'messageerror']) {
+    const { service, workers } = createHarness();
+    service.initEngine('singlePlayer', 'advanced');
+    const fen = 'private-position-never-retained';
+    const result = service.getBestMove(fen);
+    const worker = workers[0];
+    if (kind === 'structured') worker.emit({ type: 'error', error: { message: `Cannot load ${fen}` } });
+    else if (kind === 'error-event') worker.error({ type: 'error', message: `Cannot allocate ${fen}` });
+    else worker.listeners.messageerror({ type: 'messageerror', message: `Cannot clone ${fen}` });
+    const diagnostic = service.getDiagnostics();
+    assert.equal(diagnostic.lastFault.reason, kind === 'messageerror' ? 'message-error' : 'worker-error');
+    assert.match(diagnostic.lastFault.message, /Cannot (load|allocate|clone) \[position\]/);
+    assert.equal(JSON.stringify(diagnostic).includes(fen), false);
+    const fallback = workers[1];
+    fallback.emit({ type: 'bestmove', move: 'e2e4', id: fallback.searches[0].id });
+    assert.equal(await result, 'e2e4');
+    assert.equal(service.getDiagnostics().lastFault.message, diagnostic.lastFault.message);
+    service.dispose();
+  }
+});
+
+test('diagnostic history is bounded, snapshots are copies and supersession/disposal reasons survive cleanup', async () => {
+  const { service, workers } = createHarness();
+  service.initEngine('singlePlayer', 'basic');
+  const first = service.getBestMove('not retained');
+  const second = service.getBestMove('not retained either');
+  assert.equal(await first, null);
+  assert.equal(service.getDiagnostics().lastCancel.reason, 'superseded');
+  workers[1].emit({ type: 'bestmove', move: 'e2e4', id: workers[1].searches[0].id });
+  await second;
+  for (let i = 0; i < 20; i++) {
+    const result = service.getBestMove('not retained');
+    const current = workers.at(-1);
+    current.emit({ type: 'bestmove', move: 'd2d4', id: current.searches.at(-1).id });
+    await result;
+  }
+  const diagnostic = service.getDiagnostics();
+  assert.equal(diagnostic.recentEvents.length, 10);
+  diagnostic.recentEvents[0].event = 'mutated';
+  diagnostic.capabilities.worker = false;
+  diagnostic.lastCancel.reason = 'mutated';
+  diagnostic.lastRequest.phase = 'mutated';
+  diagnostic.workers[0].ready = false;
+  const fresh = service.getDiagnostics();
+  assert.notEqual(fresh.recentEvents[0].event, 'mutated');
+  assert.equal(fresh.capabilities.worker, true);
+  assert.equal(fresh.lastCancel.reason, 'superseded');
+  assert.equal(fresh.lastRequest.phase, 'completed');
+  assert.equal(fresh.workers[0].ready, true);
+  const pending = service.getBestMove('not retained');
+  service.dispose(); await pending;
+  assert.equal(service.getDiagnostics().lastCancel.reason, 'dispose');
+  assert.equal(service.getDiagnostics().workers.length, 0);
+  assert.equal(service.getDiagnostics().currentRequest, null);
+  assert.equal(JSON.stringify(service.getDiagnostics()).includes('not retained'), false);
 });

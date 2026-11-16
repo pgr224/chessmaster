@@ -17,6 +17,7 @@ extension type _JSEngineService._(JSObject _) {
   external JSArray<JSString> getLegalMoves(JSString fen, JSString square);
   external JSObject getGameState(JSString fen);
   external JSString getActiveEngine();
+  external JSObject getDiagnostics();
   external JSPromise<JSObject> analyzeStyle(
     JSString fen,
     JSArray<JSString> recentMoves,
@@ -186,6 +187,16 @@ String jsEngineGetActiveEngine() {
   final svc = _getService();
   if (svc == null) return 'none';
   return svc.getActiveEngine().toDart;
+}
+
+Map<String, dynamic> jsEngineGetDiagnostics() {
+  try {
+    final value = _getService()?.getDiagnostics().dartify();
+    if (value is Map) return Map<String, dynamic>.from(value);
+  } catch (_) {
+    // An older installed web build may not expose the diagnostic API yet.
+  }
+  return {'available': false};
 }
 
 /// Stop the active search without changing the selected game mode.

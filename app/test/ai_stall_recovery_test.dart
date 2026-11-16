@@ -73,6 +73,13 @@ class _Engine extends AIEngineController {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  test('engine errors and their dismissal are observable state changes', () {
+    final state =
+        GameState(board: ChessEngine().board, currentTurn: PieceColor.white);
+    final failed = state.copyWith(engineError: 'worker crashed');
+    expect(failed, isNot(state));
+    expect(failed.copyWith(clearEngineError: true), state);
+  });
   setUpAll(() {
     registerFallbackValue(ChessEngine());
     registerFallbackValue(Move.fromAlgebraic('e2e4'));
@@ -197,6 +204,46 @@ void main() {
     await Future<void>.delayed(const Duration(milliseconds: 40));
     expect(engine.requests.length, 1);
   });
+  test('retry after an engine error keeps the position and selected level',
+      () async {
+    await start();
+    await humanMove();
+    final fen = bloc.state.currentFEN;
+    final failed = bloc.stream.firstWhere((s) => s.engineError != null);
+    engine.requests.first.completeError(StateError('worker crashed'));
+    await failed;
+    expect(bloc.state.isGameOver, false);
+    expect(bloc.state.isAIThinking, false);
+    bloc.add(const GameRetryAIEvent());
+    bloc.add(const GameRetryAIEvent());
+    await waitRequests(2);
+    expect(bloc.state.currentFEN, fen);
+    expect(bloc.state.moveHistory.length, 1);
+    expect(bloc.state.engineError, isNull);
+    expect(engine.selected, AIDifficulty.advanced);
+    expect(engine.level, 67);
+    final replied = bloc.stream.firstWhere((s) => s.moveHistory.length == 2);
+    engine.requests[1].complete('e7e5');
+    await replied;
+    expect(bloc.state.isAIThinking, false);
+    expect(bloc.state.isGameOver, false);
+  });
+  test('a storage ID update during a search cannot strand the thinking state',
+      () async {
+    await start();
+    await humanMove();
+    final save = Completer<String>();
+    when(() => games.saveGame(any())).thenAnswer((_) => save.future);
+    bloc.add(GameSaveEvent());
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    save.complete('recovered-storage-id');
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    final replied = bloc.stream.firstWhere((s) => s.moveHistory.length == 2);
+    engine.requests.first.complete('e7e5');
+    await replied.timeout(const Duration(seconds: 1));
+    expect(bloc.state.isAIThinking, false);
+    expect(bloc.state.currentTurn, PieceColor.white);
+  });
   test('accepting a draw cancels thinking and rejects the pending AI move',
       () async {
     await start();
@@ -204,10 +251,15 @@ void main() {
     final ended = bloc.stream.firstWhere((s) => s.result == GameResult.draw);
     bloc.add(GameDrawAcceptEvent());
     await ended;
+    final finishedFen = bloc.state.currentFEN;
+    bloc.add(
+        GameMakeMoveEvent(Square.fromString('e7'), Square.fromString('e5')));
     engine.requests.first.complete('e7e5');
     await Future<void>.delayed(const Duration(milliseconds: 30));
     expect(bloc.state.isAIThinking, false);
     expect(bloc.state.moveHistory.length, 1);
+    expect(bloc.state.currentFEN, finishedFen);
+    expect(bloc.state.result, GameResult.draw);
     expect(engine.cancellations, greaterThan(1));
   });
   test(
@@ -316,5 +368,27 @@ void main() {
     expect(engine.selected, AIDifficulty.impossible);
     expect(engine.level, 93);
     expect(bloc.state.playerColor, PieceColor.white);
+  });
+  test(
+      'a saved checkmate is restored as a result without requesting an AI move',
+      () async {
+    final saved = GameModel(
+        id: 'mate',
+        fen: 'rnb1kbnr/pppp1ppp/8/4p3/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3',
+        mode: 'singlePlayer',
+        status: 'checkmate',
+        result: 'blackWins',
+        playerColor: 'black',
+        moveCount: 4,
+        updatedAt: DateTime.now());
+    when(() => games.getSavedGame('mate')).thenAnswer((_) async => saved);
+    final ended = bloc.stream.firstWhere((s) => s.isGameOver);
+    bloc.add(const GameResumeEvent('mate'));
+    await ended.timeout(const Duration(seconds: 2));
+    expect(bloc.state.status, GameStatus.checkmate);
+    expect(bloc.state.result, GameResult.blackWins);
+    expect(bloc.state.engineError, isNull);
+    expect(bloc.state.isAIThinking, false);
+    expect(engine.requests, isEmpty);
   });
 }

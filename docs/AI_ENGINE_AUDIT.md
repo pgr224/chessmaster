@@ -63,4 +63,49 @@ python3 ../scripts/prune_web_chunks.py
 
 For real worker repetition, install Playwright and the backend's chess.js dependency, then run `node app/test/browser/engine_stability.cjs` from the repository root. Set NODE_PATH if Playwright is installed outside the checkout, CHROME_EXECUTABLE if using an existing Chromium, and ENGINE_REPORT for JSON output. ENGINE_DIFFICULTIES, ENGINE_TURNS and ENGINE_FULL_BUDGET=1 select a longer full-budget run. The script starts an ephemeral isolated local HTTP server and makes no live account/API requests.
 
-No production deployment was performed.
+## Installed Chrome web-app follow-up
+
+The reported Acer/Ubuntu/Chrome installed-web-app failure occurs after about
+10–15 moves on Medium and 8–10 on Hard. The report describes a frozen board
+with Rematch and Quit. In this source, Rematch belongs to a terminal game
+result; the engine-error overlay is a separate state. This distinction does
+not establish whether the reported position was a legal result, an incorrect
+result, or a different installed build. Device RAM exhaustion has not been
+established.
+
+Additional reproduced corrections:
+
+- `engineError` was omitted from `GameState` equality. Clearing an error alone
+  could be suppressed as an unchanged state. Error display/dismissal is now
+  observable, and a regression test verifies both transitions.
+- The previous Reload action could start a new game and discard the current
+  position. Retry Move now reinitializes the selected engine for the same
+  position, preserving board, history, difficulty/level and clock. Duplicate
+  retries cannot create concurrent searches.
+- A storage ID update during the same computer turn could invalidate its
+  answer without clearing the thinking state. The turn now uses its lifecycle
+  epoch and exact position, independent of optional storage metadata. The
+  regression changes an ID while a request is outstanding and verifies that
+  the legal reply is applied.
+- Capturing a corner rook left its castling right enabled, and castling did
+  not require an own rook. The resulting phantom castle could throw. Rook
+  capture clears the appropriate right; generation verifies the rook, and
+  undo restores rights.
+- Undoing mate/draw retained the old result/reason. Recalculation now resets
+  these before checking the current position. FEN imports and resumed boards
+  expose their actual terminal state instead of trying to request a move from
+  a checkmated position. Queued moves cannot change an already ended game.
+
+Copy game report is available on the error and result overlays. It copies the
+position, moves, selected difficulty, result/reason, clocks, build revision and
+local engine diagnostics to the clipboard. It sends nothing automatically and
+contains no account tokens or player identifiers. Engine diagnostics retain
+bounded request timings, readiness/search failure reasons, browser isolation
+capabilities and worker state. CI embeds its commit in `APP_REVISION`;
+manual builds can pass `--dart-define=APP_REVISION=<revision>`.
+
+The baseline fixes were deployed from commit
+`de6305c259634202abd1d051b9f3d8008007efea` to the existing `chessmaster-app`
+Pages project on 2026-11-16 at 12:38 UTC. The corrections in this follow-up
+remain local until the next deployment. No deployment was performed in this
+session.

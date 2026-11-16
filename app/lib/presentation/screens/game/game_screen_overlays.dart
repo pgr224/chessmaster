@@ -88,6 +88,7 @@ extension _GameScreenOverlays on _GameScreenState {
         context.go('/home');
       },
       onShare: () => context.read<GameBloc>().add(GameSaveEvent()),
+      onCopyReport: () => _copyGameReport(context),
     );
   }
 

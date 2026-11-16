@@ -16,39 +16,83 @@
   let nextRequestId = 0;
   let pending = null;
   let chessLogic = null;
+  const diagnosticEvents = [];
+  let lastRequest = null;
+  let lastFault = null;
+  let lastCancel = null;
+  const now = () => typeof performance !== 'undefined' && typeof performance.now === 'function'
+    ? performance.now() : Date.now();
+
+  function requestSnapshot(request) {
+    if (!request) return null;
+    return {
+      id: request.id, phase: request.phase, engine: request.engine,
+      difficulty: request.difficulty, budgetMs: request.budget,
+      elapsedMs: Math.max(0, now() - request.createdAt),
+      phaseElapsedMs: Math.max(0, now() - request.phaseStartedAt),
+      fallback: !!request.fallback,
+    };
+  }
+
+  function event(name, request, details = {}) {
+    const entry = { event: name, atMs: now(), ...requestSnapshot(request), ...details };
+    diagnosticEvents.push(entry);
+    if (diagnosticEvents.length > 10) diagnosticEvents.shift();
+    return entry;
+  }
+
+  function fault(request, engine, reason, error) {
+    let message = typeof error === 'string' ? error
+      : error?.message || error?.error?.message || (error ? String(error) : reason);
+    // Never retain a position if a lower-level exception happens to quote it.
+    message = String(message);
+    if (request?.fen) message = message.split(request.fen).join('[position]');
+    lastFault = { ...event('fault', request, {
+      engine, phase: request?.phase || 'idle', reason, message: message.slice(0, 400),
+    }) };
+  }
+
 
   function terminate(type) {
     const record = workers.get(type);
     if (record) {
       workers.delete(type);
       record.worker.terminate();
+      event('worker-terminated', pending, { engine: type });
     }
   }
 
-  function finish(request, value) {
+  function finish(request, value, outcome = 'completed') {
     if (pending !== request) return;
     clearTimeout(request.timer);
+    event(outcome, request, { hasMove: !!(typeof value === 'string' ? value : value?.move) });
+    request.phase = outcome;
+    lastRequest = requestSnapshot(request);
     pending = null;
     request.resolve(value);
   }
 
-  function cancel() {
+  function cancel(reason = 'cancelled') {
     if (!pending) return;
     const request = pending;
     // A synchronous engine search cannot consume a stop message until it ends.
     // Terminate busy workers so an old search cannot queue ahead of a new one.
+    reason = typeof reason === 'string' ? reason.split(request.fen).join('[position]').slice(0, 120) : 'cancelled';
+    lastCancel = { ...event('cancelled', request, { reason }) };
     if (request.started) terminate(request.engine);
-    finish(request, null);
+    finish(request, null, 'cancelled');
   }
 
-  function fail(request) {
+  function fail(request, reason = 'search-timeout', error) {
     if (pending !== request) return;
     clearTimeout(request.timer);
+    fault(request, request.engine, reason, error);
     terminate(request.engine);
     if (request.engine === STOCKFISH) {
+      event('fallback', request, { nextEngine: SUNFISH });
       search(request, SUNFISH, FALLBACK_BUDGET);
     } else {
-      finish(request, null);
+      finish(request, null, 'failed');
     }
   }
 
@@ -59,11 +103,13 @@
     const filename = type === STOCKFISH ? 'stockfish_hybrid.worker.js' : 'sunfish.worker.js';
     const record = { worker: new Worker(href + 'engine/' + filename), ready: type !== STOCKFISH };
     workers.set(type, record);
+    event('worker-created', pending, { engine: type });
 
     record.worker.addEventListener('message', ({ data }) => {
       if (workers.get(type) !== record || !data) return;
       if (data.type === 'ready') {
         record.ready = true;
+        event('worker-ready', pending, { engine: type });
         if (pending && pending.record === record && !pending.started) sendSearch(pending);
         return;
       }
@@ -76,13 +122,17 @@
           ? { move: data.move, candidates: data.candidates }
           : data.move || null);
       } else if (data.type === 'error') {
-        fail(request);
+        fail(request, 'worker-error', data.message || data.error);
       }
     });
-    const onError = () => {
+    const onError = error => {
       if (workers.get(type) !== record) return;
-      if (pending && pending.record === record) fail(pending);
-      else terminate(type);
+      const reason = error?.type === 'messageerror' ? 'message-error' : 'worker-error';
+      if (pending && pending.record === record) fail(pending, reason, error);
+      else {
+        fault(null, type, reason, error);
+        terminate(type);
+      }
     };
     record.worker.addEventListener('error', onError);
     record.worker.addEventListener('messageerror', onError);
@@ -98,6 +148,9 @@
   function sendSearch(request) {
     if (pending !== request || request.started) return;
     request.started = true;
+    request.phase = 'searching';
+    request.phaseStartedAt = now();
+    event('search-started', request);
     clearTimeout(request.timer);
     // WASM preparation is separate from the existing difficulty search budget.
     request.timer = setTimeout(() => fail(request), request.budget);
@@ -110,8 +163,8 @@
           timeout: Math.max(250, request.budget - 250), id: request.id };
     try {
       request.record.worker.postMessage(message);
-    } catch (_) {
-      fail(request);
+    } catch (error) {
+      fail(request, 'post-message-failed', error);
     }
   }
 
@@ -121,12 +174,14 @@
     request.engine = type;
     request.budget = budget;
     request.started = false;
+    request.phase = 'preparing';
+    request.phaseStartedAt = now();
     try {
       request.record = getWorker(type);
       if (request.record.ready) sendSearch(request);
-      else request.timer = setTimeout(() => fail(request), STOCKFISH_READY_TIMEOUT);
-    } catch (_) {
-      fail(request);
+      else request.timer = setTimeout(() => fail(request, 'readiness-timeout'), STOCKFISH_READY_TIMEOUT);
+    } catch (error) {
+      fail(request, 'worker-start-failed', error);
     }
   }
 
@@ -137,7 +192,7 @@
 
   const EngineService = {
     initEngine(mode, requestedDifficulty) {
-      cancel();
+      cancel('mode-change');
       difficulty = requestedDifficulty || 'basic';
       const type = mode === 'twoPlayer' || mode === 'multiplayer' ? VALIDATION
         : difficulty === 'advanced' || difficulty === 'impossible' || difficulty === 'aiMode' ? STOCKFISH
@@ -151,13 +206,15 @@
     },
 
     getBestMove(fen, requestedBudget) {
-      cancel();
+      cancel('superseded');
       if (!activeEngine || activeEngine === VALIDATION) return Promise.resolve(null);
       const defaultBudget = BUDGET[difficulty] ?? 1500;
       const budget = Number.isFinite(requestedBudget) && requestedBudget > 0
         ? Math.min(requestedBudget, defaultBudget + 2000) : defaultBudget;
       return new Promise(resolve => {
-        const request = { id: ++nextRequestId, fen, resolve, started: false };
+        const createdAt = now();
+        const request = { id: ++nextRequestId, fen, resolve, started: false,
+          difficulty, createdAt, phaseStartedAt: createdAt, phase: 'requested' };
         pending = request;
         search(request, activeEngine, budget);
       });
@@ -177,6 +234,24 @@
 
     getActiveEngine() {
       return lastSearchEngine || activeEngine;
+    },
+
+    getDiagnostics() {
+      return {
+        capabilities: {
+          secureContext: typeof isSecureContext === 'boolean' ? isSecureContext : null,
+          crossOriginIsolated: typeof crossOriginIsolated === 'boolean' ? crossOriginIsolated : null,
+          sharedArrayBuffer: typeof SharedArrayBuffer === 'function',
+          worker: typeof Worker === 'function',
+        },
+        difficulty, selectedEngine: activeEngine, activeEngine: lastSearchEngine || activeEngine,
+        currentRequest: requestSnapshot(pending),
+        lastRequest: lastRequest ? { ...lastRequest } : null,
+        lastFault: lastFault ? { ...lastFault } : null,
+        lastCancel: lastCancel ? { ...lastCancel } : null,
+        workers: [...workers].map(([engine, record]) => ({ engine, ready: record.ready })),
+        recentEvents: diagnosticEvents.map(entry => ({ ...entry })),
+      };
     },
 
     cancel,
@@ -226,7 +301,7 @@
     },
 
     dispose() {
-      cancel();
+      cancel('dispose');
       for (const type of workers.keys()) terminate(type);
       activeEngine = null;
       lastSearchEngine = null;

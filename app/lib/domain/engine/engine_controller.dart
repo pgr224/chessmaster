@@ -50,6 +50,16 @@ class AIEngineController {
 
   String get lastMoveSource => _lastMoveSource;
 
+  Map<String, dynamic> get diagnostics => {
+        ...js_bridge.jsEngineGetDiagnostics(),
+        'mode': _mode.name,
+        'difficulty': _difficulty.name,
+        'initialized': _initialized,
+        'ownsBridge': _owner == this,
+        'bridgeBusy': _bridgeBusy,
+        'moveSource': _lastMoveSource,
+      };
+
   /// Current AI Personality Message (for UI thinking bubble)
   String get aiMessage =>
       _latestThinkingMessage ?? PersonalityEngine().generateNewMessage();
