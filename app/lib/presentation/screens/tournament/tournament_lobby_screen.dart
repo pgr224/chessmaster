@@ -1,3 +1,4 @@
+import '../../../domain/engine/chess_engine.dart';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
@@ -100,20 +101,24 @@ class _TournamentLobbyScreenState extends State<TournamentLobbyScreen> {
                 fontWeight: FontWeight.w800,
                 letterSpacing: 1.5,
                 shadows: [
-                  Shadow(color: AppTheme.goldPrimary.withValues(alpha: 0.5), blurRadius: 10),
+                  Shadow(
+                      color: AppTheme.goldPrimary.withValues(alpha: 0.5),
+                      blurRadius: 10),
                 ],
               ),
             ),
             centerTitle: true,
             actions: [
               IconButton(
-                icon: const Icon(Icons.info_outline, color: AppTheme.goldPrimary),
+                icon:
+                    const Icon(Icons.info_outline, color: AppTheme.goldPrimary),
                 onPressed: () => _showTournamentRules(context),
               ),
             ],
           ),
           body: Container(
-            decoration: const BoxDecoration(gradient: AppTheme.backgroundGradient),
+            decoration:
+                const BoxDecoration(gradient: AppTheme.backgroundGradient),
             child: SafeArea(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(20),
@@ -129,7 +134,8 @@ class _TournamentLobbyScreenState extends State<TournamentLobbyScreen> {
                     const SizedBox(height: 16),
                     _buildOpponentSpotlight(ts),
                     const SizedBox(height: 16),
-                    _buildTopThreePodium(ts.activeTournament?.players ?? const []),
+                    _buildTopThreePodium(
+                        ts.activeTournament?.players ?? const []),
                     const SizedBox(height: 16),
                     _buildScoreCard(ts),
                     const SizedBox(height: 16),
@@ -158,9 +164,11 @@ class _TournamentLobbyScreenState extends State<TournamentLobbyScreen> {
   }
 
   void _captureRoundHistory(TournamentState ts) {
-    final pairings = ts.activeTournament?.currentPairings ?? const <TournamentPairing>[];
+    final pairings =
+        ts.activeTournament?.currentPairings ?? const <TournamentPairing>[];
     for (final pair in pairings) {
-      final isMine = pair.player1.id == _myUserId || pair.player2.id == _myUserId;
+      final isMine =
+          pair.player1.id == _myUserId || pair.player2.id == _myUserId;
       final exists = _pairingHistory.any((p) => p.gameId == pair.gameId);
       if (isMine && !exists) {
         _pairingHistory.add(pair);
@@ -182,7 +190,8 @@ class _TournamentLobbyScreenState extends State<TournamentLobbyScreen> {
       );
     }
 
-    final rank = _myRank(ts.activeTournament?.players ?? const <TournamentPlayer>[]);
+    final rank =
+        _myRank(ts.activeTournament?.players ?? const <TournamentPlayer>[]);
     if (rank > 0 && _lastKnownRank > 0 && rank < _lastKnownRank) {
       _notify(
         title: 'Position Improved',
@@ -195,7 +204,8 @@ class _TournamentLobbyScreenState extends State<TournamentLobbyScreen> {
       _lastKnownRank = rank;
     }
 
-    if (ts.engagementMessage != null && ts.engagementMessage != _lastEngagementText) {
+    if (ts.engagementMessage != null &&
+        ts.engagementMessage != _lastEngagementText) {
       _lastEngagementText = ts.engagementMessage;
       _notify(
         title: 'Tournament Update',
@@ -275,9 +285,14 @@ class _TournamentLobbyScreenState extends State<TournamentLobbyScreen> {
   }
 
   Widget _buildStatusBanner(TournamentState ts) {
-    final rank = _myRank(ts.activeTournament?.players ?? const <TournamentPlayer>[]);
-    final score = _myPlayer(ts.activeTournament?.players ?? const <TournamentPlayer>[])?.score ?? 0;
-    final text = 'Round ${math.max(1, ts.currentRound)}/${math.max(1, ts.totalRounds)} | Score: ${score.toStringAsFixed(1)} | Rank: ${rank > 0 ? '#$rank' : '-'}';
+    final rank =
+        _myRank(ts.activeTournament?.players ?? const <TournamentPlayer>[]);
+    final score =
+        _myPlayer(ts.activeTournament?.players ?? const <TournamentPlayer>[])
+                ?.score ??
+            0;
+    final text =
+        'Round ${math.max(1, ts.currentRound)}/${math.max(1, ts.totalRounds)} | Score: ${score.toStringAsFixed(1)} | Rank: ${rank > 0 ? '#$rank' : '-'}';
 
     final color = switch (ts.status) {
       TournamentStatus.waiting => AppTheme.skyBlue,
@@ -307,14 +322,20 @@ class _TournamentLobbyScreenState extends State<TournamentLobbyScreen> {
                   color.withValues(alpha: 0.05),
                 ],
               ),
-              border: Border.all(color: color.withValues(alpha: 0.4), width: 1.5),
+              border:
+                  Border.all(color: color.withValues(alpha: 0.4), width: 1.5),
             ),
             child: Column(
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(color == AppTheme.accentGreen ? Icons.play_circle_fill : Icons.timer, color: color, size: 20),
+                    Icon(
+                        color == AppTheme.accentGreen
+                            ? Icons.play_circle_fill
+                            : Icons.timer,
+                        color: color,
+                        size: 20),
                     const SizedBox(width: 8),
                     Text(
                       ts.status.name.toUpperCase(),
@@ -409,14 +430,18 @@ class _TournamentLobbyScreenState extends State<TournamentLobbyScreen> {
   }
 
   Widget _buildOpponentSpotlight(TournamentState ts) {
-    final pairings = ts.activeTournament?.currentPairings ?? const <TournamentPairing>[];
-    final myPair = pairings.where((p) => p.player1.id == _myUserId || p.player2.id == _myUserId).firstOrNull;
+    final pairings =
+        ts.activeTournament?.currentPairings ?? const <TournamentPairing>[];
+    final myPair = pairings
+        .where((p) => p.player1.id == _myUserId || p.player2.id == _myUserId)
+        .firstOrNull;
     if (myPair == null) {
       return const SizedBox.shrink();
     }
 
     final me = myPair.player1.id == _myUserId ? myPair.player1 : myPair.player2;
-    final opponent = myPair.player1.id == _myUserId ? myPair.player2 : myPair.player1;
+    final opponent =
+        myPair.player1.id == _myUserId ? myPair.player2 : myPair.player1;
     final winProb = _winProbability(me.rating, opponent.rating);
     final pseudoH2H = '${me.wins}-${me.losses}';
 
@@ -542,14 +567,19 @@ class _TournamentLobbyScreenState extends State<TournamentLobbyScreen> {
           Row(
             children: List.generate(top.length, (index) {
               final p = top[index];
-              final medal = index == 0 ? '🥇' : index == 1 ? '🥈' : '🥉';
+              final medal = index == 0
+                  ? '🥇'
+                  : index == 1
+                      ? '🥈'
+                      : '🥉';
               final leadText = index == 0
                   ? 'Leader'
                   : '${(top[index - 1].score - p.score).toStringAsFixed(1)} behind';
               return Expanded(
                 child: Container(
                   margin: const EdgeInsets.symmetric(horizontal: 4),
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(14),
@@ -642,7 +672,8 @@ class _TournamentLobbyScreenState extends State<TournamentLobbyScreen> {
               const SizedBox(height: 4),
               Text(
                 'Round ${ts.currentRound} of ${ts.totalRounds}',
-                style: GoogleFonts.baloo2(color: AppTheme.textMuted, fontSize: 10),
+                style:
+                    GoogleFonts.baloo2(color: AppTheme.textMuted, fontSize: 10),
               ),
             ],
           ),
@@ -654,7 +685,8 @@ class _TournamentLobbyScreenState extends State<TournamentLobbyScreen> {
 
   Widget _buildPlayerScore(TournamentPlayer p, {required bool isMe}) {
     return Column(
-      crossAxisAlignment: isMe ? CrossAxisAlignment.start : CrossAxisAlignment.end,
+      crossAxisAlignment:
+          isMe ? CrossAxisAlignment.start : CrossAxisAlignment.end,
       children: [
         Text(
           isMe ? 'You' : p.username,
@@ -681,7 +713,8 @@ class _TournamentLobbyScreenState extends State<TournamentLobbyScreen> {
   }
 
   Widget _buildPairingsList(TournamentState ts) {
-    final current = ts.activeTournament?.currentPairings ?? const <TournamentPairing>[];
+    final current =
+        ts.activeTournament?.currentPairings ?? const <TournamentPairing>[];
     final items = <_PairingListItem>[];
 
     for (final pair in _pairingHistory) {
@@ -693,7 +726,8 @@ class _TournamentLobbyScreenState extends State<TournamentLobbyScreen> {
       }
     }
 
-    final futureRounds = math.max(0, ts.totalRounds - math.max(0, ts.currentRound));
+    final futureRounds =
+        math.max(0, ts.totalRounds - math.max(0, ts.currentRound));
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -764,7 +798,9 @@ class _TournamentLobbyScreenState extends State<TournamentLobbyScreen> {
                   ),
                 ),
               ),
-              Text('vs', style: GoogleFonts.fredoka(color: AppTheme.textMuted, fontSize: 12)),
+              Text('vs',
+                  style: GoogleFonts.fredoka(
+                      color: AppTheme.textMuted, fontSize: 12)),
               Expanded(
                 child: Text(
                   '${pair.player2.username} (${pair.player2Color})',
@@ -809,7 +845,8 @@ class _TournamentLobbyScreenState extends State<TournamentLobbyScreen> {
                 GestureDetector(
                   onTap: () => _joinMatch(context, pair.gameId, pair),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: AppTheme.goldPrimary.withValues(alpha: 0.22),
                       borderRadius: BorderRadius.circular(8),
@@ -941,10 +978,16 @@ class _TournamentLobbyScreenState extends State<TournamentLobbyScreen> {
             spacing: 10,
             runSpacing: 10,
             children: [
-              _metricChip('Rating Δ', '${me.ratingChange >= 0 ? '+' : ''}${me.ratingChange}', AppTheme.skyBlue),
-              _metricChip('Accuracy', '${me.accuracy.toStringAsFixed(1)}%', AppTheme.accentGreen),
-              _metricChip('Form', '${(formIndex * 100).toStringAsFixed(0)}%', AppTheme.goldPrimary),
-              _metricChip('Avg Opp', avgOpp.toStringAsFixed(0), AppTheme.accentOrange),
+              _metricChip(
+                  'Rating Δ',
+                  '${me.ratingChange >= 0 ? '+' : ''}${me.ratingChange}',
+                  AppTheme.skyBlue),
+              _metricChip('Accuracy', '${me.accuracy.toStringAsFixed(1)}%',
+                  AppTheme.accentGreen),
+              _metricChip('Form', '${(formIndex * 100).toStringAsFixed(0)}%',
+                  AppTheme.goldPrimary),
+              _metricChip(
+                  'Avg Opp', avgOpp.toStringAsFixed(0), AppTheme.accentOrange),
             ],
           ),
           const SizedBox(height: 12),
@@ -1068,11 +1111,13 @@ class _TournamentLobbyScreenState extends State<TournamentLobbyScreen> {
               contentPadding: EdgeInsets.zero,
               leading: CircleAvatar(
                 radius: 14,
-                backgroundColor: rank == 1 ? AppTheme.goldPrimary : AppTheme.navyCard,
+                backgroundColor:
+                    rank == 1 ? AppTheme.goldPrimary : AppTheme.navyCard,
                 child: Text(
                   '$rank',
                   style: GoogleFonts.fredoka(
-                    color: rank == 1 ? AppTheme.midnight : AppTheme.textSecondary,
+                    color:
+                        rank == 1 ? AppTheme.midnight : AppTheme.textSecondary,
                     fontSize: 12,
                   ),
                 ),
@@ -1108,8 +1153,12 @@ class _TournamentLobbyScreenState extends State<TournamentLobbyScreen> {
   }
 
   Widget _buildShareActions(TournamentState ts) {
-    final rank = _myRank(ts.activeTournament?.players ?? const <TournamentPlayer>[]);
-    final score = _myPlayer(ts.activeTournament?.players ?? const <TournamentPlayer>[])?.score ?? 0;
+    final rank =
+        _myRank(ts.activeTournament?.players ?? const <TournamentPlayer>[]);
+    final score =
+        _myPlayer(ts.activeTournament?.players ?? const <TournamentPlayer>[])
+                ?.score ??
+            0;
 
     return Container(
       width: double.infinity,
@@ -1209,14 +1258,15 @@ class _TournamentLobbyScreenState extends State<TournamentLobbyScreen> {
             ),
           ),
           const SizedBox(height: 10),
-              ..._engagement.feed.take(4).map(
+          ..._engagement.feed.take(4).map(
                 (item) => Container(
                   margin: const EdgeInsets.only(bottom: 8),
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
                     color: item.accent.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: item.accent.withValues(alpha: 0.24)),
+                    border:
+                        Border.all(color: item.accent.withValues(alpha: 0.24)),
                   ),
                   child: Row(
                     children: [
@@ -1276,7 +1326,8 @@ class _TournamentLobbyScreenState extends State<TournamentLobbyScreen> {
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 32),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
-      onPressed: () => context.read<TournamentBloc>().add(TournamentReadyEvent()),
+      onPressed: () =>
+          context.read<TournamentBloc>().add(TournamentReadyEvent()),
       icon: const Icon(Icons.play_arrow_rounded),
       label: Text(
         'Ready!',
@@ -1286,7 +1337,8 @@ class _TournamentLobbyScreenState extends State<TournamentLobbyScreen> {
   }
 
   void _showStatsModal(TournamentState ts) {
-    final me = _myPlayer(ts.activeTournament?.players ?? const <TournamentPlayer>[]);
+    final me =
+        _myPlayer(ts.activeTournament?.players ?? const <TournamentPlayer>[]);
     if (me == null) {
       return;
     }
@@ -1317,15 +1369,18 @@ class _TournamentLobbyScreenState extends State<TournamentLobbyScreen> {
               const SizedBox(height: 12),
               Text(
                 'Score: ${me.score.toStringAsFixed(1)} | Record: ${me.wins}-${me.draws}-${me.losses}',
-                style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 14),
+                style: GoogleFonts.baloo2(
+                    color: AppTheme.textSecondary, fontSize: 14),
               ),
               Text(
                 'Accuracy: ${me.accuracy.toStringAsFixed(1)}% | Longest streak: ${me.longestWinStreak}',
-                style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 14),
+                style: GoogleFonts.baloo2(
+                    color: AppTheme.textSecondary, fontSize: 14),
               ),
               Text(
                 'Rating delta: ${me.ratingChange >= 0 ? '+' : ''}${me.ratingChange}',
-                style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 14),
+                style: GoogleFonts.baloo2(
+                    color: AppTheme.textSecondary, fontSize: 14),
               ),
               const SizedBox(height: 12),
             ],
@@ -1358,7 +1413,8 @@ class _TournamentLobbyScreenState extends State<TournamentLobbyScreen> {
   }
 
   double _avgOpponentRating(List<TournamentPlayer> players) {
-    final opponents = players.where((p) => p.id != _myUserId).toList(growable: false);
+    final opponents =
+        players.where((p) => p.id != _myUserId).toList(growable: false);
     if (opponents.isEmpty) {
       return 0;
     }
@@ -1374,6 +1430,18 @@ class _TournamentLobbyScreenState extends State<TournamentLobbyScreen> {
       color = pair.player2Color;
     }
 
+    final opponent = pair.player1.id == _myUserId ? pair.player2 : pair.player1;
+    context.read<MultiplayerBloc>().add(MpGameFoundEvent(
+        gameId,
+        color == 'white' ? PieceColor.white : PieceColor.black,
+        opponent.username,
+        mode: 'tournament',
+        timeControl: context
+                .read<TournamentBloc>()
+                .state
+                .activeTournament
+                ?.timeControl ??
+            '10+0'));
     context.push('/room/$gameId');
     debugPrint('[TournamentLobby] playing as $color');
   }
@@ -1387,4 +1455,3 @@ class _PairingListItem {
 
   const _PairingListItem({required this.pairing, required this.kind});
 }
-

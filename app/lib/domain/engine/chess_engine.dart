@@ -268,6 +268,32 @@ class ChessEngine {
   List<List<ChessPiece?>> get board =>
       _board.map((r) => List<ChessPiece?>.from(r)).toList();
 
+  /// Whether this side has material that can possibly deliver mate on a flag fall.
+  bool canPossiblyMate(PieceColor color) {
+    final own = <(ChessPiece, int)>[], enemy = <(ChessPiece, int)>[];
+    for (var rank = 0; rank < 8; rank++) {
+      for (var file = 0; file < 8; file++) {
+        final piece = _board[rank][file];
+        if (piece == null || piece.type == PieceType.king) continue;
+        (piece.color == color ? own : enemy).add((piece, (rank + file) % 2));
+      }
+    }
+    if (own.isEmpty) return false;
+    if (own.any((p) =>
+        [PieceType.pawn, PieceType.rook, PieceType.queen].contains(p.$1.type)))
+      return true;
+    final knights = own.where((p) => p.$1.type == PieceType.knight).length;
+    final bishops = own.where((p) => p.$1.type == PieceType.bishop).toList();
+    if (knights >= 2 || (knights > 0 && bishops.isNotEmpty)) return true;
+    if (bishops.map((p) => p.$2).toSet().length > 1) return true;
+    if (enemy.isEmpty) return false;
+    if (bishops.length == own.length &&
+        enemy.every(
+            (p) => p.$1.type == PieceType.bishop && p.$2 == bishops.first.$2))
+      return false;
+    return true;
+  }
+
   /// Get all legal moves for a piece at [sq]
   List<Move> legalMovesFrom(Square sq) {
     final piece = pieceAt(sq);
@@ -651,7 +677,6 @@ class ChessEngine {
     }
   }
 
-
   // ═══════════════════════════════════════════
   // STATUS CHECKS
   // ═══════════════════════════════════════════
@@ -842,7 +867,7 @@ class ChessEngine {
     final current = toFEN(includeClocks: false);
     int count = 0;
     for (final fen in _positionHistory) {
-      // Position history should ideally store minimal FENs, but if it stores full FENs, 
+      // Position history should ideally store minimal FENs, but if it stores full FENs,
       // we must strip them here for comparison.
       if (_stripFENClocks(fen) == current) {
         count++;
@@ -866,20 +891,27 @@ class ChessEngine {
         }
       }
     }
-    
+
     // King vs King
-    if (pieces.length == 2) return true; 
+    if (pieces.length == 2) return true;
 
     // King + Minor Piece vs King
     if (pieces.length == 3) {
-      return pieces.any((p) => p.$1.type == PieceType.knight || p.$1.type == PieceType.bishop);
+      return pieces.any((p) =>
+          p.$1.type == PieceType.knight || p.$1.type == PieceType.bishop);
     }
 
     // King + Bishop vs King + Bishop (Same color bishops)
     if (pieces.length == 4) {
-      final whiteBishops = pieces.where((p) => p.$1.color == PieceColor.white && p.$1.type == PieceType.bishop).toList();
-      final blackBishops = pieces.where((p) => p.$1.color == PieceColor.black && p.$1.type == PieceType.bishop).toList();
-      
+      final whiteBishops = pieces
+          .where((p) =>
+              p.$1.color == PieceColor.white && p.$1.type == PieceType.bishop)
+          .toList();
+      final blackBishops = pieces
+          .where((p) =>
+              p.$1.color == PieceColor.black && p.$1.type == PieceType.bishop)
+          .toList();
+
       if (whiteBishops.length == 1 && blackBishops.length == 1) {
         final wSq = whiteBishops.first.$2;
         final bSq = blackBishops.first.$2;
@@ -890,7 +922,6 @@ class ChessEngine {
 
     return false;
   }
-
 
   PieceColor _opponent(PieceColor color) =>
       color == PieceColor.white ? PieceColor.black : PieceColor.white;
@@ -960,7 +991,7 @@ class ChessEngine {
 
     buf.write(' ');
     buf.write(_enPassantTarget?.toAlgebraic() ?? '-');
-    
+
     if (includeClocks) {
       buf.write(' $_halfMoveClock $_fullMoveNumber');
     }

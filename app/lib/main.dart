@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hive_ce_flutter/hive_ce_flutter.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'core/router/app_router.dart';
+import 'data/repositories/auth_repository.dart';
+import 'core/config/app_config.dart';
+import 'core/config/web_push_config.dart';
 import 'core/theme/app_theme.dart';
 import 'core/di/injection_container.dart' as di;
 import 'presentation/blocs/auth/auth_bloc.dart';
@@ -15,14 +17,8 @@ import 'presentation/blocs/settings/settings_bloc.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Load env variables
-  await dotenv.load(fileName: '.env');
-
-  // Initialize Hive local storage
-  await Hive.initFlutter();
-
-  // Initialize dependency injection
-  await di.init();
+  // Independent startup work can run together.
+  await Future.wait([Hive.initFlutter(), di.init()]);
 
   // Lock orientation
   await SystemChrome.setPreferredOrientations([
@@ -40,6 +36,12 @@ Future<void> main() async {
     ),
   );
 
+  setNotificationRouteHandler((route) {
+    if (di.sl<AuthBloc>().state is! AuthAuthenticatedState) return false;
+    AppRouter.router.go(route);
+    return true;
+  });
+  configureWebPush(AppConfig.apiUrl);
   runApp(const ChessApp());
 }
 
@@ -51,54 +53,70 @@ class ChessApp extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider<AuthBloc>(
-            create: (_) => di.sl<AuthBloc>()..add(AuthInitializeEvent())),
+          create: (_) => di.sl<AuthBloc>()..add(AuthInitializeEvent()),
+        ),
         BlocProvider<MultiplayerBloc>(create: (_) => di.sl<MultiplayerBloc>()),
         BlocProvider<ThemeBloc>(
-            create: (_) => di.sl<ThemeBloc>()..add(ThemeLoadEvent())),
+          lazy: false,
+          create: (_) => di.sl<ThemeBloc>()..add(ThemeLoadEvent()),
+        ),
         BlocProvider<SettingsBloc>(
-            create: (_) => di.sl<SettingsBloc>()..add(SettingsLoadEvent())),
+          lazy: false,
+          create: (_) => di.sl<SettingsBloc>()..add(SettingsLoadEvent()),
+        ),
       ],
       child: BlocListener<AuthBloc, AuthState>(
         listenWhen: (previous, current) =>
-            previous.runtimeType != current.runtimeType &&
+            (previous.runtimeType != current.runtimeType ||
+                (previous is AuthAuthenticatedState &&
+                    current is AuthAuthenticatedState &&
+                    previous.user.isGuest != current.user.isGuest)) &&
             current is! AuthLoadingState &&
             current is! AuthInitialState,
         listener: (context, authState) {
           final multiplayerBloc = context.read<MultiplayerBloc>();
           if (authState is AuthAuthenticatedState) {
-            context.read<SettingsBloc>().add(SettingsLoadAIDifficultyFromProfile(
-              aiEasyLevel: authState.user.aiEasyLevel,
-              aiMediumLevel: authState.user.aiMediumLevel,
-              aiHardLevel: authState.user.aiHardLevel,
-              aiImpossibleLevel: authState.user.aiImpossibleLevel,
-              aiLastDifficulty: authState.user.aiLastDifficulty,
-            ));
+            context.read<SettingsBloc>().add(
+                  SettingsLoadAIDifficultyFromProfile(
+                    aiEasyLevel: authState.user.aiEasyLevel,
+                    aiMediumLevel: authState.user.aiMediumLevel,
+                    aiHardLevel: authState.user.aiHardLevel,
+                    aiImpossibleLevel: authState.user.aiImpossibleLevel,
+                    aiLastDifficulty: authState.user.aiLastDifficulty,
+                  ),
+                );
             if (!authState.user.isGuest) {
-              multiplayerBloc.add(MpConnectLobbyEvent(
-                authState.user.id,
-                authState.user.username,
-                rating: authState.user.stats.eloRating,
-              ));
+              context.read<SettingsBloc>().add(SettingsLoadEvent());
+              syncWebPush();
+              di.sl<AuthRepository>().syncPendingProgress();
+              final notificationRoute = takePendingNotificationRoute();
+              if (notificationRoute != null)
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  AppRouter.router.go(notificationRoute);
+                });
+              multiplayerBloc.add(
+                MpConnectLobbyEvent(
+                  authState.user.id,
+                  authState.user.username,
+                  rating: authState.user.stats.eloRating,
+                ),
+              );
+            }
+            if (authState.user.isGuest) {
+              disableWebPush();
+              multiplayerBloc.add(MpDisconnectLobbyEvent());
             }
           } else if (authState is AuthUnauthenticatedState) {
+            disableWebPush();
             multiplayerBloc.add(MpDisconnectLobbyEvent());
           }
         },
-        child: BlocBuilder<SettingsBloc, SettingsState>(
-          builder: (context, settingsState) {
-            return BlocBuilder<ThemeBloc, ThemeState>(
-              builder: (context, themeState) {
-                return MaterialApp.router(
-                  title: 'Chess Master',
-                  debugShowCheckedModeBanner: false,
-                  theme: AppTheme.darkTheme,
-                  darkTheme: AppTheme.darkTheme,
-                  themeMode: ThemeMode.dark,
-                  routerConfig: AppRouter.router,
-                );
-              },
-            );
-          },
+        child: MaterialApp.router(
+          title: 'Chess Master',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.darkTheme,
+          themeMode: ThemeMode.dark,
+          routerConfig: AppRouter.router,
         ),
       ),
     );

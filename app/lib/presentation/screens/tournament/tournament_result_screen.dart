@@ -28,6 +28,8 @@ class _TournamentResultScreenState extends State<TournamentResultScreen> {
     super.initState();
     _confettiController =
         ConfettiController(duration: const Duration(seconds: 10));
+    final auth=context.read<AuthBloc>().state;
+    if(auth is AuthAuthenticatedState)context.read<TournamentBloc>().add(TournamentConnectEvent(tournamentId:widget.tournamentId,userId:auth.user.id,username:auth.user.username));
     _confettiController.play();
     context.read<MultiplayerBloc>().add(const MpSetPresenceEvent(
           LobbyPresence.online,
@@ -49,7 +51,7 @@ class _TournamentResultScreenState extends State<TournamentResultScreen> {
         final myId = authState is AuthAuthenticatedState ? authState.user.id : null;
 
         final players = ts.activeTournament?.players ?? [];
-        final winner = players.isNotEmpty ? players.first : null;
+        final winner = players.isNotEmpty && (players.length==1 || players[0].score>players[1].score) ? players.first : null;
         final iWon = winner?.id == myId;
 
         return Scaffold(
@@ -69,7 +71,7 @@ class _TournamentResultScreenState extends State<TournamentResultScreen> {
                         const SizedBox(height: 16),
                         Text(
                           iWon
-                              ? '🥇 WORLD CHAMPION'
+                              ? '🥇 TOURNAMENT WINNER'
                               : '🎗️ TOURNAMENT FINISHED',
                           textAlign: TextAlign.center,
                           style: GoogleFonts.outfit(
@@ -144,7 +146,7 @@ class _TournamentResultScreenState extends State<TournamentResultScreen> {
       child: Column(
         children: [
           Text(
-            '+${ts.xpEarned} XP',
+            '${ts.xpEarned>=0?"+":""}${ts.xpEarned} XP',
             style: GoogleFonts.fredoka(
               color: AppTheme.goldPrimary,
               fontSize: 40,

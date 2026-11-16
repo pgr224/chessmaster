@@ -1,3 +1,6 @@
+import { transferXP } from '../services/xp_transfer'
+import { currentBounty } from '../services/bounty'
+import { StatsService } from '../services/stats_service'
 import { Hono } from 'hono'
 import { authMiddleware } from '../middleware/auth'
 import type { Env } from '../index'
@@ -307,106 +310,29 @@ profileRoutes.post('/:id/unlock-achievement', async (c) => {
     return c.json({ error: 'Unauthorized' }, 403)
   }
 
-  const { achievementId, points } = await c.req.json() as { achievementId: string, points: number }
-  
-  try {
-    // 1. Check if already unlocked to prevent double-dipping XP
-    const existing = await c.env.DB.prepare(
-      'SELECT 1 FROM user_achievements WHERE user_id = ? AND achievement_id = ?'
-    ).bind(userId, achievementId).first()
-
-    if (existing) {
-      return c.json({ success: true, message: 'Already unlocked' })
-    }
-
-    // 2. Atomic update: Record achievement and award XP
-    await c.env.DB.batch([
-      c.env.DB.prepare('INSERT INTO user_achievements (user_id, achievement_id) VALUES (?, ?)')
-        .bind(userId, achievementId),
-      c.env.DB.prepare('UPDATE users SET xp = xp + ?, updated_at = datetime("now") WHERE id = ?')
-        .bind(points, userId),
-      // Also update user_stats xp for consistency (though users.xp is the master)
-      c.env.DB.prepare('UPDATE user_stats SET xp = xp + ?, updated_at = datetime("now") WHERE user_id = ?')
-        .bind(points, userId)
-    ])
-
-    return c.json({ 
-      success: true, 
-      achievementId,
-      xpAwarded: points 
-    })
-  } catch (err: any) {
-    console.error('Achievement unlock failed:', err)
-    return c.json({ error: 'Database error', message: err.message }, 500)
-  }
+  const {achievementId}=await c.req.json() as {achievementId:string}
+  const achievement=await c.env.DB.prepare('SELECT points FROM achievements WHERE id=?').bind(achievementId).first<{points:number}>()
+  if(!achievement)return c.json({error:'Unknown achievement'},400)
+  const existing=await c.env.DB.prepare('SELECT 1 FROM user_achievements WHERE user_id=? AND achievement_id=?').bind(userId,achievementId).first()
+  if(existing)return c.json({success:true,xpAwarded:0})
+  const awarded=await StatsService.applyProgress(c.env.DB,{userId,eventId:`achievement:${achievementId}`,xpDelta:achievement.points})
+  await c.env.DB.prepare('INSERT OR IGNORE INTO user_achievements(user_id,achievement_id) VALUES(?,?)').bind(userId,achievementId).run()
+  return c.json({success:true,achievementId,xpAwarded:awarded})
 })
 
 // Update User XP & Stats
-profileRoutes.post('/:id/xp', async (c) => {
-  const userId = c.get('user').sub
-  const targetId = c.req.param('id')
-  
-  if (userId !== targetId) {
-    return c.json({ error: 'Unauthorized' }, 403)
-  }
-
-  const { xpDelta, stats, isOnlineMatch } = await c.req.json() as { xpDelta: number, stats: any, isOnlineMatch?: boolean }
-  
-  try {
-    // Start transactional-like multi-command
-    const batch = [
-      // 1. Update User XP
-      c.env.DB.prepare('UPDATE users SET xp = xp + ?, updated_at = datetime("now") WHERE id = ?')
-        .bind(xpDelta, userId),
-      
-      // 2. Update stats and unified XP
-      c.env.DB.prepare(`
-        UPDATE user_stats 
-        SET 
-          wins = wins + ?,
-          losses = losses + ?,
-          draws = draws + ?,
-          games_played = games_played + ?,
-          multiplayer_wins = multiplayer_wins + ?,
-          tournament_wins = tournament_wins + ?,
-          total_moves = total_moves + ?,
-          hints_used = hints_used + ?,
-          puzzles_solved = puzzles_solved + ?,
-          puzzle_rating = CASE WHEN ? > 0 THEN ? ELSE puzzle_rating END,
-          updated_at = datetime('now')
-        WHERE user_id = ?
-      `).bind(
-        stats.wins || 0,
-        stats.losses || 0,
-        stats.draws || 0,
-        (stats.wins || 0) + (stats.losses || 0) + (stats.draws || 0),
-        stats.multiplayer_wins || 0,
-        stats.tournament_wins || 0,
-        stats.total_moves || 0,
-        stats.hints_used || 0,
-        stats.puzzles_solved || 0,
-        stats.puzzle_rating || 0,
-        stats.puzzle_rating || 0,
-        userId
-      )
-    ]
-    
-    await c.env.DB.batch(batch)
-    
-    // Check for "First Win" badge if wins == 1
-    if (stats.wins > 0) {
-      const { results: s } = await c.env.DB.prepare('SELECT wins FROM user_stats WHERE user_id = ?').bind(userId).all()
-      if (s[0]?.wins === 1) {
-        await c.env.DB.prepare('INSERT OR IGNORE INTO user_achievements (user_id, achievement_id) VALUES (?, ?)')
-          .bind(userId, 'first_win')
-          .run();
-      }
-    }
-
-    return c.json({ success: true, xpDelta })
-  } catch (err: any) {
-    return c.json({ error: err.message }, 500)
-  }
+profileRoutes.post('/:id/xp',async c=>{
+ const userId=c.get('user').sub
+ if(userId!==c.req.param('id'))return c.json({error:'Unauthorized'},403)
+ const body=await c.req.json() as {xpDelta:number;stats?:Record<string,number>;isOnlineMatch?:boolean;eventId?:string}
+ if(!Number.isSafeInteger(body.xpDelta)||Math.abs(body.xpDelta)>25000||typeof body.eventId!=='string'||body.eventId.length>200)return c.json({error:'A valid scoring event ID and integer XP delta are required'},400)
+ const stats=body.stats??{}
+ if(body.isOnlineMatch||['multiplayer_games','multiplayer_wins','tournament_games','tournament_wins','elo_rating'].some(key=>key in stats))return c.json({error:'Online results are settled only by the game server'},403)
+ for(const value of Object.values(stats))if(!Number.isSafeInteger(value)||Math.abs(value)>100000)return c.json({error:'Invalid stats'},400)
+ const actual=await StatsService.applyProgress(c.env.DB,{userId,eventId:body.eventId,xpDelta:body.xpDelta,stats})
+ await c.env.DB.prepare('UPDATE user_stats SET games_played=wins+losses+draws WHERE user_id=?').bind(userId).run()
+ const user=await c.env.DB.prepare('SELECT xp FROM users WHERE id=?').bind(userId).first<{xp:number}>()
+ return c.json({success:true,xpDelta:actual,xp:user?.xp??0})
 })
 
 // Donate XP to another user
@@ -415,59 +341,19 @@ profileRoutes.post('/xp/transfer', async (c) => {
   await expireStaleRequests(c)
 
   const donorId = c.get('user').sub
-  const { recipientId, amount, requestId } = await c.req.json() as { recipientId: string, amount: number, requestId?: number }
+  const { recipientId, amount, requestId, eventId } = await c.req.json() as { recipientId: string, amount: number, requestId?: number,eventId?:string }
   
   if (!recipientId || recipientId === donorId) return c.json({ error: 'Invalid recipient' }, 400)
-  if (!Number.isFinite(amount) || amount <= 0) return c.json({ error: 'Invalid amount' }, 400)
+  if (!Number.isSafeInteger(amount) || amount <= 0) return c.json({ error: 'Invalid amount' }, 400)
 
   const normalizedAmount = Math.floor(amount)
 
-  const donatedAgg = await c.env.DB.prepare(`
-    SELECT
-      COALESCE(SUM(amount), 0) as total_donated,
-      COALESCE(SUM(CASE WHEN date(created_at) = date('now') THEN amount ELSE 0 END), 0) as donated_today
-    FROM xp_transfers
-    WHERE donor_id = ?
-  `).bind(donorId).first<{ total_donated: number; donated_today: number }>()
-
-  const donatedToday = Number(donatedAgg?.donated_today ?? 0)
-  const totalDonated = Number(donatedAgg?.total_donated ?? 0)
-  if (donatedToday + normalizedAmount > 2000) {
-    return c.json({ error: 'Daily donation limit (2000 XP) reached.' }, 400)
-  }
-  if (totalDonated + normalizedAmount > 10000) {
-    return c.json({ error: 'Total donation limit (10000 XP) reached.' }, 400)
-  }
-
-  // Verify donor has enough XP and recipient exists
   const { results: donor } = await c.env.DB.prepare('SELECT xp, username FROM users WHERE id = ?').bind(donorId).all()
   const { results: recipient } = await c.env.DB.prepare('SELECT id, username FROM users WHERE id = ?').bind(recipientId).all()
-  if (!donor.length || !recipient.length || (donor[0].xp as number) < normalizedAmount) {
-    return c.json({ error: 'Insufficient XP' }, 400)
-  }
+  if(!donor.length||!recipient.length)return c.json({error:'User not found'},404)
 
   try {
-    const donorUpdate = await c.env.DB.prepare('UPDATE users SET xp = xp - ? WHERE id = ? AND xp >= ?')
-      .bind(normalizedAmount, donorId, normalizedAmount)
-      .run()
-
-    if ((donorUpdate.meta.changes || 0) === 0) {
-      return c.json({ error: 'Insufficient XP' }, 400)
-    }
-
-    await c.env.DB.batch([
-      c.env.DB.prepare('UPDATE users SET xp = xp + ? WHERE id = ?').bind(normalizedAmount, recipientId),
-      c.env.DB.prepare('INSERT INTO xp_transfers (donor_id, recipient_id, amount) VALUES (?, ?, ?)')
-        .bind(donorId, recipientId, normalizedAmount)
-    ])
-
-    if (requestId != null) {
-      await c.env.DB.prepare(`
-        UPDATE xp_requests_v2
-        SET status = 'fulfilled', fulfilled_by = ?, fulfilled_at = datetime('now'), updated_at = datetime('now')
-        WHERE id = ? AND status = 'open'
-      `).bind(donorId, requestId).run()
-    }
+    await transferXP(c.env.DB,donorId,recipientId,normalizedAmount,eventId??crypto.randomUUID(),requestId??null)
 
     // Check donation badge
     const { results: donatedTotals } = await c.env.DB.prepare(
@@ -549,7 +435,7 @@ profileRoutes.post('/xp/request', async (c) => {
     const username = usernameRow?.username ?? 'Someone'
     const { amount, targetUserId } = await c.req.json() as { amount: number, targetUserId?: string }
 
-    if (!Number.isFinite(amount) || amount <= 0) {
+    if (!Number.isSafeInteger(amount) || amount <= 0) {
       return c.json({ error: 'Invalid amount' }, 400)
     }
 
@@ -626,7 +512,7 @@ profileRoutes.post('/xp/broadcast-request', async (c) => {
   const userId = c.get('user').sub
   const { amount } = await c.req.json() as { amount: number }
 
-  if (!Number.isFinite(amount) || amount <= 0) {
+  if (!Number.isSafeInteger(amount) || amount <= 0) {
     return c.json({ error: 'Invalid amount' }, 400)
   }
 
@@ -745,28 +631,11 @@ profileRoutes.post('/xp/request/:id/respond', async (c) => {
   }
 
   const amount = Number(request.amount)
-  const { results: donor } = await c.env.DB.prepare('SELECT xp FROM users WHERE id = ?').bind(responderId).all()
-  if (!donor.length || Number(donor[0].xp) < amount) {
-    return c.json({ error: 'Insufficient XP to fulfill request' }, 400)
+  try {
+    await transferXP(c.env.DB,responderId,request.requester_id,amount,`request:${requestId}:accept`,requestId)
+  } catch(error) {
+    return c.json({error:error instanceof Error?error.message:'Unable to fulfill request'},400)
   }
-
-  const donorUpdate = await c.env.DB.prepare('UPDATE users SET xp = xp - ? WHERE id = ? AND xp >= ?')
-    .bind(amount, responderId, amount)
-    .run()
-  if ((donorUpdate.meta.changes || 0) === 0) {
-    return c.json({ error: 'Insufficient XP to fulfill request' }, 400)
-  }
-
-  await c.env.DB.batch([
-    c.env.DB.prepare('UPDATE users SET xp = xp + ? WHERE id = ?').bind(amount, request.requester_id),
-    c.env.DB.prepare('INSERT INTO xp_transfers (donor_id, recipient_id, amount) VALUES (?, ?, ?)')
-      .bind(responderId, request.requester_id, amount),
-    c.env.DB.prepare(`
-      UPDATE xp_requests_v2
-      SET status = 'fulfilled', fulfilled_by = ?, fulfilled_at = datetime('now'), responded_at = datetime('now'), updated_at = datetime('now')
-      WHERE id = ? AND status = 'open'
-    `).bind(responderId, requestId)
-  ])
 
   c.executionCtx.waitUntil(
     PushService.notifyUser(request.requester_id, {
@@ -865,6 +734,8 @@ profileRoutes.get('/xp/friends', async (c) => {
 })
 
 // Get public profile by user ID
+profileRoutes.get('/bounty',async c=>c.json(await currentBounty(c.env.DB)))
+
 profileRoutes.get('/:id', async (c) => {
   const targetId = c.req.param('id')
   return getFullProfile(c, targetId)

@@ -16,11 +16,12 @@ leaderboard.get('/', async (c) => {
   try {
     const rows = await c.env.DB.prepare(`
       SELECT 
-        *,
+        id,username,avatar_url,xp,is_online,wins,losses,draws,games_played,longest_streak,elo_rating,win_rate,
         CASE
           WHEN games_played < 1 THEN 0
           ELSE RANK() OVER (
             ORDER BY 
+              CASE WHEN games_played >= 1 THEN 0 ELSE 1 END,
               CASE 
                 WHEN ? = 'wins' THEN wins
                 WHEN ? = 'streak' THEN longest_streak
@@ -31,6 +32,7 @@ leaderboard.get('/', async (c) => {
           ) 
         END as rank
       FROM unified_player_scoring
+      WHERE id NOT GLOB 'guest_*'
       ORDER BY 
         CASE WHEN games_played >= 1 THEN 0 ELSE 1 END,
         CASE 
@@ -43,7 +45,9 @@ leaderboard.get('/', async (c) => {
       LIMIT ?
     `).bind(type, type, type, type, type, type, limit).all()
 
-    return c.json({ leaderboard: rows.results })
+    const hunters=await c.env.DB.prepare("SELECT DISTINCT user_id FROM bounty_awards WHERE datetime(expires_at)>datetime('now')").all<{user_id:string}>()
+    const hunterIds=new Set(hunters.results.map(row=>row.user_id))
+    return c.json({ leaderboard: rows.results.map(row=>({...row,is_bounty_hunter:hunterIds.has(row.id as string)})) })
   } catch (err) {
     console.error('Leaderboard primary query failed, falling back:', err)
     try {
@@ -58,6 +62,7 @@ leaderboard.get('/', async (c) => {
                0 as win_rate,
                RANK() OVER (ORDER BY u.xp DESC) as rank
         FROM users u
+        WHERE u.id NOT GLOB 'guest_*'
         ORDER BY u.xp DESC
         LIMIT ?
       `).bind(limit).all()
@@ -128,7 +133,7 @@ leaderboard.get('/rank/:userId', async (c) => {
       SELECT COUNT(*) as better_count
       FROM users u
       JOIN user_stats s ON u.id = s.user_id
-      WHERE s.games_played >= 1 AND (${sqlCondition})
+      WHERE u.id NOT GLOB 'guest_*' AND s.games_played >= 1 AND (${sqlCondition})
     `).bind(
       ...(type === 'xp' ? [sortValue] : [sortValue, sortValue, me.xp])
     ).first<{ better_count: number }>()

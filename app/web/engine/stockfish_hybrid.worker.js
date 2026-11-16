@@ -1,188 +1,175 @@
-/**
- * Stockfish Web Worker — Runs Stockfish 18 WASM via UCI protocol
- * Communication via postMessage:
- *   IN:  { type: 'init' }
- *   IN:  { type: 'search', fen: string, depth: number }
- *   IN:  { type: 'stop' }
- *   IN:  { type: 'quit' }
- *   OUT: { type: 'ready' }
- *   OUT: { type: 'bestmove', move: string }
- *   OUT: { type: 'error', message: string }
- */
-
+/** Stockfish UCI worker. Searches are serialized across stop/readiness barriers. */
 let stockfishEngine = null;
+let loading = null;
+let generation = 0;
 let isReady = false;
+let awaitingReady = false;
+let activeSearch = null;
 let pendingSearch = null;
-let currentSearchId = null;
-let isSearching = false;
 let candidates = [];
+let outputListener = null;
 
-/**
- * Parses info line for MultiPV candidates
- * Format: info depth 10 seldepth 14 multipv 1 score cp 45 nodes 10795 nps 215900 hashfull 207 tbhits 0 time 50 pv e2e4 e7e5
- */
+function sendUCI(command) {
+  if (stockfishEngine?.postMessage) stockfishEngine.postMessage(command);
+}
+
+function disposeEngine(engine, listener) {
+  if (!engine) return;
+  try {
+    if (listener && engine.removeMessageListener) engine.removeMessageListener(listener);
+    if (engine.terminate) engine.terminate();
+    else if (engine.postMessage) engine.postMessage('quit');
+  } catch (_) { /* A failed WASM instance may already have torn down its threads. */ }
+}
+
+function reset() {
+  generation++;
+  const engine = stockfishEngine, listener = outputListener;
+  stockfishEngine = null;
+  loading = null;
+  isReady = false;
+  awaitingReady = false;
+  activeSearch = null;
+  pendingSearch = null;
+  candidates = [];
+  outputListener = null;
+  disposeEngine(engine, listener);
+}
+
+function reportError(error) {
+  const id = activeSearch?.id ?? pendingSearch?.id;
+  reset();
+  self.postMessage({ type: 'error', message: error.message || String(error), id });
+}
+
 function parseInfoLine(line) {
-  if (!line.includes('multipv')) return;
-  
-  try {
-    const parts = line.split(' ');
-    let mp = -1, score = 0, move = '';
-    
-    for (let i = 0; i < parts.length; i++) {
-       if (parts[i] === 'multipv') mp = parseInt(parts[i+1]);
-       if (parts[i] === 'score') {
-         if (parts[i+1] === 'cp') score = parseInt(parts[i+2]);
-         else if (parts[i+1] === 'mate') score = 10000;
-       }
-       if (parts[i] === 'pv') move = parts[i+1];
-    }
-    
-    if (mp !== -1 && move) {
-      // Store or update candidate
-      const index = candidates.findIndex(c => c.multipv === mp);
-      if (index !== -1) {
-        candidates[index] = { multipv: mp, uci: move, score: score };
-      } else {
-        candidates.push({ multipv: mp, uci: move, score: score });
-      }
-    }
-  } catch (e) {}
+  if (!activeSearch || activeSearch.cancelled) return;
+  const parts = line.split(/\s+/);
+  const multipv = Number(parts[parts.indexOf('multipv') + 1]);
+  const move = parts[parts.indexOf('pv') + 1];
+  const scoreIndex = parts.indexOf('score');
+  const score = parts[scoreIndex + 1] === 'mate' ? 10000 : Number(parts[scoreIndex + 2]);
+  if (!Number.isInteger(multipv) || multipv < 1 || multipv > activeSearch.multipv ||
+      !Number.isFinite(score) || !/^[a-h][1-8][a-h][1-8][qrbn]?$/.test(move)) return;
+  candidates[multipv - 1] = { uci: move, score };
 }
 
-async function loadStockfish() {
-  if (stockfishEngine) return;
-
-  try {
-    self.mainScriptUrlOrBlob = 'stockfish.wasm.js';
-    importScripts('stockfish.wasm.js');
-
-    if (typeof Stockfish === 'function') {
-      const result = Stockfish();
-      stockfishEngine = result instanceof Promise ? await result : result;
-    } else {
-      throw new Error('Stockfish constructor not found after importScripts');
-    }
-
-    const listener = (line) => {
-      const lineStr = typeof line === 'string' ? line : line.data;
-      handleUCIOutput(lineStr);
-    };
-
-    if (stockfishEngine.addMessageListener) {
-      stockfishEngine.addMessageListener(listener);
-    } else {
-      stockfishEngine.onmessage = listener;
-    }
-
-    sendUCI('uci');
-    sendUCI('setoption name Threads value 1');
-    sendUCI('setoption name Hash value 256');
-    sendUCI('ucinewgame');
-    sendUCI('isready');
-
-  } catch (err) {
-    self.postMessage({ type: 'error', message: `Failed to load Stockfish: ${err.message}` });
-  }
+function executeSearch(search) {
+  activeSearch = search;
+  candidates = [];
+  const { fen, depth, timeoutMs, multipv, skillLevel } = search;
+  sendUCI(`setoption name Skill Level value ${skillLevel}`);
+  sendUCI(`setoption name MultiPV value ${multipv}`);
+  sendUCI(`position fen ${fen}`);
+  // Keep the existing difficulty's depth and time limits unchanged.
+  if (!depth || depth <= 0) sendUCI(`go movetime ${timeoutMs || 5000}`);
+  else if (timeoutMs) sendUCI(`go depth ${depth} movetime ${timeoutMs}`);
+  else sendUCI(`go depth ${depth}`);
 }
 
-function sendUCI(cmd) {
-  if (stockfishEngine && stockfishEngine.postMessage) {
-    stockfishEngine.postMessage(cmd);
-  }
+function preparePendingSearch() {
+  if (!stockfishEngine || !isReady || activeSearch || !pendingSearch || awaitingReady) return;
+  // Flush output from the previous search before assigning a new request ID.
+  awaitingReady = true;
+  sendUCI('isready');
 }
 
 function handleUCIOutput(line) {
   if (typeof line !== 'string') return;
-
-  if (line.startsWith('info depth') && line.includes('multipv')) {
-    parseInfoLine(line);
-  }
-
+  if (line.startsWith('info depth') && line.includes('multipv')) parseInfoLine(line);
   if (line === 'readyok') {
+    const initialReady = !isReady;
     isReady = true;
-    self.postMessage({ type: 'ready' });
-
-    if (pendingSearch) {
-      const { fen, depth, timeoutMs, multipv, searchId } = pendingSearch;
+    awaitingReady = false;
+    if (initialReady) self.postMessage({ type: 'ready' });
+    if (!activeSearch && pendingSearch) {
+      const search = pendingSearch;
       pendingSearch = null;
-      executeSearch(fen, depth, timeoutMs, multipv, searchId);
+      executeSearch(search);
     }
-  }
-
-  if (line.startsWith('bestmove')) {
-    isSearching = false;
-    const parts = line.split(' ');
-    const move = parts[1] || null;
-    
-    // Finalize candidates: sort by mp and remove duplicates if any
-    candidates.sort((a, b) => a.multipv - b.multipv);
-    const resultCandidates = candidates.map(c => ({ uci: c.uci, score: c.score }));
-    
-    self.postMessage({ type: 'bestmove', move, candidates: resultCandidates, id: currentSearchId });
-  }
-}
-
-function executeSearch(fen, depth, timeoutMs, multipv = 1, searchId = null, skillLevel = 20) {
-  isSearching = true;
-  currentSearchId = searchId;
-  candidates = []; // Reset for new search
-  
-  // Set skill level for difficulty scaling (0-20, 20 = strongest)
-  sendUCI(`setoption name Skill Level value ${skillLevel}`);
-  sendUCI(`setoption name MultiPV value ${multipv}`);
-  sendUCI(`position fen ${fen}`);
-  
-  // When depth is 0 or not set, use movetime only for uncapped search depth
-  if (!depth || depth <= 0) {
-    sendUCI(`go movetime ${timeoutMs || 5000}`);
-  } else if (timeoutMs) {
-    sendUCI(`go depth ${depth} movetime ${timeoutMs}`);
-  } else {
-    sendUCI(`go depth ${depth}`);
+  } else if (line.startsWith('bestmove')) {
+    const search = activeSearch;
+    if (!search) return; // Unsolicited/late output cannot complete another search.
+    activeSearch = null;
+    if (!search.cancelled) {
+      const raw = line.split(/\s+/)[1];
+      const move = raw === '(none)' || raw === '0000' ? null : raw || null;
+      self.postMessage({ type: 'bestmove', move, candidates: candidates.filter(Boolean), id: search.id });
+    }
+    candidates = [];
+    preparePendingSearch();
   }
 }
 
-self.addEventListener('message', async (e) => {
-  const msg = e.data;
+function loadStockfish() {
+  if (loading) return loading;
+  if (stockfishEngine) return Promise.resolve();
+  const loadGeneration = generation;
+  loading = Promise.resolve().then(async () => {
+    try {
+      self.mainScriptUrlOrBlob = 'stockfish.wasm.js';
+      importScripts('stockfish.wasm.js');
+      if (typeof Stockfish !== 'function') throw new Error('Stockfish constructor not found');
+      const engine = await Stockfish();
+      if (generation !== loadGeneration) {
+        disposeEngine(engine);
+        return;
+      }
+      stockfishEngine = engine;
+      outputListener = line => {
+        if (generation === loadGeneration && stockfishEngine === engine) {
+          handleUCIOutput(typeof line === 'string' ? line : line.data);
+        }
+      };
+      if (engine.addMessageListener) engine.addMessageListener(outputListener);
+      else engine.onmessage = outputListener;
+      sendUCI('uci');
+      sendUCI('setoption name Threads value 1');
+      sendUCI('setoption name Hash value 32');
+      sendUCI('ucinewgame');
+      awaitingReady = true;
+      sendUCI('isready');
+    } catch (error) {
+      if (generation === loadGeneration) reportError(error);
+    }
+  });
+  return loading;
+}
 
-  switch (msg.type) {
-    case 'init':
-      await loadStockfish();
-      break;
-
-    case 'search': {
-      const { fen, depth = 12, timeoutMs = 14000, multipv = 1, id, skillLevel = 20 } = msg;
-
-      if (!stockfishEngine) {
+self.addEventListener('message', async ({ data: message }) => {
+  if (!message || typeof message !== 'object') return;
+  try {
+    switch (message.type) {
+      case 'init':
         await loadStockfish();
-      }
-
-      if (isSearching) {
-        sendUCI('stop');
-      }
-
-      if (isReady) {
-        executeSearch(fen, depth, timeoutMs, multipv, id, skillLevel);
-      } else {
-        pendingSearch = { fen, depth, timeoutMs, multipv, searchId: id, skillLevel };
-        sendUCI('isready');
-      }
-      break;
+        break;
+      case 'search':
+        pendingSearch = {
+          fen: message.fen, depth: message.depth ?? 12,
+          timeoutMs: message.timeoutMs ?? 14000, multipv: message.multipv ?? 1,
+          id: message.id, skillLevel: message.skillLevel ?? 20,
+        };
+        if (activeSearch && !activeSearch.cancelled) {
+          activeSearch.cancelled = true;
+          sendUCI('stop');
+        }
+        await loadStockfish();
+        preparePendingSearch();
+        break;
+      case 'stop':
+        pendingSearch = null;
+        if (activeSearch && !activeSearch.cancelled) {
+          activeSearch.cancelled = true;
+          sendUCI('stop');
+        }
+        break;
+      case 'quit':
+        reset();
+        break;
+      default:
+        self.postMessage({ type: 'error', message: `Unknown message type: ${message.type}`, id: message.id });
     }
-
-    case 'stop':
-      sendUCI('stop');
-      isSearching = false;
-      break;
-
-    case 'quit':
-      sendUCI('quit');
-      stockfishEngine = null;
-      isReady = false;
-      isSearching = false;
-      break;
-
-    default:
-      self.postMessage({ type: 'error', message: `Unknown message type: ${msg.type}` });
+  } catch (error) {
+    reportError(error);
   }
 });

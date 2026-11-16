@@ -1,3 +1,4 @@
+import { acceptChallenge } from '../services/challenge_claim'
 import { Hono } from 'hono'
 import { authMiddleware } from '../middleware/auth'
 import type { Env } from '../index'
@@ -63,6 +64,9 @@ challengeRoutes.post('/', async (c) => {
   const message = body.message ?? ''
   const requestId = body.requestId ?? uuidv4()
 
+  if(mode==='tournament')return c.json({error:'Create a tournament invite to reserve a series'},422)
+  if(variant_id!=='standard')return c.json({error:'This variant is not available for online play'},422)
+  if(challenged_id===userId)return c.json({error:'Choose another player'},400)
   if (!challenged_id) {
     return c.json({ error: 'challenged_id is required' }, 400)
   }
@@ -97,13 +101,13 @@ challengeRoutes.post('/', async (c) => {
           requestId,
           challengerId: userId,
           challengerName: username,
-            category: mode === 'tournament' ? 'tournaments' : 'challenges',
+            category: 'challenges',
           mode,
           timeControl: normalizeTimeControl(time_control),
           variantId: variant_id,
           queued: delivery_status === 'queued',
         }
-      }, c.env, mode === 'tournament' ? 'tournaments' : 'challenges')
+      }, c.env, 'challenges')
     )
 
     return c.json({ success: true, id: requestId }, 201)
@@ -141,17 +145,7 @@ challengeRoutes.post('/:id/accept', async (c) => {
   }
 
   try {
-    // We create the game and update the challenge in a batch
-    await c.env.DB.batch([
-      c.env.DB.prepare(
-        `INSERT INTO games (id, white_user_id, black_user_id, mode, time_control) 
-         VALUES (?, ?, ?, 'multiplayer', ?)`
-      ).bind(gameId, whiteId, blackId, challenge.time_control),
-      
-      c.env.DB.prepare(
-        `UPDATE challenges SET status = 'accepted', game_id = ?, updated_at = datetime('now') WHERE id = ?`
-      ).bind(gameId, challengeId)
-    ])
+    if(!await acceptChallenge(c.env.DB,challengeId,userId,gameId,whiteId,blackId))return c.json({error:'Challenge already processed or expired'},409)
 
     return c.json({ success: true, gameId })
   } catch (err: any) {

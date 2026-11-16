@@ -142,7 +142,10 @@ export function normalizeTimeControl(timeControl: string): string {
 }
 
 export function isValidTimeControl(timeControl: string): boolean {
-  return STANDARD_TIME_CONTROLS.includes(normalizeTimeControl(timeControl) as typeof STANDARD_TIME_CONTROLS[number])
+  if(typeof timeControl!=='string')return false
+  const raw=timeControl.trim().toLowerCase()
+  const parts=/^\d+\+\d+$/.test(raw)?raw.split('+'): /^(?:bullet|blitz|rapid|classical)_\d+_\d+$/.test(raw)?raw.split('_').slice(-2):null
+  return parts!==null&&STANDARD_TIME_CONTROLS.includes(`${Number(parts[0])}+${Number(parts[1])}` as typeof STANDARD_TIME_CONTROLS[number])
 }
 
 export function classifyTimeControl(timeControl: string): TimeControlCategory {

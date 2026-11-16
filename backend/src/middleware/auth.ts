@@ -1,7 +1,7 @@
 import { Context, Next } from 'hono'
 import { verify } from 'hono/jwt'
 import type { Env } from '../index'
-import { JWT_ALG, type AppVariables, type AuthUser } from '../auth_utils'
+import { JWT_ALG, isGuestIdentity, type AppVariables, type AuthUser } from '../auth_utils'
 
 export async function authMiddleware(
   c: Context<{ Bindings: Env; Variables: AppVariables }>,
@@ -28,6 +28,7 @@ export async function authMiddleware(
       return c.json({ error: 'Unauthorized - invalid token payload' }, 401)
     }
 
+    if(isGuestIdentity(payload.sub,payload))return c.json({error:'Sign in to use online features'},403)
     c.set('user', payload)
     await next()
   } catch {

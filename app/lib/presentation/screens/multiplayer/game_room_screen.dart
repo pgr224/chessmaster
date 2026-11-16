@@ -1,3 +1,6 @@
+import 'package:dio/dio.dart';
+import '../../../core/di/injection_container.dart' as di;
+import '../../blocs/auth/auth_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -13,6 +16,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../domain/engine/chess_engine.dart';
 import '../../../data/models/game_config.dart';
 import '../../utils/engagement_notifier.dart';
+import '../../utils/game_feedback_changes.dart';
 
 class GameRoomScreen extends StatefulWidget {
   final String gameId;
@@ -28,65 +32,42 @@ class _GameRoomScreenState extends State<GameRoomScreen> {
   bool _didLowTimeNotice = false;
   int _lastOpponentUndoCount = 0;
   int _lastChatCount = 0;
+  MultiplayerState _previousMpState = const MultiplayerState();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final mp = context.read<MultiplayerBloc>();
+      if (mp.state.gameId != widget.gameId) {
+        try {
+          final response = await di.sl<Dio>().get('/api/game/${widget.gameId}');
+          final game = Map<String, dynamic>.from(response.data['game'] as Map);
+          if (!mounted) return;
+          final auth = context.read<AuthBloc>().state;
+          if (auth is! AuthAuthenticatedState) return;
+          final white = game['white_user_id'] == auth.user.id;
+          mp.add(MpGameFoundEvent(
+              widget.gameId,
+              white ? PieceColor.white : PieceColor.black,
+              (game[white ? 'black_username' : 'white_username'] ?? 'Opponent')
+                  .toString(),
+              mode: game['mode']?.toString(),
+              timeControl: game['time_control']?.toString()));
+        } catch (_) {
+          if (mounted) context.go('/lobby');
+        }
+      }
+      if (mounted) _onMultiplayerState(context.read<MultiplayerBloc>().state);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<MultiplayerBloc, MultiplayerState>(
-      listenWhen: (prev, current) =>
-          prev.status != current.status ||
-          prev.gameReason != current.gameReason ||
-          prev.drawOfferPending != current.drawOfferPending ||
-          prev.saveOfferPending != current.saveOfferPending ||
-          prev.opponentUndoCount != current.opponentUndoCount ||
-          prev.whiteTime != current.whiteTime ||
-          prev.blackTime != current.blackTime ||
-          prev.chatMessages.length != current.chatMessages.length,
-      listener: (context, mpState) {
-        _handleMilestones(mpState);
-
-        if (mpState.gameReason == 'disconnect_timeout') {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Opponent left: disconnect timeout')),
-          );
-        }
-        if (mpState.status == MultiplayerStatus.gameOver &&
-            mpState.gameReason != null) {
-          // Only show SnackBar for NETWORK-level endings.
-          // Standard game-over reasons (checkmate, resignation, agreement,
-          // timeout) are already displayed by the GameScreen overlay.
-          const networkReasons = {
-            'opponent_no_show',
-            'disconnect_timeout',
-            'network_disconnect',
-            'network_disconnect_or_app_crash',
-          };
-          if (mpState.gameReason == 'opponent_no_show') {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Your opponent did not join the game in time.')),
-            );
-            Future.delayed(const Duration(seconds: 2), () {
-              if (context.mounted) context.go('/lobby');
-            });
-          } else if (networkReasons.contains(mpState.gameReason)) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                  content:
-                      Text('Match ended: ${_friendlyCause(mpState.gameReason)}')),
-            );
-          }
-          // For standard reasons (checkmate, resignation, etc.) — no SnackBar.
-          // The GameScreen's game-over overlay handles it.
-        }
-        if (mpState.status == MultiplayerStatus.disconnected) {
-          context.go('/home');
-        }
-        if (mpState.drawOfferPending) {
-          _showDrawOfferDialog(context);
-        }
-        if (mpState.saveOfferPending) {
-          _showSaveRequestDialog(context);
-        }
-      },
+      listenWhen: shouldListenForRoomNotices,
+      buildWhen: shouldRebuildGameRoom,
+      listener: (context, mpState) => _onMultiplayerState(mpState),
       builder: (context, mpState) {
         if (mpState.status != MultiplayerStatus.inGame &&
             mpState.status != MultiplayerStatus.gameOver) {
@@ -100,7 +81,8 @@ class _GameRoomScreenState extends State<GameRoomScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const CircularProgressIndicator(color: AppTheme.goldPrimary),
+                      const CircularProgressIndicator(
+                          color: AppTheme.goldPrimary),
                       const SizedBox(height: 24),
                       Text(
                         'Waiting for ${mpState.opponentName ?? 'opponent'} to join...',
@@ -123,7 +105,9 @@ class _GameRoomScreenState extends State<GameRoomScreen> {
                       const SizedBox(height: 32),
                       ElevatedButton.icon(
                         onPressed: () {
-                          context.read<MultiplayerBloc>().add(const MpLeaveGameEvent());
+                          context
+                              .read<MultiplayerBloc>()
+                              .add(const MpLeaveGameEvent());
                           context.go('/home');
                         },
                         icon: const Icon(Icons.exit_to_app),
@@ -133,7 +117,8 @@ class _GameRoomScreenState extends State<GameRoomScreen> {
                         ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.accentRed,
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 12),
                         ),
                       ),
                     ],
@@ -162,7 +147,11 @@ class _GameRoomScreenState extends State<GameRoomScreen> {
         }
 
         final config = GameConfig(
-          mode: GameMode.multiplayer,
+          mode: mpState.mode == 'tournament'
+              ? GameMode.tournament
+              : GameMode.multiplayer,
+          activeGameId: mpState.gameId,
+          tournamentId: mpState.serverPosition?['tournamentId']?.toString(),
           playerColor: mpState.playerColor?.name ?? 'white',
           boardTheme: themeState.boardTheme,
           pieceShape: themeState.pieceShape,
@@ -175,48 +164,13 @@ class _GameRoomScreenState extends State<GameRoomScreen> {
         return MultiBlocListener(
           listeners: [
             BlocListener<MultiplayerBloc, MultiplayerState>(
-              listenWhen: (prev, current) =>
-                  (prev.lastMoveFrom != current.lastMoveFrom ||
-                      prev.lastMoveTo != current.lastMoveTo) &&
-                  current.lastMoveFrom != null,
+              listenWhen: (previous, current) =>
+                  previous.serverPosition != current.serverPosition,
               listener: (context, state) {
-                context.read<GameBloc>().add(GameMakeMoveEvent(
-                      Square.fromString(state.lastMoveFrom!),
-                      Square.fromString(state.lastMoveTo!),
-                      promotion: pieceTypeFromPromotionCode(state.lastMovePromotion),
-                    ));
-              },
-            ),
-            BlocListener<GameBloc, GameState>(
-              listenWhen: (prev, current) =>
-                  prev.moveHistory.length < current.moveHistory.length &&
-                  current.currentTurn != current.playerColor,
-              listener: (context, state) {
-                if (state.moveHistory.isNotEmpty &&
-                    state.mode == GameMode.multiplayer) {
-                  final lastMove = state.moveHistory.last;
-                  context.read<MultiplayerBloc>().add(MpMakeMoveEvent(
-                      lastMove.from.toString(), lastMove.to.toString(),
-                      promotion: lastMove.promotion?.name));
-                }
-              },
-            ),
-            BlocListener<MultiplayerBloc, MultiplayerState>(
-              listenWhen: (prev, current) =>
-                  current.opponentUndoCount > prev.opponentUndoCount,
-              listener: (context, state) {
-                context
-                    .read<GameBloc>()
-                    .add(const GameUndoEvent(fromOpponent: true));
-              },
-            ),
-            BlocListener<GameBloc, GameState>(
-              listenWhen: (prev, current) =>
-                  prev.moveHistory.length > current.moveHistory.length &&
-                  current.mode == GameMode.multiplayer &&
-                  current.isPlayerTurn,
-              listener: (context, state) {
-                context.read<MultiplayerBloc>().add(MpUndoEvent());
+                if (state.serverPosition != null)
+                  context
+                      .read<GameBloc>()
+                      .add(GameServerSyncEvent(state.serverPosition!));
               },
             ),
             BlocListener<MultiplayerBloc, MultiplayerState>(
@@ -245,7 +199,50 @@ class _GameRoomScreenState extends State<GameRoomScreen> {
             backgroundColor: Colors.transparent,
             body: Stack(
               children: [
-                GameScreen(config: config),
+                BlocBuilder<MultiplayerBloc, MultiplayerState>(
+                  buildWhen: (previous, current) =>
+                      previous.gameConnected != current.gameConnected,
+                  builder: (context, connection) => AbsorbPointer(
+                    absorbing: !connection.gameConnected,
+                    child: GameScreen(
+                        key: ValueKey(mpState.gameId), config: config),
+                  ),
+                ),
+                BlocBuilder<MultiplayerBloc, MultiplayerState>(
+                  buildWhen: (previous, current) =>
+                      previous.gameConnected != current.gameConnected ||
+                      previous.gameReconnecting != current.gameReconnecting,
+                  builder: (context, connection) => connection.gameConnected
+                      ? const SizedBox.shrink()
+                      : SafeArea(
+                          child: Align(
+                          alignment: Alignment.topCenter,
+                          child: Card(
+                              child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child:
+                                Row(mainAxisSize: MainAxisSize.min, children: [
+                              Flexible(
+                                  child: Text(connection.gameReconnecting
+                                      ? 'Reconnecting to your game...'
+                                      : 'Game connection is offline.')),
+                              TextButton(
+                                  onPressed: () => context
+                                      .read<MultiplayerBloc>()
+                                      .add(MpReconnectEvent()),
+                                  child: const Text('Retry')),
+                              TextButton(
+                                  onPressed: () {
+                                    context
+                                        .read<MultiplayerBloc>()
+                                        .add(const MpLeaveGameEvent());
+                                    context.go('/lobby');
+                                  },
+                                  child: const Text('Leave')),
+                            ]),
+                          )),
+                        )),
+                ),
                 _buildEngagementOverlay(),
               ],
             ),
@@ -255,7 +252,70 @@ class _GameRoomScreenState extends State<GameRoomScreen> {
     );
   }
 
-  void _handleMilestones(MultiplayerState mpState) {
+  void _onMultiplayerState(MultiplayerState mpState) {
+    if (mpState.status == MultiplayerStatus.inGame &&
+        mpState.gameId != null &&
+        mpState.gameId != widget.gameId) {
+      context.go('/room/${mpState.gameId}');
+      return;
+    }
+    final previous = _previousMpState;
+    _previousMpState = mpState;
+    final changes = multiplayerPromptChanges(previous, mpState);
+    _handleMilestones(previous, mpState);
+
+    if (changes.gameEnded) {
+      // Only show SnackBar for NETWORK-level endings.
+      // Standard game-over reasons (checkmate, resignation, agreement,
+      // timeout) are already displayed by the GameScreen overlay.
+      const networkReasons = {
+        'opponent_no_show',
+        'disconnect_timeout',
+        'network_disconnect',
+        'network_disconnect_or_app_crash',
+      };
+      if (mpState.gameReason == 'opponent_no_show') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Your opponent did not join the game in time.')),
+        );
+        Future.delayed(const Duration(seconds: 2), () {
+          if (context.mounted) {
+            final latest = context.read<MultiplayerBloc>().state;
+            if (latest.gameId == mpState.gameId &&
+                latest.status == MultiplayerStatus.gameOver &&
+                latest.gameReason == 'opponent_no_show') context.go('/lobby');
+          }
+        });
+      } else if (networkReasons.contains(mpState.gameReason)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content:
+                  Text('Match ended: ${_friendlyCause(mpState.gameReason)}')),
+        );
+      }
+      // For standard reasons (checkmate, resignation, etc.) — no SnackBar.
+      // The GameScreen's game-over overlay handles it.
+    }
+    if (changes.disconnected) {
+      context.go('/home');
+    }
+    if (changes.drawOffered) {
+      _showDrawOfferDialog(context);
+    }
+    if (changes.saveRequested) {
+      _showSaveRequestDialog(context);
+    }
+  }
+
+  void _handleMilestones(MultiplayerState previous, MultiplayerState mpState) {
+    final changes = multiplayerPromptChanges(previous, mpState);
+    if (previous.gameId != mpState.gameId) {
+      _didStartNotice = false;
+      _didLowTimeNotice = false;
+      _lastOpponentUndoCount = 0;
+      _lastChatCount = 0;
+    }
     if (!_didStartNotice && mpState.status == MultiplayerStatus.inGame) {
       _didStartNotice = true;
       _pushEngagementNotice(
@@ -287,8 +347,7 @@ class _GameRoomScreenState extends State<GameRoomScreen> {
     }
     _lastChatCount = mpState.chatMessages.length;
 
-    final lowTime = (mpState.whiteTime > 0 && mpState.whiteTime <= 30) ||
-        (mpState.blackTime > 0 && mpState.blackTime <= 30);
+    final lowTime = multiplayerHasLowTime(mpState);
     if (lowTime && !_didLowTimeNotice) {
       _didLowTimeNotice = true;
       _pushEngagementNotice(
@@ -298,7 +357,7 @@ class _GameRoomScreenState extends State<GameRoomScreen> {
       );
     }
 
-    if (mpState.drawOfferPending) {
+    if (changes.drawOffered) {
       _pushEngagementNotice(
         title: 'Draw Offer Received',
         body: 'Your opponent offered a draw.',
@@ -306,7 +365,7 @@ class _GameRoomScreenState extends State<GameRoomScreen> {
       );
     }
 
-    if (mpState.saveOfferPending) {
+    if (changes.saveRequested) {
       _pushEngagementNotice(
         title: 'Save Request',
         body: 'Opponent wants to save and continue later.',
@@ -314,11 +373,13 @@ class _GameRoomScreenState extends State<GameRoomScreen> {
       );
     }
 
-    if (mpState.status == MultiplayerStatus.gameOver && mpState.gameReason != null) {
+    if (changes.gameEnded) {
       _pushEngagementNotice(
         title: 'Game Over',
         body: _friendlyCause(mpState.gameReason),
         accent: AppTheme.goldPrimary,
+        silent:
+            true, // The result overlay or network notice handles this ending.
       );
     }
   }
@@ -327,18 +388,21 @@ class _GameRoomScreenState extends State<GameRoomScreen> {
     required String title,
     required String body,
     required Color accent,
+    bool silent = false,
   }) {
     if (!mounted) {
       return;
     }
 
     final settings = context.read<SettingsBloc>().state;
+    if (!settings.notificationsEnabled || !settings.notificationGames) return;
     _engagement.push(
       context: context,
       globalNotificationsEnabled: settings.notificationsEnabled,
       title: title,
       body: body,
       accent: accent,
+      snackAlwaysSilent: silent,
     );
 
     setState(() {});
@@ -418,7 +482,6 @@ class _GameRoomScreenState extends State<GameRoomScreen> {
       ),
     );
   }
-
 
   void _showDrawOfferDialog(BuildContext context) {
     showDialog(
@@ -519,4 +582,3 @@ class _GameRoomScreenState extends State<GameRoomScreen> {
     }
   }
 }
-

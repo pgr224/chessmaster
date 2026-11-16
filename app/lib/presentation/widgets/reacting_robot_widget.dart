@@ -157,14 +157,14 @@ class _ReactingRobotWidgetState extends State<ReactingRobotWidget>
 
   void _updateMood() {
     final s = widget.state;
-    final feedback = s.coachFeedback;
+    final feedback = s.showMoveFeedback ? s.coachFeedback : null;
     final oldMood = _mood;
 
     if (feedback != null) {
       _mood = _moodFromClassification(feedback.classification);
       // Generate a contextual reaction from personality + classification
       _currentReaction = _generateReaction(feedback, s);
-      if (s.isAIThinking && s.mode != GameMode.practice) {
+      if (s.showComputerThinking) {
         _startMessageCycle();
       } else {
         _stopMessageCycle();
@@ -172,7 +172,7 @@ class _ReactingRobotWidgetState extends State<ReactingRobotWidget>
     } else if (s.activeHint != null) {
       _mood = RobotMood.hinting;
       _stopMessageCycle();
-    } else if (s.isAIThinking && s.mode != GameMode.practice) {
+    } else if (s.showComputerThinking) {
       _mood = RobotMood.thinking;
       _startMessageCycle();
     } else if (s.isGameOver) {
@@ -246,7 +246,7 @@ class _ReactingRobotWidgetState extends State<ReactingRobotWidget>
     _messageCycleTimer?.cancel();
     _messageCycleTimer =
         Timer.periodic(const Duration(milliseconds: 2800), (_) {
-      if (mounted && widget.state.isAIThinking) {
+      if (mounted && widget.state.showComputerThinking) {
         setState(() {
           _messageIndex++;
         });
@@ -300,10 +300,10 @@ class _ReactingRobotWidgetState extends State<ReactingRobotWidget>
   @override
   Widget build(BuildContext context) {
     final s = widget.state;
-    final feedback = s.coachFeedback;
+    final feedback = s.showMoveFeedback ? s.coachFeedback : null;
     final hint = s.activeHint;
     // In practice mode, suppress thinking display — only show reactions & hints
-    final isThinking = s.isAIThinking && s.mode != GameMode.practice;
+    final isThinking = s.showComputerThinking;
 
     // Determine what message to show
     String bubbleText;

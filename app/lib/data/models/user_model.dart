@@ -24,7 +24,6 @@ class UserModel {
   final int aiImpossibleLevel;
   final String aiLastDifficulty;
 
-
   const UserModel({
     required this.id,
     required this.username,
@@ -48,7 +47,6 @@ class UserModel {
     this.aiImpossibleLevel = 100,
     this.aiLastDifficulty = 'intermediate',
   });
-
 
   int get level => UserStats.calculateLevel(xp);
   double get levelProgress => UserStats.progressToNextLevel(xp);
@@ -96,7 +94,6 @@ class UserModel {
       aiImpossibleLevel: parseInt(json['aiImpossibleLevel'], 100),
       aiLastDifficulty: (json['aiLastDifficulty'] ?? 'intermediate').toString(),
     );
-
   }
 
   Map<String, dynamic> toJson() => {
@@ -141,7 +138,6 @@ class UserModel {
         'aiLastDifficulty': aiLastDifficulty,
       };
 
-
   UserModel copyWith({
     String? id,
     String? username,
@@ -165,7 +161,6 @@ class UserModel {
     int? aiImpossibleLevel,
     String? aiLastDifficulty,
   }) {
-
     return UserModel(
       id: id ?? this.id,
       username: username ?? this.username,
@@ -189,7 +184,6 @@ class UserModel {
       aiImpossibleLevel: aiImpossibleLevel ?? this.aiImpossibleLevel,
       aiLastDifficulty: aiLastDifficulty ?? this.aiLastDifficulty,
     );
-
   }
 }
 
@@ -274,16 +268,18 @@ class UserStats {
       multiplayerWins: parseInt(json['multiplayer_wins']),
       twoPlayerGames: parseInt(json['two_player_games']),
       twoPlayerWins: parseInt(json['two_player_wins']),
-      tournamentWins: parseInt(json['tournament_wins'] ?? json['tournaments_won']),
+      tournamentWins:
+          parseInt(json['tournament_wins'] ?? json['tournaments_won']),
       piecesCaptured: parseInt(json['pieces_captured']),
       checkmatesDelivered: parseInt(json['checkmates_delivered']),
       bestWinElo: parseInt(json['best_win_elo']),
-      totalPlaytimeMins: parseInt(json['total_time_played'] ?? json['total_playtime_mins']),
+      totalPlaytimeMins:
+          parseInt(json['total_time_played'] ?? json['total_playtime_mins']),
       practiceDifficulty:
           (json['practice_difficulty'] as num?)?.toDouble() ?? 1.0,
       eloRating: parseInt(json['elo_rating'], 0),
       puzzlesSolved: parseInt(json['puzzles_solved']),
-      puzzleRating: parseInt(json['puzzle_rating'],0),
+      puzzleRating: parseInt(json['puzzle_rating'], 0),
       dailyDonatedXP: parseInt(json['daily_donated_xp']),
       totalDonatedXP: parseInt(json['total_donated_xp']),
       lastDonationDate: json['last_donation_date'] as String?,
@@ -319,20 +315,14 @@ class UserStats {
         'last_donation_date': lastDonationDate,
       };
 
-  // Level Logic
-  static int xpToLevel(int xp) => (xp <= 0)
-      ? 1
-      : (xp / 100).toInt() +
-          1; // Basic for now, user requested sqrt(totalXP / 100)
-  // Re-reading user request: level = sqrt(totalXP / 100)
+  // Level 1 starts at zero; subsequent levels follow floor(sqrt(XP / 100)).
+  static int xpToLevel(int xp) => calculateLevel(xp);
   static int calculateLevel(int totalXP) =>
-      (totalXP <= 0) ? 1 : (math.sqrt(totalXP / 100)).floor() + 1;
-
+      math.max(1, math.sqrt(math.max(0, totalXP) / 100).floor());
   static double progressToNextLevel(int totalXP) {
-    if (totalXP <= 0) return 0.0;
-    final currentLevel = calculateLevel(totalXP);
-    final currentLevelXP = math.pow(currentLevel - 1, 2) * 100;
-    final nextLevelXP = math.pow(currentLevel, 2) * 100;
-    return (totalXP - currentLevelXP) / (nextLevelXP - currentLevelXP);
+    final level = calculateLevel(totalXP),
+        start = level == 1 ? 0 : level * level * 100,
+        next = (level + 1) * (level + 1) * 100;
+    return ((math.max(0, totalXP) - start) / (next - start)).clamp(0.0, 1.0);
   }
 }

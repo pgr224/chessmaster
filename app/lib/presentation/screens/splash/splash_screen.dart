@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+
 import '../../../core/theme/app_theme.dart';
 import '../../blocs/auth/auth_bloc.dart';
 
@@ -13,19 +16,20 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
+class _SplashScreenState extends State<SplashScreen> {
+  Timer? _authTimeout;
   bool _hasNavigated = false;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: 2.seconds);
-    _controller.forward();
+    // Auth may already have completed before this listener is attached.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _onAuthStateChanged(context, context.read<AuthBloc>().state);
+    });
 
     // SAFETY NET: If auth takes longer than 10 seconds, force navigate
-    Future.delayed(const Duration(seconds: 10), () {
+    _authTimeout = Timer(const Duration(seconds: 10), () {
       if (!_hasNavigated && mounted) {
         _navigateTo('/onboarding');
       }
@@ -35,14 +39,15 @@ class _SplashScreenState extends State<SplashScreen>
   void _navigateTo(String route) {
     if (_hasNavigated || !mounted) return;
     _hasNavigated = true;
+    _authTimeout?.cancel();
     context.go(route);
   }
 
   void _onAuthStateChanged(BuildContext context, AuthState state) {
     if (state is AuthAuthenticatedState) {
-      Future.delayed(1200.ms, () => _navigateTo('/home'));
+      _navigateTo('/home');
     } else if (state is AuthUnauthenticatedState || state is AuthErrorState) {
-      Future.delayed(1200.ms, () => _navigateTo('/onboarding'));
+      _navigateTo('/onboarding');
     }
   }
 
@@ -51,118 +56,122 @@ class _SplashScreenState extends State<SplashScreen>
     return BlocListener<AuthBloc, AuthState>(
       listener: _onAuthStateChanged,
       child: Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFF1A1A2E), Color(0xFF16213E), Color(0xFF0F3460)],
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color(0xFF1A1A2E), Color(0xFF16213E), Color(0xFF0F3460)],
+            ),
           ),
-        ),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // ── Big bouncy chess king ──
-              Container(
-                width: 160,
-                height: 160,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      AppTheme.goldPrimary,
-                      AppTheme.accentPurple,
-                      AppTheme.skyBlue
-                    ],
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppTheme.goldPrimary.withValues(alpha: 0.5),
-                      blurRadius: 50,
-                      spreadRadius: 15,
-                    ),
-                    BoxShadow(
-                      color: AppTheme.accentPurple.withValues(alpha: 0.3),
-                      blurRadius: 30,
-                      spreadRadius: 5,
-                    ),
-                  ],
-                ),
-                child: const Center(
-                  child: Text('♔', style: TextStyle(fontSize: 80)),
-                ),
-              )
-                  .animate()
-                  .scale(
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // ── Big bouncy chess king ──
+                Container(
+                      width: 160,
+                      height: 160,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            AppTheme.goldPrimary,
+                            AppTheme.accentPurple,
+                            AppTheme.skyBlue,
+                          ],
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppTheme.goldPrimary.withValues(alpha: 0.5),
+                            blurRadius: 50,
+                            spreadRadius: 15,
+                          ),
+                          BoxShadow(
+                            color: AppTheme.accentPurple.withValues(alpha: 0.3),
+                            blurRadius: 30,
+                            spreadRadius: 5,
+                          ),
+                        ],
+                      ),
+                      child: const Center(
+                        child: Text('♔', style: TextStyle(fontSize: 80)),
+                      ),
+                    )
+                    .animate()
+                    .scale(
                       begin: const Offset(0, 0),
                       duration: 1000.ms,
-                      curve: Curves.elasticOut)
-                  .fadeIn(duration: 600.ms)
-                  .then()
-                  .shimmer(duration: 1500.ms, color: Colors.white24),
+                      curve: Curves.elasticOut,
+                    )
+                    .fadeIn(duration: 600.ms)
+                    .then()
+                    .shimmer(duration: 1500.ms, color: Colors.white24),
 
-              const SizedBox(height: 40),
+                const SizedBox(height: 40),
 
-              // ── Rainbow gradient title ──
-              ShaderMask(
-                shaderCallback: (bounds) =>
-                    AppTheme.rainbowGradient.createShader(bounds),
-                child: Text(
-                  'CHESS MASTER',
-                  style: GoogleFonts.fredoka(
-                    color: Colors.white,
-                    fontSize: 38,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 4,
+                // ── Rainbow gradient title ──
+                ShaderMask(
+                      shaderCallback: (bounds) =>
+                          AppTheme.rainbowGradient.createShader(bounds),
+                      child: Text(
+                        'CHESS MASTER',
+                        style: GoogleFonts.fredoka(
+                          color: Colors.white,
+                          fontSize: 38,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 4,
+                        ),
+                      ),
+                    )
+                    .animate()
+                    .fadeIn(delay: 500.ms, duration: 600.ms)
+                    .slideY(begin: 0.5)
+                    .then()
+                    .shimmer(
+                      delay: 500.ms,
+                      duration: 2000.ms,
+                      color: Colors.white30,
+                    ),
+
+                const SizedBox(height: 12),
+
+                Text(
+                  '🎮 Play • 📚 Learn • 🏆 Win',
+                  style: GoogleFonts.baloo2(
+                    color: AppTheme.textSecondary,
+                    fontSize: 18,
+                    letterSpacing: 2,
                   ),
-                ),
-              )
-                  .animate()
-                  .fadeIn(delay: 500.ms, duration: 600.ms)
-                  .slideY(begin: 0.5)
-                  .then()
-                  .shimmer(
-                      delay: 500.ms, duration: 2000.ms, color: Colors.white30),
+                ).animate().fadeIn(delay: 800.ms),
 
-              const SizedBox(height: 12),
+                const SizedBox(height: 80),
 
-              Text(
-                '🎮 Play • 📚 Learn • 🏆 Win',
-                style: GoogleFonts.baloo2(
-                  color: AppTheme.textSecondary,
-                  fontSize: 18,
-                  letterSpacing: 2,
-                ),
-              ).animate().fadeIn(delay: 800.ms),
-
-              const SizedBox(height: 80),
-
-              // ── Colorful loading bar ──
-              SizedBox(
-                width: 160,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: const LinearProgressIndicator(
-                    minHeight: 8,
-                    backgroundColor: AppTheme.surface,
-                    valueColor: AlwaysStoppedAnimation(AppTheme.goldPrimary),
+                // ── Colorful loading bar ──
+                SizedBox(
+                  width: 160,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: const LinearProgressIndicator(
+                      minHeight: 8,
+                      backgroundColor: AppTheme.surface,
+                      valueColor: AlwaysStoppedAnimation(AppTheme.goldPrimary),
+                    ),
                   ),
-                ),
-              ).animate().fadeIn(delay: 1000.ms),
-            ],
+                ).animate().fadeIn(delay: 1000.ms),
+              ],
+            ),
           ),
         ),
       ),
-    ),
-   );
+    );
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _authTimeout?.cancel();
     super.dispose();
   }
 }

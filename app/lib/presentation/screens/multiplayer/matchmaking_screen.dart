@@ -71,6 +71,18 @@ class _MatchmakingScreenState extends State<MatchmakingScreen>
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
+                        if (state.connectionError != null)
+                          Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Column(children: [
+                                Text(state.connectionError!,
+                                    textAlign: TextAlign.center),
+                                TextButton(
+                                    onPressed: () => context
+                                        .read<MultiplayerBloc>()
+                                        .add(MpReconnectEvent()),
+                                    child: const Text('Retry Connection')),
+                              ])),
                         _buildRadar(),
                         const SizedBox(height: 64),
                         Text(
@@ -153,4 +165,3 @@ class _MatchmakingScreenState extends State<MatchmakingScreen>
     );
   }
 }
-

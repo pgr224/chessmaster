@@ -1,4 +1,4 @@
-import 'dart:isolate';
+import 'engine_task.dart' if (dart.library.js_interop) 'engine_task_web.dart';
 import 'dart:math';
 import '../engine/chess_engine.dart';
 import '../../data/models/game_config.dart';
@@ -36,7 +36,7 @@ class AIEngine {
   }) async {
     // Run AI search on a background isolate so UI actions stay responsive.
     final fenSnapshot = engine.toFEN();
-    final bestMoveAlg = await Isolate.run<String?>(() {
+    final bestMoveAlg = await runEngineTask<String?>(() {
       final isolatedEngine = ChessEngine.fromFEN(fenSnapshot);
       final move = _getBestMoveSync(isolatedEngine, difficulty,
           timeout: timeout, personality: personality);
@@ -53,21 +53,25 @@ class AIEngine {
     ChessEngine engine,
     AIDifficulty difficulty, {
     int count = 3,
+    Duration timeout = const Duration(seconds: 3),
     AIPersonality personality = AIPersonality.coach,
   }) async {
     final fenSnapshot = engine.toFEN();
-    final results = await Isolate.run<List<(String, int)>>(() {
+    final results = await runEngineTask<List<(String, int)>>(() {
       final isolatedEngine = ChessEngine.fromFEN(fenSnapshot);
       final config = _configs[difficulty]!;
 
       final moves = isolatedEngine.allLegalMoves();
       final List<(String, int)> scored = [];
 
+      final started = DateTime.now();
       for (final move in moves) {
         isolatedEngine.applyMoveInternal(move);
-        final score = -_search(isolatedEngine, config.depth, -999999, 999999,
-                DateTime.now(), const Duration(seconds: 10), personality)
-            .score;
+        final score = DateTime.now().difference(started) >= timeout
+            ? -_evaluate(isolatedEngine)
+            : -_search(isolatedEngine, config.depth, -999999, 999999, started,
+                    timeout, personality)
+                .score;
         isolatedEngine.undoMove();
         scored.add((move.toAlgebraic(), score));
       }
@@ -86,7 +90,7 @@ class AIEngine {
   /// Synchronously evaluate position score (Isolate-safe)
   static Future<int> evaluatePosition(ChessEngine engine) async {
     final fenSnapshot = engine.toFEN();
-    return await Isolate.run<int>(() {
+    return await runEngineTask<int>(() {
       final isolatedEngine = ChessEngine.fromFEN(fenSnapshot);
       return _evaluate(isolatedEngine);
     });
@@ -160,10 +164,12 @@ class AIEngine {
   static _SearchResult _search(ChessEngine engine, int depth, int alpha,
       int beta, DateTime startTime, Duration timeout,
       [AIPersonality personality = AIPersonality.coach]) {
+    if (DateTime.now().difference(startTime) >= timeout)
+      return _SearchResult(score: _evaluate(engine));
     if (depth == 0) {
       return _SearchResult(
-          score:
-              _quiescence(engine, alpha, beta, startTime, timeout, personality));
+          score: _quiescence(
+              engine, alpha, beta, startTime, timeout, personality));
     }
 
     final fen = engine.toFEN();
@@ -213,6 +219,7 @@ class AIEngine {
       if (alpha >= beta) break;
     }
 
+    if (_tt.length >= 50000) _tt.clear();
     _tt[fen] = _TTEntry(score: bestScore, depth: depth, bestMove: bestMove);
     return _SearchResult(score: bestScore, move: bestMove);
   }
@@ -241,7 +248,8 @@ class AIEngine {
     return alpha;
   }
 
-  static int _evaluate(ChessEngine engine, [AIPersonality personality = AIPersonality.coach]) {
+  static int _evaluate(ChessEngine engine,
+      [AIPersonality personality = AIPersonality.coach]) {
     if (engine.status == GameStatus.checkmate) return -100000;
     if (engine.status == GameStatus.stalemate ||
         engine.status == GameStatus.draw) return 0;
@@ -255,11 +263,12 @@ class AIEngine {
         if (piece == null) continue;
 
         int value = _pieceValue(piece.type) + _positionalBonus(piece, f, r);
-        
+
         // --- Personality Bias ---
         if (personality == AIPersonality.aggressive) {
           // Favor forward development and attacking squares
-          if (piece.type == PieceType.knight || piece.type == PieceType.bishop) {
+          if (piece.type == PieceType.knight ||
+              piece.type == PieceType.bishop) {
             final homeRank = piece.color == PieceColor.white ? 7 : 0;
             if (r != homeRank) value += 10; // Bonus for developed pieces
           }

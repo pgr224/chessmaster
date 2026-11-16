@@ -15,6 +15,8 @@ class GameOverOverlay extends StatefulWidget {
   final String? gameReason;
   final PieceColor? playerColor;
   final VoidCallback onPlayAgain;
+  final String? playAgainLabel;
+  final bool playAgainEnabled;
   final VoidCallback onGoHome;
   final VoidCallback onShare;
   final Puzzle? puzzle;
@@ -35,6 +37,7 @@ class GameOverOverlay extends StatefulWidget {
   final int eloChange;
   final int currentElo;
   final int bestMoves;
+  final Widget? accountPrompt;
 
   const GameOverOverlay({
     super.key,
@@ -43,6 +46,8 @@ class GameOverOverlay extends StatefulWidget {
     this.gameReason,
     this.playerColor,
     required this.onPlayAgain,
+    this.playAgainLabel,
+    this.playAgainEnabled = true,
     required this.onGoHome,
     required this.onShare,
     this.puzzle,
@@ -63,6 +68,7 @@ class GameOverOverlay extends StatefulWidget {
     this.eloChange = 0,
     this.currentElo = 1200,
     this.bestMoves = 0,
+    this.accountPrompt,
   });
 
   @override
@@ -127,7 +133,8 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
             decoration: BoxDecoration(
               gradient: AppTheme.cardGradient,
               borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: statusColor.withValues(alpha: 0.6), width: 3),
+              border: Border.all(
+                  color: statusColor.withValues(alpha: 0.6), width: 3),
               boxShadow: [
                 BoxShadow(
                     color: statusColor.withValues(alpha: 0.3),
@@ -174,7 +181,10 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                                 ? 'VICTORY!'
                                 : isDraw
                                     ? 'DRAW!'
-                                    : widget.gameReason == 'checkmate' || (widget.gameReason == null && !isWin && !isDraw)
+                                    : widget.gameReason == 'checkmate' ||
+                                            (widget.gameReason == null &&
+                                                !isWin &&
+                                                !isDraw)
                                         ? 'CHECKMATE!'
                                         : 'GAME OVER',
                             style: GoogleFonts.fredoka(
@@ -271,8 +281,8 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                     decoration: BoxDecoration(
                       color: AppTheme.surface.withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(18),
-                      border:
-                          Border.all(color: AppTheme.skyBlue.withValues(alpha: 0.1)),
+                      border: Border.all(
+                          color: AppTheme.skyBlue.withValues(alpha: 0.1)),
                     ),
                     child: Column(
                       children: [
@@ -373,7 +383,8 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                               color: AppTheme.skyBlue.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                  color: AppTheme.skyBlue.withValues(alpha: 0.2)),
+                                  color:
+                                      AppTheme.skyBlue.withValues(alpha: 0.2)),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
@@ -440,14 +451,14 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                                   ]),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: ((widget.xpReward > 0 || widget.xpGained > 0)
+                            color: ((widget.xpReward > 0 || widget.xpGained > 0)
                                     ? AppTheme.goldPrimary
                                     : AppTheme.accentRed)
                                 .withValues(alpha: 0.5),
                             width: 2),
                         boxShadow: [
                           BoxShadow(
-                          color: ((widget.xpReward > 0 || widget.xpGained > 0)
+                            color: ((widget.xpReward > 0 || widget.xpGained > 0)
                                     ? AppTheme.goldPrimary
                                     : AppTheme.accentRed)
                                 .withValues(alpha: 0.2),
@@ -466,9 +477,10 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                                 (widget.xpReward > 0 || widget.xpGained > 0)
                                     ? Icons.stars_rounded
                                     : Icons.trending_down_rounded,
-                                color: (widget.xpReward > 0 || widget.xpGained > 0)
-                                    ? AppTheme.goldPrimary
-                                    : AppTheme.accentRed,
+                                color:
+                                    (widget.xpReward > 0 || widget.xpGained > 0)
+                                        ? AppTheme.goldPrimary
+                                        : AppTheme.accentRed,
                                 size: 30,
                               ),
                               const SizedBox(width: 12),
@@ -479,7 +491,8 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                                         ? '+${widget.xpGained} XP'
                                         : '${widget.xpGained} XP'),
                                 style: GoogleFonts.fredoka(
-                                  color: (widget.xpReward > 0 || widget.xpGained > 0)
+                                  color: (widget.xpReward > 0 ||
+                                          widget.xpGained > 0)
                                       ? AppTheme.goldPrimary
                                       : AppTheme.accentRed,
                                   fontSize: 28,
@@ -493,7 +506,9 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                           Text(
                             widget.xpReward > 0
                                 ? 'WIN REWARD'
-                                : (widget.xpGained > 0 ? 'XP GAINED' : 'XP PENALTY'),
+                                : (widget.xpGained > 0
+                                    ? 'XP GAINED'
+                                    : 'XP PENALTY'),
                             style: GoogleFonts.fredoka(
                               color: AppTheme.textPrimary,
                               fontSize: 13,
@@ -551,6 +566,8 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                             curve: Curves.easeOutBack)
                         .fadeIn(delay: 700.ms),
 
+                  if (widget.accountPrompt != null) widget.accountPrompt!,
+
                   // ── ACTION BUTTONS ──
                   Row(
                     children: [
@@ -560,7 +577,8 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppTheme.textPrimary,
                             side: BorderSide(
-                                color: AppTheme.textMuted.withValues(alpha: 0.3),
+                                color:
+                                    AppTheme.textMuted.withValues(alpha: 0.3),
                                 width: 2),
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(18)),
@@ -585,16 +603,19 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
                             padding: const EdgeInsets.symmetric(vertical: 13),
                             elevation: 8,
                           ),
-                          onPressed: widget.onPlayAgain,
+                          onPressed: widget.playAgainEnabled
+                              ? widget.onPlayAgain
+                              : null,
                           icon: Icon(
                               widget.gameMode == GameMode.puzzle
                                   ? Icons.skip_next_rounded
                                   : Icons.refresh_rounded,
                               size: 20),
                           label: Text(
-                              widget.gameMode == GameMode.puzzle
-                                  ? 'NEXT PUZZLE'
-                                  : 'REMATCH',
+                              widget.playAgainLabel ??
+                                  (widget.gameMode == GameMode.puzzle
+                                      ? 'NEXT PUZZLE'
+                                      : 'REMATCH'),
                               style: GoogleFonts.fredoka(
                                   fontWeight: FontWeight.w800,
                                   fontSize: 16,
@@ -711,10 +732,10 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
     final isTwoPlayer = widget.gameMode == GameMode.twoPlayer;
     final myLabel = isTwoPlayer ? 'White' : 'You';
     final oppLabel = isTwoPlayer
-      ? 'Black'
-      : (widget.opponentName?.trim().isNotEmpty == true
-        ? widget.opponentName!.trim()
-        : 'Opponent');
+        ? 'Black'
+        : (widget.opponentName?.trim().isNotEmpty == true
+            ? widget.opponentName!.trim()
+            : 'Opponent');
 
     final myAcc = widget.accuracy.clamp(0.0, 100.0);
     final oppAcc = widget.opponentAccuracy.clamp(0.0, 100.0);
@@ -733,7 +754,9 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          isTwoPlayer ? 'Accuracy Comparison (White vs Black)' : 'Accuracy Comparison',
+          isTwoPlayer
+              ? 'Accuracy Comparison (White vs Black)'
+              : 'Accuracy Comparison',
           style: GoogleFonts.fredoka(
             color: AppTheme.textPrimary,
             fontSize: 13,
@@ -829,12 +852,13 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
 
     if (didPlayerWin && widget.gameReason != null) {
       return switch (widget.gameReason) {
-        'resignation' => 'Opponent resigned! You win! 🏆',
-        'disconnect_timeout' => 'Opponent disconnected! You win! 📴',
-        'opponent_no_show' => 'Opponent didn\'t join! You win! ⏰',
-        'checkmate' => 'Checkmate! You win! ♔',
-        _ => null,
-      } ?? 'You win this round.';
+            'resignation' => 'Opponent resigned! You win! 🏆',
+            'disconnect_timeout' => 'Opponent disconnected! You win! 📴',
+            'opponent_no_show' => 'Opponent didn\'t join! You win! ⏰',
+            'checkmate' => 'Checkmate! You win! ♔',
+            _ => null,
+          } ??
+          'You win this round.';
     }
 
     if (didPlayerLose && widget.gameReason != null) {
@@ -854,7 +878,8 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
       if (didPlayerLose) return '$opponentLabel wins this round.';
     }
 
-    if (widget.gameMode == GameMode.multiplayer && widget.opponentName != null) {
+    if (widget.gameMode == GameMode.multiplayer &&
+        widget.opponentName != null) {
       if (didPlayerWin) return 'You defeated ${widget.opponentName}! 🥳';
       if (didPlayerLose) return '${widget.opponentName} wins this round.';
     }
@@ -863,4 +888,3 @@ class _GameOverOverlayState extends State<GameOverOverlay> {
     return '$winner wins the battle! 🥳';
   }
 }
-

@@ -1,3 +1,4 @@
+import { acceptChallenge } from './services/challenge_claim'
 import { Matchmaker, QueuedPlayer } from './matchmaking'
 import type { Env } from './index'
 import { normalizeTimeControl, DEFAULT_TIME_CONTROL } from './time_control'
@@ -91,9 +92,12 @@ export class Lobby implements DurableObject {
 
     const { 0: client, 1: server } = new WebSocketPair()
 
-    const userId = url.searchParams.get('userId') ?? 'anon'
+    const userId = request.headers.get('X-Authenticated-User')
+    if(!userId)return new Response('Unauthorized',{status:401})
     const queryUsername = url.searchParams.get('username') ?? 'Player'
-    const rating = parseInt(url.searchParams.get('rating') ?? '0')
+    let rating = 0
+    const ratingRow=await this.env.DB.prepare('SELECT elo_rating FROM user_stats WHERE user_id=?').bind(userId).first<{elo_rating:number}>()
+    rating=ratingRow?.elo_rating??0
 
     const dbUser = await this.env.DB.prepare('SELECT username FROM users WHERE id = ?')
       .bind(userId)
@@ -181,7 +185,7 @@ export class Lobby implements DurableObject {
             joinedAt: Date.now(),
             socket: ws
           })
-          this.checkMatches()
+          await this.checkMatches()
           break
 
         case 'CANCEL_FIND_MATCH':
@@ -198,11 +202,13 @@ export class Lobby implements DurableObject {
               ? msg.requestId
               : crypto.randomUUID()
           const mode = this.normalizeChallengeMode(msg.mode)
+          if(mode==='tournament'){ws.send(JSON.stringify({type:'CHALLENGE_CANCELLED',data:{requestId,message:'Create a tournament invite to reserve a series.'}}));break}
           const timeControl = normalizeTimeControl(msg.timeControl ?? DEFAULT_TIME_CONTROL)
           const variantId =
             typeof msg.variantId === 'string' && msg.variantId.length > 0
               ? msg.variantId
               : 'standard'
+          if(variantId!=='standard'||opponentId===meta.id){ws.send(JSON.stringify({type:'CHALLENGE_CANCELLED',data:{requestId,message:'Choose another player and standard chess.'}}));break}
           const allowOffline = msg.allowOffline === true
           const sockets = this.state.getWebSockets()
           const opponent = sockets.find(s => (s.deserializeAttachment() as LobbyPlayer)?.id === opponentId)
@@ -298,13 +304,13 @@ export class Lobby implements DurableObject {
                 requestId,
                 challengerId: meta.id,
                 challengerName: meta.name,
-                category: mode === 'tournament' ? 'tournaments' : 'challenges',
+                category: 'challenges',
                 mode,
                 timeControl,
                 variantId,
                 queued: true,
               },
-            }, this.env, mode === 'tournament' ? 'tournaments' : 'challenges')
+            }, this.env, 'challenges')
 
             ws.send(JSON.stringify({
               type: 'CHALLENGE_QUEUED',
@@ -347,7 +353,7 @@ export class Lobby implements DurableObject {
           }
 
           const gameId = crypto.randomUUID()
-          await this.acceptChallengeRecord(challenge, gameId)
+          if(!await this.acceptChallengeRecord(challenge, gameId)){ws.send(JSON.stringify({type:'CHALLENGE_EXPIRED',data:{requestId,message:'This challenge has already been processed.'}}));break}
 
           const challengerName =
             (challenger?.deserializeAttachment() as LobbyPlayer | undefined)?.name ??
@@ -439,7 +445,10 @@ export class Lobby implements DurableObject {
 
         case 'TOURNAMENT_CHALLENGE': {
           // Challenger sends: { opponentId, tournamentId, totalRounds, timeControl }
-          const { opponentId, tournamentId, totalRounds, timeControl: tc } = msg
+          const { opponentId, tournamentId } = msg
+          const valid=await this.env.DB.prepare("SELECT t.total_rounds,t.time_control FROM tournaments t JOIN tournament_participants p ON p.tournament_id=t.id AND p.user_id=? WHERE t.id=? AND t.created_by=? AND t.status IN('upcoming','registration')").bind(opponentId,tournamentId,meta.id).first<{total_rounds:number;time_control:string}>()
+          if(!valid)break
+          const totalRounds=valid.total_rounds,tc=valid.time_control
           const sockets = this.state.getWebSockets()
           const opponent = sockets.find(s => (s.deserializeAttachment() as LobbyPlayer)?.id === opponentId)
           if (opponent) {
@@ -460,6 +469,8 @@ export class Lobby implements DurableObject {
         case 'TOURNAMENT_CHALLENGE_ACCEPTED': {
           // Acceptor sends: { challengerId, tournamentId }
           const { challengerId: cId, tournamentId: tId } = msg
+          const valid=await this.env.DB.prepare('SELECT t.id FROM tournaments t JOIN tournament_participants p ON p.tournament_id=t.id AND p.user_id=? WHERE t.id=? AND t.created_by=?').bind(meta.id,tId,cId).first()
+          if(!valid)break
           const sockets = this.state.getWebSockets()
           const challenger2 = sockets.find(s => (s.deserializeAttachment() as LobbyPlayer)?.id === cId)
           if (challenger2) {
@@ -493,11 +504,11 @@ export class Lobby implements DurableObject {
     await this.webSocketClose(ws)
   }
 
-  private checkMatches() {
+  private async checkMatches() {
     const matches = this.matchmaker.findMatches()
     for (const [p1, p2] of matches) {
       const gameId = crypto.randomUUID()
-      
+      await this.env.DB.prepare("INSERT INTO games(id,white_user_id,black_user_id,mode,time_control) VALUES(?,?,?,'multiplayer',?)").bind(gameId,p1.id,p2.id,p1.timeControl).run()
       const payload = (color: 'white' | 'black', opponent: QueuedPlayer) => JSON.stringify({
         type: 'MATCH_FOUND',
         data: {
@@ -716,17 +727,7 @@ export class Lobby implements DurableObject {
       blackId = challenge.challenged_id
     }
 
-    await this.env.DB.batch([
-      this.env.DB.prepare(
-        `INSERT INTO games (id, white_user_id, black_user_id, mode, time_control)
-         VALUES (?, ?, ?, 'multiplayer', ?)`
-      ).bind(gameId, whiteId, blackId, challenge.time_control),
-      this.env.DB.prepare(
-        `UPDATE challenges
-         SET status = 'accepted', game_id = ?, updated_at = datetime('now')
-         WHERE id = ?`
-      ).bind(gameId, challenge.id),
-    ])
+    return acceptChallenge(this.env.DB,challenge.id,challenge.challenged_id,gameId,whiteId,blackId)
   }
 
   private async declineChallengeRecord(requestId: string, challengedUserId: string) {

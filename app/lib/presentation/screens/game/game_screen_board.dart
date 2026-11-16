@@ -1,14 +1,15 @@
 part of 'game_screen.dart';
 
 extension GameScreenBoard on _GameScreenState {
-  Widget _buildBoardFrame(BuildContext context, GameState state, {required double maxDimension}) {
+  Widget _buildBoardFrame(BuildContext context, GameState state,
+      {required double maxDimension}) {
     final dimension = math.max(300.0, math.min(maxDimension, 860.0));
     final settings = context.watch<SettingsBloc>().state;
     final themeState = context.watch<ThemeBloc>().state;
 
     // In multiplayer, always use playerColor for perspective (never auto-flip)
     final PieceColor perspective;
-    if (state.mode == GameMode.multiplayer && state.playerColor != null) {
+    if (state.isOnline && state.playerColor != null) {
       perspective = state.playerColor!;
     } else if (settings.autoFlipBoard) {
       perspective = state.currentTurn;
@@ -18,16 +19,19 @@ extension GameScreenBoard on _GameScreenState {
 
     final minimalMotion = settings.moveAnimationSpeed == 'off';
     final bool isUrgentClock =
-      ((state.whiteTimeMs > 0 && state.whiteTimeMs <= 10000) ||
-        (state.blackTimeMs > 0 && state.blackTimeMs <= 10000)) &&
-      !state.isGameOver;
+        ((state.whiteTimeMs > 0 && state.whiteTimeMs <= 10000) ||
+                (state.blackTimeMs > 0 && state.blackTimeMs <= 10000)) &&
+            !state.isGameOver;
 
     return ConstrainedBox(
-      constraints: BoxConstraints.tightFor(width: dimension + 30, height: dimension),
+      constraints:
+          BoxConstraints.tightFor(width: dimension + 30, height: dimension),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          if (state.coachSettings.showEvalBar && (state.mode == GameMode.singlePlayer || state.mode == GameMode.practice)) ...[
+          if (state.coachSettings.showEvalBar &&
+              (state.mode == GameMode.singlePlayer ||
+                  state.mode == GameMode.practice)) ...[
             EvalBarWidget(
               evalScore: state.evalScore,
               perspective: perspective,
@@ -61,7 +65,8 @@ extension GameScreenBoard on _GameScreenState {
                         boxShadow: isUrgentClock
                             ? [
                                 BoxShadow(
-                                  color: AppTheme.accentRed.withValues(alpha: 0.22),
+                                  color: AppTheme.accentRed
+                                      .withValues(alpha: 0.22),
                                   blurRadius: 16,
                                   spreadRadius: 1.5,
                                 ),
@@ -74,10 +79,12 @@ extension GameScreenBoard on _GameScreenState {
                           board: state.board,
                           perspective: perspective,
                           selectedSquare: state.selectedSquare,
-                          legalMoves:
-                              settings.showLegalMoves ? state.legalMoves : const [],
-                          lastMove:
-                              state.moveHistory.isNotEmpty ? state.moveHistory.last : null,
+                          legalMoves: settings.showLegalMoves
+                              ? state.legalMoves
+                              : const [],
+                          lastMove: state.moveHistory.isNotEmpty
+                              ? state.moveHistory.last
+                              : null,
                           hintMove: state.hintMove,
                           status: state.status,
                           boardTheme: themeState.boardTheme,
@@ -98,8 +105,7 @@ extension GameScreenBoard on _GameScreenState {
                                       .read<GameBloc>()
                                       .add(GameSelectPieceEvent(sq));
                                 },
-                          isInteractive:
-                              state.mode == GameMode.multiplayer || !state.isAIThinking,
+                          isInteractive: state.isOnline || !state.isAIThinking,
                           lastCorrectMove: state.coachMove,
                           preMove: state.preMove,
                         ),
@@ -141,12 +147,10 @@ extension GameScreenBoard on _GameScreenState {
                   ),
                 ),
 
-              // AI COACH TALKING WINDOW
-              // Disabled in multiplayer and local two-player matches to avoid coach overlays in non-AI games.
-              if (state.mode != GameMode.multiplayer && state.mode != GameMode.twoPlayer &&
-                  ((state.isAIThinking && state.mode != GameMode.practice) ||
-                      state.coachFeedback != null ||
-                      state.activeHint != null))
+              // Feedback follows the mover; thinking belongs only to a computer.
+              if (state.showComputerThinking ||
+                  state.showMoveFeedback ||
+                  state.activeHint != null)
                 Positioned(
                   left: -20,
                   right: -20,
@@ -165,23 +169,27 @@ extension GameScreenBoard on _GameScreenState {
     final isMyTurn = state.currentTurn == state.playerColor;
     if (state.isGameOver) return const SizedBox.shrink();
 
-    final isMultiplayer = state.mode == GameMode.multiplayer;
+    final isMultiplayer = state.isOnline;
     final isTwoPlayer = state.mode == GameMode.twoPlayer;
-    
+
     final opponentLabel = isMultiplayer
         ? 'OPPONENT\'S TURN'
         : isTwoPlayer
-            ? (state.currentTurn == PieceColor.white ? 'WHITE\'S TURN' : 'BLACK\'S TURN')
+            ? (state.currentTurn == PieceColor.white
+                ? 'WHITE\'S TURN'
+                : 'BLACK\'S TURN')
             : 'AI THINKING...';
-    
-    final opponentIcon = isMultiplayer || isTwoPlayer 
-        ? Icons.person_rounded 
+
+    final opponentIcon = isMultiplayer || isTwoPlayer
+        ? Icons.person_rounded
         : Icons.computer_rounded;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        color: isMyTurn ? AppTheme.accentCyan.withValues(alpha: 0.2) : Colors.black45,
+        color: isMyTurn
+            ? AppTheme.accentCyan.withValues(alpha: 0.2)
+            : Colors.black45,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isMyTurn ? AppTheme.accentCyan : Colors.white24,
@@ -211,4 +219,3 @@ extension GameScreenBoard on _GameScreenState {
     );
   }
 }
-

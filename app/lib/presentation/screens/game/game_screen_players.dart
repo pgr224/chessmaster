@@ -3,7 +3,7 @@ part of 'game_screen.dart';
 extension GameScreenPlayers on _GameScreenState {
   Widget _buildOpponentInfo(GameState state) {
     final multiplayerState = context.watch<MultiplayerBloc>().state;
-    final bool isMultiplayer = state.mode == GameMode.multiplayer;
+    final bool isMultiplayer = state.isOnline;
     final bool isWhite = state.playerColor == PieceColor.white;
 
     String opponentName = 'Robot Master';
@@ -12,8 +12,8 @@ extension GameScreenPlayers on _GameScreenState {
     bool isOpponentThinking = false;
     bool isTwoPlayer = state.mode == GameMode.twoPlayer;
 
-    if (isMultiplayer && multiplayerState.opponentName != null) {
-      opponentName = multiplayerState.opponentName!;
+    if (isMultiplayer) {
+      opponentName = multiplayerState.opponentName ?? 'Opponent';
       opponentAvatar = multiplayerState.opponentAvatarUrl;
       opponentLocal = multiplayerState.opponentLocalAvatar;
       // Don't show AI thinking indicator for human opponents
@@ -23,15 +23,14 @@ extension GameScreenPlayers on _GameScreenState {
       isOpponentThinking = false;
     } else {
       opponentName = _aiName(state.aiDifficulty);
-      isOpponentThinking = state.currentTurn != state.playerColor &&
-          state.status == GameStatus.active;
+      isOpponentThinking = state.showComputerThinking;
     }
 
     Widget playerInfo = PlayerInfoWidget(
       name: opponentName,
       color: isWhite ? PieceColor.black : PieceColor.white,
       isActive: state.currentTurn != state.playerColor,
-      isAI: !isMultiplayer && !isTwoPlayer,
+      isAI: state.hasComputerOpponent,
       isThinking: isOpponentThinking,
       avatarUrl: opponentAvatar,
       localAvatar: opponentLocal,
@@ -73,7 +72,8 @@ extension GameScreenPlayers on _GameScreenState {
   }
 
   Widget _buildCapturedPieces(GameState state, PieceColor color) {
-    final captured = color == PieceColor.white ? state.capturedWhite : state.capturedBlack;
+    final captured =
+        color == PieceColor.white ? state.capturedWhite : state.capturedBlack;
     if (captured.isEmpty) return const SizedBox.shrink();
 
     return CapturedPiecesWidget(

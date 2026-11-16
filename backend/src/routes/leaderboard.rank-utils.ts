@@ -26,8 +26,8 @@ export function getLeaderboardSortValue(
   return row.xp
 }
 
-export function isLeaderboardEligible(row: Pick<LeaderboardStatRow, 'games_played'>): boolean {
-  return row.games_played >= 1
+export function isLeaderboardEligible(row: Pick<LeaderboardStatRow, 'id' | 'games_played'>): boolean {
+  return !row.id.startsWith('guest_') && row.games_played >= 1
 }
 
 export function computeLeaderboardListRanks(
@@ -40,18 +40,21 @@ export function computeLeaderboardListRanks(
     .sort((a, b) => {
       const diff = getLeaderboardSortValue(b, type) - getLeaderboardSortValue(a, type)
       if (diff !== 0) return diff
+      if(b.xp!==a.xp)return b.xp-a.xp
       return a.id.localeCompare(b.id)
     })
 
   const ranks = new Map<string, number>()
   let previousValue: number | null = null
+  let previousXP: number | null = null
   let previousRank = 0
 
   for (let i = 0; i < eligible.length; i++) {
     const row = eligible[i]
     const value = getLeaderboardSortValue(row, type)
-    const rank = previousValue !== null && value === previousValue ? previousRank : i + 1
+    const rank = previousValue !== null && value === previousValue && row.xp === previousXP ? previousRank : i + 1
     ranks.set(row.id, rank)
+    previousXP = row.xp
     previousValue = value
     previousRank = rank
   }
@@ -71,7 +74,7 @@ export function computeLeaderboardUserRank(
 
   const myValue = getLeaderboardSortValue(me, type)
   const betterCount = rows.filter(
-    (row) => isLeaderboardEligible(row) && getLeaderboardSortValue(row, type) > myValue,
+    (row) => isLeaderboardEligible(row) && (getLeaderboardSortValue(row, type) > myValue || (getLeaderboardSortValue(row,type) === myValue && row.xp > me.xp)),
   ).length
 
   return betterCount + 1

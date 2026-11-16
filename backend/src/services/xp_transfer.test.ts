@@ -1,0 +1,11 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import {readFileSync} from 'node:fs'
+import {testDB} from '../test_support/sqlite'
+import {transferXP} from './xp_transfer'
+const schema=readFileSync(new URL('../../schema/d1-schema.sql',import.meta.url),'utf8')
+async function setup(){const d=testDB(schema);for(const id of ['a','b'])await d.prepare('INSERT INTO users(id,username,device_id,xp) VALUES(?,?,?,?)').bind(id,id,id,id==='a'?12000:0).run();return d}
+const xp=async(d:D1Database,id:string)=>(await d.prepare('SELECT xp FROM users WHERE id=?').bind(id).first<{xp:number}>())!.xp
+test('donation retry debits and credits exactly once with matching history',async()=>{const d=await setup();await transferXP(d,'a','b',2000,'one');await transferXP(d,'a','b',2000,'one');assert.equal(await xp(d,'a'),10000);assert.equal(await xp(d,'b'),2000);assert.equal((await d.prepare('SELECT COUNT(*) AS n FROM xp_transfers').first<any>()).n,1);assert.equal((await d.prepare('SELECT COUNT(*) AS n FROM xp_history').first<any>()).n,2);await assert.rejects(transferXP(d,'a','b',100,'one'),/already used/);assert.equal(await xp(d,'a'),10000)})
+test('daily and lifetime transfer caps apply atomically without partial debits',async()=>{const d=await setup();await transferXP(d,'a','b',1500,'one');await assert.rejects(transferXP(d,'a','b',501,'two'));assert.equal(await xp(d,'a'),10500);await transferXP(d,'a','b',500,'three');await d.prepare("UPDATE xp_transfers SET created_at='2000-01-01'").run();await d.prepare("INSERT INTO xp_transfers(donor_id,recipient_id,amount,created_at) VALUES('a','b',7500,'2000-01-01')").run();await assert.rejects(transferXP(d,'a','b',501,'lifetime'));await transferXP(d,'a','b',500,'last');assert.equal(await xp(d,'a'),9500);assert.equal(await xp(d,'b'),2500)})
+test('insufficient funds, missing recipient and invalid amounts cannot change balances',async()=>{const d=await setup();await d.prepare("UPDATE users SET xp=5 WHERE id='a'").run();for(const [recipient,amount] of [['b',6],['missing',1],['a',1],['b',-1],['b',1.5],['b',2001]] as const)await assert.rejects(transferXP(d,'a',recipient,amount,`${recipient}:${amount}`));assert.equal(await xp(d,'a'),5);assert.equal(await xp(d,'b'),0)})

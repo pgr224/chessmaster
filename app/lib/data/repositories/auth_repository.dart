@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
@@ -10,6 +11,7 @@ import 'package:uuid/uuid.dart';
 
 class AuthRepository {
   final Dio _dio;
+  Future<void> _progressQueue = Future.value();
   static const _tokenKey = 'auth_token';
   static const _userKey = 'user_data';
   static const _deviceIdKey = 'device_id';
@@ -21,6 +23,52 @@ class AuthRepository {
   final _uuid = const Uuid();
 
   AuthRepository(this._dio);
+
+  UserModel? _guestUser;
+  int _accountIntent = 0;
+  final Map<String, int> _guestReceipts = {};
+  static const guestSessionKey = 'guest_session_active';
+
+  UserModel _newGuest(String deviceId) => UserModel(
+      id: 'guest_${_uuid.v4()}',
+      username: 'Guest',
+      deviceId: deviceId,
+      isGuest: true,
+      isOnline: false,
+      xp: 0,
+      stats: const UserStats());
+
+  Future<UserModel> startGuestSession() async {
+    _accountIntent++;
+    final prefs = await SharedPreferences.getInstance();
+    final deviceId = await getDeviceId();
+    await prefs.setBool(guestSessionKey, true);
+    await prefs.remove(_tokenKey);
+    _dio.options.headers.remove('Authorization');
+    _guestReceipts.clear();
+    return _guestUser = _newGuest(deviceId);
+  }
+
+  Future<UserModel?> _currentGuest() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool(guestSessionKey) != true) return null;
+    // Guest XP and stats are memory-only: reopening the app starts at zero.
+    return _guestUser ??= _newGuest(await getDeviceId());
+  }
+
+  Future<UserModel?> resetGuestProgress() async {
+    final guest = await _currentGuest();
+    if (guest == null) return null;
+    _guestReceipts.clear();
+    return _guestUser =
+        _newGuest(guest.deviceId); // Retire old game event IDs too.
+  }
+
+  Future<void> _finishGuestSession() async {
+    _guestUser = null;
+    _guestReceipts.clear();
+    await (await SharedPreferences.getInstance()).remove(guestSessionKey);
+  }
 
   /// Generate a deterministic device fingerprint
   Future<String> getDeviceId() async {
@@ -55,6 +103,8 @@ class AuthRepository {
   /// Read ONLY from local cache — never touches network.
   /// This is the safe fallback when network is unavailable.
   Future<UserModel?> getCachedUser() async {
+    final guest = await _currentGuest();
+    if (guest != null) return guest;
     final prefs = await SharedPreferences.getInstance();
     final userData = prefs.getString(_userKey);
     if (userData == null) return null;
@@ -68,6 +118,8 @@ class AuthRepository {
   }
 
   Future<UserModel?> getCurrentUser({bool forceRefresh = false}) async {
+    final guest = await _currentGuest();
+    if (guest != null) return guest;
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString(_tokenKey);
 
@@ -98,6 +150,7 @@ class AuthRepository {
   }
 
   Future<UserModel> login() async {
+    final intent = ++_accountIntent;
     final deviceId = await getDeviceId();
     final response = await _dio.post(
       '/api/auth/login',
@@ -118,6 +171,8 @@ class AuthRepository {
       );
     }
 
+    if (intent != _accountIntent)
+      throw StateError('Account request cancelled by a newer session choice');
     final rawToken =
         (response.data['token'] ?? response.data['accessToken']) as String;
     final token = _normalizeToken(rawToken);
@@ -126,6 +181,7 @@ class AuthRepository {
     _dio.options.headers['Authorization'] = 'Bearer $token';
 
     final prefs = await SharedPreferences.getInstance();
+    await _finishGuestSession();
     await prefs.setString(_tokenKey, token);
 
     final profile = _resolveRegisteredUser(
@@ -136,11 +192,11 @@ class AuthRepository {
     );
 
     await prefs.setString(_userKey, jsonEncode(profile.toJson()));
-    
+
     // Success! Clear logout flag and store last username for potential future use
     await prefs.setBool(_explicitLogoutKey, false);
     await prefs.setString(_lastUsernameKey, profile.username);
-    
+
     return profile;
   }
 
@@ -160,7 +216,8 @@ class AuthRepository {
   }
 
   /// Check username availability with detailed rate limit information
-  Future<Map<String, dynamic>> checkUsernameAvailability(String username) async {
+  Future<Map<String, dynamic>> checkUsernameAvailability(
+      String username) async {
     try {
       final normalized = username.trim();
       final response = await _dio.get(
@@ -171,7 +228,7 @@ class AuthRepository {
           receiveTimeout: const Duration(seconds: 5),
         ),
       );
-      
+
       final data = _asMap(response.data);
       if (response.statusCode == 200) {
         return {
@@ -198,6 +255,7 @@ class AuthRepository {
 
   Future<UserModel> register(
       {required String username, String? avatarPath}) async {
+    final intent = ++_accountIntent;
     final normalizedUsername = _normalizeUsername(username);
     if (!_usernamePattern.hasMatch(normalizedUsername)) {
       throw Exception(
@@ -219,6 +277,8 @@ class AuthRepository {
       ),
     );
 
+    if (intent != _accountIntent)
+      throw StateError('Account request cancelled by a newer session choice');
     if (response.statusCode == 400) {
       throw Exception(_extractValidationMessage(response.data));
     }
@@ -234,6 +294,8 @@ class AuthRepository {
       throw Exception(_extractConflictMessage(response.data));
     }
 
+    if (intent != _accountIntent)
+      throw StateError('Account request cancelled by a newer session choice');
     final rawToken =
         (response.data['token'] ?? response.data['accessToken']) as String;
     final token = _normalizeToken(rawToken);
@@ -241,6 +303,7 @@ class AuthRepository {
 
     // Store token & basic user info locally
     final prefs = await SharedPreferences.getInstance();
+    await _finishGuestSession();
     await prefs.setString(_tokenKey, token);
 
     // Prefer user payload from register response to avoid an immediate follow-up
@@ -255,7 +318,7 @@ class AuthRepository {
 
     final userJson = jsonEncode(profile.toJson());
     await prefs.setString(_userKey, userJson);
-    
+
     // Success! Clear logout flag and store last username
     await prefs.setBool(_explicitLogoutKey, false);
     await prefs.setString(_lastUsernameKey, profile.username);
@@ -279,6 +342,7 @@ class AuthRepository {
     if (tokenValue is String) {
       final prefs = await SharedPreferences.getInstance();
       final token = _normalizeToken(tokenValue);
+      await _finishGuestSession();
       await prefs.setString(_tokenKey, token);
       _dio.options.headers['Authorization'] = 'Bearer $token';
     }
@@ -381,8 +445,7 @@ class AuthRepository {
       final cooldownRemainingMs = error['cooldownRemainingMs'] as int?;
       final nextChangeTime = error['nextChangeTime'] as int?;
       throw Exception(
-        'COOLDOWN_ACTIVE::${cooldownRemainingMs ?? 0}::${nextChangeTime ?? 0}'
-      );
+          'COOLDOWN_ACTIVE::${cooldownRemainingMs ?? 0}::${nextChangeTime ?? 0}');
     } else if (response.statusCode == 403) {
       // Lifetime limit reached or other auth error
       final error = response.data as Map<String, dynamic>;
@@ -404,6 +467,7 @@ class AuthRepository {
 
     if (updatedData.containsKey('token') && updatedData['token'] != null) {
       final token = _normalizeToken(updatedData['token'] as String);
+      await _finishGuestSession();
       await prefs.setString(_tokenKey, token);
       _dio.options.headers['Authorization'] = 'Bearer $token';
     }
@@ -420,47 +484,149 @@ class AuthRepository {
     return updated;
   }
 
-  Future<void> updateXPProgress({
-    required String userId,
-    required int xpDelta,
-    required Map<String, dynamic> statUpdates,
-    bool isOnlineMatch = false,
-  }) async {
-    final prefs = await SharedPreferences.getInstance();
-    final userData = prefs.getString(_userKey);
-    if (userData == null) return;
+  Future<Map<String, dynamic>> getBountyTarget() async =>
+      Map<String, dynamic>.from((await _dio.get('/api/profile/bounty')).data);
+  Future<void> syncPendingProgress() {
+    final task = _progressQueue.then((_) => _syncPendingProgress());
+    _progressQueue = task.catchError((Object _) {});
+    return task;
+  }
 
-    try {
-      final dynamic decoded = jsonDecode(userData);
-      if (decoded is! Map<String, dynamic>) return;
-
-      final current = decoded;
-      final currentStats = current['stats'] as Map<String, dynamic>? ?? {};
-
-      // Update local data first (for instant feedback/offline play)
-      current['xp'] = (current['xp'] as int? ?? 0) + xpDelta;
-      statUpdates.forEach((key, value) {
-        if (value is int) {
-          currentStats[key] = (currentStats[key] as int? ?? 0) + value;
-        } else {
-          currentStats[key] = value;
+  Future<void> _syncPendingProgress() async {
+    final prefs = await SharedPreferences.getInstance(),
+        raw = prefs.getString(_userKey);
+    if (prefs.getBool(guestSessionKey) == true ||
+        raw == null ||
+        prefs.getString(_tokenKey) == null) return;
+    final user = jsonDecode(raw) as Map<String, dynamic>, id = user['id'];
+    final pending = List<Map<String, dynamic>>.from(
+        (jsonDecode(prefs.getString('pending_xp_$id') ?? '[]') as List)
+            .map((e) => Map<String, dynamic>.from(e)));
+    for (final event in [...pending]) {
+      try {
+        final response = await _dio.post('/api/profile/$id/xp', data: event);
+        if (response.statusCode != 200) break;
+        pending.remove(event);
+        if (pending.isEmpty && response.data['xp'] is num) {
+          user['xp'] = (response.data['xp'] as num).toInt();
+          await prefs.setString(_userKey, jsonEncode(user));
         }
-      });
-      current['stats'] = currentStats;
-      await prefs.setString(_userKey, jsonEncode(current));
-
-      // Push to server
-      await _dio.post(
-        '/api/profile/$userId/xp',
-        data: {
-          'xpDelta': xpDelta,
-          'stats': statUpdates,
-          'isOnlineMatch': isOnlineMatch,
-        },
-      );
-    } catch (_) {
-      // Silent fail for network, data is already saved locally in prefs
+        await prefs.setString('pending_xp_$id', jsonEncode(pending));
+      } catch (_) {
+        break;
+      }
     }
+  }
+
+  Future<int> updateXPProgress(
+      {required String userId,
+      required int xpDelta,
+      required Map<String, dynamic> statUpdates,
+      bool isOnlineMatch = false,
+      String? eventId}) {
+    final completer = Completer<int>();
+    _progressQueue = _progressQueue.then((_) async {
+      try {
+        completer.complete(await _applyProgress(userId, xpDelta, statUpdates,
+            isOnlineMatch, eventId ?? const Uuid().v4()));
+      } catch (error, stack) {
+        completer.completeError(error, stack);
+      }
+    });
+    return completer.future;
+  }
+
+  Future<int> _applyProgress(String userId, int xpDelta,
+      Map<String, dynamic> stats, bool online, String eventId) async {
+    if (online) return 0; // Online results are settled only by GameRoom.
+    if (userId.startsWith('guest_')) {
+      final guest = await _currentGuest();
+      if (guest == null || guest.id != userId) return 0;
+      if (_guestReceipts.containsKey(eventId)) return _guestReceipts[eventId]!;
+      final actual = (guest.xp + xpDelta).clamp(0, 1 << 53).toInt() - guest.xp;
+      final localStats = Map<String, dynamic>.from(guest.stats.toJson());
+      const absolute = {
+        'puzzle_rating',
+        'current_streak',
+        'longest_streak',
+        'best_win_elo'
+      };
+      for (final entry in stats.entries) {
+        if (entry.value is num && entry.key != 'elo_rating')
+          localStats[entry.key] = absolute.contains(entry.key)
+              ? entry.value
+              : ((localStats[entry.key] as num?)?.toInt() ?? 0) +
+                  (entry.value as num).toInt();
+      }
+      localStats['games_played'] =
+          ((localStats['wins'] as num?)?.toInt() ?? 0) +
+              ((localStats['losses'] as num?)?.toInt() ?? 0) +
+              ((localStats['draws'] as num?)?.toInt() ?? 0);
+      _guestUser = guest.copyWith(
+          xp: guest.xp + actual, stats: UserStats.fromJson(localStats));
+      return _guestReceipts[eventId] = actual;
+    }
+    if (await _currentGuest() != null) return 0;
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_userKey);
+    if (raw == null) return 0;
+    final current = jsonDecode(raw) as Map<String, dynamic>;
+    if (current['id'] != userId) return 0;
+    final receipts = Map<String, dynamic>.from(
+        jsonDecode(prefs.getString('xp_receipts_$userId') ?? '{}') as Map);
+    if (receipts.containsKey(eventId))
+      return (receipts[eventId] as num).toInt();
+    final before = (current['xp'] as num?)?.toInt() ?? 0;
+    final after = (before + xpDelta).clamp(0, 1 << 53).toInt(),
+        actual = after - before;
+    current['xp'] = after;
+    final currentStats =
+        Map<String, dynamic>.from(current['stats'] as Map? ?? {});
+    const absolute = {
+      'puzzle_rating',
+      'elo_rating',
+      'current_streak',
+      'longest_streak',
+      'best_win_elo'
+    };
+    for (final entry in stats.entries) {
+      if (entry.value is! num) continue;
+      currentStats[entry.key] = absolute.contains(entry.key)
+          ? entry.value
+          : ((currentStats[entry.key] as num?)?.toInt() ?? 0) +
+              (entry.value as num).toInt();
+    }
+    currentStats['games_played'] =
+        ((currentStats['wins'] as num?)?.toInt() ?? 0) +
+            ((currentStats['losses'] as num?)?.toInt() ?? 0) +
+            ((currentStats['draws'] as num?)?.toInt() ?? 0);
+    current['stats'] = currentStats;
+    receipts[eventId] = actual;
+    await prefs.setString(_userKey, jsonEncode(current));
+    await prefs.setString('xp_receipts_$userId', jsonEncode(receipts));
+    final pending = List<Map<String, dynamic>>.from(
+        (jsonDecode(prefs.getString('pending_xp_$userId') ?? '[]') as List)
+            .map((e) => Map<String, dynamic>.from(e)));
+    pending.add({'eventId': eventId, 'xpDelta': xpDelta, 'stats': stats});
+    for (final event in [...pending]) {
+      try {
+        final response =
+            await _dio.post('/api/profile/$userId/xp', data: event);
+        if (response.statusCode != 200) break;
+        pending.remove(event);
+        if (event['eventId'] == eventId && response.data['xpDelta'] is num)
+          receipts[eventId] = (response.data['xpDelta'] as num).toInt();
+        if (pending.isEmpty && response.data['xp'] is num) {
+          current['xp'] = (response.data['xp'] as num).toInt();
+          await prefs.setString(_userKey, jsonEncode(current));
+        }
+      } catch (_) {
+        break;
+      }
+    }
+    await prefs.setString('pending_xp_$userId', jsonEncode(pending));
+    await prefs.setString('xp_receipts_$userId', jsonEncode(receipts));
+    return (receipts[eventId] as num).toInt();
   }
 
   Future<void> updatePracticeDifficulty(
@@ -484,7 +650,9 @@ class AuthRepository {
   }
 
   Future<bool> donateXP(
-      {required String recipientId, required int amount, int? requestId}) async {
+      {required String recipientId,
+      required int amount,
+      int? requestId}) async {
     try {
       if (amount <= 0) {
         throw Exception('Donation amount must be greater than 0.');
@@ -494,6 +662,7 @@ class AuthRepository {
         '/api/profile/xp/transfer',
         data: {
           'recipientId': recipientId,
+          'eventId': const Uuid().v4(),
           'amount': amount,
           if (requestId != null) 'requestId': requestId,
         },
@@ -506,9 +675,10 @@ class AuthRepository {
           final dynamic decoded = jsonDecode(userData);
           if (decoded is Map<String, dynamic>) {
             final Map<String, dynamic> current = decoded;
-            final statsJson =
-                (current['stats'] as Map<String, dynamic>?) ?? <String, dynamic>{};
-            final donationStats = response.data['donorDonationStats'] as Map<String, dynamic>?;
+            final statsJson = (current['stats'] as Map<String, dynamic>?) ??
+                <String, dynamic>{};
+            final donationStats =
+                response.data['donorDonationStats'] as Map<String, dynamic>?;
             final donorXpRaw = response.data['donorXp'];
 
             final serverDonorXp = donorXpRaw is num
@@ -672,7 +842,7 @@ class AuthRepository {
       if (userData != null) {
         final current = jsonDecode(userData) as Map<String, dynamic>;
         current['xp'] = (current['xp'] as int? ?? 0) + points;
-        
+
         final achievements = (current['achievements'] as List? ?? [])
             .map((a) => a.toString())
             .toList();
@@ -680,16 +850,15 @@ class AuthRepository {
           achievements.add(achievementId);
         }
         current['achievements'] = achievements;
-        
+
         final stats = current['stats'] as Map<String, dynamic>? ?? {};
         stats['xp'] = (stats['xp'] as int? ?? 0) + points;
         current['stats'] = stats;
-        
+
         await prefs.setString(_userKey, jsonEncode(current));
       }
 
-      final retryAfter =
-          prefs.getInt(_achievementSyncRetryAfterKey) ?? 0;
+      final retryAfter = prefs.getInt(_achievementSyncRetryAfterKey) ?? 0;
       if (DateTime.now().millisecondsSinceEpoch < retryAfter) {
         return false;
       }
@@ -714,9 +883,7 @@ class AuthRepository {
         await prefs.remove(_achievementSyncDisabledKey);
         await prefs.setInt(
           _achievementSyncRetryAfterKey,
-          DateTime.now()
-              .add(const Duration(hours: 6))
-              .millisecondsSinceEpoch,
+          DateTime.now().add(const Duration(hours: 6)).millisecondsSinceEpoch,
         );
         debugPrint(
             'Achievement sync endpoint unavailable; keeping unlocks local.');
@@ -779,8 +946,10 @@ class AuthRepository {
   }
 
   Future<void> signOut() async {
+    _accountIntent++;
+    if (await _currentGuest() != null) await _finishGuestSession();
     final prefs = await SharedPreferences.getInstance();
-    
+
     // Store last username before clearing user data
     final userData = prefs.getString(_userKey);
     if (userData != null) {
@@ -794,7 +963,8 @@ class AuthRepository {
 
     await prefs.remove(_tokenKey);
     await prefs.remove(_userKey);
-    await prefs.setBool(_explicitLogoutKey, true); // Mark as explicitly logged out
+    await prefs.setBool(
+        _explicitLogoutKey, true); // Mark as explicitly logged out
     _dio.options.headers.remove('Authorization');
   }
 
@@ -804,6 +974,7 @@ class AuthRepository {
   }
 
   Future<String?> getToken() async {
+    if (await _currentGuest() != null) return null;
     final prefs = await SharedPreferences.getInstance();
     final storedToken = prefs.getString(_tokenKey);
     if (storedToken == null) return null;
@@ -863,6 +1034,7 @@ class AuthRepository {
   /// User will need to enter new username/re-authenticate on next launch
   /// Used for testing session persistence across app restarts
   Future<void> clearAllData() async {
+    await _finishGuestSession();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_tokenKey); // Clear auth token
     await prefs.remove(_userKey); // Clear user profile

@@ -4,7 +4,7 @@
 
 | Tool | Version | Install |
 |------|---------|---------|
-| Flutter | ≥ 3.22 | [flutter.dev](https://flutter.dev/docs/get-started/install) |
+| Flutter | 3.50.0 (verified) | [flutter.dev](https://flutter.dev/docs/get-started/install) |
 | Node.js | ≥ 20 | [nodejs.org](https://nodejs.org) |
 | Wrangler CLI | ≥ 3.60 | `npm i -g wrangler` |
 | Git | Latest | [git-scm.com](https://git-scm.com) |
@@ -80,11 +80,11 @@ npm run secret:jwt
 ## Step 6 — Deploy Backend (Workers)
 
 ```bash
-# Deploy to production
-npm run deploy
+# Deploy the Cloudflare Worker backend
+npm run deploy:backend
 
 # Or deploy dev environment
-npm run deploy:dev
+npm run deploy:backend:dev
 
 # Your Workers URL will be: https://chess-master-api.YOUR_SUBDOMAIN.workers.dev
 ```
@@ -95,32 +95,32 @@ npm run deploy:dev
 
 ### Option A: GitHub Auto-Deploy (Recommended)
 
-1. Push code to GitHub
-2. Go to Cloudflare Dashboard → Pages → Create Project
-3. Connect GitHub repo
-4. Build settings:
-   - **Build command**: `cd app && flutter build web --release --web-renderer canvaskit`
-   - **Build output**: `app/build/web`
-   - **Root directory**: `/`
-5. Set environment variables:
-   - `API_URL` = `https://chess-master-api.YOUR_SUBDOMAIN.workers.dev`
-   - `WS_URL` = `wss://chess-master-api.YOUR_SUBDOMAIN.workers.dev`
+The repository's GitHub Actions workflow builds and deploys to the existing
+`chessmaster-app` Pages project when changes are pushed to `main`. Configure
+the Cloudflare GitHub repository secrets listed in Step 9. Flutter's API
+endpoint defaults to the production Worker URL configured in
+`app_config.dart`. If that endpoint changes, pass it as a build flag (for
+example, `--dart-define=API_URL=https://chess-master-api.YOUR_SUBDOMAIN.workers.dev`);
+Cloudflare environment variables alone are not embedded in the Flutter build.
+`WS_URL` is derived from `API_URL` unless it uses a different host or path.
 
 ### Option B: Manual Deploy
 
 ```bash
-cd app
-flutter build web --release --web-renderer canvaskit
-
-cd ..
-npx wrangler pages deploy app/build/web --project-name=chess-master
+# From the repository root; builds and deploys to chessmaster-app
+npm run deploy
 ```
+
+`npm run deploy` builds the Flutter web app and publishes it to the existing
+Cloudflare Pages project `chessmaster-app`. Pushes to `main` are also deployed
+by the GitHub Actions workflow after its build and tests pass. For a combined
+frontend and Worker release, use `npm run deploy:all`.
 
 ---
 
 ## Step 8 — Custom Domain
 
-1. Cloudflare Dashboard → Pages → chess-master → Custom Domains
+1. Cloudflare Dashboard → Pages → chessmaster-app → Custom Domains
 2. Add `chess.yourdomain.com`
 3. Cloudflare auto-provisions SSL
 
@@ -206,8 +206,8 @@ open ios/Runner.xcworkspace
 - [ ] Enable Cloudflare Caching for static assets
 - [ ] Set Cache-Control headers on Workers responses
 - [ ] Enable Brotli compression on Pages
-- [ ] Use `--web-renderer canvaskit` for consistent Flutter rendering
-- [ ] Enable Flutter web service worker for PWA caching
+- [ ] Use `flutter build web --release && python3 ../scripts/prune_web_chunks.py` with icon tree shaking enabled
+- [ ] Keep the custom bootstrap and `sw.js`; the push worker owns the app scope. Deferred screens load on demand.
 - [ ] Set up Cloudflare R2 for avatar/asset storage
 
 ---

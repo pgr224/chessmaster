@@ -124,6 +124,8 @@ class GameVariantPreset {
     ),
   ];
 
+  static List<GameVariantPreset> get playable => all.where((variant)=>variant.id=='standard').toList(growable:false);
+
   static GameVariantPreset fromId(String? id) {
     if (id == null || id.isEmpty) return all.first;
     return all.firstWhere(

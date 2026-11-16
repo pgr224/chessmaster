@@ -1,257 +1,70 @@
 import { Hono } from 'hono'
 import { authMiddleware } from '../middleware/auth'
+import { normalizeTimeControl, isValidTimeControl } from '../time_control'
+import { PushService } from '../services/push_service'
 import type { Env } from '../index'
-import { normalizeTimeControl, DEFAULT_TIME_CONTROL } from '../time_control'
-
-import { v4 as uuidv4 } from 'uuid'
-
-const tournamentRoutes = new Hono<{ Bindings: Env; Variables: { user: any } }>()
-
-// Apply auth middleware to all tournament routes
-tournamentRoutes.use('*', authMiddleware)
-
-// List upcoming and active tournaments
-tournamentRoutes.get('/', async (c) => {
-  const { results } = await c.env.DB.prepare(
-    `SELECT * FROM tournaments 
-     WHERE status IN ('upcoming', 'registration', 'active') 
-     ORDER BY start_time ASC LIMIT 50`
-  ).all()
-
-  return c.json({ tournaments: results })
+const tournamentRoutes=new Hono<{Bindings:Env;Variables:{user:any}}>()
+tournamentRoutes.use('*',authMiddleware)
+async function visible(db:D1Database,id:string,userId:string){return db.prepare(`SELECT t.* FROM tournaments t WHERE t.id=? AND (t.type='public' OR EXISTS(SELECT 1 FROM tournament_participants p WHERE p.tournament_id=t.id AND p.user_id=?))`).bind(id,userId).first<any>()}
+tournamentRoutes.get('/',async c=>{const {results}=await c.env.DB.prepare(`SELECT t.* FROM tournaments t WHERE (t.type='public' OR EXISTS(SELECT 1 FROM tournament_participants p WHERE p.tournament_id=t.id AND p.user_id=?)) AND t.status IN('upcoming','registration','active') ORDER BY t.start_time LIMIT 50`).bind(c.get('user').sub).all();return c.json({tournaments:results})})
+tournamentRoutes.get('/:id',async c=>{
+ const t=await visible(c.env.DB,c.req.param('id'),c.get('user').sub);if(!t)return c.json({error:'Tournament not found'},404)
+ const {results}=await c.env.DB.prepare(`SELECT u.id,u.username,COALESCE(s.elo_rating,0) AS rating,p.* FROM tournament_participants p JOIN users u ON u.id=p.user_id LEFT JOIN user_stats s ON s.user_id=u.id WHERE p.tournament_id=? ORDER BY p.points DESC,u.id`).bind(t.id).all()
+ return c.json({tournament:t,participants:results})
 })
-
-// Get specific tournament
-tournamentRoutes.get('/:id', async (c) => {
-  const tournamentId = c.req.param('id')
-  
-  const { results: tournaments } = await c.env.DB.prepare(
-    'SELECT * FROM tournaments WHERE id = ?'
-  ).bind(tournamentId).all()
-
-  if (!tournaments.length) {
-    return c.json({ error: 'Tournament not found' }, 404)
-  }
-
-  // Get participants
-  const { results: participants } = await c.env.DB.prepare(
-    `SELECT u.id, u.username, u.rating, tp.seed, tp.status, tp.points 
-     FROM tournament_participants tp 
-     JOIN users u ON tp.user_id = u.id 
-     WHERE tp.tournament_id = ? 
-     ORDER BY tp.points DESC, tp.seed ASC`
-  ).bind(tournamentId).all()
-
-  return c.json({ 
-    tournament: tournaments[0], 
-    participants 
-  })
+tournamentRoutes.post('/',async c=>{
+ const userId=c.get('user').sub,body=await c.req.json(),type=body.type==='private'?'private':'public',rounds=Number(body.total_rounds??body.totalRounds??3),tc=body.time_control??body.timeControl??'10+0'
+ if(!Number.isInteger(rounds)||(type==='private'?![3,5,7].includes(rounds):rounds<1||rounds>15)||!isValidTimeControl(tc))return c.json({error:'Invalid rounds or time control'},400)
+ const invited=Array.from(new Set<string>((Array.isArray(body.invited_players)?body.invited_players:[]).filter((x:unknown)=>typeof x==='string'&&x!==userId)))
+ if(type==='private'&&invited.length>1)return c.json({error:'A private series has two players'},400)
+ const id=crypto.randomUUID(),ids=[userId,...invited]
+ for(const player of ids)if(!await c.env.DB.prepare('SELECT id FROM users WHERE id=?').bind(player).first())return c.json({error:'Invited player not found'},400)
+ await c.env.DB.batch([
+  c.env.DB.prepare(`INSERT INTO tournaments(id,name,description,format,start_time,time_control,created_by,type,total_rounds,max_players,current_players) VALUES(?,?,?,?,?,?,?,?,?,?,?)`).bind(id,String(body.name??'New Tournament').slice(0,80),String(body.description??'').slice(0,500),type==='private'?'round_robin':'swiss',new Date().toISOString(),normalizeTimeControl(tc),userId,type,rounds,type==='private'?2:16,ids.length),
+  ...ids.map(player=>c.env.DB.prepare('INSERT INTO tournament_participants(tournament_id,user_id) VALUES(?,?)').bind(id,player))
+ ])
+ for(const player of invited)c.executionCtx.waitUntil(PushService.notifyUser(player,{title:'🏆 Tournament invitation',body:'You have been invited to a chess series.',data:{type:'TOURNAMENT_INVITE',tournamentId:id,category:'tournaments'}},c.env,'tournaments'))
+ return c.json({success:true,id},201)
 })
-
-// Create a new tournament (admin or premium user)
-tournamentRoutes.post('/', async (c) => {
-  const userId = c.get('user').sub
-  const body = await c.req.json()
-  const id = uuidv4()
-
-  const type = body.type === 'private' ? 'private' : 'public'
-  const totalRounds = Math.min(Math.max(parseInt(body.total_rounds ?? body.totalRounds ?? '3'), 1), 15)
-  const invitedPlayers: string[] = Array.isArray(body.invited_players) ? body.invited_players : []
-
-  try {
-    await c.env.DB.prepare(
-      `INSERT INTO tournaments (id, name, description, format, start_time, time_control, created_by, type, total_rounds) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).bind(
-      id,
-      body.name || 'New Tournament',
-      body.description || '',
-      body.format || (type === 'private' ? 'best_of' : 'swiss'),
-      body.start_time || new Date().toISOString(),
-      normalizeTimeControl(body.time_control || body.timeControl || DEFAULT_TIME_CONTROL),
-      userId,
-      type,
-      totalRounds,
-    ).run()
-
-    // Auto-join creator
-    await c.env.DB.prepare(
-      'INSERT INTO tournament_participants (tournament_id, user_id) VALUES (?, ?)'
-    ).bind(id, userId).run()
-
-    // invited_players: future push-notification hook (not yet implemented)
-    if (invitedPlayers.length > 0) {
-      console.log(`[tournament] ${invitedPlayers.length} players invited to ${id}`)
-    }
-
-    return c.json({ success: true, id }, 201)
-  } catch (err: any) {
-    return c.json({ error: 'Failed to create tournament', details: err.message }, 400)
-  }
+async function join(c:any){
+ const id=c.req.param('id'),userId=c.get('user').sub,t=await visible(c.env.DB,id,userId)
+ if(!t)return c.json({error:'Tournament not found or invitation required'},404)
+ const existing=await c.env.DB.prepare('SELECT user_id FROM tournament_participants WHERE tournament_id=? AND user_id=?').bind(id,userId).first()
+ if(existing)return c.json({success:true})
+ if(t.type==='private')return c.json({error:'Invitation required'},403)
+ if(!['upcoming','registration'].includes(t.status))return c.json({error:'Registration is closed'},409)
+ await c.env.DB.batch([
+  c.env.DB.prepare(`INSERT OR IGNORE INTO tournament_participants(tournament_id,user_id) SELECT ?,? WHERE (SELECT COUNT(*) FROM tournament_participants WHERE tournament_id=?) < (SELECT max_players FROM tournaments WHERE id=?)`).bind(id,userId,id,id),
+  c.env.DB.prepare('UPDATE tournaments SET current_players=(SELECT COUNT(*) FROM tournament_participants WHERE tournament_id=?) WHERE id=?').bind(id,id)
+ ])
+ if(!await c.env.DB.prepare('SELECT user_id FROM tournament_participants WHERE tournament_id=? AND user_id=?').bind(id,userId).first())return c.json({error:'Tournament is full'},409)
+ return c.json({success:true})
+}
+tournamentRoutes.post('/:id/join',join)
+tournamentRoutes.post('/:id/accept-invite',join)
+tournamentRoutes.post('/:id/start',async c=>{
+ const id=c.req.param('id'),userId=c.get('user').sub,t=await visible(c.env.DB,id,userId)
+ if(!t||t.created_by!==userId)return c.json({error:'Creator only'},403)
+ const headers=new Headers({'X-Authenticated-User':userId})
+ const stub=c.env.TOURNAMENT_ROOM.get(c.env.TOURNAMENT_ROOM.idFromName(id))
+ return stub.fetch(new Request(`https://tournament/start?tournamentId=${encodeURIComponent(id)}`,{method:'POST',headers}))
 })
-
-// Join a tournament
-tournamentRoutes.post('/:id/join', async (c) => {
-  const userId = c.get('user').sub
-  const tournamentId = c.req.param('id')
-
-  try {
-    // Check if tournament exists and is open
-    const { results } = await c.env.DB.prepare(
-      'SELECT status, max_players, current_players FROM tournaments WHERE id = ?'
-    ).bind(tournamentId).all()
-
-    if (!results.length) return c.json({ error: 'Tournament not found' }, 404)
-    
-    const t = results[0] as any
-    if (t.status !== 'upcoming' && t.status !== 'registration') {
-      return c.json({ error: 'Tournament registration is closed' }, 400)
-    }
-    if (t.current_players >= t.max_players) {
-      return c.json({ error: 'Tournament is full' }, 400)
-    }
-
-    // Insert participant and update count
-    await c.env.DB.batch([
-      c.env.DB.prepare(
-        'INSERT INTO tournament_participants (tournament_id, user_id) VALUES (?, ?)'
-      ).bind(tournamentId, userId),
-      c.env.DB.prepare(
-        'UPDATE tournaments SET current_players = current_players + 1 WHERE id = ?'
-      ).bind(tournamentId)
-    ])
-
-    return c.json({ success: true, message: 'Successfully joined tournament' })
-  } catch (err: any) {
-    if (err.message.includes('UNIQUE constraint failed')) {
-      return c.json({ error: 'Already joined this tournament' }, 400)
-    }
-    return c.json({ error: 'Failed to join tournament' }, 500)
-  }
+tournamentRoutes.post('/:id/result',c=>c.json({error:'Results are submitted only by the authoritative game room'},403))
+tournamentRoutes.get('/:id/standings',async c=>{
+ const t=await visible(c.env.DB,c.req.param('id'),c.get('user').sub);if(!t)return c.json({error:'Tournament not found'},404)
+ const {results}=await c.env.DB.prepare(`SELECT u.id,u.username,COALESCE(s.elo_rating,0) AS rating,p.points,p.wins,p.losses,p.draws,p.status FROM tournament_participants p JOIN users u ON u.id=p.user_id LEFT JOIN user_stats s ON s.user_id=u.id WHERE p.tournament_id=? ORDER BY p.points DESC,p.wins DESC,u.id`).bind(t.id).all();return c.json({standings:results})
 })
-
-// Start a tournament (creator only)
-tournamentRoutes.post('/:id/start', async (c) => {
-  const userId = c.get('user').sub
-  const tournamentId = c.req.param('id')
-
-  const { results } = await c.env.DB.prepare(
-    'SELECT * FROM tournaments WHERE id = ?'
-  ).bind(tournamentId).all()
-  if (!results.length) return c.json({ error: 'Tournament not found' }, 404)
-
-  const t = results[0] as any
-  if (t.created_by !== userId) return c.json({ error: 'Only the creator can start the tournament' }, 403)
-  if (t.status !== 'upcoming' && t.status !== 'registration') {
-    return c.json({ error: 'Tournament already started' }, 400)
-  }
-
-  await c.env.DB.prepare(
-    `UPDATE tournaments SET status = 'active', current_round = 1 WHERE id = ?`
-  ).bind(tournamentId).run()
-
-  return c.json({ success: true, message: 'Tournament started' })
+tournamentRoutes.post('/:id/invite',async c=>{
+ const id=c.req.param('id'),userId=c.get('user').sub,t=await visible(c.env.DB,id,userId),body=await c.req.json(),invited=body.invited_user_id
+ if(!t||t.created_by!==userId)return c.json({error:'Creator only'},403)
+ if(!['upcoming','registration'].includes(t.status))return c.json({error:'Registration closed'},409)
+ if(typeof invited!=='string'||invited===userId||!await c.env.DB.prepare('SELECT id FROM users WHERE id=?').bind(invited).first())return c.json({error:'Invalid invited player'},400)
+ await c.env.DB.batch([
+  c.env.DB.prepare(`INSERT OR IGNORE INTO tournament_participants(tournament_id,user_id) SELECT ?,? WHERE (SELECT COUNT(*) FROM tournament_participants WHERE tournament_id=?) < ?`).bind(id,invited,id,t.type==='private'?2:16),
+  c.env.DB.prepare('UPDATE tournaments SET current_players=(SELECT COUNT(*) FROM tournament_participants WHERE tournament_id=?) WHERE id=?').bind(id,id)
+ ])
+ if(!await c.env.DB.prepare('SELECT user_id FROM tournament_participants WHERE tournament_id=? AND user_id=?').bind(id,invited).first())return c.json({error:'Tournament full'},409)
+ c.executionCtx.waitUntil(PushService.notifyUser(invited,{title:'🏆 Tournament invitation',body:'You have been invited to a chess series.',data:{type:'TOURNAMENT_INVITE',tournamentId:id,category:'tournaments'}},c.env,'tournaments'))
+ return c.json({success:true})
 })
-
-// Report a match result within a tournament
-tournamentRoutes.post('/:id/result', async (c) => {
-  const userId = c.get('user').sub
-  const tournamentId = c.req.param('id')
-  const body = await c.req.json()
-  const { game_id, result } = body  // result: 'player1' | 'player2' | 'draw'
-
-  if (!game_id || !result) return c.json({ error: 'game_id and result are required' }, 400)
-
-  const { results: matchRows } = await c.env.DB.prepare(
-    'SELECT * FROM tournament_matches WHERE tournament_id = ? AND game_id = ?'
-  ).bind(tournamentId, game_id).all()
-  if (!matchRows.length) return c.json({ error: 'Match not found' }, 404)
-
-  const match = matchRows[0] as any
-  const winnerId = result === 'player1' ? match.player1_id
-    : result === 'player2' ? match.player2_id
-    : null
-
-  await c.env.DB.prepare(
-    `UPDATE tournament_matches SET result = ?, winner_id = ?, status = 'completed' WHERE tournament_id = ? AND game_id = ?`
-  ).bind(result, winnerId, tournamentId, game_id).run()
-
-  // Update participant points
-  const scoreIncr = result === 'draw' ? 0.5 : 1.0
-  if (winnerId) {
-    await c.env.DB.prepare(
-      'UPDATE tournament_participants SET points = points + ? WHERE tournament_id = ? AND user_id = ?'
-    ).bind(scoreIncr, tournamentId, winnerId).run()
-  } else {
-    // draw: both get 0.5
-    await c.env.DB.batch([
-      c.env.DB.prepare(
-        'UPDATE tournament_participants SET points = points + 0.5 WHERE tournament_id = ? AND user_id = ?'
-      ).bind(tournamentId, match.player1_id),
-      c.env.DB.prepare(
-        'UPDATE tournament_participants SET points = points + 0.5 WHERE tournament_id = ? AND user_id = ?'
-      ).bind(tournamentId, match.player2_id),
-    ])
-  }
-
-  return c.json({ success: true })
-})
-
-// Get current standings
-tournamentRoutes.get('/:id/standings', async (c) => {
-  const tournamentId = c.req.param('id')
-
-  const { results } = await c.env.DB.prepare(
-    `SELECT u.id, u.username, u.rating, tp.points, tp.status
-     FROM tournament_participants tp
-     JOIN users u ON tp.user_id = u.id
-     WHERE tp.tournament_id = ?
-     ORDER BY tp.points DESC, u.rating DESC`
-  ).bind(tournamentId).all()
-
-  return c.json({ standings: results })
-})
-
-// Invite a player to a private tournament
-tournamentRoutes.post('/:id/invite', async (c) => {
-  const userId = c.get('user').sub
-  const tournamentId = c.req.param('id')
-  const body = await c.req.json()
-  const { invited_user_id } = body
-
-  if (!invited_user_id) return c.json({ error: 'invited_user_id is required' }, 400)
-
-  const { results } = await c.env.DB.prepare(
-    'SELECT * FROM tournaments WHERE id = ? AND created_by = ?'
-  ).bind(tournamentId, userId).all()
-  if (!results.length) return c.json({ error: 'Tournament not found or access denied' }, 403)
-
-  try {
-    await c.env.DB.prepare(
-      'INSERT INTO tournament_participants (tournament_id, user_id, status) VALUES (?, ?, ?)'
-    ).bind(tournamentId, invited_user_id, 'invited').run()
-    return c.json({ success: true })
-  } catch (err: any) {
-    if (err.message.includes('UNIQUE')) return c.json({ error: 'Already invited' }, 400)
-    return c.json({ error: 'Failed to invite player' }, 500)
-  }
-})
-
-// Accept a tournament invitation
-tournamentRoutes.post('/:id/accept-invite', async (c) => {
-  const userId = c.get('user').sub
-  const tournamentId = c.req.param('id')
-
-  const { results } = await c.env.DB.prepare(
-    `SELECT * FROM tournament_participants WHERE tournament_id = ? AND user_id = ? AND status = 'invited'`
-  ).bind(tournamentId, userId).all()
-  if (!results.length) return c.json({ error: 'No pending invitation found' }, 404)
-
-  await c.env.DB.prepare(
-    `UPDATE tournament_participants SET status = 'active' WHERE tournament_id = ? AND user_id = ?`
-  ).bind(tournamentId, userId).run()
-
-  return c.json({ success: true })
-})
-
 export { tournamentRoutes }

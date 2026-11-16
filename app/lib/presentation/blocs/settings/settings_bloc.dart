@@ -1,3 +1,4 @@
+import '../../../core/config/web_push_config.dart';
 import 'dart:convert';
 
 import 'package:equatable/equatable.dart';
@@ -146,7 +147,13 @@ class SettingsLoadAIDifficultyFromProfile extends SettingsEvent {
     required this.aiLastDifficulty,
   });
   @override
-  List<Object?> get props => [aiEasyLevel, aiMediumLevel, aiHardLevel, aiImpossibleLevel, aiLastDifficulty];
+  List<Object?> get props => [
+        aiEasyLevel,
+        aiMediumLevel,
+        aiHardLevel,
+        aiImpossibleLevel,
+        aiLastDifficulty
+      ];
 }
 
 class SettingsBackgroundEvent extends SettingsEvent {
@@ -160,6 +167,7 @@ class SettingsState extends Equatable {
   final bool soundEnabled;
   final bool vibrationEnabled;
   final bool notificationsEnabled;
+  final bool notificationGames;
   final bool notificationChallenges;
   final bool notificationCommunity;
   final bool notificationTournaments;
@@ -178,7 +186,8 @@ class SettingsState extends Equatable {
   final int aiMediumLevel;
   final int aiHardLevel;
   final int aiImpossibleLevel;
-  final String aiLastDifficulty; // 'basic', 'intermediate', 'advanced', 'impossible'
+  final String
+      aiLastDifficulty; // 'basic', 'intermediate', 'advanced', 'impossible'
   final String backgroundTheme;
   final bool isLoaded;
 
@@ -186,6 +195,7 @@ class SettingsState extends Equatable {
     this.soundEnabled = true,
     this.vibrationEnabled = true,
     this.notificationsEnabled = true,
+    this.notificationGames = true,
     this.notificationChallenges = true,
     this.notificationCommunity = true,
     this.notificationTournaments = true,
@@ -211,17 +221,18 @@ class SettingsState extends Equatable {
 
   /// Convenience: get the fine-grained level for the currently selected difficulty mode.
   int get activeDifficultyLevel => switch (aiLastDifficulty) {
-    'basic' => aiEasyLevel,
-    'intermediate' => aiMediumLevel,
-    'advanced' => aiHardLevel,
-    'impossible' => aiImpossibleLevel,
-    _ => aiMediumLevel,
-  };
+        'basic' => aiEasyLevel,
+        'intermediate' => aiMediumLevel,
+        'advanced' => aiHardLevel,
+        'impossible' => aiImpossibleLevel,
+        _ => aiMediumLevel,
+      };
 
   SettingsState copyWith({
     bool? soundEnabled,
     bool? vibrationEnabled,
     bool? notificationsEnabled,
+    bool? notificationGames,
     bool? notificationChallenges,
     bool? notificationCommunity,
     bool? notificationTournaments,
@@ -248,11 +259,13 @@ class SettingsState extends Equatable {
         soundEnabled: soundEnabled ?? this.soundEnabled,
         vibrationEnabled: vibrationEnabled ?? this.vibrationEnabled,
         notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
+        notificationGames: notificationGames ?? this.notificationGames,
         notificationChallenges:
-          notificationChallenges ?? this.notificationChallenges,
-        notificationCommunity: notificationCommunity ?? this.notificationCommunity,
+            notificationChallenges ?? this.notificationChallenges,
+        notificationCommunity:
+            notificationCommunity ?? this.notificationCommunity,
         notificationTournaments:
-          notificationTournaments ?? this.notificationTournaments,
+            notificationTournaments ?? this.notificationTournaments,
         notificationSystem: notificationSystem ?? this.notificationSystem,
         showCoordinates: showCoordinates ?? this.showCoordinates,
         showSquareLabels: showSquareLabels ?? this.showSquareLabels,
@@ -278,6 +291,7 @@ class SettingsState extends Equatable {
         soundEnabled,
         vibrationEnabled,
         notificationsEnabled,
+        notificationGames,
         notificationChallenges,
         notificationCommunity,
         notificationTournaments,
@@ -304,6 +318,9 @@ class SettingsState extends Equatable {
 
 class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
   final Dio? dio;
+  int _notificationRevision = 0;
+  Future<void> _notificationChanges = Future.value();
+  Future<void> _notificationSync = Future.value();
 
   SettingsBloc({this.dio}) : super(const SettingsState()) {
     on<SettingsLoadEvent>(_onLoad);
@@ -316,37 +333,53 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
       emit(state.copyWith(vibrationEnabled: e.enabled));
     });
     on<SettingsNotificationsEvent>((e, emit) async {
-      final prefs = await SharedPreferences.getInstance();
-      prefs.setBool('notifications', e.enabled);
-      emit(state.copyWith(notificationsEnabled: e.enabled));
-      await _syncNotificationSettings(prefs, state.copyWith(notificationsEnabled: e.enabled));
+      await _queueNotificationChange(() async {
+        _notificationRevision++;
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('notifications', e.enabled);
+        await prefs.setBool('notification_settings_dirty', true);
+        if (!e.enabled) disableWebPush();
+        emit(state.copyWith(notificationsEnabled: e.enabled));
+        await _syncNotificationSettings(
+            prefs, state.copyWith(notificationsEnabled: e.enabled));
+        if (e.enabled) syncWebPush();
+      });
     });
     on<SettingsNotificationCategoryEvent>((e, emit) async {
-      final prefs = await SharedPreferences.getInstance();
-      final next = switch (e.category) {
-        'challenges' => state.copyWith(notificationChallenges: e.enabled),
-        'community' => state.copyWith(notificationCommunity: e.enabled),
-        'tournaments' => state.copyWith(notificationTournaments: e.enabled),
-        _ => state.copyWith(notificationSystem: e.enabled),
-      };
+      await _queueNotificationChange(() async {
+        _notificationRevision++;
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('notification_settings_dirty', true);
+        final next = switch (e.category) {
+          'games' => state.copyWith(notificationGames: e.enabled),
+          'challenges' => state.copyWith(notificationChallenges: e.enabled),
+          'community' => state.copyWith(notificationCommunity: e.enabled),
+          'tournaments' => state.copyWith(notificationTournaments: e.enabled),
+          _ => state.copyWith(notificationSystem: e.enabled),
+        };
 
-      switch (e.category) {
-        case 'challenges':
-          await prefs.setBool('notif_challenges', e.enabled);
-          break;
-        case 'community':
-          await prefs.setBool('notif_community', e.enabled);
-          break;
-        case 'tournaments':
-          await prefs.setBool('notif_tournaments', e.enabled);
-          break;
-        default:
-          await prefs.setBool('notif_system', e.enabled);
-          break;
-      }
+        switch (e.category) {
+          case 'games':
+            await prefs.setBool('notif_games', e.enabled);
+            break;
+          case 'challenges':
+            await prefs.setBool('notif_challenges', e.enabled);
+            break;
+          case 'community':
+            await prefs.setBool('notif_community', e.enabled);
+            break;
+          case 'tournaments':
+            await prefs.setBool('notif_tournaments', e.enabled);
+            break;
+          default:
+            await prefs.setBool('notif_system', e.enabled);
+            break;
+        }
 
-      emit(next);
-      await _syncNotificationSettings(prefs, next);
+        emit(next);
+        await _syncNotificationSettings(prefs, next);
+        syncWebPush();
+      });
     });
     on<SettingsShowCoordinatesEvent>((e, emit) async {
       (await SharedPreferences.getInstance())
@@ -402,11 +435,14 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     });
     on<SettingsAIModeLevelEvent>((e, emit) async {
       final prefs = await SharedPreferences.getInstance();
-      
+
       int level = e.level;
-      if (e.mode == 'easy') level = level.clamp(0, 10);
-      else if (e.mode == 'medium') level = level.clamp(10, 20);
-      else if (e.mode == 'hard') level = level.clamp(20, 50);
+      if (e.mode == 'easy')
+        level = level.clamp(0, 10);
+      else if (e.mode == 'medium')
+        level = level.clamp(10, 20);
+      else if (e.mode == 'hard')
+        level = level.clamp(20, 50);
       else if (e.mode == 'impossible') level = level.clamp(50, 100);
 
       final next = switch (e.mode) {
@@ -456,6 +492,7 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
       soundEnabled: prefs.getBool('sound') ?? true,
       vibrationEnabled: prefs.getBool('vibration') ?? true,
       notificationsEnabled: prefs.getBool('notifications') ?? true,
+      notificationGames: prefs.getBool('notif_games') ?? true,
       notificationChallenges: prefs.getBool('notif_challenges') ?? true,
       notificationCommunity: prefs.getBool('notif_community') ?? true,
       notificationTournaments: prefs.getBool('notif_tournaments') ?? true,
@@ -473,7 +510,8 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
       aiEasyLevel: (prefs.getInt('ai_easy_level') ?? 5).clamp(0, 10),
       aiMediumLevel: (prefs.getInt('ai_medium_level') ?? 15).clamp(10, 20),
       aiHardLevel: (prefs.getInt('ai_hard_level') ?? 35).clamp(20, 50),
-      aiImpossibleLevel: (prefs.getInt('ai_impossible_level') ?? 100).clamp(50, 100),
+      aiImpossibleLevel:
+          (prefs.getInt('ai_impossible_level') ?? 100).clamp(50, 100),
       aiLastDifficulty: prefs.getString('ai_last_difficulty') ?? 'intermediate',
       backgroundTheme: prefs.getString('background_theme') ?? 'midnight',
       isLoaded: true,
@@ -483,9 +521,16 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
 
     final userId = _resolveUserIdFromPrefs(prefs);
     if (dio != null && userId != null) {
+      if (prefs.getBool('notification_settings_dirty') ?? false) {
+        await _syncNotificationSettings(prefs, loadedState);
+        if (prefs.getBool('notification_settings_dirty') ?? false) return;
+      }
       try {
-        final response = await dio!.get('/api/push/settings',
-            queryParameters: {'userId': userId});
+        final loadedRevision = _notificationRevision;
+        final response = await dio!
+            .get('/api/push/settings', queryParameters: {'userId': userId});
+        if (_notificationRevision != loadedRevision ||
+            (prefs.getBool('notification_settings_dirty') ?? false)) return;
         final data = response.data as Map<String, dynamic>;
         final categories = (data['categories'] as Map?)?.map(
               (key, value) => MapEntry(key.toString(), value),
@@ -494,6 +539,7 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
 
         loadedState = loadedState.copyWith(
           notificationsEnabled: data['enabled'] == true,
+          notificationGames: categories['games'] != false,
           notificationChallenges: categories['challenges'] != false,
           notificationCommunity: categories['community'] != false,
           notificationTournaments: categories['tournaments'] != false,
@@ -501,11 +547,20 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
         );
 
         await prefs.setBool('notifications', loadedState.notificationsEnabled);
-        await prefs.setBool('notif_challenges', loadedState.notificationChallenges);
-        await prefs.setBool('notif_community', loadedState.notificationCommunity);
-        await prefs.setBool('notif_tournaments', loadedState.notificationTournaments);
+        await prefs.setBool('notif_games', loadedState.notificationGames);
+        await prefs.setBool(
+            'notif_challenges', loadedState.notificationChallenges);
+        await prefs.setBool(
+            'notif_community', loadedState.notificationCommunity);
+        await prefs.setBool(
+            'notif_tournaments', loadedState.notificationTournaments);
         await prefs.setBool('notif_system', loadedState.notificationSystem);
         emit(loadedState);
+        if (loadedState.notificationsEnabled) {
+          syncWebPush();
+        } else {
+          disableWebPush();
+        }
       } catch (e) {
         LoggingService.error('Failed to fetch remote notification settings', e);
       }
@@ -521,20 +576,38 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
       return;
     }
 
-    try {
+    final revision = _notificationRevision;
+    final operation = _notificationSync.catchError((_) {}).then((_) async {
+      // Requests from another account must not reuse the new account's token.
+      if (_resolveUserIdFromPrefs(prefs) != userId) return;
       await dio!.put('/api/push/settings', data: {
-        'userId': userId,
         'enabled': next.notificationsEnabled,
         'categories': {
+          'games': next.notificationGames,
           'challenges': next.notificationChallenges,
           'community': next.notificationCommunity,
           'tournaments': next.notificationTournaments,
           'system': next.notificationSystem,
         },
       });
+      if (revision == _notificationRevision) {
+        await prefs.setBool('notification_settings_dirty', false);
+      }
+    });
+    _notificationSync = operation;
+    try {
+      await operation;
     } catch (e) {
+      // Keep the dirty marker so reconnect/load can retry the user's choice.
       LoggingService.error('Failed to sync notification settings', e);
     }
+  }
+
+  Future<void> _queueNotificationChange(Future<void> Function() apply) {
+    final operation =
+        _notificationChanges.catchError((_) {}).then((_) => apply());
+    _notificationChanges = operation;
+    return operation;
   }
 
   Future<void> _syncDifficultySettings(

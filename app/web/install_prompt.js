@@ -3,9 +3,6 @@
  */
 
 let deferredInstallPrompt = null;
-const APK_DOWNLOAD_URL = '/downloads/chessmaster.apk';
-const DMG_DOWNLOAD_URL = '/downloads/chessmaster.dmg'; // Placeholder for Apple direct download
-const VAPID_PUBLIC_KEY = 'BCX...'; // USER: Please replace with your actual VAPID Public Key
 
 function isIOS() {
     return /iPad|iPhone|iPod/.test(navigator.userAgent);
@@ -14,31 +11,27 @@ function isIOS() {
 function showInstallBanner() {
     if (isStandalone()) return;
     if (document.getElementById('install-banner-overlay')) return;
+    try {
+        if (sessionStorage.getItem('install_banner_dismissed') === 'true') return;
+    } catch (_) {}
 
     const overlay = document.createElement('div');
     overlay.id = 'install-banner-overlay';
     overlay.style.display = 'flex';
 
-    const isAndroid = /android/i.test(navigator.userAgent);
     const isIOSDevice = isIOS();
-    const isDesktop = !isMobile();
 
     overlay.innerHTML = `
         <div id="install-banner-content" role="dialog" aria-modal="true" aria-labelledby="install-banner-title">
             <button id="close-install" aria-label="Close install banner">&times;</button>
             <img id="install-banner-icon" src="icons/Icon-192.png" alt="Chess Master">
             <div id="install-banner-title">Install Chess Master</div>
-            <div id="install-banner-text">Install for faster launch and offline play. Share with friends in one tap.</div>
+            <div id="install-banner-text">Add Chess Master to your home screen for quick access. Share with friends in one tap.</div>
             ${isIOSDevice ? '<div id="install-banner-hint">On iPhone/iPad: tap Share, then Add to Home Screen.</div>' : ''}
 
             <div id="banner-actions">
                 <button class="install-button" id="pwa-install-btn">Install</button>
                 <button id="share-banner-btn" class="secondary-action">Share</button>
-            </div>
-
-            <div id="direct-downloads">
-                ${isAndroid ? `<a href="${APK_DOWNLOAD_URL}" class="direct-link">Download Android APK</a>` : ''}
-                ${isIOS || isDesktop ? `<a href="${DMG_DOWNLOAD_URL}" class="direct-link">Download for macOS/iOS</a>` : ''}
             </div>
         </div>
     `;
@@ -49,7 +42,7 @@ function showInstallBanner() {
     const pwaBtn = document.getElementById('pwa-install-btn');
     const closeBanner = () => {
         overlay.remove();
-        sessionStorage.setItem('install_banner_dismissed', 'true');
+        try { sessionStorage.setItem('install_banner_dismissed', 'true'); } catch (_) {}
     };
 
     if (!deferredInstallPrompt) {
@@ -63,75 +56,27 @@ function showInstallBanner() {
         if (event.target === overlay) closeBanner();
     });
 
-    document.getElementById('share-banner-btn').addEventListener('click', () => {
+    document.getElementById('share-banner-btn').addEventListener('click', async () => {
+        const url = new URL('.', document.baseURI).href;
         if (navigator.share) {
-            navigator.share({
-                title: 'Chess Master',
-                text: 'Play the best chess app online! ♟️',
-                url: window.location.origin,
-            });
+            try {
+                await navigator.share({ title: 'Chess Master', text: 'Play chess with me! ♟️', url });
+            } catch (_) {}
         } else {
-            alert('Copy this link to share: ' + window.location.origin);
+            alert('Copy this link to share: ' + url);
         }
     });
 
     pwaBtn.addEventListener('click', async () => {
-        if (deferredInstallPrompt) {
-            deferredInstallPrompt.prompt();
-            const { outcome } = await deferredInstallPrompt.userChoice;
-            console.log(`User response to install prompt: ${outcome}`);
-            deferredInstallPrompt = null;
-        }
-        
-        // Always try to request notification permission after intent
-        requestNotificationPermission();
+        try {
+            if (deferredInstallPrompt) {
+                await deferredInstallPrompt.prompt();
+                await deferredInstallPrompt.userChoice;
+                deferredInstallPrompt = null;
+            }
+        } catch (_) {}
         closeBanner();
     });
-}
-
-/**
- * Web Push Subscription Logic
- */
-async function requestNotificationPermission() {
-    const permission = await Notification.requestPermission();
-    if (permission === 'granted') {
-        console.log('Notification permission granted.');
-        await subscribeUser();
-    }
-}
-
-async function subscribeUser() {
-    try {
-        const registration = await navigator.serviceWorker.ready;
-        const subscription = await registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-        });
-
-        // Send to our Cloudflare backend
-        const userId = localStorage.getItem('chess_user_id'); // Assuming stored on login
-        if (userId) {
-            await fetch('/api/push/subscribe', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId, subscription })
-            });
-            console.log('User is subscribed to Push Notifications');
-        }
-    } catch (e) {
-        console.error('Failed to subscribe user:', e);
-    }
-}
-
-function urlBase64ToUint8Array(base64String) {
-    const padding = '='.repeat((4 - base64String.length % 4) % 4);
-    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-    const rawData = window.atob(base64);
-    const outputArray = new Uint8Array(rawData.length);
-    for (let i = 0; i < rawData.length; ++i) {
-        outputArray[i] = rawData.charCodeAt(i);
-    }
-    return outputArray;
 }
 
 // Check if running in standalone mode (already installed PWA)
@@ -163,5 +108,7 @@ window.addEventListener('appinstalled', () => {
 
 // For iOS, which doesn't support beforeinstallprompt, we show it manually
 if (isMobile() && isIOS() && !isStandalone()) {
-    setTimeout(showInstallBanner, 3000);
+    window.addEventListener('flutter-first-frame', () => {
+        setTimeout(showInstallBanner, 3000);
+    }, { once: true });
 }

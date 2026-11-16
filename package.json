@@ -1,5 +1,32 @@
 {
+  "name": "chess-master",
+  "version": "1.0.0",
+  "description": "Production-ready Chess App with Flutter frontend and Cloudflare Workers backend",
+  "scripts": {
+    "build:frontend": "cd app && flutter build web --release && cd .. && python3 scripts/prune_web_chunks.py",
+    "build:backend": "cd backend && npm run build",
+    "build": "npm run build:frontend && npm run build:backend",
+    "deploy:frontend": "npm run build:frontend && npx wrangler pages deploy app/build/web --project-name=chessmaster-app",
+    "deploy:frontend:staging": "npm run build:frontend && npx wrangler pages deploy app/build/web --project-name=chess-master-staging",
+    "deploy:backend": "cd backend && npm run deploy",
+    "deploy:backend:staging": "cd backend && npm run deploy:staging",
+    "deploy:backend:dev": "cd backend && npm run deploy:dev",
+    "deploy": "npm run deploy:frontend",
+    "deploy:all": "npm run deploy:frontend && npm run deploy:backend",
+    "deploy:staging": "npm run deploy:frontend:staging && npm run deploy:backend:staging",
+    "dev:frontend": "cd app && flutter run -d chrome",
+    "dev:backend": "cd backend && npm run dev",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "install:backend": "cd backend && npm install",
+    "install:frontend": "cd app && flutter pub get",
+    "install": "npm run install:backend && npm run install:frontend"
+  },
   "devDependencies": {
-    "wrangler": "^3.114.17"
+    "wrangler": "^3.114.17",
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=9.0.0"
   }
 }

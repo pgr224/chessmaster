@@ -1,7 +1,7 @@
 {
   "name": "chess-master-backend",
   "version": "1.0.0",
-  "description": "Chess Master — Cloudflare Workers Backend",
+  "description": "Chess Master \u2014 Cloudflare Workers Backend",
   "type": "module",
   "scripts": {
     "dev": "wrangler dev --env development",
@@ -14,7 +14,6 @@
     "db:migrate:remote": "wrangler d1 execute chessmaster-real4 --remote --file=./schema/d1-schema.sql",
     "db:migrate:v17": "wrangler d1 execute chessmaster-real4 --remote --file=./schema/migration_v17_fix_push_and_cleanup.sql",
     "db:migrate:staging": "wrangler d1 execute chessmaster-real4 --env staging --remote --file=./schema/d1-schema.sql",
-
     "db:migrate:xp": "wrangler d1 execute chessmaster-real4 --local --file=./schema/migration_v5_xp_p2p.sql",
     "db:backfill": "wrangler d1 execute chessmaster-real4 --local --file=./schema/backfill_stats.sql",
     "db:backfill:remote": "wrangler d1 execute chessmaster-real4 --remote --file=./schema/backfill_stats.sql",
@@ -24,7 +23,8 @@
     "secret:jwt": "wrangler secret put JWT_SECRET",
     "secret:jwt:staging": "wrangler secret put JWT_SECRET --env staging",
     "type-check": "tsc --noEmit",
-    "test:unit": "tsx --test src/**/*.test.ts"
+    "test:unit": "node --import tsx --test --test-isolation=none src/*.test.ts src/**/*.test.ts",
+    "test:integration": "node --import tsx --test --test-isolation=none test/integration/*.test.ts"
   },
   "dependencies": {
     "chess.js": "^1.4.0",
@@ -40,5 +40,8 @@
     "tsx": "^4.20.0",
     "typescript": "^5.4.5",
     "wrangler": "^3.60.0"
+  },
+  "engines": {
+    "node": ">=22.13.0"
   }
 }

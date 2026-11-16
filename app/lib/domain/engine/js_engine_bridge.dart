@@ -1,5 +1,6 @@
 import 'dart:js_interop';
 import 'dart:js_interop_unsafe';
+
 import 'candidate_model.dart';
 import '../../core/services/logging_service.dart';
 
@@ -8,20 +9,33 @@ extension type _JSEngineService._(JSObject _) {
   external void initEngine(JSString mode, JSString difficulty);
   external JSPromise<JSAny?> getBestMove(JSString fen, [JSNumber? movetime]);
   external JSBoolean validateMove(
-      JSString fen, JSString from, JSString to, JSString? promotion);
+    JSString fen,
+    JSString from,
+    JSString to,
+    JSString? promotion,
+  );
   external JSArray<JSString> getLegalMoves(JSString fen, JSString square);
   external JSObject getGameState(JSString fen);
   external JSString getActiveEngine();
-  external JSPromise<JSObject> analyzeStyle(JSString fen, JSArray<JSString> recentMoves);
+  external JSPromise<JSObject> analyzeStyle(
+    JSString fen,
+    JSArray<JSString> recentMoves,
+  );
+  external void cancel();
   external void dispose();
 }
 
 /// Analyze player style from position and recent moves
-Future<Map<String, dynamic>> jsEngineAnalyzeStyle(String fen, List<String> recentMoves) async {
+Future<Map<String, dynamic>> jsEngineAnalyzeStyle(
+  String fen,
+  List<String> recentMoves,
+) async {
   final svc = _getService();
   if (svc == null) {
     // Fallback heuristic
-    bool aggressive = recentMoves.any((m) => m.contains('+') || m.contains('#'));
+    bool aggressive = recentMoves.any(
+      (m) => m.contains('+') || m.contains('#'),
+    );
     return {
       'style': aggressive ? 'aggressive' : 'positional',
       'confidence': 0.5,
@@ -37,7 +51,8 @@ Future<Map<String, dynamic>> jsEngineAnalyzeStyle(String fen, List<String> recen
     final obj = result as JSObject;
     final style = (obj['style'] as JSString?)?.toDart ?? 'positional';
     final confidence = (obj['confidence'] as JSNumber?)?.toDartDouble ?? 0.5;
-    final personality = (obj['suggested_personality'] as JSString?)?.toDart ?? 'defensive';
+    final personality =
+        (obj['suggested_personality'] as JSString?)?.toDart ?? 'defensive';
 
     return {
       'style': style,
@@ -73,8 +88,10 @@ void jsEngineInit(String mode, String difficulty, {int? difficultyLevel}) {
 }
 
 /// Get best move (or move+candidates) from JS
-Future<Map<String, dynamic>?> jsEngineGetBestMove(String fen,
-    {int? movetime}) async {
+Future<Map<String, dynamic>?> jsEngineGetBestMove(
+  String fen, {
+  int? movetime,
+}) async {
   final svc = _getService();
   if (svc == null) return null;
 
@@ -93,8 +110,7 @@ Future<Map<String, dynamic>?> jsEngineGetBestMove(String fen,
 
       final List<MoveCandidate> candidates = [];
       if (candidatesAny != null && candidatesAny.isA<JSArray>()) {
-        final dartArray =
-            (candidatesAny as JSArray<JSAny?>).toDart;
+        final dartArray = (candidatesAny as JSArray<JSAny?>).toDart;
         for (var i = 0; i < dartArray.length; i++) {
           final c = dartArray[i];
           if (c == null || !c.isA<JSObject>()) continue;
@@ -116,8 +132,11 @@ Future<Map<String, dynamic>?> jsEngineGetBestMove(String fen,
 
 /// Get top candidate moves from JS
 Future<List<MoveCandidate>> jsEngineGetTopMoves(
-    String fen, int depth, int count,
-    {int? movetime}) async {
+  String fen,
+  int depth,
+  int count, {
+  int? movetime,
+}) async {
   final res = await jsEngineGetBestMove(fen, movetime: movetime);
   final raw = res?['candidates'];
   if (raw is List<MoveCandidate>) {
@@ -144,7 +163,11 @@ Future<List<MoveCandidate>> jsEngineGetTopMoves(
 
 /// Validate a move using the JS engine (synchronous)
 bool jsEngineValidateMove(
-    String fen, String from, String to, String? promotion) {
+  String fen,
+  String from,
+  String to,
+  String? promotion,
+) {
   final svc = _getService();
   if (svc == null) return false;
   return svc.validateMove(fen.toJS, from.toJS, to.toJS, promotion?.toJS).toDart;
@@ -163,6 +186,11 @@ String jsEngineGetActiveEngine() {
   final svc = _getService();
   if (svc == null) return 'none';
   return svc.getActiveEngine().toDart;
+}
+
+/// Stop the active search without changing the selected game mode.
+void jsEngineCancel() {
+  _getService()?.cancel();
 }
 
 /// Dispose all JS engine resources

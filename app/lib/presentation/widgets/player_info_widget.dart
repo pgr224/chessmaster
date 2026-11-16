@@ -44,7 +44,8 @@ class PlayerInfoWidget extends StatelessWidget {
         boxShadow: isActive
             ? [
                 BoxShadow(
-                    color: AppTheme.goldPrimary.withValues(alpha: 0.1), blurRadius: 8)
+                    color: AppTheme.goldPrimary.withValues(alpha: 0.1),
+                    blurRadius: 8)
               ]
             : null,
       ),
@@ -149,7 +150,7 @@ class PlayerInfoWidget extends StatelessWidget {
       ),
       child: Center(
         child: Icon(
-          isThinking
+          (isAI && isThinking)
               ? Icons.psychology_rounded
               : (isAI ? Icons.smart_toy_rounded : Icons.person_rounded),
           color: color == PieceColor.white ? AppTheme.midnight : Colors.white,
@@ -159,4 +160,3 @@ class PlayerInfoWidget extends StatelessWidget {
     );
   }
 }
-

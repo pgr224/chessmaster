@@ -54,6 +54,7 @@ class AchievementService {
   }
 
   int unlockAchievement(String id, {bool syncToServer = true}) {
+    if (_prefs.getBool(AuthRepository.guestSessionKey) == true) return 0;
     final index = _achievements.indexWhere((a) => a.id == id);
     if (index != -1 && !_achievements[index].isUnlocked) {
       final achievement = _achievements[index];
@@ -74,7 +75,9 @@ class AchievementService {
   }
 
   Future<void> _syncUnlockWithServer(Achievement achievement) async {
-    if (_authRepository == null || !_serverSyncAvailable) return;
+    if (_prefs.getBool(AuthRepository.guestSessionKey) == true ||
+        _authRepository == null ||
+        !_serverSyncAvailable) return;
 
     try {
       final userData = _prefs.getString('user_data');
@@ -120,7 +123,8 @@ class AchievementService {
     }
   }
 
-  int updateProgress(String id, int currentProgress, {bool syncToServer = true}) {
+  int updateProgress(String id, int currentProgress,
+      {bool syncToServer = true}) {
     final index = _achievements.indexWhere((a) => a.id == id);
     if (index != -1 && !_achievements[index].isUnlocked) {
       if (currentProgress > _achievements[index].currentProgress) {
@@ -220,11 +224,13 @@ class AchievementService {
     }
   }
 
-  int evaluatePostGame(GameState state, UserStats stats, {bool syncToServer = true}) {
+  int evaluatePostGame(GameState state, UserStats stats,
+      {bool syncToServer = true}) {
     int totalPoints = 0;
     // Beginner
     if (state.moveHistory.isNotEmpty) {
-      totalPoints += unlockAchievement('first_move', syncToServer: syncToServer);
+      totalPoints +=
+          unlockAchievement('first_move', syncToServer: syncToServer);
     }
     if (stats.wins > 0) {
       totalPoints += unlockAchievement('first_win', syncToServer: syncToServer);
@@ -234,28 +240,36 @@ class AchievementService {
         ? state.capturedBlack.isNotEmpty
         : state.capturedWhite.isNotEmpty;
     if (playerCapturedOpponent) {
-      totalPoints += unlockAchievement('first_capture', syncToServer: syncToServer);
+      totalPoints +=
+          unlockAchievement('first_capture', syncToServer: syncToServer);
     }
-    final playerMoves = state.moveHistory.asMap().entries
+    final playerMoves = state.moveHistory
+        .asMap()
+        .entries
         .where((entry) => _isPlayerMove(entry.key, state.playerColor))
         .map((entry) => entry.value)
         .toList();
-    final playerNotation = playerMoves
-        .map((m) => m.algebraic ?? m.toAlgebraic())
-        .join(' ');
+    final playerNotation =
+        playerMoves.map((m) => m.algebraic ?? m.toAlgebraic()).join(' ');
     if (playerNotation.contains('+') || playerNotation.contains('#')) {
-      totalPoints += unlockAchievement('first_check', syncToServer: syncToServer);
+      totalPoints +=
+          unlockAchievement('first_check', syncToServer: syncToServer);
     }
     if (playerMoves.any((m) => m.isCastle)) {
-      totalPoints += unlockAchievement('first_castle', syncToServer: syncToServer);
+      totalPoints +=
+          unlockAchievement('first_castle', syncToServer: syncToServer);
     }
-    totalPoints += updateProgress('play_5_games', stats.gamesPlayed, syncToServer: syncToServer);
+    totalPoints += updateProgress('play_5_games', stats.gamesPlayed,
+        syncToServer: syncToServer);
     if (stats.gamesPlayed >= 5) {
-      totalPoints += unlockAchievement('play_5_games', syncToServer: syncToServer);
+      totalPoints +=
+          unlockAchievement('play_5_games', syncToServer: syncToServer);
     }
-    totalPoints += updateProgress('play_100_games', stats.gamesPlayed, syncToServer: syncToServer);
+    totalPoints += updateProgress('play_100_games', stats.gamesPlayed,
+        syncToServer: syncToServer);
     if (stats.gamesPlayed >= 100) {
-      totalPoints += unlockAchievement('play_100_games', syncToServer: syncToServer);
+      totalPoints +=
+          unlockAchievement('play_100_games', syncToServer: syncToServer);
     }
 
     if (state.hintsUsed > 0) {
@@ -273,34 +287,43 @@ class AchievementService {
           ? state.capturedWhite.any((p) => p.type == PieceType.queen)
           : state.capturedBlack.any((p) => p.type == PieceType.queen);
       if (playerLostQueen) {
-        totalPoints += unlockAchievement('queen_sacrifice', syncToServer: syncToServer);
+        totalPoints +=
+            unlockAchievement('queen_sacrifice', syncToServer: syncToServer);
       }
 
       // Strategy: no_pieces_lost — works in ALL modes, not just singlePlayer
       if (state.playerColor == PieceColor.white &&
           state.capturedWhite.isEmpty) {
-        totalPoints += unlockAchievement('no_pieces_lost', syncToServer: syncToServer);
+        totalPoints +=
+            unlockAchievement('no_pieces_lost', syncToServer: syncToServer);
       } else if (state.playerColor == PieceColor.black &&
           state.capturedBlack.isEmpty) {
-        totalPoints += unlockAchievement('no_pieces_lost', syncToServer: syncToServer);
+        totalPoints +=
+            unlockAchievement('no_pieces_lost', syncToServer: syncToServer);
       }
     }
-    
+
     // Bounty Hunter (Capture Opposition Queen in Multiplayer)
     if (state.mode == GameMode.multiplayer) {
-      final capturedOppPieces = state.playerColor == PieceColor.white ? state.capturedBlack : state.capturedWhite;
+      final capturedOppPieces = state.playerColor == PieceColor.white
+          ? state.capturedBlack
+          : state.capturedWhite;
       if (capturedOppPieces.any((p) => p.type == PieceType.queen)) {
-         int queensCount = _prefs.getInt('mp_queens_captured') ?? 0;
-         queensCount++;
-         _prefs.setInt('mp_queens_captured', queensCount);
-         totalPoints += updateProgress('bounty_hunter', queensCount, syncToServer: syncToServer);
+        int queensCount = _prefs.getInt('mp_queens_captured') ?? 0;
+        queensCount++;
+        _prefs.setInt('mp_queens_captured', queensCount);
+        totalPoints += updateProgress('bounty_hunter', queensCount,
+            syncToServer: syncToServer);
       }
     }
 
     // Combat
-    totalPoints += updateProgress('win_10', stats.wins, syncToServer: syncToServer);
-    totalPoints += updateProgress('win_50', stats.wins, syncToServer: syncToServer);
-    totalPoints += updateProgress('win_100', stats.wins, syncToServer: syncToServer);
+    totalPoints +=
+        updateProgress('win_10', stats.wins, syncToServer: syncToServer);
+    totalPoints +=
+        updateProgress('win_50', stats.wins, syncToServer: syncToServer);
+    totalPoints +=
+        updateProgress('win_100', stats.wins, syncToServer: syncToServer);
     if (stats.wins >= 10) {
       totalPoints += unlockAchievement('win_10', syncToServer: syncToServer);
     }
@@ -311,36 +334,46 @@ class AchievementService {
       totalPoints += unlockAchievement('win_100', syncToServer: syncToServer);
     }
 
-    totalPoints += updateProgress('win_streak_3', stats.currentStreak, syncToServer: syncToServer);
-    totalPoints += updateProgress('win_streak_5', stats.currentStreak, syncToServer: syncToServer);
-    totalPoints += updateProgress('win_streak_10', stats.currentStreak, syncToServer: syncToServer);
+    totalPoints += updateProgress('win_streak_3', stats.currentStreak,
+        syncToServer: syncToServer);
+    totalPoints += updateProgress('win_streak_5', stats.currentStreak,
+        syncToServer: syncToServer);
+    totalPoints += updateProgress('win_streak_10', stats.currentStreak,
+        syncToServer: syncToServer);
 
     // Beating AIs
     if (isPlayerWin && state.mode == GameMode.singlePlayer) {
       if (state.aiDifficulty == AIDifficulty.basic) {
-        totalPoints += unlockAchievement('beat_ai_basic', syncToServer: syncToServer);
+        totalPoints +=
+            unlockAchievement('beat_ai_basic', syncToServer: syncToServer);
       }
       if (state.aiDifficulty == AIDifficulty.intermediate) {
-        totalPoints += unlockAchievement('beat_ai_intermediate', syncToServer: syncToServer);
+        totalPoints += unlockAchievement('beat_ai_intermediate',
+            syncToServer: syncToServer);
       }
       if (state.aiDifficulty == AIDifficulty.advanced ||
           state.aiDifficulty == AIDifficulty.aiMode) {
-        totalPoints += unlockAchievement('beat_ai_advanced', syncToServer: syncToServer);
+        totalPoints +=
+            unlockAchievement('beat_ai_advanced', syncToServer: syncToServer);
       }
       if (state.aiDifficulty == AIDifficulty.impossible) {
-        totalPoints += unlockAchievement('beat_ai_impossible', syncToServer: syncToServer);
+        totalPoints +=
+            unlockAchievement('beat_ai_impossible', syncToServer: syncToServer);
       }
     }
 
     // Accuracy
     if (state.accuracy >= 90.0) {
-      totalPoints += unlockAchievement('accuracy_90', syncToServer: syncToServer);
+      totalPoints +=
+          unlockAchievement('accuracy_90', syncToServer: syncToServer);
     }
     if (state.accuracy >= 95.0) {
-      totalPoints += unlockAchievement('accuracy_95', syncToServer: syncToServer);
+      totalPoints +=
+          unlockAchievement('accuracy_95', syncToServer: syncToServer);
     }
     if (state.blunders == 0 && isPlayerWin) {
-      totalPoints += unlockAchievement('zero_blunders', syncToServer: syncToServer);
+      totalPoints +=
+          unlockAchievement('zero_blunders', syncToServer: syncToServer);
     }
 
     // Promotions — only credit the PLAYER's promotions, not opponent's
@@ -348,23 +381,28 @@ class AchievementService {
       if (!_isPlayerMove(entry.key, state.playerColor)) continue;
       final move = entry.value;
       if (move.promotion == PieceType.queen) {
-        totalPoints += unlockAchievement('pawn_promotion', syncToServer: syncToServer);
+        totalPoints +=
+            unlockAchievement('pawn_promotion', syncToServer: syncToServer);
       } else if (move.promotion == PieceType.knight) {
-        totalPoints += unlockAchievement('promote_knight', syncToServer: syncToServer);
+        totalPoints +=
+            unlockAchievement('promote_knight', syncToServer: syncToServer);
       }
       // En passant detection
       if (move.isEnPassant) {
-        totalPoints += unlockAchievement('en_passant', syncToServer: syncToServer);
+        totalPoints +=
+            unlockAchievement('en_passant', syncToServer: syncToServer);
       }
     }
 
     // Fast checkmate — MUST be player's win, not opponent's
     if (state.status == GameStatus.checkmate && isPlayerWin) {
       if (state.moveHistory.length <= 40) {
-        totalPoints += unlockAchievement('checkmate_fast', syncToServer: syncToServer); // Under 20 full moves
+        totalPoints += unlockAchievement('checkmate_fast',
+            syncToServer: syncToServer); // Under 20 full moves
       }
       if (state.moveHistory.length <= 8) {
-        totalPoints += unlockAchievement('scholars_mate', syncToServer: syncToServer); // Under 4 full moves
+        totalPoints += unlockAchievement('scholars_mate',
+            syncToServer: syncToServer); // Under 4 full moves
       }
     }
 
@@ -375,15 +413,19 @@ class AchievementService {
 
     // Depth Over Speed — Win a game with 50+ moves (100 half-moves)
     if (isPlayerWin && state.moveHistory.length >= 100) {
-      totalPoints += unlockAchievement('tc_depth_over_speed', syncToServer: syncToServer);
+      totalPoints +=
+          unlockAchievement('tc_depth_over_speed', syncToServer: syncToServer);
     }
 
     // Social / Multiplayer
     if (stats.multiplayerWins > 0) {
-      totalPoints += unlockAchievement('mp_first_win', syncToServer: syncToServer);
+      totalPoints +=
+          unlockAchievement('mp_first_win', syncToServer: syncToServer);
     }
-    totalPoints += updateProgress('mp_win_10', stats.multiplayerWins, syncToServer: syncToServer);
-    totalPoints += updateProgress('mp_win_50', stats.multiplayerWins, syncToServer: syncToServer);
+    totalPoints += updateProgress('mp_win_10', stats.multiplayerWins,
+        syncToServer: syncToServer);
+    totalPoints += updateProgress('mp_win_50', stats.multiplayerWins,
+        syncToServer: syncToServer);
     if (stats.multiplayerWins >= 50) {
       totalPoints += unlockAchievement('mp_win_50', syncToServer: syncToServer);
     }
@@ -400,17 +442,25 @@ class AchievementService {
       }
       _prefs.setString('last_mp_date', todayStr);
       _prefs.setInt('daily_mp_count', dailyMpCount);
-      totalPoints += updateProgress('daily_warrior', dailyMpCount, syncToServer: syncToServer);
+      totalPoints += updateProgress('daily_warrior', dailyMpCount,
+          syncToServer: syncToServer);
     }
-    
+
     // Speed Demon (Win any MP game in under 2 minutes)
-    if (state.mode == GameMode.multiplayer && isPlayerWin && state.gameDurationSeconds > 0 && state.gameDurationSeconds < 120) {
-       totalPoints += unlockAchievement('speed_demon_mp', syncToServer: syncToServer);
+    if (state.mode == GameMode.multiplayer &&
+        isPlayerWin &&
+        state.gameDurationSeconds > 0 &&
+        state.gameDurationSeconds < 120) {
+      totalPoints +=
+          unlockAchievement('speed_demon_mp', syncToServer: syncToServer);
     }
 
     // Win on time — opponent ran out of clock
-    if (isPlayerWin && state.gameReason != null && state.gameReason!.toLowerCase().contains('time')) {
-      totalPoints += unlockAchievement('win_on_time', syncToServer: syncToServer);
+    if (isPlayerWin &&
+        state.gameReason != null &&
+        state.gameReason!.toLowerCase().contains('time')) {
+      totalPoints +=
+          unlockAchievement('win_on_time', syncToServer: syncToServer);
     }
 
     // Survive low time — Win with less than 10 seconds remaining
@@ -419,7 +469,8 @@ class AchievementService {
           ? state.whiteTimeMs
           : state.blackTimeMs;
       if (playerTimeMs > 0 && playerTimeMs < 10000) {
-        totalPoints += unlockAchievement('survive_low_time', syncToServer: syncToServer);
+        totalPoints +=
+            unlockAchievement('survive_low_time', syncToServer: syncToServer);
       }
     }
 
@@ -443,25 +494,31 @@ class AchievementService {
 
     // Puzzles
     if (stats.puzzlesSolved > 0) {
-      totalPoints += updateProgress('puzzle_10', stats.puzzlesSolved, syncToServer: syncToServer);
-      totalPoints += updateProgress('puzzle_50', stats.puzzlesSolved, syncToServer: syncToServer);
+      totalPoints += updateProgress('puzzle_10', stats.puzzlesSolved,
+          syncToServer: syncToServer);
+      totalPoints += updateProgress('puzzle_50', stats.puzzlesSolved,
+          syncToServer: syncToServer);
       if (stats.puzzlesSolved >= 10) {
-        totalPoints += unlockAchievement('puzzle_10', syncToServer: syncToServer);
+        totalPoints +=
+            unlockAchievement('puzzle_10', syncToServer: syncToServer);
       }
       if (stats.puzzlesSolved >= 50) {
-        totalPoints += unlockAchievement('puzzle_50', syncToServer: syncToServer);
+        totalPoints +=
+            unlockAchievement('puzzle_50', syncToServer: syncToServer);
       }
     }
     if (state.isPuzzleRush) {
-      totalPoints += unlockAchievement('puzzle_rush_survive', syncToServer: syncToServer);
+      totalPoints +=
+          unlockAchievement('puzzle_rush_survive', syncToServer: syncToServer);
     }
-    
+
     // Tournament Star
     if (state.mode == GameMode.multiplayer && state.isTournamentGame) {
-       int tournamentGames = _prefs.getInt('tournament_games_played') ?? 0;
-       tournamentGames++;
-       _prefs.setInt('tournament_games_played', tournamentGames);
-       totalPoints += updateProgress('tournament_star', tournamentGames, syncToServer: syncToServer);
+      int tournamentGames = _prefs.getInt('tournament_games_played') ?? 0;
+      tournamentGames++;
+      _prefs.setInt('tournament_games_played', tournamentGames);
+      totalPoints += updateProgress('tournament_star', tournamentGames,
+          syncToServer: syncToServer);
     }
     return totalPoints;
   }
@@ -478,7 +535,8 @@ class AchievementService {
       points += unlockAchievement('first_undo', syncToServer: syncToServer);
     }
     if (action == 'tutorial') {
-      points += unlockAchievement('complete_tutorial', syncToServer: syncToServer);
+      points +=
+          unlockAchievement('complete_tutorial', syncToServer: syncToServer);
     }
     if (action == 'donate_xp') {
       points += unlockAchievement('donate_xp', syncToServer: syncToServer);
@@ -487,13 +545,14 @@ class AchievementService {
       int chatCount = _prefs.getInt('chat_messages_sent') ?? 0;
       chatCount++;
       _prefs.setInt('chat_messages_sent', chatCount);
-      points += updateProgress('gg_champion', chatCount, syncToServer: syncToServer);
+      points +=
+          updateProgress('gg_champion', chatCount, syncToServer: syncToServer);
       points += unlockAchievement('chat_game', syncToServer: syncToServer);
     }
     if (action == 'puzzle_rush') {
-      points += unlockAchievement('puzzle_rush_survive', syncToServer: syncToServer);
+      points +=
+          unlockAchievement('puzzle_rush_survive', syncToServer: syncToServer);
     }
     return points;
   }
 }
-

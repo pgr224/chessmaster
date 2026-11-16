@@ -1,3 +1,4 @@
+import '../../../core/config/web_push_config.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -86,11 +87,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             title: 'Notifications',
                             subtitle: 'Match invites and multiplayer updates',
                             value: settings.notificationsEnabled,
-                            onChanged: (v) => context
-                                .read<SettingsBloc>()
-                                .add(SettingsNotificationsEvent(v)),
+                            onChanged: (v) {
+                              if (v) enableWebPush();
+                              context
+                                  .read<SettingsBloc>()
+                                  .add(SettingsNotificationsEvent(v));
+                            },
                           ),
                           if (settings.notificationsEnabled) ...[
+                            TextButton.icon(
+                                icon: const Icon(
+                                    Icons.notifications_active_outlined),
+                                label:
+                                    const Text('Enable alerts on this device'),
+                                onPressed: () async {
+                                  final enabled = await enableWebPush();
+                                  if (context.mounted)
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                            content: Text(enabled
+                                                ? 'Device alerts are enabled.'
+                                                : 'Device alerts are unavailable. Check permission and app setup.')));
+                                }),
+                            _switchTile(
+                                title: 'Game Notifications',
+                                subtitle: 'Opponent waiting and match updates',
+                                value: settings.notificationGames,
+                                onChanged: (value) => context
+                                    .read<SettingsBloc>()
+                                    .add(SettingsNotificationCategoryEvent(
+                                        'games', value))),
                             const SizedBox(height: 6),
                             _switchTile(
                               title: 'Challenge Notifications',
@@ -103,7 +129,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             ),
                             _switchTile(
                               title: 'Community Notifications',
-                              subtitle: 'XP requests and social community alerts',
+                              subtitle:
+                                  'XP requests and social community alerts',
                               value: settings.notificationCommunity,
                               onChanged: (v) => context
                                   .read<SettingsBloc>()
@@ -112,7 +139,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             ),
                             _switchTile(
                               title: 'Tournament Notifications',
-                              subtitle: 'Tournament invites and progress updates',
+                              subtitle:
+                                  'Tournament invites and progress updates',
                               value: settings.notificationTournaments,
                               onChanged: (v) => context
                                   .read<SettingsBloc>()
@@ -169,31 +197,51 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       const SizedBox(height: 16),
                       ...['easy', 'medium', 'hard', 'impossible'].map((mode) {
-                        final isActive = (mode == 'easy' && settings.aiLastDifficulty == 'basic') ||
-                                         (mode == 'medium' && settings.aiLastDifficulty == 'intermediate') ||
-                                         (mode == 'hard' && settings.aiLastDifficulty == 'advanced') ||
-                                         (mode == 'impossible' && settings.aiLastDifficulty == 'impossible');
-                        
-                        final level = mode == 'easy' ? settings.aiEasyLevel :
-                                      mode == 'medium' ? settings.aiMediumLevel :
-                                      mode == 'hard' ? settings.aiHardLevel :
-                                      settings.aiImpossibleLevel;
-                        
-                        final String emoji = mode == 'easy' ? '🌱' :
-                                            mode == 'medium' ? '⚔️' :
-                                            mode == 'hard' ? '🔥' : '🤖';
-                        
-                        final String name = mode == 'easy' ? 'Easy' :
-                                           mode == 'medium' ? 'Medium' :
-                                           mode == 'hard' ? 'Hard' : 'Impossible';
+                        final isActive = (mode == 'easy' &&
+                                settings.aiLastDifficulty == 'basic') ||
+                            (mode == 'medium' &&
+                                settings.aiLastDifficulty == 'intermediate') ||
+                            (mode == 'hard' &&
+                                settings.aiLastDifficulty == 'advanced') ||
+                            (mode == 'impossible' &&
+                                settings.aiLastDifficulty == 'impossible');
 
-                        final String settingsModeKey = mode == 'easy' ? 'basic' :
-                                                       mode == 'medium' ? 'intermediate' :
-                                                       mode == 'hard' ? 'advanced' : 'impossible';
+                        final level = mode == 'easy'
+                            ? settings.aiEasyLevel
+                            : mode == 'medium'
+                                ? settings.aiMediumLevel
+                                : mode == 'hard'
+                                    ? settings.aiHardLevel
+                                    : settings.aiImpossibleLevel;
+
+                        final String emoji = mode == 'easy'
+                            ? '🌱'
+                            : mode == 'medium'
+                                ? '⚔️'
+                                : mode == 'hard'
+                                    ? '🔥'
+                                    : '🤖';
+
+                        final String name = mode == 'easy'
+                            ? 'Easy'
+                            : mode == 'medium'
+                                ? 'Medium'
+                                : mode == 'hard'
+                                    ? 'Hard'
+                                    : 'Impossible';
+
+                        final String settingsModeKey = mode == 'easy'
+                            ? 'basic'
+                            : mode == 'medium'
+                                ? 'intermediate'
+                                : mode == 'hard'
+                                    ? 'advanced'
+                                    : 'impossible';
 
                         return GestureDetector(
                           onTap: () {
-                            context.read<SettingsBloc>().add(SettingsAILastDifficultyEvent(settingsModeKey));
+                            context.read<SettingsBloc>().add(
+                                SettingsAILastDifficultyEvent(settingsModeKey));
                           },
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 250),
@@ -207,11 +255,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               border: Border.all(
                                 color: isActive
                                     ? AppTheme.goldPrimary
-                                    : AppTheme.goldPrimary.withValues(alpha: 0.15),
+                                    : AppTheme.goldPrimary
+                                        .withValues(alpha: 0.15),
                                 width: isActive ? 2 : 1,
                               ),
                               boxShadow: isActive
-                                  ? [BoxShadow(color: AppTheme.goldPrimary.withValues(alpha: 0.15), blurRadius: 8)]
+                                  ? [
+                                      BoxShadow(
+                                          color: AppTheme.goldPrimary
+                                              .withValues(alpha: 0.15),
+                                          blurRadius: 8)
+                                    ]
                                   : null,
                             ),
                             child: Column(
@@ -219,23 +273,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               children: [
                                 Row(
                                   children: [
-                                    Text(emoji, style: const TextStyle(fontSize: 22)),
+                                    Text(emoji,
+                                        style: const TextStyle(fontSize: 22)),
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
                                         '$name Mode ${isActive ? "• Active" : ""}',
                                         style: GoogleFonts.fredoka(
-                                          color: isActive ? AppTheme.goldPrimary : AppTheme.textPrimary,
+                                          color: isActive
+                                              ? AppTheme.goldPrimary
+                                              : AppTheme.textPrimary,
                                           fontWeight: FontWeight.w700,
                                           fontSize: 15,
                                         ),
                                       ),
                                     ),
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 10, vertical: 4),
                                       decoration: BoxDecoration(
-                                        color: AppTheme.goldPrimary.withValues(alpha: 0.16),
-                                        borderRadius: BorderRadius.circular(999),
+                                        color: AppTheme.goldPrimary
+                                            .withValues(alpha: 0.16),
+                                        borderRadius:
+                                            BorderRadius.circular(999),
                                       ),
                                       child: Text(
                                         '$level/100',
@@ -254,19 +314,52 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     activeTrackColor: AppTheme.goldPrimary,
                                     inactiveTrackColor: AppTheme.surface,
                                     thumbColor: AppTheme.accentCyan,
-                                    overlayColor: AppTheme.accentCyan.withValues(alpha: 0.16),
+                                    overlayColor: AppTheme.accentCyan
+                                        .withValues(alpha: 0.16),
                                     trackHeight: 6,
                                   ),
                                   child: Slider(
-                                    min: mode == 'easy' ? 0 : mode == 'medium' ? 10 : mode == 'hard' ? 20 : 50,
-                                    max: mode == 'easy' ? 10 : mode == 'medium' ? 20 : mode == 'hard' ? 50 : 100,
-                                    divisions: mode == 'easy' ? 10 : mode == 'medium' ? 10 : mode == 'hard' ? 30 : 50,
+                                    min: mode == 'easy'
+                                        ? 0
+                                        : mode == 'medium'
+                                            ? 10
+                                            : mode == 'hard'
+                                                ? 20
+                                                : 50,
+                                    max: mode == 'easy'
+                                        ? 10
+                                        : mode == 'medium'
+                                            ? 20
+                                            : mode == 'hard'
+                                                ? 50
+                                                : 100,
+                                    divisions: mode == 'easy'
+                                        ? 10
+                                        : mode == 'medium'
+                                            ? 10
+                                            : mode == 'hard'
+                                                ? 30
+                                                : 50,
                                     value: level.toDouble().clamp(
-                                        mode == 'easy' ? 0.0 : mode == 'medium' ? 10.0 : mode == 'hard' ? 20.0 : 50.0,
-                                        mode == 'easy' ? 10.0 : mode == 'medium' ? 20.0 : mode == 'hard' ? 50.0 : 100.0,
-                                    ),
+                                          mode == 'easy'
+                                              ? 0.0
+                                              : mode == 'medium'
+                                                  ? 10.0
+                                                  : mode == 'hard'
+                                                      ? 20.0
+                                                      : 50.0,
+                                          mode == 'easy'
+                                              ? 10.0
+                                              : mode == 'medium'
+                                                  ? 20.0
+                                                  : mode == 'hard'
+                                                      ? 50.0
+                                                      : 100.0,
+                                        ),
                                     onChanged: (val) {
-                                      context.read<SettingsBloc>().add(SettingsAIModeLevelEvent(mode, val.round()));
+                                      context.read<SettingsBloc>().add(
+                                          SettingsAIModeLevelEvent(
+                                              mode, val.round()));
                                     },
                                   ),
                                 ),
@@ -436,14 +529,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
       'royal',
       'electric'
     ];
-    
+
     return Wrap(
       spacing: 12,
       runSpacing: 12,
       children: themes.map((t) {
         final selected = _boardTheme == t;
-        final themeData = AppTheme.boardThemes[t] ?? AppTheme.boardThemes['classic']!;
-        
+        final themeData =
+            AppTheme.boardThemes[t] ?? AppTheme.boardThemes['classic']!;
+
         return GestureDetector(
           onTap: () {
             setState(() => _boardTheme = t);
@@ -456,7 +550,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             duration: const Duration(milliseconds: 200),
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
-              color: selected ? AppTheme.goldPrimary.withValues(alpha: 0.1) : Colors.transparent,
+              color: selected
+                  ? AppTheme.goldPrimary.withValues(alpha: 0.1)
+                  : Colors.transparent,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: selected ? AppTheme.goldPrimary : AppTheme.surface,
@@ -499,7 +595,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   _cap(t),
                   style: GoogleFonts.fredoka(
                     fontSize: 10,
-                    color: selected ? AppTheme.goldPrimary : AppTheme.textSecondary,
+                    color: selected
+                        ? AppTheme.goldPrimary
+                        : AppTheme.textSecondary,
                     fontWeight: selected ? FontWeight.bold : FontWeight.w600,
                   ),
                 ),
@@ -524,8 +622,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 decoration: BoxDecoration(
                   color: AppTheme.surface.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(12),
-                  border:
-                      Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.3)),
+                  border: Border.all(
+                      color: AppTheme.goldPrimary.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   children: [
@@ -1071,4 +1169,3 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 }
-

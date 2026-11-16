@@ -1,3 +1,4 @@
+import '../../../core/config/web_push_config.dart';
 import 'dart:convert';
 import 'dart:math';
 
@@ -31,7 +32,7 @@ class ProfileScreen extends StatelessWidget {
         listener: (context, state) {
           if (state is auth.AuthErrorState) {
             final errorMsg = state.message;
-            
+
             if (errorMsg.startsWith('NAME_CHANGE_COOLDOWN')) {
               showDialog(
                 context: context,
@@ -105,7 +106,8 @@ class ProfileScreen extends StatelessWidget {
           }
         },
         builder: (context, state) {
-          if (state is auth.AuthLoadingState || state is auth.AuthInitialState) {
+          if (state is auth.AuthLoadingState ||
+              state is auth.AuthInitialState) {
             return const Center(
               child: CircularProgressIndicator(color: AppTheme.goldPrimary),
             );
@@ -325,7 +327,8 @@ class _ProfileContent extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppTheme.navyCard.withValues(alpha: 0.8),
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.1)),
+            border:
+                Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.1)),
           ),
           child: Column(
             children: [
@@ -425,6 +428,7 @@ class _ProfileContent extends StatelessWidget {
                             : Icons.notifications_off_rounded,
                         value: settings.notificationsEnabled,
                         onChanged: (val) {
+                          if (val) enableWebPush();
                           context
                               .read<SettingsBloc>()
                               .add(SettingsNotificationsEvent(val));
@@ -577,8 +581,10 @@ class _ProfileContent extends StatelessWidget {
               _ruleItem('Victory', '+100 XP', AppTheme.goldPrimary),
               _ruleItem('Draw', '+30 XP', AppTheme.textSecondary),
               _ruleItem('Defeat', '-20 XP', AppTheme.accentRed),
-              _ruleSectionTitle('🔥 Bonuses', Icons.local_fire_department_rounded),
-              _ruleItem('Win Streak', '+10%/game', AppTheme.accentOrange),
+              _ruleSectionTitle(
+                  '🔥 Bonuses', Icons.local_fire_department_rounded),
+              _ruleItem(
+                  'AI Win Streak', '+10%/win, max 2×', AppTheme.accentOrange),
               _ruleItem('Underdog Win', 'Up to +1000 XP', AppTheme.lavender),
               _ruleSectionTitle(
                   '✨ Milestones & Skills', Icons.auto_awesome_rounded),
@@ -589,12 +595,19 @@ class _ProfileContent extends StatelessWidget {
               _ruleSectionTitle('🛠️ Penalties', Icons.warning_amber_rounded),
               _ruleItem('Take Back (Vs AI)', '-25 XP', AppTheme.accentRed),
               _ruleItem('Hint Usage', '-10 XP', AppTheme.accentRed),
+              _ruleItem('Brain Explanation', '-15 XP', AppTheme.accentRed),
+              _ruleSectionTitle('🏆 Tournament', Icons.emoji_events_rounded),
+              _ruleItem('Win / Draw / Loss', '+100 / +30 / -20 XP',
+                  AppTheme.goldPrimary),
+              _ruleItem(
+                  'Streak Bonus', '+20% per prior win', AppTheme.accentOrange),
+              _ruleItem('Sole Champion', '+200 XP', AppTheme.goldPrimary),
               const Padding(
                 padding: EdgeInsets.only(top: 20),
                 child: Text(
                   '💡 Rules of the Arena:\n'
-                  '• 5-Second Rule: Take backs are only allowed within 5s of a move.\n'
-                  '• Practice & 2-Player modes award 0 XP but follow the 5s rule.\n'
+                  '• Online & 2-Player: take backs within 5s; online maximum 2.\n'
+                  '• Practice & 2-Player modes award 0 XP. Practice has free take backs.\n'
                   '• Be fair, have fun, and master the board!',
                   style: TextStyle(
                       color: AppTheme.textMuted,
@@ -615,7 +628,8 @@ class _ProfileContent extends StatelessWidget {
       padding: const EdgeInsets.only(top: 16, bottom: 8),
       child: Row(
         children: [
-          Icon(icon, size: 14, color: AppTheme.textSecondary.withValues(alpha: 0.5)),
+          Icon(icon,
+              size: 14, color: AppTheme.textSecondary.withValues(alpha: 0.5)),
           const SizedBox(width: 8),
           Text(title.toUpperCase(),
               style: GoogleFonts.fredoka(
@@ -749,7 +763,8 @@ void showEditProfileModal(BuildContext context, UserModel user) {
   bool checkingName = false;
   bool? nameAvailable;
   String? suggestedName;
-  bool canChangeNameDueToRate = user.remainingNameChanges > 0 && user.canChangeNameNow;
+  bool canChangeNameDueToRate =
+      user.remainingNameChanges > 0 && user.canChangeNameNow;
   DateTime? nextChangeTime = user.lastUsernameChange != null
       ? DateTime.parse(user.lastUsernameChange!).add(const Duration(hours: 24))
       : null;
@@ -770,7 +785,7 @@ void showEditProfileModal(BuildContext context, UserModel user) {
   String formatTimeRemaining(DateTime until) {
     final now = DateTime.now();
     if (until.isBefore(now)) return 'now';
-    
+
     final diff = until.difference(now);
     if (diff.inHours > 0) {
       return '${diff.inHours}h ${diff.inMinutes.remainder(60)}m';
@@ -957,7 +972,11 @@ void showEditProfileModal(BuildContext context, UserModel user) {
 
                       setLocalState(() {
                         checkingName = false;
-                        nameAvailable = hasError ? null : (isAvailable ? true : (isUnavailable ? false : null));
+                        nameAvailable = hasError
+                            ? null
+                            : (isAvailable
+                                ? true
+                                : (isUnavailable ? false : null));
                         if (isUnavailable) {
                           suggestedName = buildUsernameSuggestion(val);
                         } else {
@@ -976,7 +995,8 @@ void showEditProfileModal(BuildContext context, UserModel user) {
                   }
                 },
                 decoration: InputDecoration(
-                  labelText: canChangeNameDueToRate ? 'PLAYER NAME' : 'NAME LOCKED',
+                  labelText:
+                      canChangeNameDueToRate ? 'PLAYER NAME' : 'NAME LOCKED',
                   labelStyle: GoogleFonts.fredoka(
                       color: canChangeNameDueToRate
                           ? AppTheme.textSecondary
@@ -1097,10 +1117,12 @@ void showEditProfileModal(BuildContext context, UserModel user) {
                             if (message.contains('COOLDOWN_ACTIVE')) {
                               message =
                                   'You can change your name once every 24 hours. Please try again later.';
-                            } else if (message.contains('LIFETIME_LIMIT_REACHED')) {
+                            } else if (message
+                                .contains('LIFETIME_LIMIT_REACHED')) {
                               message =
                                   'You have reached the maximum number of name changes (3 lifetime).';
-                            } else if (message.contains('Username already taken')) {
+                            } else if (message
+                                .contains('Username already taken')) {
                               message =
                                   'This username is already taken. Please choose another.';
                             }
@@ -1198,4 +1220,3 @@ class _FallbackAvatar extends StatelessWidget {
     );
   }
 }
-

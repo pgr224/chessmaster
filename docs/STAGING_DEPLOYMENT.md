@@ -340,7 +340,7 @@ npm run deploy:staging  # (reinstall previous source)
 
 After responsive testing passes:
 
-1. **Production Deployment**: `npm run deploy` (backend) + `wrangler pages deploy` (frontend)
+1. **Production Deployment**: `npm run deploy:backend` (backend) + `npm run deploy` (frontend)
 2. **Custom Domain**: Chess Cloudflare Dashboard → Add custom domain
 3. **Analytics**: Enable Cloudflare Analytics to track staging traffic
 4. **Monitoring**: Set up real user monitoring (RUM) for production

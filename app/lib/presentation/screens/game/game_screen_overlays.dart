@@ -18,7 +18,28 @@ extension _GameScreenOverlays on _GameScreenState {
       return const SizedBox.shrink();
     }
 
+    final rematch = context.select((MultiplayerBloc bloc) => (
+          requested: bloc.state.rematchRequested,
+          received: bloc.state.rematchReceived,
+          connected: bloc.state.gameConnected,
+        ));
+    final authState = context.watch<AuthBloc>().state;
+    final isGuest =
+        authState is AuthAuthenticatedState && authState.user.isGuest;
     return GameOverOverlay(
+      accountPrompt: isGuest ? const GuestAccountPrompt() : null,
+      playAgainLabel: widget.config.isOnline
+          ? state.mode == GameMode.tournament
+              ? 'TOURNAMENT'
+              : rematch.received
+                  ? 'ACCEPT REMATCH'
+                  : rematch.requested
+                      ? 'REQUEST SENT'
+                      : 'REMATCH'
+          : null,
+      playAgainEnabled: !widget.config.isOnline ||
+          state.mode == GameMode.tournament ||
+          (rematch.connected && (!rematch.requested || rematch.received)),
       result: state.result,
       drawReason: state.drawReason,
       gameReason: state.gameReason,
@@ -41,21 +62,42 @@ extension _GameScreenOverlays on _GameScreenState {
       eloChange: state.eloChange,
       currentElo: 1200, // Will be updated from user model
       bestMoves: state.bestMoves,
-      onPlayAgain: () {
-        if (state.mode == GameMode.puzzle) {
+      onPlayAgain: () async {
+        if (isGuest) {
+          await context.read<AuthBloc>().authRepository.resetGuestProgress();
+          if (!context.mounted) return;
+          context.read<AuthBloc>().add(AuthCheckStatusEvent());
+        }
+        if (widget.config.isOnline) {
+          if (state.mode == GameMode.tournament) {
+            context.go('/tournament/${widget.config.tournamentId}');
+          } else {
+            context.read<MultiplayerBloc>().add(rematch.received
+                ? MpRematchAcceptEvent()
+                : MpRematchRequestEvent());
+          }
+        } else if (state.mode == GameMode.puzzle) {
           context.read<GameBloc>().add(const GamePuzzleNextEvent());
         } else {
           context.read<GameBloc>().add(GameStartEvent(widget.config));
         }
       },
-      onGoHome: () => context.go('/home'),
+      onGoHome: () {
+        if (widget.config.isOnline)
+          context.read<MultiplayerBloc>().add(const MpLeaveGameEvent());
+        context.go('/home');
+      },
       onShare: () => context.read<GameBloc>().add(GameSaveEvent()),
     );
   }
 
-  Widget _buildLearningCompletionOverlay(BuildContext context, GameState state) {
+  Widget _buildLearningCompletionOverlay(
+      BuildContext context, GameState state) {
     final isPuzzle = state.mode == GameMode.puzzle;
     final gaveUp = state.puzzleGaveUp;
+    final authState = context.watch<AuthBloc>().state;
+    final isGuest =
+        authState is AuthAuthenticatedState && authState.user.isGuest;
     final title = isPuzzle
         ? (gaveUp ? 'Nice Try!' : 'Puzzle Solved!')
         : 'Lesson Complete!';
@@ -90,9 +132,13 @@ extension _GameScreenOverlays on _GameScreenState {
                 ),
               ],
             ),
-            child: Column(
+            constraints: BoxConstraints(
+                maxHeight: MediaQuery.sizeOf(context).height * 0.88),
+            child: SingleChildScrollView(
+                child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                if (isGuest) const GuestAccountPrompt(),
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -129,7 +175,8 @@ extension _GameScreenOverlays on _GameScreenState {
                   const SizedBox(height: 10),
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 10),
                     decoration: BoxDecoration(
                       color: Colors.black.withValues(alpha: 0.16),
                       borderRadius: BorderRadius.circular(12),
@@ -210,7 +257,7 @@ extension _GameScreenOverlays on _GameScreenState {
                   ],
                 ),
               ],
-            ),
+            )),
           )
               .animate()
               .fadeIn(duration: 260.ms)
@@ -305,7 +352,7 @@ extension _GameScreenOverlays on _GameScreenState {
     final settings = context.watch<SettingsBloc>().state;
 
     final PieceColor perspective;
-    if (state.mode == GameMode.multiplayer && state.playerColor != null) {
+    if (state.isOnline && state.playerColor != null) {
       perspective = state.playerColor!;
     } else if (settings.autoFlipBoard) {
       perspective = state.currentTurn;
@@ -313,7 +360,8 @@ extension _GameScreenOverlays on _GameScreenState {
       perspective = state.playerColor ?? PieceColor.white;
     }
 
-    final bool shouldRotate = state.mode == GameMode.twoPlayer && state.currentTurn != perspective;
+    final bool shouldRotate =
+        state.mode == GameMode.twoPlayer && state.currentTurn != perspective;
 
     Widget dialog = PromotionDialog(
       color: state.currentTurn,
@@ -361,7 +409,8 @@ extension _GameScreenOverlays on _GameScreenState {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.warning_rounded, color: Colors.white, size: 24),
+                const Icon(Icons.warning_rounded,
+                    color: Colors.white, size: 24),
                 const SizedBox(width: 10),
                 Text('⚠️ CHECK!',
                     style: GoogleFonts.fredoka(
@@ -399,4 +448,3 @@ extension _GameScreenOverlays on _GameScreenState {
     );
   }
 }
-

@@ -31,7 +31,8 @@ class TournamentCreateEvent extends TournamentEvent {
   });
 
   @override
-  List<Object?> get props => [name, type, totalRounds, timeControl, invitedPlayers];
+  List<Object?> get props =>
+      [name, type, totalRounds, timeControl, invitedPlayers];
 }
 
 class TournamentJoinEvent extends TournamentEvent {
@@ -164,8 +165,7 @@ class TournamentBloc extends Bloc<TournamentEvent, TournamentState> {
   final MultiplayerService _mpService;
   StreamSubscription<Map<String, dynamic>>? _wsSubscription;
 
-  TournamentBloc(this._repo, this._mpService)
-      : super(const TournamentState()) {
+  TournamentBloc(this._repo, this._mpService) : super(const TournamentState()) {
     on<TournamentLoadListEvent>(_onLoadList);
     on<TournamentCreateEvent>(_onCreate);
     on<TournamentJoinEvent>(_onJoin);
@@ -177,17 +177,20 @@ class TournamentBloc extends Bloc<TournamentEvent, TournamentState> {
     on<_TournamentWsMessageEvent>(_onWsMessage);
   }
 
-  Future<void> _onLoadList(TournamentLoadListEvent event, Emitter<TournamentState> emit) async {
+  Future<void> _onLoadList(
+      TournamentLoadListEvent event, Emitter<TournamentState> emit) async {
     emit(state.copyWith(status: TournamentStatus.loading));
     try {
       final list = await _repo.fetchTournaments();
       emit(state.copyWith(status: TournamentStatus.idle, tournaments: list));
     } catch (e) {
-      emit(state.copyWith(status: TournamentStatus.error, errorMessage: e.toString()));
+      emit(state.copyWith(
+          status: TournamentStatus.error, errorMessage: e.toString()));
     }
   }
 
-  Future<void> _onCreate(TournamentCreateEvent event, Emitter<TournamentState> emit) async {
+  Future<void> _onCreate(
+      TournamentCreateEvent event, Emitter<TournamentState> emit) async {
     emit(state.copyWith(status: TournamentStatus.loading));
     try {
       await _repo.createTournament(
@@ -199,54 +202,64 @@ class TournamentBloc extends Bloc<TournamentEvent, TournamentState> {
       );
       emit(state.copyWith(status: TournamentStatus.idle));
     } catch (e) {
-      emit(state.copyWith(status: TournamentStatus.error, errorMessage: e.toString()));
+      emit(state.copyWith(
+          status: TournamentStatus.error, errorMessage: e.toString()));
     }
   }
 
-  Future<void> _onJoin(TournamentJoinEvent event, Emitter<TournamentState> emit) async {
+  Future<void> _onJoin(
+      TournamentJoinEvent event, Emitter<TournamentState> emit) async {
     try {
       await _repo.joinTournament(event.tournamentId);
     } catch (e) {
-      emit(state.copyWith(status: TournamentStatus.error, errorMessage: e.toString()));
+      emit(state.copyWith(
+          status: TournamentStatus.error, errorMessage: e.toString()));
     }
   }
 
-  Future<void> _onConnect(TournamentConnectEvent event, Emitter<TournamentState> emit) async {
+  Future<void> _onConnect(
+      TournamentConnectEvent event, Emitter<TournamentState> emit) async {
     emit(state.copyWith(status: TournamentStatus.waiting));
     await _wsSubscription?.cancel();
-    await _mpService.connectTournament(
-      event.tournamentId,
-      event.userId,
-      event.username,
-      rating: event.rating,
-      totalRounds: state.selectedRounds,
-      timeControl: state.selectedTimeControl,
-    );
     _wsSubscription = _mpService.tournamentUpdates.listen((msg) {
       add(_TournamentWsMessageEvent(msg));
     });
+    try {
+      await _mpService.connectTournament(
+          event.tournamentId, event.userId, event.username,
+          rating: event.rating,
+          totalRounds: state.selectedRounds,
+          timeControl: state.selectedTimeControl);
+    } catch (error) {
+      emit(state.copyWith(
+          status: TournamentStatus.error, errorMessage: error.toString()));
+    }
   }
 
   void _onReady(TournamentReadyEvent event, Emitter<TournamentState> emit) {
     _mpService.sendTournamentReady();
   }
 
-  Future<void> _onDisconnect(TournamentDisconnectEvent event, Emitter<TournamentState> emit) async {
+  Future<void> _onDisconnect(
+      TournamentDisconnectEvent event, Emitter<TournamentState> emit) async {
     await _wsSubscription?.cancel();
     _wsSubscription = null;
     _mpService.disconnectTournament();
     emit(const TournamentState());
   }
 
-  void _onSelectRounds(TournamentSelectRoundsEvent event, Emitter<TournamentState> emit) {
+  void _onSelectRounds(
+      TournamentSelectRoundsEvent event, Emitter<TournamentState> emit) {
     emit(state.copyWith(selectedRounds: event.rounds));
   }
 
-  void _onSelectTimeControl(TournamentSelectTimeControlEvent event, Emitter<TournamentState> emit) {
+  void _onSelectTimeControl(
+      TournamentSelectTimeControlEvent event, Emitter<TournamentState> emit) {
     emit(state.copyWith(selectedTimeControl: event.timeControl));
   }
 
-  void _onWsMessage(_TournamentWsMessageEvent event, Emitter<TournamentState> emit) {
+  void _onWsMessage(
+      _TournamentWsMessageEvent event, Emitter<TournamentState> emit) {
     final msg = event.data;
     final type = msg['type'] as String? ?? '';
     final data = msg['data'] as Map<String, dynamic>? ?? {};
@@ -255,6 +268,10 @@ class TournamentBloc extends Bloc<TournamentEvent, TournamentState> {
       case 'tournament_state':
         final model = TournamentModel.fromJson(data);
         emit(state.copyWith(
+          xpEarned:
+              (data['xpDeltas']?[_mpService.userId] as num?)?.toInt() ?? 0,
+          eloChange:
+              (data['eloDeltas']?[_mpService.userId] as num?)?.toInt() ?? 0,
           activeTournament: model,
           currentRound: model.currentRound,
           totalRounds: model.totalRounds,
@@ -269,14 +286,17 @@ class TournamentBloc extends Bloc<TournamentEvent, TournamentState> {
       case 'tournament_start':
         emit(state.copyWith(
           status: TournamentStatus.active,
-          totalRounds: (data['totalRounds'] as num?)?.toInt() ?? state.totalRounds,
+          totalRounds:
+              (data['totalRounds'] as num?)?.toInt() ?? state.totalRounds,
         ));
         break;
 
       case 'round_start':
-        final round = (data['round'] as num?)?.toInt() ?? state.currentRound + 1;
+        final round =
+            (data['round'] as num?)?.toInt() ?? state.currentRound + 1;
         final pairings = (data['pairings'] as List<dynamic>?)
-                ?.map((e) => TournamentPairing.fromJson(e as Map<String, dynamic>))
+                ?.map((e) =>
+                    TournamentPairing.fromJson(e as Map<String, dynamic>))
                 .toList() ??
             [];
         final updated = state.activeTournament == null
@@ -303,7 +323,8 @@ class TournamentBloc extends Bloc<TournamentEvent, TournamentState> {
       case 'match_result':
         // standings come with this; rebuild TournamentModel players
         final standings = (data['standings'] as List<dynamic>?)
-                ?.map((e) => TournamentPlayer.fromJson(e as Map<String, dynamic>))
+                ?.map(
+                    (e) => TournamentPlayer.fromJson(e as Map<String, dynamic>))
                 .toList() ??
             state.activeTournament?.players ??
             [];
@@ -334,20 +355,15 @@ class TournamentBloc extends Bloc<TournamentEvent, TournamentState> {
         // We don't know local userId here; callers read from activeTournament standings
         emit(state.copyWith(
           status: TournamentStatus.finished,
-          xpEarned: (xpDeltas.values.isNotEmpty
-              ? xpDeltas.values.first as num
-              : 0)
-              .toInt(),
-          eloChange: (eloDeltas.values.isNotEmpty
-              ? eloDeltas.values.first as num
-              : 0)
-              .toInt(),
+          xpEarned: (xpDeltas[_mpService.userId] as num? ?? 0).toInt(),
+          eloChange: (eloDeltas[_mpService.userId] as num? ?? 0).toInt(),
         ));
         break;
 
       case 'players_update':
         final players = (data['players'] as List<dynamic>?)
-                ?.map((e) => TournamentPlayer.fromJson(e as Map<String, dynamic>))
+                ?.map(
+                    (e) => TournamentPlayer.fromJson(e as Map<String, dynamic>))
                 .toList() ??
             [];
         if (state.activeTournament != null) {

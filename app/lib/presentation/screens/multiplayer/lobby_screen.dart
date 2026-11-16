@@ -53,9 +53,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
             authState.user.username,
             rating: authState.user.stats.eloRating,
           ));
-      context
-          .read<MultiplayerBloc>()
-          .add(const MpSetPresenceEvent(LobbyPresence.online, context: 'lobby'));
+      context.read<MultiplayerBloc>().add(
+          const MpSetPresenceEvent(LobbyPresence.online, context: 'lobby'));
 
       // 📲 Handle Deep-linked Invitation
       if (widget.initialChallengeId != null) {
@@ -110,25 +109,37 @@ class _LobbyScreenState extends State<LobbyScreen> {
           _tryAutoAcceptDeepLink(state);
         }
 
-        // Show incoming tournament challenge dialog
-        if (state.pendingTournamentId != null &&
+        final settings = context.read<SettingsBloc>().state;
+        // Keep invites in the inbox even when their alerts are disabled.
+        final incomingAlertEnabled = settings.notificationsEnabled &&
+            (state.pendingTournamentId != null ||
+                    state.challengerMode == 'tournament'
+                ? settings.notificationTournaments
+                : settings.notificationChallenges);
+        // Show incoming tournament challenge dialog only when enabled.
+        if (settings.notificationsEnabled &&
+            settings.notificationTournaments &&
+            state.pendingTournamentId != null &&
             state.pendingTournamentChallengerId != null) {
           _showTournamentChallengeDialog(context, state);
         }
 
-        if (state.lobbyNotice != null) {
+        if (state.lobbyNotice != null &&
+            ((state.challengerId == null &&
+                    state.pendingTournamentId == null) ||
+                incomingAlertEnabled)) {
           ScaffoldMessenger.of(context)
             ..hideCurrentSnackBar()
             ..showSnackBar(SnackBar(
               content: Text(state.lobbyNotice!),
               backgroundColor: AppTheme.navyCard,
-              action: (state.incomingChallenges.isNotEmpty) 
-                ? SnackBarAction(
-                    label: 'VIEW',
-                    textColor: AppTheme.accentCyan,
-                    onPressed: () => _scrollToChallenges(),
-                  )
-                : null,
+              action: (state.incomingChallenges.isNotEmpty)
+                  ? SnackBarAction(
+                      label: 'VIEW',
+                      textColor: AppTheme.accentCyan,
+                      onPressed: () => _scrollToChallenges(),
+                    )
+                  : null,
               onVisible: () =>
                   context.read<MultiplayerBloc>().add(MpClearNoticeEvent()),
             ));
@@ -149,9 +160,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
               icon: const Icon(Icons.arrow_back_rounded,
                   color: AppTheme.textPrimary),
               onPressed: () {
-                context
-                    .read<MultiplayerBloc>()
-                    .add(const MpSetPresenceEvent(LobbyPresence.online, context: 'app'));
+                context.read<MultiplayerBloc>().add(const MpSetPresenceEvent(
+                    LobbyPresence.online,
+                    context: 'app'));
                 context.pop();
               },
             ),
@@ -288,6 +299,18 @@ class _LobbyScreenState extends State<LobbyScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (state.connectionError != null)
+          Card(
+              child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(children: [
+                    Expanded(child: Text(state.connectionError!)),
+                    TextButton(
+                        onPressed: () => context
+                            .read<MultiplayerBloc>()
+                            .add(MpReconnectEvent()),
+                        child: const Text('Retry')),
+                  ]))),
         _buildLiveNotificationBar(state),
         const SizedBox(height: 12),
         _buildActiveChallenges(state),
@@ -340,16 +363,16 @@ class _LobbyScreenState extends State<LobbyScreen> {
               child: OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 18),
-                  side:
-                      BorderSide(color: AppTheme.goldPrimary.withValues(alpha: 0.5)),
+                  side: BorderSide(
+                      color: AppTheme.goldPrimary.withValues(alpha: 0.5)),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20)),
                 ),
                 onPressed: () {
                   context.push('/tournament/invite');
                 },
-                icon:
-                    const Icon(Icons.emoji_events_rounded, color: AppTheme.goldPrimary),
+                icon: const Icon(Icons.emoji_events_rounded,
+                    color: AppTheme.goldPrimary),
                 label: Text(
                   '🏆 Tournament',
                   style: GoogleFonts.fredoka(
@@ -468,7 +491,6 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
-
   Widget _buildXpBroadcasts(MultiplayerState state) {
     final authState = context.watch<auth.AuthBloc>().state;
     final bool needsXp =
@@ -570,11 +592,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 final success = await context
                     .read<auth.AuthBloc>()
                     .authRepository
-                  .donateXP(
-                    recipientId: userId,
-                    amount: amount,
-                    requestId: requestId);
-                
+                    .donateXP(
+                        recipientId: userId,
+                        amount: amount,
+                        requestId: requestId);
+
                 if (!mounted) {
                   return;
                 }
@@ -582,10 +604,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 if (success) {
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                       content: Text('Donated $amount XP to $username!')));
-                  
+
                   context.read<auth.AuthBloc>().add(
                       auth.AuthCheckStatusEvent()); // Refresh local user XP
-                    _refreshXpRequests();
+                  _refreshXpRequests();
                 }
               } catch (e) {
                 if (!mounted) {
@@ -678,37 +700,39 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 .read<MultiplayerBloc>()
                 .add(MpChangeSelectedTimeEvent(option.value)),
             child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            decoration: BoxDecoration(
-              gradient: isSelected
-                  ? LinearGradient(
-                      colors: [
-                        accentColor.withValues(alpha: 0.15),
-                        accentColor.withValues(alpha: 0.05)
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    )
-                  : null,
-              color: isSelected ? null : AppTheme.surface.withValues(alpha: 0.6),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: isSelected
-                    ? accentColor
-                    : AppTheme.textMuted.withValues(alpha: 0.1),
-                width: isSelected ? 2 : 1,
+              duration: const Duration(milliseconds: 200),
+              decoration: BoxDecoration(
+                gradient: isSelected
+                    ? LinearGradient(
+                        colors: [
+                          accentColor.withValues(alpha: 0.15),
+                          accentColor.withValues(alpha: 0.05)
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      )
+                    : null,
+                color:
+                    isSelected ? null : AppTheme.surface.withValues(alpha: 0.6),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: isSelected
+                      ? accentColor
+                      : AppTheme.textMuted.withValues(alpha: 0.1),
+                  width: isSelected ? 2 : 1,
+                ),
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                            color: accentColor.withValues(alpha: 0.2),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2))
+                      ]
+                    : null,
               ),
-              boxShadow: isSelected
-                  ? [
-                      BoxShadow(
-                          color: accentColor.withValues(alpha: 0.2),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2))
-                    ]
-                  : null,
-            ),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -735,7 +759,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         Text(
                           option.label,
                           style: GoogleFonts.baloo2(
-                            color: isSelected ? accentColor : AppTheme.textMuted,
+                            color:
+                                isSelected ? accentColor : AppTheme.textMuted,
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
                           ),
@@ -793,7 +818,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
   }
 
   Widget _buildVariantGrid(MultiplayerState state, double width) {
-    final variants = GameVariantPreset.all;
+    final variants = GameVariantPreset.playable;
     final crossAxisCount = width < 520 ? 2 : 3;
     final aspectRatio = width < 520 ? 2.0 : 2.35;
 
@@ -893,8 +918,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final previewPlayers =
         state.availablePlayers.take(3).toList(growable: false);
     final pendingRequests = state.incomingChallenges
-      .where((request) => request.status == 'pending')
-      .length;
+        .where((request) => request.status == 'pending')
+        .length;
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -1004,8 +1029,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
             children: [
               CircleAvatar(
                 radius: 18,
-                backgroundColor:
-                    player.isAvailable ? AppTheme.accentCyan : AppTheme.textMuted,
+                backgroundColor: player.isAvailable
+                    ? AppTheme.accentCyan
+                    : AppTheme.textMuted,
                 child: Text(player.name.characters.first.toUpperCase(),
                     style: GoogleFonts.fredoka(color: AppTheme.midnight)),
               ),
@@ -1029,7 +1055,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 visualDensity: VisualDensity.compact,
                 icon: Icon(
                   Icons.sports_martial_arts_rounded,
-                  color: player.isAvailable ? AppTheme.goldPrimary : AppTheme.textMuted,
+                  color: player.isAvailable
+                      ? AppTheme.goldPrimary
+                      : AppTheme.textMuted,
                   size: 20,
                 ),
                 tooltip: 'Send Request',
@@ -1073,7 +1101,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
       isScrollControlled: true,
       builder: (ctx) {
         return Container(
-          padding: const EdgeInsets.only(top: 12, left: 16, right: 16, bottom: 32),
+          padding:
+              const EdgeInsets.only(top: 12, left: 16, right: 16, bottom: 32),
           decoration: const BoxDecoration(
             gradient: AppTheme.backgroundGradient,
             borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
@@ -1165,15 +1194,19 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                   _buildGameRequestsTabWithBadge(liveState),
                                   const Tab(
                                       text: 'XP Requests',
-                                      icon: Icon(Icons.volunteer_activism_rounded)),
+                                      icon: Icon(
+                                          Icons.volunteer_activism_rounded)),
                                 ],
                               ),
                               Expanded(
                                 child: TabBarView(
                                   children: [
-                                    _buildPlayersTab(liveState, scrollController),
-                                    _buildGameRequestsTab(liveState, scrollController),
-                                    _buildRequestsTab(liveState, scrollController),
+                                    _buildPlayersTab(
+                                        liveState, scrollController),
+                                    _buildGameRequestsTab(
+                                        liveState, scrollController),
+                                    _buildRequestsTab(
+                                        liveState, scrollController),
                                   ],
                                 ),
                               ),
@@ -1302,9 +1335,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final requests = <ChallengeRequest>[
       ...state.incomingChallenges,
       ...state.outgoingChallenges,
-    ]
-        .where((r) => now.difference(r.createdAt).inHours < 1)
-        .toList()
+    ].where((r) => now.difference(r.createdAt).inHours < 1).toList()
       ..sort((left, right) => right.createdAt.compareTo(left.createdAt));
 
     return Padding(
@@ -1443,10 +1474,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           style: FilledButton.styleFrom(
                               backgroundColor: AppTheme.accentOrange),
                           onPressed: () => _handleDonateXP(
-                            req['userId'], req['username'], req['amount'],
-                            req['id'] is int
-                              ? req['id'] as int
-                              : int.tryParse('${req['id']}')),
+                              req['userId'],
+                              req['username'],
+                              req['amount'],
+                              req['id'] is int
+                                  ? req['id'] as int
+                                  : int.tryParse('${req['id']}')),
                           child: const Text('DONATE'),
                         ),
                       ],
@@ -1525,9 +1558,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         )
                     : null,
                 icon: const Icon(Icons.emoji_events_rounded),
-                label: Text(player.isAvailable
-                    ? 'Tournament Invite'
-                    : 'Queue Invite'),
+                label: Text(
+                    player.isAvailable ? 'Tournament Invite' : 'Queue Invite'),
               ),
               OutlinedButton.icon(
                 onPressed: () => _handleDonateXP(
@@ -1598,10 +1630,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: AppTheme.goldPrimary.withValues(alpha: 0.14),
+                              color:
+                                  AppTheme.goldPrimary.withValues(alpha: 0.14),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: AppTheme.goldPrimary.withValues(alpha: 0.3),
+                                color:
+                                    AppTheme.goldPrimary.withValues(alpha: 0.3),
                                 width: 1,
                               ),
                             ),
@@ -1724,6 +1758,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
   }
 
   void _handleChallengeTap(OnlineLobbyUser player, ChallengeMode mode) {
+    if(mode==ChallengeMode.tournament){context.push('/tournament/invite',extra:player);return;}
     final multiplayerState = context.read<MultiplayerBloc>().state;
     final requestEvent = MpSendChallengeEvent(
       opponent: player,
@@ -1738,7 +1773,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
       return;
     }
 
-    final modeLabel = mode == ChallengeMode.duel ? 'battle request' : 'tournament invite';
+    final modeLabel =
+        mode == ChallengeMode.duel ? 'battle request' : 'tournament invite';
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -1831,7 +1867,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
       BuildContext context, MultiplayerState state) {
     final challName = state.pendingTournamentChallengerName ?? 'Someone';
     final rounds = state.pendingTournamentRounds;
-    final tc = state.pendingTournamentTimeControl ?? TimeControlPreset.defaultValue;
+    final tc =
+        state.pendingTournamentTimeControl ?? TimeControlPreset.defaultValue;
     final preset = TimeControlPreset.fromValue(tc);
     final tId = state.pendingTournamentId!;
     final cId = state.pendingTournamentChallengerId!;
@@ -1850,8 +1887,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
           children: [
             Text(
               '$challName wants to play a $rounds-round tournament with ${preset.label} (${preset.value}) time control.',
-              style: GoogleFonts.baloo2(
-                  color: AppTheme.textPrimary, fontSize: 15),
+              style:
+                  GoogleFonts.baloo2(color: AppTheme.textPrimary, fontSize: 15),
             ),
             const SizedBox(height: 12),
             Text(preset.description,
@@ -1867,8 +1904,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
             },
             child: Text('Decline',
                 style: GoogleFonts.fredoka(
-                    color: AppTheme.accentRed,
-                    fontWeight: FontWeight.w600)),
+                    color: AppTheme.accentRed, fontWeight: FontWeight.w600)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -1879,9 +1915,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
             ),
             onPressed: () {
               // Accept via lobby WS
-              final mpService = context
-                  .read<MultiplayerBloc>()
-                  .mpService;
+              final mpService = context.read<MultiplayerBloc>().mpService;
               mpService.acceptTournamentChallenge(cId, tId);
               context.read<MultiplayerBloc>().add(MpClearNoticeEvent());
               Navigator.pop(ctx);
@@ -1889,8 +1923,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
               context.push('/tournament/$tId');
             },
             child: Text('Accept',
-                style:
-                    GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
+                style: GoogleFonts.fredoka(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -2025,14 +2058,16 @@ class _LobbyScreenState extends State<LobbyScreen> {
           ),
           child: Row(
             children: [
-              Icon(isIncoming ? Icons.bolt_rounded : Icons.schedule_send_rounded, color: accent),
+              Icon(
+                  isIncoming ? Icons.bolt_rounded : Icons.schedule_send_rounded,
+                  color: accent),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      isIncoming 
+                      isIncoming
                           ? '${challenge.playerName} challenged you!'
                           : 'Waiting for ${challenge.playerName}...',
                       style: GoogleFonts.fredoka(
@@ -2054,24 +2089,30 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.close_rounded, color: AppTheme.accentRed),
+                    icon: const Icon(Icons.close_rounded,
+                        color: AppTheme.accentRed),
                     tooltip: isIncoming ? 'Decline' : 'Cancel Request',
                     onPressed: () {
-                      context.read<MultiplayerBloc>().add(MpDeclineChallengeEvent(
-                        challenge.playerId,
-                        requestId: challenge.id,
-                      ));
+                      context
+                          .read<MultiplayerBloc>()
+                          .add(MpDeclineChallengeEvent(
+                            challenge.playerId,
+                            requestId: challenge.id,
+                          ));
                     },
                   ),
                   if (isIncoming)
                     IconButton(
-                      icon: const Icon(Icons.check_rounded, color: AppTheme.accentGreen),
+                      icon: const Icon(Icons.check_rounded,
+                          color: AppTheme.accentGreen),
                       tooltip: 'Accept',
                       onPressed: () {
-                        context.read<MultiplayerBloc>().add(MpAcceptChallengeEvent(
-                          challenge.playerId,
-                          requestId: challenge.id,
-                        ));
+                        context
+                            .read<MultiplayerBloc>()
+                            .add(MpAcceptChallengeEvent(
+                              challenge.playerId,
+                              requestId: challenge.id,
+                            ));
                       },
                     ),
                 ],
@@ -2087,8 +2128,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
     // In many designs we'd scroll, but here it's right at the top.
   }
 
-  Widget _buildChallengeDialog(BuildContext context, ChallengeRequest challenge) {
-     return const SizedBox.shrink(); // Replaced by banner
+  Widget _buildChallengeDialog(
+      BuildContext context, ChallengeRequest challenge) {
+    return const SizedBox.shrink(); // Replaced by banner
   }
 }
-

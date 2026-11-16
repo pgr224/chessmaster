@@ -22,7 +22,8 @@ void main() {
     when(() => authBloc.add(any())).thenReturn(null);
   });
 
-  MultiplayerBloc buildBloc() => MultiplayerBloc(MultiplayerService(), authBloc);
+  MultiplayerBloc buildBloc() =>
+      MultiplayerBloc(MultiplayerService(), authBloc);
 
   group('MultiplayerBloc game over XP', () {
     blocTest<MultiplayerBloc, MultiplayerState>(
@@ -85,9 +86,9 @@ void main() {
       expect: () => [
         isA<MultiplayerState>()
             .having((s) => s.outgoingChallenges.length, 'outgoing count', 1)
+            .having((s) => s.outgoingChallenges.first.isQueued, 'queued', true)
             .having(
-                (s) => s.outgoingChallenges.first.isQueued, 'queued', true)
-            .having((s) => s.outgoingChallenges.first.status, 'status', 'queued')
+                (s) => s.outgoingChallenges.first.status, 'status', 'queued')
             .having((s) => s.lobbyNotice, 'notice', contains('queued')),
       ],
     );
@@ -109,7 +110,7 @@ void main() {
   });
 
   group('GameBloc multiplayer result stat updates', () {
-    test('win includes multiplayer win stats and win XP fallback', () {
+    test('zero-XP win keeps server zero and multiplayer win stats', () {
       final result = GameBloc.buildMultiplayerResultDelta(
         isWin: true,
         isLoss: false,
@@ -117,7 +118,7 @@ void main() {
         syncedXpDelta: 0,
       );
 
-      expect(result.xpDelta, 100);
+      expect(result.xpDelta, 0);
       expect(result.statUpdates['multiplayer_games'], 1);
       expect(result.statUpdates['wins'], 1);
       expect(result.statUpdates['multiplayer_wins'], 1);
@@ -125,7 +126,7 @@ void main() {
       expect(result.statUpdates.containsKey('draws'), false);
     });
 
-    test('loss includes multiplayer games + losses and loss XP fallback', () {
+    test('zero-XP loss keeps server zero and loss stats', () {
       final result = GameBloc.buildMultiplayerResultDelta(
         isWin: false,
         isLoss: true,
@@ -133,7 +134,7 @@ void main() {
         syncedXpDelta: 0,
       );
 
-      expect(result.xpDelta, -20);
+      expect(result.xpDelta, 0);
       expect(result.statUpdates['multiplayer_games'], 1);
       expect(result.statUpdates['losses'], 1);
       expect(result.statUpdates.containsKey('wins'), false);
@@ -141,7 +142,7 @@ void main() {
       expect(result.statUpdates.containsKey('draws'), false);
     });
 
-    test('draw includes multiplayer games + draws and draw XP fallback', () {
+    test('zero-XP draw keeps server zero and draw stats', () {
       final result = GameBloc.buildMultiplayerResultDelta(
         isWin: false,
         isLoss: false,
@@ -149,7 +150,7 @@ void main() {
         syncedXpDelta: 0,
       );
 
-      expect(result.xpDelta, 30);
+      expect(result.xpDelta, 0);
       expect(result.statUpdates['multiplayer_games'], 1);
       expect(result.statUpdates['draws'], 1);
       expect(result.statUpdates.containsKey('wins'), false);

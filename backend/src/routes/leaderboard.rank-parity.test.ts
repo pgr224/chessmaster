@@ -49,6 +49,7 @@ const sampleRows: LeaderboardStatRow[] = [
     elo_rating: 1100,
     games_played: 6,
   },
+  {id:'u_new',xp:10000,wins:0,longest_streak:0,elo_rating:0,games_played:0}
 ]
 
 const sorts: LeaderboardSortType[] = ['xp', 'wins', 'elo', 'streak']
@@ -60,8 +61,8 @@ test('rank parity: list ordering rank matches rank endpoint logic for all leader
     for (const row of sampleRows) {
       const endpointRank = computeLeaderboardUserRank(sampleRows, row.id, sort)
 
-      if (row.games_played <= 1) {
-        // Ineligible users (<=1 games) should have rank 0 in both endpoints
+      if (row.games_played < 1) {
+        // Ineligible users (0 games) should have rank 0 in both endpoints
         assert.equal(
           endpointRank,
           0,
@@ -91,4 +92,22 @@ test('normalizeLeaderboardSortType falls back to xp for unsupported values', () 
   assert.equal(normalizeLeaderboardSortType('bad-sort'), 'xp')
   assert.equal(normalizeLeaderboardSortType('wins'), 'wins')
   assert.equal(normalizeLeaderboardSortType('elo'), 'elo')
+})
+
+test('real SQL leaderboard agrees with rank utility, excluding unplayed users and breaking ties by XP', async()=>{
+ const {readFileSync}=await import('node:fs')
+ const {testDB}=await import('../test_support/sqlite')
+ const {leaderboardRoutes}=await import('./leaderboard')
+ const db=testDB(readFileSync(new URL('../../schema/d1-schema.sql',import.meta.url),'utf8'))
+ for(const r of sampleRows){
+  await db.prepare('INSERT INTO users(id,username,device_id,xp) VALUES(?,?,?,?)').bind(r.id,r.id,r.id,r.xp).run()
+  await db.prepare('INSERT INTO user_stats(user_id,wins,longest_streak,elo_rating,games_played) VALUES(?,?,?,?,?)').bind(r.id,r.wins,r.longest_streak,r.elo_rating,r.games_played).run()
+ }
+ for(const sort of sorts){
+  const response=await leaderboardRoutes.request(`/?type=${sort}`,undefined,{DB:db} as any)
+  assert.equal(response.status,200)
+  const {leaderboard}=await response.json() as any
+  const ranks=computeLeaderboardListRanks(sampleRows,sort)
+  for(const row of leaderboard)assert.equal(row.rank,ranks.get(row.id)??0,`${sort}:${row.id}`)
+ }
 })

@@ -10,7 +10,8 @@ import '../../../core/theme/app_theme.dart';
 import '../../../presentation/blocs/auth/auth_bloc.dart';
 
 class OnboardingScreen extends StatefulWidget {
-  const OnboardingScreen({super.key});
+  final bool showAccountForm;
+  const OnboardingScreen({super.key, this.showAccountForm = false});
 
   @override
   State<OnboardingScreen> createState() => _OnboardingScreenState();
@@ -18,31 +19,42 @@ class OnboardingScreen extends StatefulWidget {
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
   static final RegExp _usernamePattern = RegExp(r'^[a-zA-Z0-9_]{3,30}$');
-  final _pageController = PageController();
+  late final PageController _pageController;
   final _usernameController = TextEditingController();
   final Random _random = Random();
   int _currentPage = 0;
   bool _isLoading = false;
+  bool _requestedGuest = false;
+  void _startGuest() {
+    _requestedGuest = true;
+    context.read<AuthBloc>().add(const AuthGuestLoginEvent());
+  }
 
   @override
   void initState() {
     super.initState();
+    _currentPage = widget.showAccountForm ? _pages.length - 1 : 0;
+    _pageController = PageController(initialPage: _currentPage);
     _loadLastUsername();
   }
 
   Future<void> _loadLastUsername() async {
-    final username = await context.read<AuthBloc>().authRepository.getLastLoggedOutUsername();
+    final username = await context
+        .read<AuthBloc>()
+        .authRepository
+        .getLastLoggedOutUsername();
     if (mounted) {
       setState(() => _lastUsername = username);
     }
   }
+
   String? _usernameErrorText;
   bool _hasRetriedSuggestedUsername = false;
   String? _lastUsername;
 
   final List<_OnboardPage> _pages = const [
     _OnboardPage(
-      image: 'assets/images/onboarding_1.png',
+      image: 'assets/images/onboarding_1.webp',
       emoji: '♟️',
       title: 'Welcome to Chess Master!',
       subtitle: 'The most fun way to play chess — anytime, anywhere! 🎉',
@@ -54,7 +66,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       accentColor: Color(0xFFFFD93D),
     ),
     _OnboardPage(
-      image: 'assets/images/onboarding_2.png',
+      image: 'assets/images/onboarding_2.webp',
       emoji: '🤖',
       title: 'Play Against Smart AI!',
       subtitle: 'Our friendly robot will challenge you at YOUR level! 🧠',
@@ -66,7 +78,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       accentColor: Color(0xFF74B9FF),
     ),
     _OnboardPage(
-      image: 'assets/images/onboarding_3.png',
+      image: 'assets/images/onboarding_3.webp',
       emoji: '🌍',
       title: 'Play With Friends!',
       subtitle: 'Connect and battle players from around the world! 🤝',
@@ -78,7 +90,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       accentColor: Color(0xFF6BCB77),
     ),
     _OnboardPage(
-      image: 'assets/images/onboarding_4.png',
+      image: 'assets/images/onboarding_4.webp',
       emoji: '📚',
       title: 'Learn & Get Better!',
       subtitle: 'Discover cool tricks and become a chess champion! ⭐',
@@ -95,7 +107,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget build(BuildContext context) {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
-        if (state is AuthAuthenticatedState) context.go('/home');
+        if (state is AuthAuthenticatedState &&
+            (!state.user.isGuest || _requestedGuest)) context.go('/home');
         if (state is AuthErrorState) {
           final isConflict = _isRegisterConflict(state.message);
           String? suggestedUsername;
@@ -133,7 +146,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
               action: SnackBarAction(
                 label: 'Play Offline',
-                onPressed: () => context.read<AuthBloc>().add(const AuthGuestLoginEvent()),
+                onPressed: _startGuest,
                 textColor: AppTheme.goldPrimary,
               ),
             ),
@@ -371,7 +384,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               .scale(begin: const Offset(0.95, 0.95)),
 
           // ── Quick Start / Continue As ──
-          if (_currentPage == 0 && _lastUsername != null) ...[
+          if ((_currentPage == 0 && _lastUsername != null) ||
+              widget.showAccountForm) ...[
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
@@ -385,7 +399,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 ),
                 onPressed: _isLoading ? null : _silentLogin,
                 child: Text(
-                  'Continue as $_lastUsername',
+                  _lastUsername == null
+                      ? 'Log in on this device'
+                      : 'Continue as $_lastUsername',
                   style: GoogleFonts.fredoka(
                       fontSize: 16, fontWeight: FontWeight.w600),
                 ),
@@ -394,8 +410,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ],
           const SizedBox(height: 8),
           TextButton(
-            onPressed: () =>
-                context.read<AuthBloc>().add(const AuthGuestLoginEvent()),
+            onPressed: _startGuest,
             child: Text(
               '🎮 Play Offline as Guest',
               style: GoogleFonts.fredoka(
@@ -482,4 +497,3 @@ class _OnboardPage {
     required this.accentColor,
   });
 }
-

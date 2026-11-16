@@ -11,6 +11,7 @@ import '../../../presentation/blocs/auth/auth_bloc.dart';
 import '../../../presentation/blocs/multiplayer/multiplayer_bloc.dart';
 import '../../../presentation/blocs/settings/settings_bloc.dart';
 import '../../../data/models/game_model.dart';
+import '../../../data/models/achievement_model.dart';
 import '../../../data/models/user_model.dart';
 import '../../../data/repositories/game_repository.dart';
 import '../../../data/repositories/puzzle_repository.dart';
@@ -52,12 +53,12 @@ class _HomeScreenState extends State<HomeScreen> {
     );
     final multiplayerState = context.watch<MultiplayerBloc>().state;
     final incomingPending = multiplayerState.incomingChallenges
-      .where((request) => request.status == 'pending')
-      .length;
+        .where((request) => request.status == 'pending')
+        .length;
     final outgoingPending = multiplayerState.outgoingChallenges
-      .where((request) =>
-        request.status == 'pending' || request.status == 'queued')
-      .length;
+        .where((request) =>
+            request.status == 'pending' || request.status == 'queued')
+        .length;
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, authState) {
         final user =
@@ -132,8 +133,9 @@ class _HomeScreenState extends State<HomeScreen> {
                             colors: [Color(0xFFFF6B9D), Color(0xFFA29BFE)],
                           ),
                           shadowColor: const Color(0xFFFF6B9D),
-                          badgeText:
-                              pendingChallenges > 0 ? '$pendingChallenges new' : null,
+                          badgeText: pendingChallenges > 0
+                              ? '$pendingChallenges new'
+                              : null,
                           onTap: () => context.push('/lobby'),
                           delay: 160,
                         ),
@@ -177,7 +179,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         _buildModeCard(
                           emoji: '🏆',
                           title: 'Achievements',
-                          subtitle: '55 badges to collect!',
+                          subtitle:
+                              '${allAchievements.length} badges to collect!',
                           gradient: const LinearGradient(
                             colors: [Color(0xFFFFD93D), Color(0xFFF0C929)],
                           ),
@@ -408,13 +411,19 @@ class _HomeScreenState extends State<HomeScreen> {
       if (req.status != 'pending') return false;
       final player = multiplayerState.availablePlayers.firstWhere(
         (p) => p.id == req.playerId,
-        orElse: () => OnlineLobbyUser(id: req.playerId, name: req.playerName, xp: 0, presence: LobbyPresence.offline),
+        orElse: () => OnlineLobbyUser(
+            id: req.playerId,
+            name: req.playerName,
+            xp: 0,
+            presence: LobbyPresence.offline),
       );
       return player.presence != LobbyPresence.offline;
-    }).toList()..sort((a,b) => b.createdAt.compareTo(a.createdAt));
+    }).toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
     final totalActive = activeIncoming.length + outgoingPending;
-    if (totalActive == 0 && !_notificationsExpanded) return const SizedBox.shrink();
+    if (totalActive == 0 && !_notificationsExpanded)
+      return const SizedBox.shrink();
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(22),
@@ -439,9 +448,11 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             // HEADER (Clickable to expand)
             InkWell(
-              onTap: () => setState(() => _notificationsExpanded = !_notificationsExpanded),
+              onTap: () => setState(
+                  () => _notificationsExpanded = !_notificationsExpanded),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 child: Row(
                   children: [
                     Container(
@@ -451,7 +462,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
-                        _notificationsExpanded ? Icons.expand_less_rounded : Icons.notifications_active_rounded,
+                        _notificationsExpanded
+                            ? Icons.expand_less_rounded
+                            : Icons.notifications_active_rounded,
                         color: AppTheme.accentCyan,
                         size: 20,
                       ),
@@ -474,7 +487,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               if (totalActive > 0) ...[
                                 const SizedBox(width: 8),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 2),
                                   decoration: BoxDecoration(
                                     gradient: AppTheme.rainbowGradient,
                                     borderRadius: BorderRadius.circular(10),
@@ -491,7 +505,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               ],
                             ],
                           ),
-                          if (!_notificationsExpanded && activeIncoming.isNotEmpty)
+                          if (!_notificationsExpanded &&
+                              activeIncoming.isNotEmpty)
                             Text(
                               'Challenge from ${activeIncoming.first.playerName}...',
                               style: GoogleFonts.baloo2(
@@ -499,7 +514,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                 fontSize: 12,
                               ),
                             ),
-                          if (!_notificationsExpanded && activeIncoming.isEmpty && outgoingPending > 0)
+                          if (!_notificationsExpanded &&
+                              activeIncoming.isEmpty &&
+                              outgoingPending > 0)
                             Text(
                               'Outbound request pending...',
                               style: GoogleFonts.baloo2(
@@ -510,12 +527,13 @@ class _HomeScreenState extends State<HomeScreen> {
                         ],
                       ),
                     ),
-                    const Icon(Icons.keyboard_arrow_down_rounded, color: AppTheme.textMuted),
+                    const Icon(Icons.keyboard_arrow_down_rounded,
+                        color: AppTheme.textMuted),
                   ],
                 ),
               ),
             ),
-            
+
             // EXPANDED CONTENT
             if (_notificationsExpanded) ...[
               const Divider(height: 1, color: Colors.white10),
@@ -528,12 +546,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     style: GoogleFonts.baloo2(color: AppTheme.textMuted),
                   ),
                 ),
-              
-              ...activeIncoming.map((req) => _buildChallengeItem(req, isIncoming: true)),
+              ...activeIncoming
+                  .map((req) => _buildChallengeItem(req, isIncoming: true)),
               ...multiplayerState.outgoingChallenges
                   .where((r) => r.status == 'pending' || r.status == 'queued')
                   .map((req) => _buildChallengeItem(req, isIncoming: false)),
-              
               Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: TextButton(
@@ -549,10 +566,15 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildChallengeItem(ChallengeRequest req, {required bool isIncoming}) {
-    final player = context.read<MultiplayerBloc>().state.availablePlayers.firstWhere(
-      (p) => p.id == req.playerId,
-      orElse: () => OnlineLobbyUser(id: req.playerId, name: req.playerName, xp: 0, presence: LobbyPresence.offline),
-    );
+    final player =
+        context.read<MultiplayerBloc>().state.availablePlayers.firstWhere(
+              (p) => p.id == req.playerId,
+              orElse: () => OnlineLobbyUser(
+                  id: req.playerId,
+                  name: req.playerName,
+                  xp: 0,
+                  presence: LobbyPresence.offline),
+            );
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -572,7 +594,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 height: 8,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: player.presence == LobbyPresence.offline ? Colors.grey : AppTheme.accentCyan,
+                  color: player.presence == LobbyPresence.offline
+                      ? Colors.grey
+                      : AppTheme.accentCyan,
                 ),
               ),
               const SizedBox(width: 8),
@@ -594,7 +618,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         Text(
                           '(${player.presenceLabel})',
                           style: GoogleFonts.baloo2(
-                            color: player.isAvailable ? AppTheme.accentCyan : AppTheme.textMuted,
+                            color: player.isAvailable
+                                ? AppTheme.accentCyan
+                                : AppTheme.textMuted,
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
                           ),
@@ -613,19 +639,25 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               if (isIncoming) ...[
                 IconButton(
-                  onPressed: () => context.read<MultiplayerBloc>().add(MpAcceptChallengeEvent(req.playerId, requestId: req.id)),
-                  icon: const Icon(Icons.check_circle_rounded, color: AppTheme.accentCyan, size: 28),
+                  onPressed: () => context.read<MultiplayerBloc>().add(
+                      MpAcceptChallengeEvent(req.playerId, requestId: req.id)),
+                  icon: const Icon(Icons.check_circle_rounded,
+                      color: AppTheme.accentCyan, size: 28),
                 ),
                 IconButton(
-                  onPressed: () => context.read<MultiplayerBloc>().add(MpDeclineChallengeEvent(req.playerId, requestId: req.id)),
-                  icon: const Icon(Icons.cancel_rounded, color: AppTheme.accentRed, size: 28),
+                  onPressed: () => context.read<MultiplayerBloc>().add(
+                      MpDeclineChallengeEvent(req.playerId, requestId: req.id)),
+                  icon: const Icon(Icons.cancel_rounded,
+                      color: AppTheme.accentRed, size: 28),
                 ),
               ] else ...[
                 const Padding(
                   padding: EdgeInsets.only(right: 8),
                   child: SizedBox(
-                    width: 16, height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.accentCyan),
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: AppTheme.accentCyan),
                   ),
                 ),
               ],
@@ -997,7 +1029,8 @@ class _HomeScreenState extends State<HomeScreen> {
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: AppTheme.lavender.withValues(alpha: 0.4)),
         boxShadow: [
-          BoxShadow(color: AppTheme.lavender.withValues(alpha: 0.15), blurRadius: 20),
+          BoxShadow(
+              color: AppTheme.lavender.withValues(alpha: 0.15), blurRadius: 20),
         ],
       ),
       child: Row(
@@ -1259,4 +1292,3 @@ class _HomeScreenState extends State<HomeScreen> {
         curve: Curves.easeOutBack);
   }
 }
-

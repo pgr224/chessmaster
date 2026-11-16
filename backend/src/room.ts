@@ -1,602 +1,171 @@
-import { ChessValidator, Move } from './validation'
-import { parseTimeControl, DEFAULT_TIME_CONTROL } from './time_control'
-import { getPlayerUsername } from './player_name_sync'
-import { calculateMultiplayerXP } from './xp_rules'
-import { PushService } from './services/push_service'
+import { GameSession, type SessionSnapshot, type SessionConfig } from './game_session'
 import { StatsService } from './services/stats_service'
+import { PushService } from './services/push_service'
 import type { Env } from './index'
 
-function normalizePromotionCode(code?: string): string | undefined {
-  if (!code) return undefined
-  const value = code.toLowerCase()
-  if (value === 'q' || value === 'queen') return 'q'
-  if (value === 'r' || value === 'rook') return 'r'
-  if (value === 'b' || value === 'bishop') return 'b'
-  if (value === 'n' || value === 'knight') return 'n'
-  return undefined
-}
-
+type Receipt = { xpDeltas: Record<string,number>; eloDeltas: Record<string,number> }
+type RematchReady = {gameId:string;whiteId:string;blackId:string;timeControl:string}
+/** One authoritative, durable session per reserved game. */
 export class GameRoom {
-  private state: DurableObjectState
-  private players: Map<string, { socket: WebSocket; name: string; color: 'white' | 'black'; disconnected: boolean; disconnectTimer?: any }> = new Map()
-  private validator: ChessValidator = new ChessValidator()
-  private gameId: string | null = null
-  private status: 'active' | 'finished' = 'active'
-  private env: Env
-
-  // Timer fields
-  private whiteTime: number = 1800
-  private blackTime: number = 1800
-  private baseTime: number = 1800
-  private increment: number = 0
-  private lastMoveTimestamp: number = 0
-  private timerInterval: any = null
-  private nameSyncInterval: any = null
-  private lastNameSync: number = 0
-  private NAME_SYNC_INTERVAL_MS: number = 10000 // Sync player names every 10 seconds
-  private waitingTimer: any = null
-  private opponentUserId: string | null = null
-
-  constructor(state: DurableObjectState, env: Env) {
-    this.state = state
-    this.env = env
+ private session: GameSession | null = null
+ private receipt: Receipt | null = null
+ private queue: Promise<unknown> = Promise.resolve()
+ constructor(private state:DurableObjectState,private env:Env) {
+  state.blockConcurrencyWhile(async()=>{
+   const saved=await state.storage.get<SessionSnapshot>('session')
+   if(saved)this.session=new GameSession(saved,saved)
+   this.receipt=await state.storage.get<Receipt>('receipt')??null
+  })
+ }
+ private async serial<T>(task:()=>Promise<T>):Promise<T> { const next=this.queue.then(task,task);this.queue=next.catch(()=>{});return next }
+ async fetch(request:Request):Promise<Response> {
+  return this.serial(async()=>{
+   const url=new URL(request.url)
+   if(request.method==='POST'&&url.pathname==='/initialize') {
+    const config=await request.json() as SessionConfig
+    if(this.session){if(this.session.data.gameId!==config.gameId||this.session.data.whiteId!==config.whiteId||this.session.data.blackId!==config.blackId)return new Response('Conflicting session', {status:409})}
+    else {this.session=new GameSession(config);await this.persist()}
+    return Response.json({success:true})
+   }
+   const userId=request.headers.get('X-Authenticated-User')
+   if(!userId)return new Response('Unauthorized',{status:401})
+   const gameId=decodeURIComponent(url.pathname.split('/').pop()??'')
+   if(!this.session){
+    const row=await this.env.DB.prepare('SELECT * FROM games WHERE id=?').bind(gameId).first<any>()
+    if(!row||!row.white_user_id||!row.black_user_id)return new Response('Match not found',{status:404})
+    const variant=await this.env.DB.prepare('SELECT variant_id FROM challenges WHERE game_id=? LIMIT 1').bind(gameId).first<{variant_id:string}>()
+    if(variant&&variant.variant_id!=='standard')return new Response('This variant is not supported for online play',{status:422})
+    const session=new GameSession({gameId,whiteId:row.white_user_id,blackId:row.black_user_id,timeControl:row.time_control??'10+0',mode:row.mode==='tournament'?'tournament':'multiplayer',tournamentId:row.tournament_id??undefined,initialFen:row.initial_fen??undefined})
+    if(row.pgn){session.chess.loadPgn(row.pgn);session.data.moves=session.chess.history({verbose:true}).map(m=>({from:m.from,to:m.to,...(m.promotion?{promotion:m.promotion}:{})}))}
+    if(row.white_time_left!=null)session.data.whiteTime=row.white_time_left/1000
+    if(row.black_time_left!=null)session.data.blackTime=row.black_time_left/1000
+    if(['completed','draw','abandoned'].includes(row.status)){session.finish(row.result??'draw',row.termination??'completed');this.receipt={xpDeltas:{},eloDeltas:{}}}
+    this.session=session
+   }
+   try {this.session.color(userId)}catch{return new Response('Not a participant',{status:403})}
+   const pair=new WebSocketPair(),client=pair[0],server=pair[1]
+   for(const ws of this.state.getWebSockets(userId)){try{ws.close(1000,'Replaced by a newer connection')}catch{}}
+   this.state.acceptWebSocket(server,[userId]);server.serializeAttachment({userId,name:request.headers.get('X-Authenticated-Name')??'Player'})
+   this.session.connect(userId,Date.now());await this.persist()
+   this.send(server,'ROOM_STATE',this.session.publicState())
+   if(this.session.data.status==='active'){this.broadcast('ROOM_STATE',this.session.publicState());this.broadcast('OPPONENT_JOINED',this.session.publicState())}
+   if(this.session.finished){await this.settle();this.sendResult(server,userId);await this.sendRematchState(server,userId)}
+   if(this.session.data.status==='waiting')this.state.waitUntil(PushService.notifyUser(this.session.opponent(userId),{title:'♟️ Opponent is waiting',body:'Your match is ready. Join to play.',data:{type:'GAME_WAITING',gameId,category:'games'}},this.env,'games'))
+   return new Response(null,{status:101,webSocket:client})
+  })
+ }
+ async webSocketMessage(ws:WebSocket,message:string|ArrayBuffer) {
+  await this.serial(async()=>{
+   const userId=(ws.deserializeAttachment() as {userId?:string})?.userId
+   if(!userId||!this.session)return
+   try {
+    const msg=JSON.parse(typeof message==='string'?message:new TextDecoder().decode(message))
+    const session=this.session,now=Date.now()
+    session.tick(now)
+    if(session.finished&&msg.type==='REMATCH_REQUEST'){await this.requestRematch(userId);return}
+    if(session.finished&&msg.type==='REMATCH_ACCEPT'){await this.rematch(userId);return}
+    if(session.finished){await this.settle();this.sendResult(ws,userId);return}
+    if(msg.type==='MOVE') {
+     const move=session.move(userId,msg.move,now);await this.persist()
+     this.broadcast('MOVE_UPDATE',{...session.publicState(),userId,move,gameOver:session.finished})
+    } else if(msg.type==='UNDO') {
+     session.undo(userId,now);await this.persist()
+     this.broadcast('MOVE_UPDATE',{...session.publicState(),userId,undo:true,move:null})
+    } else if(msg.type==='RESIGN'||msg.type==='LEAVE_GAME') {session.resign(userId,now);await this.persist()}
+    else if(msg.type==='DRAW_OFFER'||msg.type==='SAVE_REQUEST') {
+     const kind=msg.type==='DRAW_OFFER'?'draw':'save';session.offer(userId,kind);await this.persist();this.broadcast(msg.type,{from:userId},userId)
+    } else if(['DRAW_ACCEPT','DRAW_DECLINE','SAVE_ACCEPT','SAVE_DECLINE'].includes(msg.type)) {
+     const kind=msg.type.startsWith('DRAW')?'draw':'save';session.respond(userId,kind,msg.type.endsWith('ACCEPT'),now);await this.persist()
+     if(session.data.status==='paused') {await this.savePaused();this.broadcast('GAME_SAVED',{reason:'manual_save'});for(const socket of this.state.getWebSockets())socket.close(1000,'Game saved')}
+     else if(msg.type.endsWith('DECLINE'))this.broadcast(msg.type,{},userId)
+    } else if(msg.type==='CHAT') {
+     const text=typeof msg.message==='string'?msg.message.trim().slice(0,500):''
+     if(text)this.broadcast('CHAT',{userId,username:requestName(ws),message:text,ts:now})
+    } else if(msg.type==='SYNC')this.send(ws,'ROOM_STATE',session.publicState())
+    else if(msg.type==='REMATCH_REQUEST'||msg.type==='REMATCH_ACCEPT')throw new Error('Rematches are available after the match ends')
+    if(session.finished){await this.settle();this.broadcastResults()}
+   } catch(error) {
+    this.send(ws,'MOVE_ERROR',{...this.session.publicState(),message:error instanceof Error?error.message:'Invalid action'})
+    await this.persist()
+   }
+  })
+ }
+ async webSocketClose(ws:WebSocket){await this.serial(async()=>{
+  const userId=(ws.deserializeAttachment() as {userId?:string})?.userId
+  if(!userId||!this.session)return
+  if(this.state.getWebSockets(userId).some(other=>other!==ws&&other.readyState===1))return
+  this.session.disconnect(userId,Date.now());await this.persist();this.broadcast('PLAYER_DISCONNECTED',{userId})
+ })}
+ async webSocketError(ws:WebSocket){await this.webSocketClose(ws)}
+ async alarm(){await this.serial(async()=>{
+  if(!this.session)return
+  this.session.tick(Date.now())
+  await this.persist()
+  if(this.session.finished){await this.settle();this.broadcastResults()}
+  else this.broadcast('TIMER_SYNC',this.session.publicState())
+ })}
+ private async persist(){if(!this.session)return;await this.state.storage.put('session',this.session.data)
+  if(this.session.data.status==='active'||this.session.data.status==='waiting'||(this.session.finished&&!this.receipt))await this.state.storage.setAlarm(Date.now()+1000)
+  else await this.state.storage.deleteAlarm()
+ }
+ private async savePaused(){const s=this.session!;await this.env.DB.prepare('UPDATE games SET pgn=?,final_fen=?,white_time_left=?,black_time_left=?,updated_at=datetime(\'now\') WHERE id=? AND status=\'active\'').bind(s.chess.pgn(),s.chess.fen(),Math.round(s.data.whiteTime*1000),Math.round(s.data.blackTime*1000),s.data.gameId).run()}
+ private async settle(){
+  if(!this.session||this.receipt||this.session.data.status!=='finished')return
+  const s=this.session,d=s.data,cancelled=d.reason==='opponent_no_show'
+  await this.env.DB.prepare(`UPDATE games SET status=?,result=?,termination=?,pgn=?,final_fen=?,move_count=?,white_time_left=?,black_time_left=?,completed_at=datetime('now'),updated_at=datetime('now') WHERE id=?`).bind(cancelled?'abandoned':'completed',cancelled?null:d.result,d.reason,s.chess.pgn(),s.chess.fen(),d.moves.length,Math.round(d.whiteTime*1000),Math.round(d.blackTime*1000),d.gameId).run()
+  const receipt:Receipt={xpDeltas:{},eloDeltas:{}}
+  for(const [color,userId]of [['white',d.whiteId],['black',d.blackId]]as const){
+   const outcome=d.result==='draw'?'draw':d.result===color?'win':'loss'
+   const before=await this.env.DB.prepare('SELECT elo_rating FROM user_stats WHERE user_id=?').bind(userId).first<{elo_rating:number}>()
+   receipt.xpDeltas[userId]=cancelled?0:await StatsService.updateAll(this.env.DB,{userId,gameId:d.gameId,mode:d.mode??'multiplayer',outcome,penalty:d.penalties[userId]??0})
+   const after=await this.env.DB.prepare('SELECT elo_rating FROM user_stats WHERE user_id=?').bind(userId).first<{elo_rating:number}>()
+   const scoring=cancelled?null:await this.env.DB.prepare('SELECT elo_delta FROM scoring_events WHERE user_id=? AND event_id=?').bind(userId,`game:${d.gameId}:result`).first<{elo_delta:number}>()
+   receipt.eloDeltas[userId]=scoring?.elo_delta??0
   }
-
-  async fetch(request: Request): Promise<Response> {
-    const { 0: client, 1: server } = new WebSocketPair()
-    server.accept()
-
-    const url = new URL(request.url)
-    const userId = url.searchParams.get('userId') ?? 'anon'
-    const name = url.searchParams.get('username') ?? 'Player'
-    const color = url.searchParams.get('color') as 'white' | 'black' ?? 'white'
-    this.gameId = url.searchParams.get('gameId')
-
-    // If game is already finished, reject connection
-    if (this.status === 'finished') {
-      server.close(1000, 'Game has ended')
-      return new Response(null, { status: 101, webSocket: client })
-    }
-
-    // Parse time control: e.g. "blitz_3_2" or "3+2" or "30+0"
-    const tcStr = url.searchParams.get('timeControl') ?? DEFAULT_TIME_CONTROL
-    const parsed = parseTimeControl(tcStr)
-    this.baseTime = parsed.baseSeconds
-    this.whiteTime = parsed.baseSeconds
-    this.blackTime = parsed.baseSeconds
-    this.increment = parsed.incrementSeconds
-
-    const player = { socket: server, name, color, disconnected: false }
-    this.players.set(userId, player)
-
-    server.addEventListener('message', async (event) => {
-      try {
-        const msg = JSON.parse(event.data as string)
-        await this.handleMessage(userId, msg)
-      } catch (_) {}
-    })
-
-    server.addEventListener('close', () => {
-      this.handleDisconnect(userId)
-    })
-
-    // Initial game state
-    server.send(JSON.stringify({
-      type: 'ROOM_STATE',
-      data: {
-        fen: this.validator.getFen(),
-        turn: this.validator.getFen().split(' ')[1] === 'w' ? 'white' : 'black',
-        status: this.status,
-        whiteTime: this.whiteTime,
-        blackTime: this.blackTime,
-        increment: this.increment
-      }
-    }))
-
-    // Notify all players if opponent has joined
-    if (this.players.size === 2) {
-      if (this.waitingTimer) {
-        clearTimeout(this.waitingTimer)
-        this.waitingTimer = null
-      }
-      this.broadcast({
-        type: 'OPPONENT_JOINED',
-        data: {}
-      })
-    }
-
-    // If only one player, start waiting timer and notify opponent
-    if (this.players.size === 1) {
-      this.startWaitingTimer(userId)
-    }
-
-    // Start game if 2 players are present
-    if (this.players.size === 2 && !this.timerInterval) {
-      this.lastMoveTimestamp = Date.now()
-      this.startSyncTimer()
-    }
-
-    return new Response(null, {
-      status: 101,
-      webSocket: client,
-    })
+  await this.env.DB.prepare("UPDATE challenges SET status='completed',updated_at=datetime('now') WHERE game_id=? AND status='accepted'").bind(d.gameId).run()
+  if(d.tournamentId){const stub=this.env.TOURNAMENT_ROOM.get(this.env.TOURNAMENT_ROOM.idFromName(d.tournamentId));const response=await stub.fetch(new Request('https://tournament/match-result',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({gameId:d.gameId,result:d.result,reason:d.reason,whiteId:d.whiteId,blackId:d.blackId,...receipt})}));if(!response.ok)throw new Error('Tournament result delivery failed')}
+  this.receipt=receipt;await this.state.storage.put('receipt',receipt);await this.persist()
+ }
+ private sendResult(ws:WebSocket,userId:string){const s=this.session!;this.send(ws,'GAME_OVER',{...s.publicState(),xpDelta:this.receipt?.xpDeltas[userId]??0,eloDelta:this.receipt?.eloDeltas[userId]??0,settlementPending:!this.receipt})}
+ private broadcastResults(){for(const ws of this.state.getWebSockets()){const meta=ws.deserializeAttachment() as {userId:string};this.sendResult(ws,meta.userId)}}
+ private send(ws:WebSocket,type:string,data:unknown){try{ws.send(JSON.stringify({type,data}))}catch{}}
+ private broadcast(type:string,data:unknown,skip?:string){for(const ws of this.state.getWebSockets()){if((ws.deserializeAttachment()as{userId:string}).userId!==skip)this.send(ws,type,data)}}
+ private async requestRematch(userId:string){
+  const s=this.session!
+  if(!s.finished||s.data.mode==='tournament')throw new Error('No rematch is available')
+  await this.settle()
+  const ready=await this.state.storage.get<RematchReady>('rematchReady')
+  if(ready){await this.ensureRematchGame(ready);this.broadcastRematchReady(ready);return}
+  await this.state.storage.put('rematch',userId)
+  this.broadcast('REMATCH_REQUEST',{from:userId},userId)
+ }
+ private async sendRematchState(ws:WebSocket,userId:string){
+  const ready=await this.state.storage.get<RematchReady>('rematchReady')
+  if(ready){await this.ensureRematchGame(ready);this.sendRematchReady(ws,userId,ready);return}
+  const from=await this.state.storage.get<string>('rematch')
+  if(from&&from!==userId)this.send(ws,'REMATCH_REQUEST',{from})
+ }
+ private async ensureRematchGame(ready:RematchReady){
+  await this.env.DB.prepare("INSERT OR IGNORE INTO games(id,white_user_id,black_user_id,mode,time_control) VALUES(?,?,?,'multiplayer',?)").bind(ready.gameId,ready.whiteId,ready.blackId,ready.timeControl).run()
+ }
+ private sendRematchReady(ws:WebSocket,userId:string,ready:RematchReady){this.send(ws,'REMATCH_READY',{gameId:ready.gameId,color:userId===ready.whiteId?'white':'black',timeControl:ready.timeControl})}
+ private broadcastRematchReady(ready:RematchReady){for(const ws of this.state.getWebSockets())this.sendRematchReady(ws,(ws.deserializeAttachment()as{userId:string}).userId,ready)}
+ private async rematch(userId:string){
+  const s=this.session!
+  if(!s.finished||s.data.mode==='tournament')throw new Error('No rematch to accept')
+  await this.settle()
+  let ready=await this.state.storage.get<RematchReady>('rematchReady')
+  if(!ready){
+   const from=await this.state.storage.get<string>('rematch')
+   if(!from||from===userId)throw new Error('No rematch to accept')
+   ready={gameId:crypto.randomUUID(),whiteId:s.data.blackId,blackId:s.data.whiteId,timeControl:s.data.timeControl}
+   // Reserve the ID first: a D1 failure/retry must not create another game.
+   await this.state.storage.put('rematchReady',ready)
   }
+  await this.ensureRematchGame(ready)
+  await this.state.storage.delete('rematch')
+  this.broadcastRematchReady(ready)
+ }
 
-  private startSyncTimer() {
-    this.timerInterval = setInterval(() => {
-      if (this.status === 'finished') {
-        clearInterval(this.timerInterval)
-        return
-      }
-
-      this.updateClocks()
-      
-      // Periodically sync player names from database
-      const now = Date.now()
-      if (now - this.lastNameSync > this.NAME_SYNC_INTERVAL_MS) {
-        this.syncPlayerNames()
-        this.lastNameSync = now
-      }
-
-      this.broadcast({
-        type: 'TIMER_SYNC',
-        data: {
-          whiteTime: Math.max(0, this.whiteTime),
-          blackTime: Math.max(0, this.blackTime),
-          turn: this.validator.getFen().split(' ')[1] === 'w' ? 'white' : 'black'
-        }
-      })
-
-      // Check for timeout
-      if (this.whiteTime <= 0 || this.blackTime <= 0) {
-        this.handleTimeout()
-      }
-    }, 1000)
-  }
-
-  /**
-   * Sync player names from database to ensure current names are displayed
-   * Called periodically during game to handle mid-game username changes
-   */
-  private async syncPlayerNames() {
-    try {
-      const userIds = Array.from(this.players.keys())
-      for (const userId of userIds) {
-        const player = this.players.get(userId)
-        if (!player) continue
-
-        const dbUsername = await getPlayerUsername(this.env, userId)
-        if (dbUsername && dbUsername !== player.name) {
-          const oldName = player.name
-          player.name = dbUsername
-          
-          // Notify all players of the name change
-          this.broadcast({
-            type: 'PLAYER_NAME_UPDATED',
-            data: {
-              userId,
-              oldName,
-              newName: dbUsername,
-              color: player.color
-            }
-          })
-        }
-      }
-    } catch (err) {
-      console.error('[GameRoom] Name sync error:', err)
-    }
-  }
-
-  private updateClocks() {
-    if (this.status !== 'active' || this.players.size < 2) return
-    const now = Date.now()
-    const elapsed = (now - this.lastMoveTimestamp) / 1000
-    const turn = this.validator.getFen().split(' ')[1] === 'w' ? 'white' : 'black'
-
-    if (turn === 'white') {
-      this.whiteTime -= elapsed
-    } else {
-      this.blackTime -= elapsed
-    }
-    this.lastMoveTimestamp = now
-  }
-
-  private async startWaitingTimer(waitingUserId: string) {
-    try {
-      // Query challenge to find opponent
-      const challenge = await this.env.DB.prepare(
-        `SELECT challenger_id, challenged_id FROM challenges WHERE game_id = ?`
-      ).bind(this.gameId).first<{ challenger_id: string; challenged_id: string }>()
-
-      if (!challenge) return
-
-      const opponentId = challenge.challenger_id === waitingUserId ? challenge.challenged_id : challenge.challenger_id
-      this.opponentUserId = opponentId
-
-      // Send push notification
-      const waitingPlayer = this.players.get(waitingUserId)
-      if (waitingPlayer) {
-        await this.sendOpponentWaitingNotification(opponentId, waitingPlayer.name)
-      }
-
-      // Start 10-second timer
-      this.waitingTimer = setTimeout(async () => {
-        await this.handleOpponentNoShow()
-      }, 10000)
-    } catch (err) {
-      console.error('[GameRoom] Error starting waiting timer:', err)
-    }
-  }
-
-  private async sendOpponentWaitingNotification(opponentId: string, waitingPlayerName: string) {
-    await PushService.notifyUser(opponentId, {
-      title: '♟️ Game Started!',
-      body: `${waitingPlayerName} has joined the game and is waiting for you. Join now!`,
-      icon: '/icons/Icon-192.png',
-      data: {
-        type: 'GAME_WAITING',
-        gameId: this.gameId,
-        category: 'games',
-      },
-    }, this.env, 'games')
-  }
-
-  private async handleOpponentNoShow() {
-    this.status = 'finished'
-    this.broadcast({
-      type: 'GAME_OVER',
-      data: {
-        result: 'opponent_no_show',
-        reason: 'opponent_no_show',
-        message: 'Your opponent did not join the game in time.',
-      }
-    })
-
-    // Clear the challenge
-    if (this.gameId) {
-      await this.env.DB.prepare(
-        `DELETE FROM challenges WHERE game_id = ?`
-      ).bind(this.gameId).run()
-    }
-
-    // Disconnect players after a short delay
-    setTimeout(() => {
-      for (const [userId, player] of this.players) {
-        try {
-          player.socket.close(1000, 'Opponent did not join')
-        } catch (_) {}
-      }
-    }, 2000)
-  }
-
-  private async handleTimeout() {
-    if (this.status !== 'active') return
-    this.status = 'finished'
-    clearInterval(this.timerInterval)
-    if (this.nameSyncInterval) clearInterval(this.nameSyncInterval)
-
-    const turn = this.validator.getFen().split(' ')[1] === 'w' ? 'white' : 'black'
-    const timedOutColor = turn === 'white' ? 'white' : 'black'
-    const opponentColor = turn === 'white' ? 'black' : 'white'
-
-    // Insufficient material check
-    let result: string
-    if (this.validator.isInsufficientMaterial()) {
-      result = 'draw'
-    } else {
-      result = opponentColor
-    }
-
-    this.broadcast({
-      type: 'GAME_OVER',
-      data: {
-        result,
-        reason: 'timeout',
-        winner: result === 'draw' ? null : result
-      }
-    })
-
-    await this.saveGameToDB(result)
-  }
-
-  private async handleMessage(userId: string, msg: any) {
-    if (this.status === 'finished') return
-
-    switch (msg.type) {
-      case 'MOVE':
-        if (msg.move?.promotion) {
-          msg.move.promotion = normalizePromotionCode(msg.move.promotion)
-        }
-        const moveRes = this.validator.validateMove(msg.move as Move)
-        if (moveRes.valid) {
-          // Final clock update for this turn
-          this.updateClocks()
-          
-          // Apply increment (Fischer)
-          const turnBeforeMove = moveRes.fen.split(' ')[1] === 'b' ? 'white' : 'black'
-          if (turnBeforeMove === 'white') {
-            this.whiteTime += this.increment
-          } else {
-            this.blackTime += this.increment
-          }
-
-          this.broadcast({
-            type: 'MOVE_UPDATE',
-            data: {
-              userId,
-              move: msg.move,
-              fen: moveRes.fen,
-              turn: moveRes.fen.split(' ')[1] === 'w' ? 'white' : 'black',
-              gameOver: moveRes.gameOver,
-              result: moveRes.result,
-              whiteTime: Math.max(0, this.whiteTime),
-              blackTime: Math.max(0, this.blackTime)
-            }
-          })
-
-          if (moveRes.gameOver) {
-            this.status = 'finished'
-            clearInterval(this.timerInterval)
-            await this.saveGameToDB(moveRes.result)
-          }
-        } else {
-          this.players.get(userId)?.socket.send(JSON.stringify({ type: 'MOVE_ERROR', data: { fen: this.validator.getFen() } }))
-        }
-        break
-
-      case 'CHAT':
-        this.broadcast({
-          type: 'CHAT',
-          data: {
-            userId,
-            username: this.players.get(userId)?.name ?? 'Player',
-            message: msg.message,
-            emoji: msg.emoji,
-            ts: Date.now()
-          }
-        })
-        break
-
-      case 'RESIGN':
-        this.status = 'finished'
-        clearInterval(this.timerInterval)
-        if (this.nameSyncInterval) clearInterval(this.nameSyncInterval)
-        const winner = this.players.get(userId)?.color === 'white' ? 'black' : 'white'
-        this.broadcast({ type: 'GAME_OVER', data: { result: winner, reason: 'resignation' } })
-        await this.saveGameToDB(winner)
-        break
-
-      case 'LEAVE_GAME': {
-        // Explicit leave = immediate resignation + cleanup
-        if (this.status !== 'active') break
-        this.status = 'finished'
-        clearInterval(this.timerInterval)
-        if (this.nameSyncInterval) clearInterval(this.nameSyncInterval)
-        const leaveWinner = this.players.get(userId)?.color === 'white' ? 'black' : 'white'
-        this.broadcast({
-          type: 'GAME_OVER',
-          data: {
-            result: leaveWinner,
-            reason: 'resignation_user_quit',
-            message: 'Opponent left the game.',
-          }
-        })
-        await this.saveGameToDB(leaveWinner)
-        // Close the leaving player's socket
-        try { this.players.get(userId)?.socket.close(1000, 'Player left') } catch (_) {}
-        break
-      }
-
-      case 'DRAW_OFFER':
-        // Forward draw offer to the opponent only
-        this.broadcast({ type: 'DRAW_OFFER', data: { from: userId } }, userId)
-        break
-
-      case 'DRAW_ACCEPT':
-        this.status = 'finished'
-        this.broadcast({ type: 'DRAW_ACCEPT', data: {} })
-        this.broadcast({ type: 'GAME_OVER', data: { result: 'draw', reason: 'agreement' } })
-        await this.saveGameToDB('draw')
-        break
-
-      case 'DRAW_DECLINE':
-        this.broadcast({ type: 'DRAW_DECLINE', data: {} }, userId)
-        break
-
-      case 'UNDO':
-        // Perform undo on internal state to keep sync
-        const newFen = this.validator.undo()
-        this.broadcast({ 
-          type: 'MOVE_UPDATE', 
-          data: { 
-            fen: newFen, 
-            turn: newFen.split(' ')[1] === 'w' ? 'white' : 'black',
-            undo: true,
-            userId,
-            move: null 
-          }
-        })
-        break
-
-      case 'SAVE_REQUEST':
-        // Forward save request to opponent
-        this.broadcast({ type: 'SAVE_REQUEST', data: { from: userId } }, userId)
-        break
-
-      case 'SAVE_ACCEPT':
-        // Both agreed, save state as 'active' (paused) and finish session
-        this.status = 'finished'
-        await this.syncPausedGame()
-        this.broadcast({ type: 'GAME_SAVED', data: { reason: 'manual_save' } })
-        break
-
-      case 'SAVE_DECLINE':
-        this.broadcast({ type: 'SAVE_DECLINE', data: {} }, userId)
-        break
-    }
-  }
-
-  private handleDisconnect(userId: string) {
-    const player = this.players.get(userId)
-    if (!player) return
-
-    // If game is already finished, just clean up
-    if (this.status === 'finished') {
-      player.disconnected = true
-      return
-    }
-
-    player.disconnected = true
-    this.broadcast({ type: 'PLAYER_DISCONNECTED', data: { userId } })
-
-    // Cancel any existing disconnect timer for this player
-    if (player.disconnectTimer) {
-      clearTimeout(player.disconnectTimer)
-    }
-
-    // Start 30s timer
-    player.disconnectTimer = setTimeout(async () => {
-      if (player.disconnected && this.status === 'active') {
-        this.status = 'finished'
-        clearInterval(this.timerInterval)
-        if (this.nameSyncInterval) clearInterval(this.nameSyncInterval)
-        
-        // Find the remaining player
-        let winnerColor: 'white' | 'black' | 'draw' = 'draw'
-        for (const [id, p] of this.players.entries()) {
-          if (id !== userId) {
-            winnerColor = p.color
-            break
-          }
-        }
-
-        this.broadcast({ 
-          type: 'GAME_OVER', 
-          data: { 
-            result: winnerColor, 
-            reason: 'disconnect_timeout',
-            message: 'Opponent disconnected and timed out.'
-          } 
-        })
-        
-        await this.saveGameToDB(winnerColor)
-      }
-    }, 30000)
-  }
-
-  private broadcast(data: any, skipUserId?: string) {
-    const payload = JSON.stringify(data)
-    for (const [id, p] of this.players.entries()) {
-      if (id === skipUserId || p.disconnected) continue
-      try {
-        p.socket.send(payload)
-      } catch (_) {
-        p.disconnected = true
-      }
-    }
-  }
-
-  private async saveGameToDB(winner?: string) {
-    if (!this.env.DB) return
-    try {
-      // Correctly map users to white/black based on their assigned color
-      let whiteUserId: string | null = null
-      let blackUserId: string | null = null
-      for (const [id, p] of this.players.entries()) {
-        if (p.color === 'white') whiteUserId = id
-        if (p.color === 'black') blackUserId = id
-      }
-
-      const moveCount = this.validator.getMoveCount()
-      const now = new Date().toISOString()
-
-      await this.env.DB.prepare(`
-        INSERT INTO games (id, white_user_id, black_user_id, mode, status, result, pgn, final_fen, move_count, completed_at, created_at, updated_at)
-        VALUES (?, ?, ?, 'multiplayer', 'completed', ?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(id) DO UPDATE SET 
-          status = 'completed', result = excluded.result, pgn = excluded.pgn, 
-          final_fen = excluded.final_fen, move_count = excluded.move_count,
-          completed_at = excluded.completed_at, updated_at = excluded.updated_at
-      `).bind(
-        this.gameId, whiteUserId, blackUserId, winner,
-        this.validator.getPgn(), this.validator.getFen(), moveCount,
-        now, now, now
-      ).run()
-
-      // Mark the associated challenge as 'completed' so it never shows as pending/resumable
-      if (this.gameId) {
-        await this.env.DB.prepare(
-          `UPDATE challenges SET status = 'completed', updated_at = ? WHERE game_id = ? AND status IN ('pending', 'accepted')`
-        ).bind(now, this.gameId).run()
-      }
-
-      // Also clear any 'active' (paused/saved) game records for this game
-      // to prevent it from appearing in the resume list
-      await this.env.DB.prepare(
-        `UPDATE games SET status = 'completed', result = ?, completed_at = ?, updated_at = ? WHERE id = ? AND status = 'active'`
-      ).bind(winner ?? 'abandoned', now, now, this.gameId).run()
-
-      // Update user stats and XP (with idempotency guard)
-      // Check if XP was already awarded for this game to prevent duplicate awards
-      // on reconnect, re-save, or Durable Object replay.
-      const existingXp = await this.env.DB.prepare(
-        `SELECT COUNT(*) as cnt FROM xp_history WHERE game_id = ?`
-      ).bind(this.gameId).first<{ cnt: number }>()
-
-      if (existingXp && existingXp.cnt > 0) {
-        console.log(`[GameRoom] XP already awarded for game ${this.gameId}, skipping stats update.`)
-      } else {
-        if (whiteUserId) {
-          const outcome = winner === 'white' ? 'win' : winner === 'black' ? 'loss' : 'draw'
-          await this.updateUserStatsAndXP(whiteUserId, outcome)
-        }
-        if (blackUserId) {
-          const outcome = winner === 'black' ? 'win' : winner === 'white' ? 'loss' : 'draw'
-          await this.updateUserStatsAndXP(blackUserId, outcome)
-        }
-      }
-    } catch (e) {
-      console.error('[GameRoom] DB Save Failed:', e)
-    }
-  }
-
-  private async updateUserStatsAndXP(userId: string, outcome: 'win' | 'loss' | 'draw') {
-    if (!this.env.DB) return
-    try {
-      await StatsService.updateAll(this.env.DB, {
-        userId,
-        gameId: this.gameId,
-        outcome,
-        mode: 'multiplayer'
-      })
-    } catch (e) {
-      console.error('[GameRoom] Stats/XP update failed:', e)
-    }
-  }
-  private async syncPausedGame() {
-    if (!this.env.DB) return
-    try {
-      let whiteUserId: string | null = null
-      let blackUserId: string | null = null
-      for (const [id, p] of this.players.entries()) {
-        if (p.color === 'white') whiteUserId = id
-        if (p.color === 'black') blackUserId = id
-      }
-
-      await this.env.DB.prepare(`
-        INSERT INTO games (id, white_user_id, black_user_id, mode, status, result, pgn, final_fen, move_count, created_at, updated_at)
-        VALUES (?, ?, ?, 'multiplayer', 'active', NULL, ?, ?, ?, ?, ?)
-        ON CONFLICT(id) DO UPDATE SET 
-          status = 'active', result = NULL, pgn = excluded.pgn, 
-          final_fen = excluded.final_fen, move_count = excluded.move_count,
-          updated_at = excluded.updated_at
-      `).bind(
-        this.gameId, whiteUserId, blackUserId,
-        this.validator.getPgn(), this.validator.getFen(), this.validator.getMoveCount(),
-        new Date().toISOString(), new Date().toISOString()
-      ).run()
-    } catch (e) {
-      console.error('[GameRoom] syncPausedGame failed:', e)
-    }
-  }
 }
+function requestName(ws:WebSocket){return (ws.deserializeAttachment()as{name?:string}).name??'Player'}

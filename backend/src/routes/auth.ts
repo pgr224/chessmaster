@@ -55,7 +55,7 @@ function getAuthMode(body: z.infer<typeof CompatSchema>) {
 async function existingUserByDevice(c: any, deviceId: string) {
   return c.env.DB.prepare('SELECT id, username FROM users WHERE device_id = ?')
     .bind(deviceId)
-    .first<{ id: string; username: string }>()
+    .first()
 }
 
 async function responseForUser(c: any, userId: string, username: string, deviceId: string, status = 200) {
@@ -132,7 +132,7 @@ async function registerWithBody(c: any, body: unknown) {
 
     const usernameOwner = await db.prepare(
       'SELECT id, username FROM users WHERE username = ? COLLATE NOCASE'
-    ).bind(username).first<{ id: string; username: string }>()
+    ).bind(username).first()
 
     let userId: string
     let responseUsername = username

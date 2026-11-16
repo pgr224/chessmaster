@@ -371,7 +371,7 @@ class CoachSettings {
     this.level = CoachingLevel.beginner,
     this.enableRealTimeCoaching = true,
     this.enablePostGameAnalysis = true,
-    this.enableMultiplayerCoaching = false,
+    this.enableMultiplayerCoaching = true,
     this.showEvalBar = false,
   });
 

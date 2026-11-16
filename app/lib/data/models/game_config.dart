@@ -30,6 +30,7 @@ class GameConfig {
   final int incrementSeconds; // seconds added per move (e.g. 5 for 10+5)
   final String variantId;
   final String? activeGameId;
+  final String? tournamentId;
   final bool isPuzzleRush;
 
   const GameConfig({
@@ -48,8 +49,12 @@ class GameConfig {
     this.incrementSeconds = 0,
     this.variantId = 'standard',
     this.activeGameId,
+    this.tournamentId,
     this.isPuzzleRush = false,
   });
+
+  bool get isOnline =>
+      mode == GameMode.multiplayer || mode == GameMode.tournament;
 
   /// Parse a time control string like "10+5" into (baseSeconds, incrementSeconds)
   static (int, int) parseTimeControl(String tc) {

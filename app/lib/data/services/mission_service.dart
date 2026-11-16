@@ -8,8 +8,9 @@ class MissionService {
   final SharedPreferences _prefs;
   final AuthRepository _authRepository;
 
-  static const String _missionsKey = 'user_missions_v1';
-  static const String _lastResetKey = 'mission_last_reset';
+  String get _missionsKey => 'user_missions_v2_$_scope';
+  String get _lastResetKey => 'mission_last_reset_$_scope';
+  String _scope = 'guest';
   static const String _bountyTargetKey = 'bounty_target_id';
   static const String _bountyExpiryKey = 'bounty_expiry';
 
@@ -18,13 +19,48 @@ class MissionService {
   DateTime? _bountyExpiry;
 
   MissionService(this._prefs, this._authRepository) {
-    _loadMissions();
+    _ensureScope();
     _checkDailyReset();
     _checkBountyRotation();
   }
 
-  List<Mission> get missions => _activeMissions;
+  List<Mission> get missions {
+    _ensureScope();
+    _checkDailyReset();
+    return _activeMissions;
+  }
+
+  void _ensureScope() {
+    final raw = _prefs.getString('user_data');
+    final scope =
+        raw == null ? 'guest' : (jsonDecode(raw) as Map)['id'].toString();
+    if (_scope != scope || _activeMissions.isEmpty) {
+      _scope = scope;
+      _loadMissions();
+      _checkDailyReset();
+    }
+  }
+
+  Future<void> recordGameResult(String gameId,
+      {required bool isWin,
+      required bool isOnline,
+      required int currentStreak}) async {
+    if (_prefs.getBool(AuthRepository.guestSessionKey) == true) return;
+    _ensureScope();
+    _checkDailyReset();
+    final key = 'mission_result_$_scope:$gameId';
+    if (_prefs.getBool(key) == true) return;
+    await _prefs.setBool(key, true);
+    await updateProgress('daily_games');
+    if (isOnline && isWin) await updateProgress('online_win');
+    await updateProgress('streak_hunter', setCount: currentStreak);
+  }
+
   String? get bountyUserId => _bountyUserId;
+  Future<String?> refreshBounty() async {
+    await _rotateBounty();
+    return _bountyUserId;
+  }
 
   void _loadMissions() {
     final data = _prefs.getString(_missionsKey);
@@ -50,24 +86,13 @@ class MissionService {
   }
 
   Future<void> _rotateBounty() async {
+    if (_prefs.getBool(AuthRepository.guestSessionKey) == true) return;
     try {
-      final leaderboard = await _authRepository.getLeaderboard(limit: 20);
-      if (leaderboard.isEmpty) return;
-
-      // Filter out 'me'
-      final currentUser = await _authRepository.getCurrentUser();
-      final candidates =
-          leaderboard.where((u) => u.id != currentUser?.id).toList();
-      if (candidates.isEmpty) return;
-
-      // Seed-based pick for consistency across reloads (or just pick one)
-      // Every 4 hours, same seed
-      final now = DateTime.now();
-      final seed = (now.millisecondsSinceEpoch / (4 * 3600 * 1000)).floor();
-      final target = candidates[seed % candidates.length];
-
-      _bountyUserId = target.id;
-      _bountyExpiry = now.add(const Duration(hours: 4));
+      final response = await _authRepository.getBountyTarget();
+      final target = response['target'] as Map?;
+      if (target == null) return;
+      _bountyUserId = target['id'].toString();
+      _bountyExpiry = DateTime.parse(response['expiresAt'].toString());
 
       await _prefs.setString(_bountyTargetKey, _bountyUserId!);
       await _prefs.setString(
@@ -133,11 +158,15 @@ class MissionService {
     }
   }
 
-  Future<void> updateProgress(String missionId, {int delta = 1}) async {
+  Future<void> updateProgress(String missionId,
+      {int delta = 1, int? setCount}) async {
+    if (_prefs.getBool(AuthRepository.guestSessionKey) == true) return;
+    _ensureScope();
+    _checkDailyReset();
     final index = _activeMissions.indexWhere((m) => m.id == missionId);
     if (index != -1 && !_activeMissions[index].isCompleted) {
       final updated = _activeMissions[index].copyWith(
-        currentCount: _activeMissions[index].currentCount + delta,
+        currentCount: setCount ?? _activeMissions[index].currentCount + delta,
       );
       _activeMissions[index] = updated;
       _saveMissions();
@@ -150,6 +179,9 @@ class MissionService {
   }
 
   Future<void> claimReward(String missionId) async {
+    if (_prefs.getBool(AuthRepository.guestSessionKey) == true) return;
+    _ensureScope();
+    _checkDailyReset();
     final index = _activeMissions.indexWhere((m) => m.id == missionId);
     if (index != -1 &&
         _activeMissions[index].isCompleted &&
@@ -161,6 +193,8 @@ class MissionService {
         await _authRepository.updateXPProgress(
           userId: user.id,
           xpDelta: mission.rewardXP,
+          eventId:
+              'mission:${DateTime.now().toIso8601String().substring(0, 10)}:$missionId',
           statUpdates: {},
         );
 

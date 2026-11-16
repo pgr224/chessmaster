@@ -34,57 +34,70 @@ class AppTheme {
   // ═══════════════════════════════════════════
   static Map<String, BoardThemeData> boardThemes = {
     'classic': BoardThemeData(
-        light: Color(0xFFF5E6CA),
-        dark: Color(0xFF8B6B4A),
-        notation: Color(0xFF8B6B4A)),
+      light: Color(0xFFF5E6CA),
+      dark: Color(0xFF8B6B4A),
+      notation: Color(0xFF8B6B4A),
+    ),
     'grey': BoardThemeData(
-        light: Color(0xFFB2B2B2),
-        dark: Color(0xFF808080),
-        notation: Color(0xFF808080)),
+      light: Color(0xFFB2B2B2),
+      dark: Color(0xFF808080),
+      notation: Color(0xFF808080),
+    ),
     'dark': BoardThemeData(
-        light: Color(0xFF444444),
-        dark: Color(0xFF333333),
-        notation: Color(0xFFCCCCCC)),
+      light: Color(0xFF444444),
+      dark: Color(0xFF333333),
+      notation: Color(0xFFCCCCCC),
+    ),
     'amoled': BoardThemeData(
-        light: Color(0xFF222222),
-        dark: Color(0xFF000000),
-        notation: Color(0xFF888888)),
+      light: Color(0xFF222222),
+      dark: Color(0xFF000000),
+      notation: Color(0xFF888888),
+    ),
     'lewis': BoardThemeData(
-        light: Color(0xFFDBD1C1),
-        dark: Color(0xFFAB3848),
-        notation: Color(0xFFAB3848)),
+      light: Color(0xFFDBD1C1),
+      dark: Color(0xFFAB3848),
+      notation: Color(0xFFAB3848),
+    ),
     'cherry': BoardThemeData(
-        light: Color(0xFFDB5E5C),
-        dark: Color(0xFF645183),
-        notation: Color(0xFFFFFFFF)),
+      light: Color(0xFFDB5E5C),
+      dark: Color(0xFF645183),
+      notation: Color(0xFFFFFFFF),
+    ),
     'sage': BoardThemeData(
-        light: Color(0xFFB2AD91),
-        dark: Color(0xFF83886F),
-        notation: Color(0xFF83886F)),
+      light: Color(0xFFB2AD91),
+      dark: Color(0xFF83886F),
+      notation: Color(0xFF83886F),
+    ),
     'tan': BoardThemeData(
-        light: Color(0xFFD3A373),
-        dark: Color(0xFF866749),
-        notation: Color(0xFF866749)),
+      light: Color(0xFFD3A373),
+      dark: Color(0xFF866749),
+      notation: Color(0xFF866749),
+    ),
     'jade': BoardThemeData(
-        light: Color(0xFF85B39F),
-        dark: Color(0xFF517970),
-        notation: Color(0xFFD0F0E0)),
+      light: Color(0xFF85B39F),
+      dark: Color(0xFF517970),
+      notation: Color(0xFFD0F0E0),
+    ),
     'stellar': BoardThemeData(
-        light: Color(0xFFE2E8F0),
-        dark: Color(0xFF475569),
-        notation: Color(0xFF475569)),
+      light: Color(0xFFE2E8F0),
+      dark: Color(0xFF475569),
+      notation: Color(0xFF475569),
+    ),
     'green': BoardThemeData(
-        light: Color(0xFFEBECD0),
-        dark: Color(0xFF779556),
-        notation: Color(0xFF779556)),
+      light: Color(0xFFEBECD0),
+      dark: Color(0xFF779556),
+      notation: Color(0xFF779556),
+    ),
     'royal': BoardThemeData(
-        light: Color(0xFFD1B28C),
-        dark: Color(0xFF8D6E63),
-        notation: Color(0xFF8D6E63)),
+      light: Color(0xFFD1B28C),
+      dark: Color(0xFF8D6E63),
+      notation: Color(0xFF8D6E63),
+    ),
     'electric': BoardThemeData(
-        light: Color(0xFFD1D1FF),
-        dark: Color(0xFF5353EC),
-        notation: Color(0xFF5353EC)),
+      light: Color(0xFFD1D1FF),
+      dark: Color(0xFF5353EC),
+      notation: Color(0xFF5353EC),
+    ),
   };
 
   static const Color selectedSq = Color(0xFF7BC67B);
@@ -134,7 +147,7 @@ class AppTheme {
       Color(0xFFE5A900),
       Color(0xFFFFD600),
       Color(0xFFFFEA79),
-      Color(0xFFFFD600)
+      Color(0xFFFFD600),
     ],
   );
 
@@ -158,7 +171,7 @@ class AppTheme {
       Color(0xFFFFD93D),
       Color(0xFF6BCB77),
       Color(0xFF74B9FF),
-      Color(0xFFA29BFE)
+      Color(0xFFA29BFE),
     ],
   );
 
@@ -171,12 +184,18 @@ class AppTheme {
   // ═══════════════════════════════════════════
   static List<BoxShadow> goldShadow = [
     BoxShadow(
-        color: goldPrimary.withValues(alpha: 0.4), blurRadius: 24, spreadRadius: 4),
+      color: goldPrimary.withValues(alpha: 0.4),
+      blurRadius: 24,
+      spreadRadius: 4,
+    ),
   ];
 
   static List<BoxShadow> cyanShadow = [
     BoxShadow(
-        color: accentCyan.withValues(alpha: 0.3), blurRadius: 20, spreadRadius: 2),
+      color: accentCyan.withValues(alpha: 0.3),
+      blurRadius: 20,
+      spreadRadius: 2,
+    ),
   ];
 
   static List<BoxShadow> cardShadow = [
@@ -189,7 +208,10 @@ class AppTheme {
 
   static List<BoxShadow> pinkShadow = [
     BoxShadow(
-        color: accentPurple.withValues(alpha: 0.3), blurRadius: 20, spreadRadius: 2),
+      color: accentPurple.withValues(alpha: 0.3),
+      blurRadius: 20,
+      spreadRadius: 2,
+    ),
   ];
 
   // ═══════════════════════════════════════════
@@ -202,194 +224,197 @@ class AppTheme {
         fontWeight: FontWeight.w700,
         color: textPrimary,
         letterSpacing: -0.5,
-      ).copyWith(fontFamilyFallback: [GoogleFonts.notoSans().fontFamily!]),
+      ).copyWith(fontFamilyFallback: const ['NotoSans']),
       displayMedium: GoogleFonts.fredoka(
         fontSize: 46,
         fontWeight: FontWeight.w600,
         color: textPrimary,
-      ).copyWith(fontFamilyFallback: [GoogleFonts.notoSans().fontFamily!]),
+      ).copyWith(fontFamilyFallback: const ['NotoSans']),
       displaySmall: GoogleFonts.fredoka(
         fontSize: 38,
         fontWeight: FontWeight.w600,
         color: textPrimary,
-      ).copyWith(fontFamilyFallback: [GoogleFonts.notoSans().fontFamily!]),
+      ).copyWith(fontFamilyFallback: const ['NotoSans']),
       headlineLarge: GoogleFonts.fredoka(
         fontSize: 34,
         fontWeight: FontWeight.w700,
         color: textPrimary,
-      ).copyWith(fontFamilyFallback: [GoogleFonts.notoSans().fontFamily!]),
+      ).copyWith(fontFamilyFallback: const ['NotoSans']),
       headlineMedium: GoogleFonts.jura(
         fontSize: 30,
         fontWeight: FontWeight.w600,
         color: textPrimary,
-      ).copyWith(fontFamilyFallback: [GoogleFonts.notoSans().fontFamily!]),
+      ).copyWith(fontFamilyFallback: const ['NotoSans']),
       headlineSmall: GoogleFonts.jura(
         fontSize: 26,
         fontWeight: FontWeight.w600,
         color: textPrimary,
-      ).copyWith(fontFamilyFallback: [GoogleFonts.notoSans().fontFamily!]),
+      ).copyWith(fontFamilyFallback: const ['NotoSans']),
       titleLarge: GoogleFonts.fredoka(
         fontSize: 24,
         fontWeight: FontWeight.w600,
         color: textPrimary,
-      ).copyWith(fontFamilyFallback: [GoogleFonts.notoSans().fontFamily!]),
+      ).copyWith(fontFamilyFallback: const ['NotoSans']),
       titleMedium: GoogleFonts.jura(
         fontSize: 18,
         fontWeight: FontWeight.w600,
         color: textPrimary,
         letterSpacing: 0.15,
-      ).copyWith(fontFamilyFallback: [GoogleFonts.notoSans().fontFamily!]),
+      ).copyWith(fontFamilyFallback: const ['NotoSans']),
       titleSmall: GoogleFonts.jura(
         fontSize: 16,
         fontWeight: FontWeight.w500,
         color: textSecondary,
         letterSpacing: 0.1,
-      ).copyWith(fontFamilyFallback: [GoogleFonts.notoSans().fontFamily!]),
+      ).copyWith(fontFamilyFallback: const ['NotoSans']),
       bodyLarge: GoogleFonts.baloo2(
         fontSize: 18,
         fontWeight: FontWeight.w400,
         color: textPrimary,
-      ).copyWith(fontFamilyFallback: [GoogleFonts.notoSans().fontFamily!]),
+      ).copyWith(fontFamilyFallback: const ['NotoSans']),
       bodyMedium: GoogleFonts.baloo2(
         fontSize: 16,
         fontWeight: FontWeight.w400,
         color: textSecondary,
-      ).copyWith(fontFamilyFallback: [GoogleFonts.notoSans().fontFamily!]),
+      ).copyWith(fontFamilyFallback: const ['NotoSans']),
       bodySmall: GoogleFonts.baloo2(
         fontSize: 14,
         fontWeight: FontWeight.w400,
         color: textMuted,
-      ).copyWith(fontFamilyFallback: [GoogleFonts.notoSans().fontFamily!]),
+      ).copyWith(fontFamilyFallback: const ['NotoSans']),
       labelLarge: GoogleFonts.fredoka(
         fontSize: 16,
         fontWeight: FontWeight.w600,
         color: textPrimary,
         letterSpacing: 1.0,
-      ).copyWith(fontFamilyFallback: [GoogleFonts.notoSans().fontFamily!]),
+      ).copyWith(fontFamilyFallback: const ['NotoSans']),
       labelMedium: GoogleFonts.fredoka(
         fontSize: 14,
         fontWeight: FontWeight.w500,
         color: textSecondary,
         letterSpacing: 0.5,
-      ).copyWith(fontFamilyFallback: [GoogleFonts.notoSans().fontFamily!]),
+      ).copyWith(fontFamilyFallback: const ['NotoSans']),
     );
   }
 
   // ═══════════════════════════════════════════
   // DARK THEME — Warm & Child-Friendly
   // ═══════════════════════════════════════════
-  static ThemeData get darkTheme {
-    return ThemeData(
-      useMaterial3: true,
-      brightness: Brightness.dark,
-      scaffoldBackgroundColor: midnight,
-      colorScheme: const ColorScheme.dark(
-        primary: goldPrimary,
-        secondary: accentCyan,
-        tertiary: accentPurple,
-        surface: navyCard,
-        error: accentRed,
-        onPrimary: midnight,
-        onSecondary: midnight,
-        onSurface: textPrimary,
-        surfaceContainerHighest: surface,
+  static final ThemeData darkTheme = ThemeData(
+    useMaterial3: true,
+    brightness: Brightness.dark,
+    scaffoldBackgroundColor: midnight,
+    colorScheme: const ColorScheme.dark(
+      primary: goldPrimary,
+      secondary: accentCyan,
+      tertiary: accentPurple,
+      surface: navyCard,
+      error: accentRed,
+      onPrimary: midnight,
+      onSecondary: midnight,
+      onSurface: textPrimary,
+      surfaceContainerHighest: surface,
+    ),
+    textTheme: _buildTextTheme(),
+    appBarTheme: AppBarTheme(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      centerTitle: true,
+      titleTextStyle: GoogleFonts.fredoka(
+        fontSize: 22,
+        fontWeight: FontWeight.w700,
+        color: textPrimary,
+        letterSpacing: 0.5,
       ),
-      textTheme: _buildTextTheme(),
-      appBarTheme: AppBarTheme(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: true,
-        titleTextStyle: GoogleFonts.fredoka(
-          fontSize: 22,
+      iconTheme: const IconThemeData(color: textPrimary),
+    ),
+    cardTheme: CardThemeData(
+      color: navyCard,
+      elevation: 8,
+      shadowColor: Colors.black.withValues(alpha: 0.4),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+    ),
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: goldPrimary,
+        foregroundColor: midnight,
+        elevation: 8,
+        shadowColor: goldPrimary.withValues(alpha: 0.4),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 18),
+        textStyle: GoogleFonts.fredoka(
+          fontSize: 18,
           fontWeight: FontWeight.w700,
-          color: textPrimary,
           letterSpacing: 0.5,
         ),
-        iconTheme: const IconThemeData(color: textPrimary),
       ),
-      cardTheme: CardThemeData(
-        color: navyCard,
-        elevation: 8,
-        shadowColor: Colors.black.withValues(alpha: 0.4),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      ),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: goldPrimary,
-          foregroundColor: midnight,
-          elevation: 8,
-          shadowColor: goldPrimary.withValues(alpha: 0.4),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 18),
-          textStyle: GoogleFonts.fredoka(
-              fontSize: 18, fontWeight: FontWeight.w700, letterSpacing: 0.5),
-        ),
-      ),
-      outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          foregroundColor: goldPrimary,
-          side: const BorderSide(color: goldPrimary, width: 2),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 18),
-        ),
-      ),
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: surface,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20),
-          borderSide: const BorderSide(color: goldPrimary, width: 2),
-        ),
-        labelStyle: GoogleFonts.baloo2(color: textSecondary, fontSize: 16),
-        hintStyle: GoogleFonts.baloo2(color: textMuted, fontSize: 16),
-      ),
-      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-        backgroundColor: deepSpace,
-        selectedItemColor: goldPrimary,
-        unselectedItemColor: textMuted,
-        type: BottomNavigationBarType.fixed,
-        elevation: 20,
-      ),
-      dividerTheme:
-          const DividerThemeData(color: Color(0xFF2D3A6A), thickness: 1),
-      iconTheme: const IconThemeData(color: textSecondary, size: 26),
-      progressIndicatorTheme: const ProgressIndicatorThemeData(
-        color: goldPrimary,
-        linearTrackColor: surface,
-      ),
-      snackBarTheme: SnackBarThemeData(
-        backgroundColor: navyCard,
-        contentTextStyle: GoogleFonts.baloo2(color: textPrimary, fontSize: 16),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: goldPrimary,
+        side: const BorderSide(color: goldPrimary, width: 2),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        behavior: SnackBarBehavior.floating,
+        padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 18),
       ),
-      dialogTheme: DialogThemeData(
-        backgroundColor: navyCard,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-        elevation: 24,
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: surface,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(20),
+        borderSide: BorderSide.none,
       ),
-      chipTheme: ChipThemeData(
-        backgroundColor: surface,
-        selectedColor: goldPrimary.withValues(alpha: 0.2),
-        labelStyle: GoogleFonts.fredoka(fontSize: 14, color: textPrimary),
-        side: const BorderSide(color: Color(0xFF2D3A6A)),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(20),
+        borderSide: const BorderSide(color: goldPrimary, width: 2),
       ),
-    );
-  }
+      labelStyle: GoogleFonts.baloo2(color: textSecondary, fontSize: 16),
+      hintStyle: GoogleFonts.baloo2(color: textMuted, fontSize: 16),
+    ),
+    bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+      backgroundColor: deepSpace,
+      selectedItemColor: goldPrimary,
+      unselectedItemColor: textMuted,
+      type: BottomNavigationBarType.fixed,
+      elevation: 20,
+    ),
+    dividerTheme: const DividerThemeData(
+      color: Color(0xFF2D3A6A),
+      thickness: 1,
+    ),
+    iconTheme: const IconThemeData(color: textSecondary, size: 26),
+    progressIndicatorTheme: const ProgressIndicatorThemeData(
+      color: goldPrimary,
+      linearTrackColor: surface,
+    ),
+    snackBarTheme: SnackBarThemeData(
+      backgroundColor: navyCard,
+      contentTextStyle: GoogleFonts.baloo2(color: textPrimary, fontSize: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      behavior: SnackBarBehavior.floating,
+    ),
+    dialogTheme: DialogThemeData(
+      backgroundColor: navyCard,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+      elevation: 24,
+    ),
+    chipTheme: ChipThemeData(
+      backgroundColor: surface,
+      selectedColor: goldPrimary.withValues(alpha: 0.2),
+      labelStyle: GoogleFonts.fredoka(fontSize: 14, color: textPrimary),
+      side: const BorderSide(color: Color(0xFF2D3A6A)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    ),
+  );
 }
 
 class BoardThemeData {
   final Color light;
   final Color dark;
   final Color notation;
-  const BoardThemeData(
-      {required this.light, required this.dark, required this.notation});
+  const BoardThemeData({
+    required this.light,
+    required this.dark,
+    required this.notation,
+  });
 }
-

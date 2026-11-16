@@ -9,6 +9,8 @@ import '../../../core/router/app_router.dart';
 import '../../../data/models/game_config.dart';
 import '../../blocs/settings/settings_bloc.dart';
 import '../../blocs/theme/theme_bloc.dart';
+import '../../../domain/engine/chess_engine.dart';
+import '../../widgets/chess_piece_widget.dart';
 
 class GameSetupScreen extends StatefulWidget {
   const GameSetupScreen({super.key});
@@ -25,6 +27,7 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
   Color _blackPieceColor = Colors.black;
   String _boardTheme = 'classic';
   String _pieceStyle = '3d';
+  String _pieceShape = 'classic';
   int? _timeControl;
   bool _loadedThemePrefs = false;
 
@@ -36,12 +39,17 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
     final settingsState = context.read<SettingsBloc>().state;
     _boardTheme = themeState.boardTheme;
     _pieceStyle = themeState.pieceStyle;
+    _pieceShape = themeState.pieceShape;
     final lastDiffStr = settingsState.aiLastDifficulty;
-    _difficulty = lastDiffStr == 'basic' ? AIDifficulty.basic :
-                  lastDiffStr == 'intermediate' ? AIDifficulty.intermediate :
-                  lastDiffStr == 'advanced' ? AIDifficulty.advanced :
-                  lastDiffStr == 'aiMode' ? AIDifficulty.aiMode :
-                  AIDifficulty.impossible;
+    _difficulty = lastDiffStr == 'basic'
+        ? AIDifficulty.basic
+        : lastDiffStr == 'intermediate'
+            ? AIDifficulty.intermediate
+            : lastDiffStr == 'advanced'
+                ? AIDifficulty.advanced
+                : lastDiffStr == 'aiMode'
+                    ? AIDifficulty.aiMode
+                    : AIDifficulty.impossible;
     _loadedThemePrefs = true;
   }
 
@@ -107,9 +115,13 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
 
                     const SizedBox(height: 18),
 
-                    const SizedBox(height: 18),
+                    // ── PIECES SHAPE ──
+                    _sectionCard(
+                      title: '🧩 Pieces Shape & Preview',
+                      child: _buildPieceShapeAndPreview(),
+                    ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.1),
 
-                    // options removed
+                    const SizedBox(height: 18),
 
                     const SizedBox(height: 36),
 
@@ -125,7 +137,8 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(22)),
                           elevation: 10,
-                          shadowColor: AppTheme.accentCyan.withValues(alpha: 0.5),
+                          shadowColor:
+                              AppTheme.accentCyan.withValues(alpha: 0.5),
                         ),
                         icon: const Icon(Icons.play_arrow_rounded, size: 34),
                         label: Text(
@@ -192,7 +205,8 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
           decoration: BoxDecoration(
             color: AppTheme.surface.withValues(alpha: 0.35),
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.2)),
+            border:
+                Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.2)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -205,19 +219,29 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(info['name']!, style: GoogleFonts.fredoka(color: AppTheme.textPrimary, fontWeight: FontWeight.w700, fontSize: 16)),
-                        Text(info['desc']!, style: GoogleFonts.baloo2(color: AppTheme.textSecondary, fontSize: 13)),
+                        Text(info['name']!,
+                            style: GoogleFonts.fredoka(
+                                color: AppTheme.textPrimary,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 16)),
+                        Text(info['desc']!,
+                            style: GoogleFonts.baloo2(
+                                color: AppTheme.textSecondary, fontSize: 13)),
                       ],
                     ),
                   ),
                   if (_difficulty != AIDifficulty.aiMode)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
                         color: AppTheme.goldPrimary.withValues(alpha: 0.16),
                         borderRadius: BorderRadius.circular(999),
                       ),
-                      child: Text('$level/100', style: GoogleFonts.fredoka(color: AppTheme.goldPrimary, fontWeight: FontWeight.w700)),
+                      child: Text('$level/100',
+                          style: GoogleFonts.fredoka(
+                              color: AppTheme.goldPrimary,
+                              fontWeight: FontWeight.w700)),
                     ),
                 ],
               ),
@@ -232,13 +256,43 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
                     trackHeight: 8,
                   ),
                   child: Slider(
-                    min: _difficulty == AIDifficulty.basic ? 0 : _difficulty == AIDifficulty.intermediate ? 10 : _difficulty == AIDifficulty.advanced ? 20 : 50,
-                    max: _difficulty == AIDifficulty.basic ? 10 : _difficulty == AIDifficulty.intermediate ? 20 : _difficulty == AIDifficulty.advanced ? 50 : 100,
-                    divisions: _difficulty == AIDifficulty.basic ? 10 : _difficulty == AIDifficulty.intermediate ? 10 : _difficulty == AIDifficulty.advanced ? 30 : 50,
+                    min: _difficulty == AIDifficulty.basic
+                        ? 0
+                        : _difficulty == AIDifficulty.intermediate
+                            ? 10
+                            : _difficulty == AIDifficulty.advanced
+                                ? 20
+                                : 50,
+                    max: _difficulty == AIDifficulty.basic
+                        ? 10
+                        : _difficulty == AIDifficulty.intermediate
+                            ? 20
+                            : _difficulty == AIDifficulty.advanced
+                                ? 50
+                                : 100,
+                    divisions: _difficulty == AIDifficulty.basic
+                        ? 10
+                        : _difficulty == AIDifficulty.intermediate
+                            ? 10
+                            : _difficulty == AIDifficulty.advanced
+                                ? 30
+                                : 50,
                     value: level.toDouble().clamp(
-                        _difficulty == AIDifficulty.basic ? 0.0 : _difficulty == AIDifficulty.intermediate ? 10.0 : _difficulty == AIDifficulty.advanced ? 20.0 : 50.0,
-                        _difficulty == AIDifficulty.basic ? 10.0 : _difficulty == AIDifficulty.intermediate ? 20.0 : _difficulty == AIDifficulty.advanced ? 50.0 : 100.0,
-                    ),
+                          _difficulty == AIDifficulty.basic
+                              ? 0.0
+                              : _difficulty == AIDifficulty.intermediate
+                                  ? 10.0
+                                  : _difficulty == AIDifficulty.advanced
+                                      ? 20.0
+                                      : 50.0,
+                          _difficulty == AIDifficulty.basic
+                              ? 10.0
+                              : _difficulty == AIDifficulty.intermediate
+                                  ? 20.0
+                                  : _difficulty == AIDifficulty.advanced
+                                      ? 50.0
+                                      : 100.0,
+                        ),
                     label: '$level',
                     onChanged: (value) {
                       final modeName = switch (_difficulty) {
@@ -247,7 +301,8 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
                         AIDifficulty.advanced => 'hard',
                         _ => 'impossible',
                       };
-                      context.read<SettingsBloc>().add(SettingsAIModeLevelEvent(modeName, value.round()));
+                      context.read<SettingsBloc>().add(
+                          SettingsAIModeLevelEvent(modeName, value.round()));
                     },
                   ),
                 ),
@@ -283,10 +338,13 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
           AIDifficulty.aiMode => 'aiMode',
           _ => 'impossible',
         };
-        context.read<SettingsBloc>().add(SettingsAILastDifficultyEvent(settingsModeKey));
+        context
+            .read<SettingsBloc>()
+            .add(SettingsAILastDifficultyEvent(settingsModeKey));
       },
       label: Text(label, style: GoogleFonts.fredoka(fontSize: 12)),
-      labelStyle: TextStyle(color: selected ? AppTheme.midnight : AppTheme.textPrimary),
+      labelStyle:
+          TextStyle(color: selected ? AppTheme.midnight : AppTheme.textPrimary),
       selectedColor: AppTheme.goldPrimary,
       backgroundColor: AppTheme.surface.withValues(alpha: 0.7),
     );
@@ -499,22 +557,32 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
   }
 
   Widget _buildThemeSelector() {
-    final themes = ['classic', 'stellar', 'green', 'royal', 'electric', 'cherry', 'sage', 'amoled'];
-    
+    final themes = [
+      'classic',
+      'stellar',
+      'green',
+      'royal',
+      'electric',
+      'cherry',
+      'sage',
+      'amoled'
+    ];
+
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
           children: themes.map((theme) {
         final isSelected = _boardTheme == theme;
-        final themeData = AppTheme.boardThemes[theme] ?? AppTheme.boardThemes['classic']!;
+        final themeData =
+            AppTheme.boardThemes[theme] ?? AppTheme.boardThemes['classic']!;
         return GestureDetector(
           onTap: () {
             setState(() => _boardTheme = theme);
             context.read<ThemeBloc>().add(
                   ThemeChangeEvent(
                     boardTheme: _boardTheme,
-                    pieceShape: context.read<ThemeBloc>().state.pieceShape,
-                    pieceStyle: context.read<ThemeBloc>().state.pieceStyle,
+                    pieceShape: _pieceShape,
+                    pieceStyle: _pieceStyle,
                   ),
                 );
           },
@@ -604,7 +672,7 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
             context.read<ThemeBloc>().add(
                   ThemeChangeEvent(
                     boardTheme: _boardTheme,
-                    pieceShape: context.read<ThemeBloc>().state.pieceShape,
+                    pieceShape: _pieceShape,
                     pieceStyle: _pieceStyle,
                   ),
                 );
@@ -665,7 +733,7 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
           difficultyLevel: finalLevel,
           playerColor: resolvedColor,
           boardTheme: _boardTheme,
-          pieceShape: themeState.pieceShape,
+          pieceShape: _pieceShape,
           pieceStyle: _pieceStyle,
           whitePieceColor: useCustomColors ? _whitePieceColor : null,
           blackPieceColor: useCustomColors ? _blackPieceColor : null,
@@ -727,6 +795,363 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
         'black' => 'Black',
         _ => 'Custom',
       };
+
+  String _cap(String s) =>
+      s.isEmpty ? s : '${s[0].toUpperCase()}${s.substring(1)}';
+
+  void _updateTheme() {
+    context.read<ThemeBloc>().add(ThemeChangeEvent(
+        boardTheme: _boardTheme,
+        pieceShape: _pieceShape,
+        pieceStyle: _pieceStyle));
+  }
+
+  Widget _buildPieceShapeAndPreview() {
+    final isShuffled = _pieceShape == 'shuffled';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.surface.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                      color: AppTheme.goldPrimary.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  children: [
+                    _getPieceAvatar(_pieceShape),
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('CURRENT SHAPE',
+                            style: GoogleFonts.fredoka(
+                                color: AppTheme.textSecondary,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold)),
+                        Text(_cap(_pieceShape.replaceAll('_', ' ')),
+                            style: GoogleFonts.fredoka(
+                                color: AppTheme.textPrimary,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                    const Spacer(),
+                    if (!isShuffled) ...[
+                      IconButton(
+                        icon: const Icon(Icons.shuffle_rounded,
+                            color: AppTheme.accentCyan, size: 20),
+                        onPressed: () {
+                          setState(() => _pieceShape = 'shuffled');
+                          _updateTheme();
+                        },
+                        tooltip: 'Toggle Shuffle Mode',
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        _glassButton(
+          icon: Icons.grid_view_rounded,
+          label: 'Change Shapes (55+ Styles)',
+          onTap: () => _showPieceSelector(context),
+        ),
+        const SizedBox(height: 16),
+        _buildCurrentThemeKeyPiecesPreview(),
+      ],
+    );
+  }
+
+  Widget _buildCurrentThemeKeyPiecesPreview() {
+    if (_pieceShape == 'shuffled') {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppTheme.surface.withValues(alpha: 0.3),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppTheme.accentCyan.withValues(alpha: 0.3)),
+        ),
+        child: Column(
+          children: [
+            const Icon(Icons.shuffle_rounded,
+                color: AppTheme.accentCyan, size: 32),
+            const SizedBox(height: 8),
+            Text('SHUFFLE MODE',
+                style: GoogleFonts.fredoka(
+                    color: AppTheme.accentCyan,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold)),
+            Text('A new random theme every game!',
+                style: GoogleFonts.fredoka(
+                    color: AppTheme.textSecondary, fontSize: 10)),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.surface.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Live Preview: ${_cap(_pieceShape)}',
+                  style: GoogleFonts.fredoka(
+                      color: AppTheme.textSecondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600)),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                    color: AppTheme.goldPrimary.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(8)),
+                child: Text(_pieceStyle.toUpperCase(),
+                    style: GoogleFonts.fredoka(
+                        color: AppTheme.goldPrimary,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _piecePreview(_pieceShape, PieceType.king, 48),
+              _piecePreview(_pieceShape, PieceType.queen, 48),
+              _piecePreview(_pieceShape, PieceType.knight, 48),
+              _piecePreview(_pieceShape, PieceType.rook, 48),
+              _piecePreview(_pieceShape, PieceType.pawn, 48),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _piecePreview(String shape, PieceType type, double size) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: ChessPieceWidget(
+        piece: ChessPiece(type: type, color: PieceColor.white),
+        shape: shape,
+        style: _pieceStyle,
+        size: size * 0.8,
+      ),
+    );
+  }
+
+  Widget _getPieceAvatar(String id) {
+    if (id == 'shuffled') {
+      return Icon(Icons.shuffle,
+          size: 16,
+          color: _pieceShape == 'shuffled' ? AppTheme.midnight : Colors.white);
+    }
+
+    return Padding(
+      padding: const EdgeInsets.all(2.0),
+      child: ChessPieceWidget(
+        piece: ChessPiece(type: PieceType.knight, color: PieceColor.white),
+        shape: id,
+        style: _pieceStyle,
+        size: 18,
+      ),
+    );
+  }
+
+  Widget _glassButton(
+      {required IconData icon,
+      required String label,
+      required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: AppTheme.skyBlue, size: 20),
+            const SizedBox(width: 10),
+            Text(label,
+                style: GoogleFonts.fredoka(
+                    color: AppTheme.skyBlue,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _glassAction(
+      {required IconData icon,
+      required double size,
+      required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.1), shape: BoxShape.circle),
+        child: Icon(icon, color: AppTheme.textPrimary, size: size - 12),
+      ),
+    );
+  }
+
+  Widget _pychessPreview(String shape) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _piecePreview(shape, PieceType.king, 38),
+          _piecePreview(shape, PieceType.knight, 38),
+          _piecePreview(shape, PieceType.pawn, 38),
+        ],
+      ),
+    );
+  }
+
+  void _showPieceSelector(BuildContext context) {
+    const basicShapes = [
+      'classic',
+      'modern',
+      'angular',
+      'neo',
+      'wood',
+      'fantasy',
+      'iconic',
+      'artwork'
+    ];
+    final List<String> allShapes =
+        {...basicShapes, ...PiecePathProvider.pychessShapes}.toList();
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.85,
+        decoration: BoxDecoration(
+          color: AppTheme.midnight,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+          border: Border.all(color: AppTheme.skyBlue.withValues(alpha: 0.1)),
+        ),
+        child: Column(
+          children: [
+            const SizedBox(height: 12),
+            Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                    color: Colors.white24,
+                    borderRadius: BorderRadius.circular(2))),
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Row(
+                children: [
+                  Text('Piece Shapes',
+                      style: GoogleFonts.fredoka(
+                          color: AppTheme.textPrimary,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold)),
+                  const Spacer(),
+                  _glassAction(
+                      icon: Icons.close_rounded,
+                      size: 32,
+                      onTap: () => Navigator.pop(context)),
+                ],
+              ),
+            ),
+            Expanded(
+              child: GridView.builder(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                  childAspectRatio: 1.2,
+                ),
+                itemCount: allShapes.length,
+                itemBuilder: (context, index) {
+                  final s = allShapes[index];
+                  final isSelected = _pieceShape == s;
+                  final displayName =
+                      s.replaceAll('_', ' ').replaceAll(' SVG', '');
+
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() => _pieceShape = s);
+                      _updateTheme();
+                      Navigator.pop(context);
+                    },
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? AppTheme.goldPrimary.withValues(alpha: 0.1)
+                            : Colors.white.withValues(alpha: 0.03),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                            color: isSelected
+                                ? AppTheme.goldPrimary
+                                : Colors.white10,
+                            width: 2),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _pychessPreview(s),
+                          const SizedBox(height: 10),
+                          Text(_cap(displayName),
+                              style: GoogleFonts.fredoka(
+                                  color: isSelected
+                                      ? AppTheme.goldPrimary
+                                      : AppTheme.textSecondary,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold),
+                              textAlign: TextAlign.center,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _MiniKingPainter extends CustomPainter {
@@ -775,6 +1200,3 @@ class _MiniKingPainter extends CustomPainter {
     return oldDelegate.fill != fill || oldDelegate.stroke != stroke;
   }
 }
-
-
-

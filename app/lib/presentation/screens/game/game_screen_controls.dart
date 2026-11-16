@@ -6,7 +6,7 @@ extension GameScreenControls on _GameScreenState {
     final isPracticeOrSingle = state.mode == GameMode.singlePlayer ||
         state.mode == GameMode.practice ||
         state.mode == GameMode.twoPlayer;
-    final isMultiplayer = state.mode == GameMode.multiplayer;
+    final isMultiplayer = state.isOnline;
     final isPuzzle = state.mode == GameMode.puzzle;
 
     return Container(
@@ -47,7 +47,7 @@ extension GameScreenControls on _GameScreenState {
             ),
 
           // Hint button
-          if (isPracticeOrSingle || isPuzzle || isMultiplayer)
+          if (isPracticeOrSingle || isPuzzle)
             _actionBtn(
               icon: Icons.lightbulb_rounded,
               label: isPuzzle
@@ -61,14 +61,15 @@ extension GameScreenControls on _GameScreenState {
                           state.mode == GameMode.practice ||
                           state.mode == GameMode.twoPlayer) &&
                       !state.isAIThinking
-                  ? () => context.read<GameBloc>().add(const GameRequestHintEvent())
+                  ? () =>
+                      context.read<GameBloc>().add(const GameRequestHintEvent())
                   : null,
             ),
 
           if (isPuzzle)
             _actionBtn(
               icon: Icons.psychology_rounded,
-              label: 'Explain',
+              label: 'Explain (15XP)',
               color: AppTheme.skyBlue,
               onTap: () {
                 if (state.puzzleStep < 0 ||
@@ -267,4 +268,3 @@ extension GameScreenControls on _GameScreenState {
     );
   }
 }
-

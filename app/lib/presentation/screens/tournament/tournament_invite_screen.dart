@@ -37,8 +37,7 @@ class _TournamentInviteScreenState extends State<TournamentInviteScreen> {
   @override
   Widget build(BuildContext context) {
     return BlocProvider<TournamentBloc>(
-      create: (_) =>
-          TournamentBloc(di.sl<TournamentRepository>(), di.sl()),
+      create: (_) => TournamentBloc(di.sl<TournamentRepository>(), di.sl()),
       child: BlocConsumer<TournamentBloc, TournamentState>(
         listener: (context, ts) {
           if (ts.status == TournamentStatus.error && ts.errorMessage != null) {
@@ -120,8 +119,8 @@ class _TournamentInviteScreenState extends State<TournamentInviteScreen> {
           const SizedBox(height: 12),
           if (players.isEmpty)
             Text('No players online right now.',
-                style: GoogleFonts.baloo2(
-                    color: AppTheme.textMuted, fontSize: 14))
+                style:
+                    GoogleFonts.baloo2(color: AppTheme.textMuted, fontSize: 14))
           else
             ...players.map((p) => _buildPlayerTile(p)),
         ],
@@ -343,8 +342,7 @@ class _TournamentInviteScreenState extends State<TournamentInviteScreen> {
     );
   }
 
-  Future<void> _sendInvite(
-      BuildContext context, TournamentState ts) async {
+  Future<void> _sendInvite(BuildContext context, TournamentState ts) async {
     if (_selectedOpponent == null) return;
     setState(() => _isSending = true);
 
@@ -356,15 +354,14 @@ class _TournamentInviteScreenState extends State<TournamentInviteScreen> {
 
     try {
       // Create the private tournament in DB
-      final tournamentId =
-          await di.sl<TournamentRepository>().createTournament(
-                name: '${authState.user.username} vs ${_selectedOpponent!.name}',
-                type: 'private',
-                totalRounds: ts.selectedRounds,
-                timeControl: ts.selectedTimeControl,
-                format: 'best_of',
-                invitedPlayers: [_selectedOpponent!.id],
-              );
+      final tournamentId = await di.sl<TournamentRepository>().createTournament(
+        name: '${authState.user.username} vs ${_selectedOpponent!.name}',
+        type: 'private',
+        totalRounds: ts.selectedRounds,
+        timeControl: ts.selectedTimeControl,
+        format: 'best_of',
+        invitedPlayers: [_selectedOpponent!.id],
+      );
 
       if (!context.mounted) return;
 
@@ -378,13 +375,13 @@ class _TournamentInviteScreenState extends State<TournamentInviteScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-              '🏆 Tournament invite sent to ${_selectedOpponent!.name}!'),
+          content:
+              Text('🏆 Tournament invite sent to ${_selectedOpponent!.name}!'),
           backgroundColor: AppTheme.navyCard,
         ),
       );
 
-      context.pop();
+      context.go('/tournament/$tournamentId');
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -396,4 +393,3 @@ class _TournamentInviteScreenState extends State<TournamentInviteScreen> {
     }
   }
 }
-

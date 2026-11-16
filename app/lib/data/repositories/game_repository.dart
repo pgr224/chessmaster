@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:dio/dio.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:uuid/uuid.dart';
@@ -10,6 +11,15 @@ class GameRepository {
   static Box? _box;
 
   GameRepository(this._dio);
+  final Map<String, GameModel> _guestGames = {};
+  String? _guestActiveId;
+  Future<bool> _isGuest() async =>
+      (await SharedPreferences.getInstance()).getBool('guest_session_active') ==
+      true;
+  void clearGuestGames() {
+    _guestGames.clear();
+    _guestActiveId = null;
+  }
 
   /// Opens the Hive box, clearing it if format is incompatible
   Future<Box> _getBox() async {
@@ -29,6 +39,11 @@ class GameRepository {
 
   /// Save game locally and sync to server if online
   Future<String> saveGame(GameModel game) async {
+    if (await _isGuest()) {
+      final id = game.id.isEmpty ? const Uuid().v4() : game.id;
+      _guestGames[id] = GameModel.fromJson({...game.toJson(), 'id': id});
+      return id;
+    }
     final box = await _getBox();
     final id = game.id.isEmpty ? const Uuid().v4() : game.id;
 
@@ -45,6 +60,9 @@ class GameRepository {
       whiteUsername: game.whiteUsername,
       blackUsername: game.blackUsername,
       moveCount: game.moveCount,
+      playerColor: game.playerColor,
+      aiDifficulty: game.aiDifficulty,
+      aiDifficultyLevel: game.aiDifficultyLevel,
       updatedAt: DateTime.now(),
     );
 
@@ -60,10 +78,12 @@ class GameRepository {
   }
 
   Future<void> _syncGameCreate(String id, GameModel game) async {
+    if (await _isGuest()) return;
     try {
       await _dio.post('/api/game/create', data: {
         'gameId': id,
         'mode': _normalizeModeForServer(game.mode),
+        if (game.aiDifficulty != null) 'aiDifficulty': game.aiDifficulty,
         'initialFen': game.fen,
       });
     } catch (e) {
@@ -99,6 +119,10 @@ class GameRepository {
 
   /// Sync game completion with the server
   Future<void> completeGame(GameModel game) async {
+    if (await _isGuest()) {
+      _guestGames[game.id] = game;
+      return;
+    }
     final box = await _getBox();
     await box.put(game.id, jsonEncode(game.toJson()));
 
@@ -115,6 +139,7 @@ class GameRepository {
   }
 
   Future<void> _syncGameComplete(GameModel game) async {
+    if (await _isGuest()) return;
     final payload = {
       'gameId': game.id,
       'result': _mapResultToWinner(game.result),
@@ -152,6 +177,7 @@ class GameRepository {
   }
 
   Future<List<GameModel>> getSavedGames() async {
+    if (await _isGuest()) return _guestGames.values.toList();
     final box = await _getBox();
     return box.values
         .map((val) => val?.toString() ?? '')
@@ -171,6 +197,7 @@ class GameRepository {
   }
 
   Future<GameModel?> getSavedGame(String id) async {
+    if (await _isGuest()) return _guestGames[id];
     final box = await _getBox();
     final val = box.get(id);
     if (val == null) return null;
@@ -185,6 +212,10 @@ class GameRepository {
   }
 
   Future<void> deleteGame(String id) async {
+    if (await _isGuest()) {
+      _guestGames.remove(id);
+      return;
+    }
     final box = await _getBox();
     await box.delete(id);
   }
@@ -192,6 +223,10 @@ class GameRepository {
   static const _lastActiveKey = 'last_active_game_id';
 
   Future<void> setLastActiveGameId(String? id) async {
+    if (await _isGuest()) {
+      _guestActiveId = id;
+      return;
+    }
     final box = await _getBox();
     if (id == null) {
       await box.delete(_lastActiveKey);
@@ -201,12 +236,14 @@ class GameRepository {
   }
 
   Future<String?> getLastActiveGameId() async {
+    if (await _isGuest()) return _guestActiveId;
     final box = await _getBox();
     return box.get(_lastActiveKey)?.toString();
   }
 
   Future<List<GameModel>> getRecentGames(String userId,
       {int limit = 10}) async {
+    if (userId.startsWith('guest_') || await _isGuest()) return const [];
     try {
       final res = await _dio
           .get('/api/game/user/$userId', queryParameters: {'limit': limit});

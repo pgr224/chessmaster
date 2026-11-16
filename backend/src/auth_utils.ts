@@ -63,3 +63,8 @@ export function validationError(error: z.ZodError) {
     details: error.flatten(),
   }
 }
+
+// Guest sessions are local-only and must never acquire online capabilities.
+export function isGuestIdentity(id:unknown,payload?:Record<string,unknown>) {
+  return typeof id==='string' && id.startsWith('guest_') || payload?.isGuest===true || payload?.is_guest===true || payload?.role==='guest'
+}

@@ -5,6 +5,8 @@ import '../auth/auth_bloc.dart';
 import '../../../data/models/multiplayer_models.dart';
 import '../../../data/models/xp_rules.dart';
 import '../../../data/services/multiplayer_service.dart';
+import '../../../data/services/mission_service.dart';
+import '../../../core/services/logging_service.dart';
 import '../../../domain/engine/chess_engine.dart';
 
 // RE-EXPORT MODELS
@@ -67,8 +69,7 @@ class MpGameFoundEvent extends MultiplayerEvent {
   });
 
   @override
-  List<Object?> get props =>
-      [
+  List<Object?> get props => [
         gameId,
         color,
         opponentName,
@@ -108,10 +109,14 @@ class MpGameOverEvent extends MultiplayerEvent {
   final String result;
   final String reason;
   final int? xpDelta;
-  const MpGameOverEvent(this.result, this.reason, {this.xpDelta});
+  final bool settlementPending;
+  final String? gameId;
+  const MpGameOverEvent(this.result, this.reason,
+      {this.xpDelta, this.settlementPending = false, this.gameId});
 
   @override
-  List<Object?> get props => [result, reason, xpDelta];
+  List<Object?> get props =>
+      [result, reason, xpDelta, settlementPending, gameId];
 }
 
 class MpLobbyUpdateEvent extends MultiplayerEvent {
@@ -129,14 +134,13 @@ class MpSendChallengeEvent extends MultiplayerEvent {
   final String timeControl;
   final String variantId;
   final bool allowOffline;
-  const MpSendChallengeEvent(
-      {
-      required this.opponent,
-      required this.mode,
-      required this.timeControl,
-      required this.variantId,
-      this.allowOffline = false,
-      });
+  const MpSendChallengeEvent({
+    required this.opponent,
+    required this.mode,
+    required this.timeControl,
+    required this.variantId,
+    this.allowOffline = false,
+  });
   @override
   List<Object?> get props =>
       [opponent, mode, timeControl, variantId, allowOffline];
@@ -201,6 +205,16 @@ class MpOpponentUndoEvent extends MultiplayerEvent {}
 class MpDisconnectLobbyEvent extends MultiplayerEvent {}
 
 class MpReconnectEvent extends MultiplayerEvent {}
+
+class MpLobbyConnectionEvent extends MultiplayerEvent {
+  const MpLobbyConnectionEvent(this.connected, this.retrying);
+  final bool connected;
+  final bool retrying;
+}
+
+class MpRematchRequestEvent extends MultiplayerEvent {}
+
+class MpRematchAcceptEvent extends MultiplayerEvent {}
 
 class MpSetPresenceEvent extends MultiplayerEvent {
   final String presence;
@@ -347,6 +361,13 @@ class MpTournamentChallengeReceivedEvent extends MultiplayerEvent {
       [challengerId, challengerName, tournamentId, totalRounds, timeControl];
 }
 
+class MpServerMessageEvent extends MultiplayerEvent {
+  final Map<String, dynamic> message;
+  const MpServerMessageEvent(this.message);
+  @override
+  List<Object?> get props => [message];
+}
+
 // STATE
 enum MultiplayerStatus { disconnected, inLobby, matchmaking, inGame, gameOver }
 
@@ -394,6 +415,12 @@ class MultiplayerState extends Equatable {
   final int pendingTournamentRounds;
   final String? pendingTournamentTimeControl;
   final bool opponentConnected;
+  final Map<String, dynamic>? serverPosition;
+  final int eloChange;
+  final bool gameConnected;
+  final bool gameReconnecting;
+  final bool rematchRequested;
+  final bool rematchReceived;
 
   const MultiplayerState({
     this.status = MultiplayerStatus.disconnected,
@@ -438,6 +465,12 @@ class MultiplayerState extends Equatable {
     this.pendingTournamentRounds = 3,
     this.pendingTournamentTimeControl,
     this.opponentConnected = false,
+    this.serverPosition,
+    this.eloChange = 0,
+    this.gameConnected = false,
+    this.gameReconnecting = false,
+    this.rematchRequested = false,
+    this.rematchReceived = false,
   });
 
   MultiplayerState copyWith({
@@ -483,24 +516,34 @@ class MultiplayerState extends Equatable {
     int? pendingTournamentRounds,
     String? pendingTournamentTimeControl,
     bool? opponentConnected,
+    Map<String, dynamic>? serverPosition,
+    int? eloChange,
+    bool? gameConnected,
+    bool? gameReconnecting,
+    bool? rematchRequested,
+    bool? rematchReceived,
+    bool clearPendingTournament = false,
+    bool clearConnectionError = false,
+    bool clearGame = false,
   }) {
     return MultiplayerState(
       status: status ?? this.status,
       onlineCount: onlineCount ?? this.onlineCount,
       searchingCount: searchingCount ?? this.searchingCount,
       availablePlayers: availablePlayers ?? this.availablePlayers,
-      gameId: gameId ?? this.gameId,
-      playerColor: playerColor ?? this.playerColor,
-      opponentName: opponentName ?? this.opponentName,
-      mode: mode ?? this.mode,
-      timeControl: timeControl ?? this.timeControl,
-      variantId: variantId ?? this.variantId,
-      chatMessages: chatMessages ?? this.chatMessages,
-      lastMoveFrom: lastMoveFrom ?? this.lastMoveFrom,
-      lastMoveTo: lastMoveTo ?? this.lastMoveTo,
-      lastMovePromotion: lastMovePromotion ?? this.lastMovePromotion,
-      gameResult: gameResult ?? this.gameResult,
-      gameReason: gameReason ?? this.gameReason,
+      gameId: gameId ?? (clearGame ? null : this.gameId),
+      playerColor: playerColor ?? (clearGame ? null : this.playerColor),
+      opponentName: opponentName ?? (clearGame ? null : this.opponentName),
+      mode: mode ?? (clearGame ? null : this.mode),
+      timeControl: timeControl ?? (clearGame ? null : this.timeControl),
+      variantId: variantId ?? (clearGame ? null : this.variantId),
+      chatMessages: chatMessages ?? (clearGame ? const [] : this.chatMessages),
+      lastMoveFrom: lastMoveFrom ?? (clearGame ? null : this.lastMoveFrom),
+      lastMoveTo: lastMoveTo ?? (clearGame ? null : this.lastMoveTo),
+      lastMovePromotion:
+          lastMovePromotion ?? (clearGame ? null : this.lastMovePromotion),
+      gameResult: gameResult ?? (clearGame ? null : this.gameResult),
+      gameReason: gameReason ?? (clearGame ? null : this.gameReason),
       lobbyNotice: (lobbyNotice == null && challengerId == null)
           ? null
           : (lobbyNotice ?? this.lobbyNotice),
@@ -510,37 +553,64 @@ class MultiplayerState extends Equatable {
       challengerMode: challengerMode ?? this.challengerMode,
       challengerTimeControl:
           challengerTimeControl ?? this.challengerTimeControl,
-        selectedVariantId: selectedVariantId ?? this.selectedVariantId,
-        challengerVariantId: challengerVariantId ?? this.challengerVariantId,
+      selectedVariantId: selectedVariantId ?? this.selectedVariantId,
+      challengerVariantId: challengerVariantId ?? this.challengerVariantId,
       selectedTimeControl: selectedTimeControl ?? this.selectedTimeControl,
-      drawOfferPending: drawOfferPending ?? this.drawOfferPending,
-      saveOfferPending: saveOfferPending ?? this.saveOfferPending,
-      connectionError: connectionError ?? this.connectionError,
-      whiteTime: whiteTime ?? this.whiteTime,
-      blackTime: blackTime ?? this.blackTime,
-      xpGained: xpGained ?? this.xpGained,
-      opponentUndoCount: opponentUndoCount ?? this.opponentUndoCount,
+      drawOfferPending:
+          drawOfferPending ?? (clearGame ? false : this.drawOfferPending),
+      saveOfferPending:
+          saveOfferPending ?? (clearGame ? false : this.saveOfferPending),
+      connectionError: clearConnectionError || clearGame
+          ? null
+          : connectionError ?? this.connectionError,
+      whiteTime: whiteTime ?? (clearGame ? 0 : this.whiteTime),
+      blackTime: blackTime ?? (clearGame ? 0 : this.blackTime),
+      xpGained: xpGained ?? (clearGame ? 0 : this.xpGained),
+      opponentUndoCount:
+          opponentUndoCount ?? (clearGame ? 0 : this.opponentUndoCount),
       xpBroadcastRequests: xpBroadcastRequests ?? this.xpBroadcastRequests,
       incomingChallenges: incomingChallenges ?? this.incomingChallenges,
       outgoingChallenges: outgoingChallenges ?? this.outgoingChallenges,
       myPresence: myPresence ?? this.myPresence,
-      opponentAvatarUrl: opponentAvatarUrl ?? this.opponentAvatarUrl,
-      opponentLocalAvatar: opponentLocalAvatar ?? this.opponentLocalAvatar,
-      pendingTournamentId: pendingTournamentId ?? this.pendingTournamentId,
-      pendingTournamentChallengerId:
-          pendingTournamentChallengerId ?? this.pendingTournamentChallengerId,
+      opponentAvatarUrl:
+          opponentAvatarUrl ?? (clearGame ? null : this.opponentAvatarUrl),
+      opponentLocalAvatar:
+          opponentLocalAvatar ?? (clearGame ? null : this.opponentLocalAvatar),
+      pendingTournamentId: pendingTournamentId ??
+          (clearPendingTournament ? null : this.pendingTournamentId),
+      pendingTournamentChallengerId: pendingTournamentChallengerId ??
+          (clearPendingTournament ? null : this.pendingTournamentChallengerId),
       pendingTournamentChallengerName: pendingTournamentChallengerName ??
-          this.pendingTournamentChallengerName,
+          (clearPendingTournament
+              ? null
+              : this.pendingTournamentChallengerName),
       pendingTournamentRounds:
           pendingTournamentRounds ?? this.pendingTournamentRounds,
-      pendingTournamentTimeControl:
-          pendingTournamentTimeControl ?? this.pendingTournamentTimeControl,
-      opponentConnected: opponentConnected ?? this.opponentConnected,
+      pendingTournamentTimeControl: pendingTournamentTimeControl ??
+          (clearPendingTournament ? null : this.pendingTournamentTimeControl),
+      opponentConnected:
+          opponentConnected ?? (clearGame ? false : this.opponentConnected),
+      serverPosition: clearGame ? null : serverPosition ?? this.serverPosition,
+      eloChange: eloChange ?? (clearGame ? 0 : this.eloChange),
+      gameConnected: gameConnected ?? (clearGame ? false : this.gameConnected),
+      gameReconnecting:
+          gameReconnecting ?? (clearGame ? false : this.gameReconnecting),
+      rematchRequested:
+          rematchRequested ?? (clearGame ? false : this.rematchRequested),
+      rematchReceived:
+          rematchReceived ?? (clearGame ? false : this.rematchReceived),
     );
   }
 
   @override
   List<Object?> get props => [
+        gameConnected,
+        gameReconnecting,
+        rematchRequested,
+        rematchReceived,
+        gameReason,
+        serverPosition,
+        eloChange,
         status,
         onlineCount,
         searchingCount,
@@ -571,6 +641,11 @@ class MultiplayerState extends Equatable {
         opponentAvatarUrl,
         opponentLocalAvatar,
         opponentConnected,
+        pendingTournamentId,
+        pendingTournamentChallengerId,
+        pendingTournamentChallengerName,
+        pendingTournamentRounds,
+        pendingTournamentTimeControl,
       ];
 }
 
@@ -584,35 +659,62 @@ class MpTimerSyncEvent extends MultiplayerEvent {
 class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
   final MultiplayerService _service;
   final AuthBloc _authBloc;
+  final MissionService? _missions;
+  final Future<int?> Function()? _loadWinStreak;
+  bool _missionGameHandled = false;
   StreamSubscription? _lobbySub;
   StreamSubscription? _gameSub;
   String? _myUserId;
   Timer? _joinTimer;
-  Timer? _reconnectTimer;
   bool _gameOverHandled = false;
 
   /// Exposed so screens can call service methods not wrapped in events.
   MultiplayerService get mpService => _service;
 
-  MultiplayerBloc(this._service, this._authBloc) : super(const MultiplayerState()) {
+  MultiplayerBloc(
+    this._service,
+    this._authBloc, {
+    MissionService? missions,
+    Future<int?> Function()? loadWinStreak,
+  })  : _missions = missions,
+        _loadWinStreak = loadWinStreak,
+        super(const MultiplayerState()) {
     on<MpConnectLobbyEvent>(_onConnectLobby);
     on<MpReconnectEvent>((event, emit) async {
-      if (_service.isLobbyConnected) return;
-      
-      final authState = _authBloc.state;
-      if (authState is AuthAuthenticatedState) {
-        try {
-          await _service.connectLobby(
-            authState.user.id,
-            authState.user.username,
-            rating: authState.user.stats.eloRating,
-          );
-        } catch (e) {
-          emit(state.copyWith(connectionError: 'Failed to reconnect: $e'));
+      await _service.reconnect();
+    });
+    on<MpLobbyConnectionEvent>((event, emit) {
+      emit(state.copyWith(
+        connectionError: event.connected
+            ? null
+            : event.retrying
+                ? 'Lobby connection lost. Reconnecting...'
+                : 'Lobby is offline. Tap Retry to reconnect.',
+        clearConnectionError: event.connected,
+      ));
+      if (event.connected) {
+        _service.sendPresence(state.myPresence,
+            gameId: state.gameId, context: 'reconnected');
+        if (state.status == MultiplayerStatus.matchmaking) {
+          _service.findMatch(
+              timeControl: state.selectedTimeControl,
+              variantId: state.selectedVariantId);
         }
-      } else {
-        emit(state.copyWith(connectionError: 'Unable to reconnect: User not authenticated'));
       }
+    });
+    on<MpRematchRequestEvent>((event, emit) {
+      if (state.status != MultiplayerStatus.gameOver ||
+          state.mode == 'tournament' ||
+          state.rematchRequested ||
+          state.rematchReceived) return;
+      _service.sendRematchRequest();
+      emit(state.copyWith(rematchRequested: true));
+    });
+    on<MpRematchAcceptEvent>((event, emit) {
+      if (!state.rematchReceived || state.status != MultiplayerStatus.gameOver)
+        return;
+      _service.sendRematchAccept();
+      emit(state.copyWith(rematchReceived: false, rematchRequested: true));
     });
     on<MpDrawReceivedEvent>(
         (event, emit) => emit(state.copyWith(drawOfferPending: true)));
@@ -624,6 +726,7 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
         searchingCount: event.searching,
         availablePlayers: event.availablePlayers)));
     on<MpGameFoundEvent>(_onGameFound);
+    on<MpServerMessageEvent>(_onServerMessage);
     on<MpMakeMoveEvent>(_onMakeMove);
     on<MpOpponentMoveEvent>(_onOpponentMove);
     on<MpUndoEvent>((event, emit) => _service.sendUndo());
@@ -652,10 +755,12 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
         status: MultiplayerStatus.gameOver, gameReason: 'manual_save')));
 
     on<MpLeaveGameEvent>((event, emit) {
+      _joinTimer?.cancel();
       _service.leaveGame();
       _gameSub?.cancel();
       emit(state.copyWith(
         status: MultiplayerStatus.inLobby,
+        clearGame: true,
         gameId: null,
         playerColor: null,
         opponentName: null,
@@ -666,15 +771,18 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
 
     on<MpSendChallengeEvent>((event, emit) {
       // Cancel any existing outgoing challenge to the same player
-      final existingOutgoings = state.outgoingChallenges
-          .where((r) => r.playerId == event.opponent.id && (r.status == 'pending' || r.status == 'queued'));
+      final existingOutgoings = state.outgoingChallenges.where((r) =>
+          r.playerId == event.opponent.id &&
+          (r.status == 'pending' || r.status == 'queued'));
       ChallengeRequest? existingOutgoing;
       if (existingOutgoings.isNotEmpty) {
         existingOutgoing = existingOutgoings.first;
-        _service.declineChallenge(existingOutgoing.playerId, requestId: existingOutgoing.id);
+        _service.declineChallenge(existingOutgoing.playerId,
+            requestId: existingOutgoing.id);
       }
       final updatedOutgoingChallenges = existingOutgoing != null
-          ? _markChallengeResolved(state.outgoingChallenges, existingOutgoing.id, 'cancelled')
+          ? _markChallengeResolved(
+              state.outgoingChallenges, existingOutgoing.id, 'cancelled')
           : state.outgoingChallenges;
 
       final request = ChallengeRequest(
@@ -787,8 +895,6 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
       ));
     });
     on<MpDisconnectLobbyEvent>((event, emit) {
-      _reconnectTimer?.cancel();
-      _reconnectTimer = null;
       _lobbySub?.cancel();
       _gameSub?.cancel();
       _myUserId = null;
@@ -796,8 +902,26 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
       emit(const MultiplayerState());
     });
     on<MpGameOverEvent>((event, emit) {
-      // Idempotency guard: ignore duplicate GAME_OVER for the same game session
-      if (_gameOverHandled) return;
+      if (event.gameId != null && event.gameId != state.gameId) return;
+      final normalized = _normalizeGameResult(event.result);
+      final won = normalized == 'win' ||
+          (normalized == 'white' && state.playerColor == PieceColor.white) ||
+          (normalized == 'black' && state.playerColor == PieceColor.black);
+      if (!_missionGameHandled &&
+          _missions != null &&
+          state.gameId != null &&
+          !event.settlementPending &&
+          event.reason != 'opponent_no_show') {
+        _missionGameHandled = true;
+        unawaited(_recordMissionProgress(state.gameId!, won));
+      }
+      // Receipt updates must refresh XP, without paying missions a second time.
+      if (_gameOverHandled) {
+        if (event.xpDelta != null)
+          emit(state.copyWith(xpGained: event.xpDelta));
+        if (!event.settlementPending) _authBloc.add(AuthCheckStatusEvent());
+        return;
+      }
       _gameOverHandled = true;
 
       final normalizedResult = _normalizeGameResult(event.result);
@@ -805,11 +929,13 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
       final isWin = normalizedResult == 'win' ||
           (normalizedResult == 'white' &&
               state.playerColor == PieceColor.white) ||
-          (normalizedResult == 'black' && state.playerColor == PieceColor.black);
+          (normalizedResult == 'black' &&
+              state.playerColor == PieceColor.black);
       final isLoss = normalizedResult == 'loss' ||
           (normalizedResult == 'white' &&
               state.playerColor == PieceColor.black) ||
-          (normalizedResult == 'black' && state.playerColor == PieceColor.white);
+          (normalizedResult == 'black' &&
+              state.playerColor == PieceColor.white);
       final isDraw = normalizedResult == 'draw';
 
       final xp = event.xpDelta ??
@@ -860,8 +986,8 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
     });
     on<MpDeclineChallengeEvent>((event, emit) {
       final resolvedId = event.requestId ?? event.challengerId;
-      final isOutgoing = state.outgoingChallenges
-          .any((request) => request.id == resolvedId);
+      final isOutgoing =
+          state.outgoingChallenges.any((request) => request.id == resolvedId);
       _service.declineChallenge(event.challengerId, requestId: event.requestId);
       emit(state.copyWith(
         incomingChallenges: isOutgoing
@@ -893,9 +1019,7 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
           lobbyNotice: null,
           challengerId: null,
           challengerVariantId: '',
-          pendingTournamentId: null,
-          pendingTournamentChallengerId: null,
-          pendingTournamentChallengerName: null,
+          clearPendingTournament: true,
         )));
 
     on<MpXpBroadcastRequestEvent>((event, emit) {
@@ -930,10 +1054,10 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
     on<MpXpTransferUpdateEvent>((event, emit) {
       final updatedPlayers = state.availablePlayers.map((player) {
         if (player.id == event.donorId) {
-          return player.copyWith(rating: event.donorXp);
+          return player.copyWith(xp: event.donorXp);
         }
         if (player.id == event.recipientId) {
-          return player.copyWith(rating: event.recipientXp);
+          return player.copyWith(xp: event.recipientXp);
         }
         return player;
       }).toList();
@@ -967,45 +1091,35 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
   Future<void> _onConnectLobby(
       MpConnectLobbyEvent event, Emitter<MultiplayerState> emit) async {
     _myUserId = event.userId;
-    try {
-      await _service.connectLobby(event.userId, event.username,
-          rating: event.rating);
-    } catch (e) {
-      emit(state.copyWith(
-        status: MultiplayerStatus.disconnected,
-        connectionError: 'Failed to connect to lobby: $e',
-      ));
-      return;
-    }
     _lobbySub?.cancel();
     _lobbySub = _service.lobbyUpdates.listen((msg) {
       final msgType = msg['type']?.toString();
       final data = _asMap(msg['data']);
 
       if (msgType == 'LOBBY_UPDATE') {
-        final playersRaw = (data['players'] is List) ? data['players'] as List : null;
+        final playersRaw =
+            (data['players'] is List) ? data['players'] as List : null;
         final list = playersRaw
                 ?.whereType<Map>()
                 .where((player) => player['id']?.toString() != _myUserId)
                 .map((player) {
-                  final presence = LobbyPresence.normalize(
-                    player['presence']?.toString() ?? player['status']?.toString(),
-                  );
-                  return OnlineLobbyUser(
-                    id: player['id']?.toString() ?? '',
-                    name: player['name']?.toString() ?? 'Unknown',
-                    rating: (player['rating'] is int)
-                        ? player['rating'] as int
-                        : int.tryParse(player['rating']?.toString() ?? '0') ??
-                            0,
-                    presence: presence,
-                    flair: _buildPresenceFlair(
-                      presence,
-                      player['flair']?.toString(),
-                    ),
-                  );
-                }).toList() ??
-              <OnlineLobbyUser>[];
+              final presence = LobbyPresence.normalize(
+                player['presence']?.toString() ?? player['status']?.toString(),
+              );
+              return OnlineLobbyUser(
+                id: player['id']?.toString() ?? '',
+                name: player['name']?.toString() ?? 'Unknown',
+                rating: (player['rating'] is int)
+                    ? player['rating'] as int
+                    : int.tryParse(player['rating']?.toString() ?? '0') ?? 0,
+                presence: presence,
+                flair: _buildPresenceFlair(
+                  presence,
+                  player['flair']?.toString(),
+                ),
+              );
+            }).toList() ??
+            <OnlineLobbyUser>[];
         add(MpLobbyUpdateEvent(
           _toInt(data['onlinePlayers']),
           _toInt(data['searchingPlayers']),
@@ -1020,7 +1134,8 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
           data['opponentName']?.toString() ?? 'Unknown',
           mode: data['mode']?.toString(),
           timeControl: data['timeControl']?.toString(),
-          variantId: data['variantId']?.toString() ?? data['variant']?.toString(),
+          variantId:
+              data['variantId']?.toString() ?? data['variant']?.toString(),
           opponentAvatarUrl: data['opponentAvatarUrl']?.toString(),
           opponentLocalAvatar: data['opponentLocalAvatar']?.toString(),
           requestId: data['requestId']?.toString(),
@@ -1035,8 +1150,9 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
             playerName: d['challengerName']?.toString() ?? 'Someone',
             mode: d['mode']?.toString() ?? 'duel',
             timeControl: d['timeControl']?.toString() ?? '10+0',
-            variantId:
-                d['variantId']?.toString() ?? d['variant']?.toString() ?? 'standard',
+            variantId: d['variantId']?.toString() ??
+                d['variant']?.toString() ??
+                'standard',
             isIncoming: true,
             isQueued: d['queued'] == true || d['isOffline'] == true,
             message:
@@ -1109,7 +1225,9 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
           msgType == 'CHALLENGE_CANCELLED') {
         final requestId = data['requestId']?.toString() ??
             _buildChallengeRequestId(
-              data['challengerId']?.toString() ?? data['opponentId']?.toString() ?? '',
+              data['challengerId']?.toString() ??
+                  data['opponentId']?.toString() ??
+                  '',
             );
         add(MpResolveChallengeEvent(
           requestId: requestId,
@@ -1122,13 +1240,16 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
       } else if (msgType == 'CHALLENGE_ACCEPTED') {
         final requestId = data['requestId']?.toString() ??
             _buildChallengeRequestId(
-              data['challengerId']?.toString() ?? data['opponentId']?.toString() ?? '',
+              data['challengerId']?.toString() ??
+                  data['opponentId']?.toString() ??
+                  '',
             );
         add(MpResolveChallengeEvent(
           requestId: requestId,
           isIncoming: false,
           status: 'accepted',
-          notice: data['message']?.toString() ?? 'Challenge accepted. Starting game...',
+          notice: data['message']?.toString() ??
+              'Challenge accepted. Starting game...',
         ));
       } else if (msgType == 'TOURNAMENT_CHALLENGE_RECEIVED') {
         final d = data;
@@ -1157,14 +1278,9 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
           recipientXp: _toInt(d['recipientXp']),
           amount: _toInt(d['amount']),
         ));
-      } else if (msgType == 'CONNECTION_LOST') {
-        add(MpLobbyNoticeEvent('Connection lost. Reconnecting...'));
-        _reconnectTimer?.cancel();
-        _reconnectTimer = Timer(const Duration(seconds: 5), () {
-          if (_myUserId != null && state.status != MultiplayerStatus.disconnected) {
-             add(MpReconnectEvent());
-          }
-        });
+      } else if (msgType == 'CONNECTION_STATUS') {
+        add(MpLobbyConnectionEvent(
+            data['connected'] == true, data['retrying'] == true));
       } else if (msgType == 'PRESENCE_SYNC') {
         final presence = LobbyPresence.normalize(data['status']?.toString());
         add(MpSetPresenceEvent(
@@ -1173,26 +1289,27 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
           context: data['context']?.toString(),
         ));
       }
-    }, onError: (err) {
-      add(MpLobbyNoticeEvent('Network error: ${err.toString()}'));
-      _scheduleReconnect();
-    }, onDone: () {
-      _scheduleReconnect();
+    }, onError: (Object error) {
+      if (!isClosed) add(const MpLobbyConnectionEvent(false, false));
     });
+    try {
+      await _service.connectLobby(event.userId, event.username,
+          rating: event.rating);
+    } catch (e) {
+      emit(state.copyWith(
+        status: MultiplayerStatus.disconnected,
+        connectionError: 'Failed to connect to lobby: $e',
+      ));
+      return;
+    }
     emit(state.copyWith(
-      status: MultiplayerStatus.inLobby,
-      connectionError: null,
+      status: state.status == MultiplayerStatus.disconnected
+          ? MultiplayerStatus.inLobby
+          : state.status,
+      clearConnectionError: _service.isLobbyConnected,
     ));
-    _service.sendPresence(state.myPresence, context: 'lobby_connected');
-  }
-
-  void _scheduleReconnect() {
-    _reconnectTimer?.cancel();
-    _reconnectTimer = Timer(const Duration(seconds: 5), () {
-      if (_myUserId != null && state.status != MultiplayerStatus.disconnected) {
-        add(MpReconnectEvent());
-      }
-    });
+    _service.sendPresence(state.myPresence,
+        gameId: state.gameId, context: 'lobby_connected');
   }
 
   void _onSetPresence(
@@ -1221,133 +1338,156 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
   void _onCancelMatchmaking(
       MpCancelMatchmakingEvent event, Emitter<MultiplayerState> emit) {
     _service.cancelFindMatch();
-    _service.sendPresence(LobbyPresence.online, context: 'matchmaking_cancelled');
+    _service.sendPresence(LobbyPresence.online,
+        context: 'matchmaking_cancelled');
     emit(state.copyWith(
       status: MultiplayerStatus.inLobby,
       myPresence: LobbyPresence.online,
     ));
   }
 
+  void _onServerMessage(
+      MpServerMessageEvent event, Emitter<MultiplayerState> emit) {
+    if (state.gameId == null) return;
+    final msg = event.message, data = _asMap(msg['data']);
+    final messageGameId = data['gameId']?.toString();
+    if (msg['type'] != 'REMATCH_READY' &&
+        messageGameId != null &&
+        state.gameId != null &&
+        messageGameId != state.gameId) return;
+    switch (msg['type']) {
+      case 'CONNECTION_STATUS':
+        final connected = data['connected'] == true;
+        emit(state.copyWith(
+            gameConnected: connected,
+            gameReconnecting: !connected && data['retrying'] == true,
+            clearConnectionError: connected,
+            connectionError: connected
+                ? null
+                : data['retrying'] == true
+                    ? 'Connection lost. Reconnecting to your game...'
+                    : 'Game connection is offline. Tap Retry to reconnect.'));
+        break;
+      case 'REMATCH_REQUEST':
+        emit(state.copyWith(rematchReceived: true, rematchRequested: false));
+        break;
+      case 'ROOM_STATE':
+      case 'MOVE_UPDATE':
+      case 'MOVE_ERROR':
+        final me = _myUserId ?? _service.userId;
+        emit(state.copyWith(
+            serverPosition: data,
+            opponentConnected: data['opponentConnected'] == true,
+            drawOfferPending:
+                data['drawOffer'] != null && data['drawOffer'] != me,
+            saveOfferPending:
+                data['saveOffer'] != null && data['saveOffer'] != me,
+            mode: data['mode']?.toString() ?? state.mode,
+            timeControl: data['timeControl']?.toString() ?? state.timeControl,
+            playerColor: data['whiteId'] == me
+                ? PieceColor.white
+                : data['blackId'] == me
+                    ? PieceColor.black
+                    : state.playerColor,
+            whiteTime: _toDouble(data['whiteTime']),
+            blackTime: _toDouble(data['blackTime']),
+            rematchRequested: msg['type'] == 'MOVE_ERROR' ? false : null,
+            clearConnectionError: msg['type'] != 'MOVE_ERROR',
+            gameConnected: true,
+            gameReconnecting: false,
+            connectionError: msg['type'] == 'MOVE_ERROR'
+                ? data['message']?.toString()
+                : null));
+        break;
+      case 'OPPONENT_JOINED':
+        add(MpOpponentJoinedEvent());
+        break;
+      case 'PLAYER_DISCONNECTED':
+        emit(state.copyWith(opponentConnected: false));
+        break;
+      case 'TIMER_SYNC':
+        add(MpTimerSyncEvent(
+            _toDouble(data['whiteTime']), _toDouble(data['blackTime'])));
+        break;
+      case 'GAME_OVER':
+        emit(state.copyWith(eloChange: _toInt(data['eloDelta'])));
+        add(MpGameOverEvent(data['result']?.toString() ?? 'draw',
+            data['reason']?.toString() ?? 'unknown',
+            xpDelta: _toIntOrNull(data['xpDelta']),
+            settlementPending: data['settlementPending'] == true,
+            gameId: data['gameId']?.toString()));
+        break;
+      case 'DRAW_OFFER':
+        add(MpDrawReceivedEvent());
+        break;
+      case 'DRAW_DECLINE':
+        emit(state.copyWith(drawOfferPending: false));
+        break;
+      case 'SAVE_REQUEST':
+        emit(state.copyWith(saveOfferPending: true));
+        break;
+      case 'SAVE_DECLINE':
+        emit(state.copyWith(saveOfferPending: false));
+        break;
+      case 'GAME_SAVED':
+        add(MpGameSavedEvent());
+        break;
+      case 'REMATCH_READY':
+        add(MpGameFoundEvent(
+            data['gameId'].toString(),
+            data['color'] == 'white' ? PieceColor.white : PieceColor.black,
+            state.opponentName ?? 'Opponent',
+            mode: 'multiplayer',
+            timeControl: data['timeControl']?.toString()));
+        break;
+      case 'CHAT':
+        add(MpChatReceivedEvent(ChatMessage(
+            userId: data['userId']?.toString() ?? '',
+            username: data['username']?.toString() ?? 'Player',
+            message: data['message']?.toString() ?? '',
+            timestamp: DateTime.fromMillisecondsSinceEpoch(_toInt(data['ts'])),
+            isMe: data['userId'] == _service.userId)));
+        break;
+    }
+  }
+
   Future<void> _onGameFound(
       MpGameFoundEvent event, Emitter<MultiplayerState> emit) async {
-    await _service.joinRoom(
-      event.gameId,
-      event.color.name,
-      timeControl: event.timeControl ?? state.selectedTimeControl,
-      variantId: event.variantId ?? state.selectedVariantId,
-    );
-
+    if (event.gameId.isEmpty ||
+        (event.gameId == state.gameId &&
+            (state.status == MultiplayerStatus.inGame ||
+                state.status == MultiplayerStatus.gameOver))) return;
+    _gameOverHandled = false;
+    _missionGameHandled = false;
+    await _gameSub?.cancel();
+    _gameSub = _service.gameUpdates
+        .listen((message) => add(MpServerMessageEvent(message)));
     emit(state.copyWith(
-      status: MultiplayerStatus.inGame,
-      gameId: event.gameId,
-      playerColor: event.color,
-      opponentName: event.opponentName,
-      opponentAvatarUrl: event.opponentAvatarUrl,
-      opponentLocalAvatar: event.opponentLocalAvatar,
-      variantId: event.variantId ?? 'standard',
-      timeControl: event.timeControl ?? '10+0',
-      opponentConnected: false,
-      drawOfferPending: false,
-      saveOfferPending: false,
-    ));
-    _gameOverHandled = false; // Reset for new game session
+        clearGame: true,
+        status: MultiplayerStatus.inGame,
+        gameId: event.gameId,
+        playerColor: event.color,
+        opponentName: event.opponentName,
+        mode: event.mode ?? 'multiplayer',
+        timeControl: event.timeControl ?? '10+0',
+        variantId: 'standard',
+        xpGained: 0,
+        eloChange: 0,
+        opponentUndoCount: 0,
+        chatMessages: const [],
+        drawOfferPending: false,
+        saveOfferPending: false,
+        opponentConnected: false));
+    try {
+      await _service.joinRoom(event.gameId, event.color.name,
+          timeControl: event.timeControl ?? '10+0', variantId: 'standard');
+    } catch (error) {
+      emit(state.copyWith(
+          status: MultiplayerStatus.inLobby,
+          connectionError: error.toString()));
+      return;
+    }
 
-    // Opponent join timeout
-    _joinTimer?.cancel();
-    _joinTimer = Timer(const Duration(seconds: 22), () {
-      if (state.status == MultiplayerStatus.inGame && !state.opponentConnected) {
-        add(const MpGameOverEvent('draw', 'opponent_timeout'));
-      }
-    });
-
-    _gameSub?.cancel();
-    _gameSub = _service.gameUpdates.listen((msg) {
-      final msgType = msg['type']?.toString();
-      final data = _asMap(msg['data']);
-      switch (msgType) {
-        case 'OPPONENT_JOINED':
-        case 'GAME_STARTED':
-          add(MpOpponentJoinedEvent());
-          break;
-        case 'MOVE_UPDATE':
-          if (data['undo'] == true) {
-            add(MpOpponentUndoEvent());
-          } else {
-            final senderId = data['userId']?.toString();
-            if (senderId != null && senderId == _myUserId) {
-              break;
-            }
-            add(MpOpponentMoveEvent(data));
-            if (data['whiteTime'] != null) {
-              add(MpTimerSyncEvent(
-                _toDouble(data['whiteTime']),
-                _toDouble(data['blackTime']),
-              ));
-            }
-          }
-          break;
-        case 'TIMER_SYNC':
-          add(MpTimerSyncEvent(
-            _toDouble(data['whiteTime']),
-            _toDouble(data['blackTime']),
-          ));
-          break;
-        case 'CHAT':
-          add(MpChatReceivedEvent(ChatMessage(
-            userId: data['userId']?.toString() ?? '',
-            username: data['username']?.toString() ?? 'Unknown',
-            message: '${data['message']?.toString() ?? ''} ${data['emoji']?.toString() ?? ''}',
-            timestamp: DateTime.fromMillisecondsSinceEpoch(
-                _toInt(data['ts'], fallback: DateTime.now().millisecondsSinceEpoch)),
-            isMe: data['userId']?.toString() == _myUserId,
-          )));
-          break;
-        case 'GAME_OVER':
-          add(MpGameOverEvent(
-            data['result']?.toString() ?? 'draw',
-            data['reason']?.toString() ?? 'unknown',
-            xpDelta: _toIntOrNull(data['xpDelta']) ??
-                _toIntOrNull(data['xp']) ??
-                _toIntOrNull(data['xpChange']),
-          ));
-          break;
-        case 'DRAW_OFFER':
-          add(MpDrawReceivedEvent());
-          break;
-        case 'DRAW_ACCEPT':
-          add(MpGameOverEvent('draw', 'agreement'));
-          break;
-        case 'DRAW_DECLINE':
-          emit(state.copyWith(drawOfferPending: false));
-          break;
-        case 'SAVE_REQUEST':
-          emit(state.copyWith(saveOfferPending: true));
-          break;
-        case 'SAVE_DECLINE':
-          emit(state.copyWith(saveOfferPending: false));
-          break;
-        case 'GAME_SAVED':
-          add(MpGameSavedEvent());
-          break;
-      }
-    });
-    emit(state.copyWith(
-      status: MultiplayerStatus.inGame,
-      gameId: event.gameId,
-      playerColor: event.color,
-      opponentName: event.opponentName,
-      opponentAvatarUrl: event.opponentAvatarUrl,
-      opponentLocalAvatar: event.opponentLocalAvatar,
-      mode: event.mode,
-      timeControl: event.timeControl,
-      variantId: event.variantId,
-      myPresence: LobbyPresence.playing,
-      incomingChallenges: const [],
-      outgoingChallenges: event.requestId != null
-          ? _markChallengeResolved(state.outgoingChallenges, event.requestId!, 'accepted')
-          : state.outgoingChallenges,
-      opponentConnected: false,
-    ));
     _service.sendPresence(
       LobbyPresence.playing,
       gameId: event.gameId,
@@ -1364,7 +1504,8 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
     });
   }
 
-  void _onOpponentMove(MpOpponentMoveEvent event, Emitter<MultiplayerState> emit) {
+  void _onOpponentMove(
+      MpOpponentMoveEvent event, Emitter<MultiplayerState> emit) {
     emit(state.copyWith(
       lastMoveFrom: event.moveData['move']?['from']?.toString(),
       lastMoveTo: event.moveData['move']?['to']?.toString(),
@@ -1392,12 +1533,23 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
     emit(state.copyWith(chatMessages: history));
   }
 
+  Future<void> _recordMissionProgress(String gameId, bool won) async {
+    try {
+      final auth = _authBloc.state;
+      final streak = await _loadWinStreak?.call() ??
+          (auth is AuthAuthenticatedState ? auth.user.stats.currentStreak : 0);
+      await _missions!.recordGameResult(gameId,
+          isWin: won, isOnline: true, currentStreak: streak);
+    } catch (error) {
+      LoggingService.error('Online mission update failed', error);
+    }
+  }
+
   @override
   Future<void> close() {
     _lobbySub?.cancel();
     _gameSub?.cancel();
     _joinTimer?.cancel();
-    _reconnectTimer?.cancel();
     _service.dispose();
     return super.close();
   }
@@ -1437,7 +1589,10 @@ class MultiplayerBloc extends Bloc<MultiplayerEvent, MultiplayerState> {
     if (value == 'win' || value == 'won' || value == 'victory') {
       return 'win';
     }
-    if (value == 'loss' || value == 'lose' || value == 'lost' || value == 'defeat') {
+    if (value == 'loss' ||
+        value == 'lose' ||
+        value == 'lost' ||
+        value == 'defeat') {
       return 'loss';
     }
     if (value == 'tie') {

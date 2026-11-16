@@ -51,6 +51,8 @@ class AuthGuestLoginEvent extends AuthEvent {
   const AuthGuestLoginEvent();
 }
 
+class AuthGuestGameEndedEvent extends AuthEvent {}
+
 // ═══════════════════════════════════════════
 // STATES
 // ═══════════════════════════════════════════
@@ -86,10 +88,12 @@ class AuthErrorState extends AuthState {
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final AuthRepository _repository;
   final AchievementService _achievementService;
+  int _authAttempt = 0;
 
   AuthRepository get authRepository => _repository;
 
-  AuthBloc(this._repository, this._achievementService) : super(AuthInitialState()) {
+  AuthBloc(this._repository, this._achievementService)
+      : super(AuthInitialState()) {
     on<AuthInitializeEvent>(_onInitialize);
     on<AuthRegisterEvent>(_onRegister);
     on<AuthUpdateProfileEvent>(_onUpdateProfile);
@@ -98,10 +102,18 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthCheckStatusEvent>(_onCheckStatus);
     on<AuthSilentLoginEvent>(_onSilentLogin);
     on<AuthGuestLoginEvent>(_onGuestLogin);
+    on<AuthGuestGameEndedEvent>((event, emit) async {
+      final guest = await _repository.resetGuestProgress();
+      if (guest != null &&
+          !emit.isDone &&
+          state is AuthAuthenticatedState &&
+          (state as AuthAuthenticatedState).user.isGuest)
+        emit(AuthAuthenticatedState(guest));
+    });
   }
 
   void _syncUserAchievements(UserModel user) {
-    _achievementService.syncAchievements(user.achievements);
+    if (!user.isGuest) _achievementService.syncAchievements(user.achievements);
   }
 
   Future<void> _onCheckStatus(
@@ -124,7 +136,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(AuthLoadingState());
     try {
       // Try server-aware getCurrentUser with a hard timeout
-      final user = await _repository.getCurrentUser()
+      final user = await _repository
+          .getCurrentUser()
           .timeout(const Duration(seconds: 8), onTimeout: () => null);
       if (user != null) {
         _syncUserAchievements(user);
@@ -151,64 +164,51 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   Future<void> _onSilentLogin(
       AuthSilentLoginEvent event, Emitter<AuthState> emit) async {
+    final attempt = ++_authAttempt;
     emit(AuthLoadingState());
     try {
-      final user = await _repository.getCurrentUser(forceRefresh: true)
-          .timeout(const Duration(seconds: 8), onTimeout: () => null);
-      if (user != null) {
-        _syncUserAchievements(user);
-        emit(AuthAuthenticatedState(user));
-      } else {
-        // Try cache as last resort
-        final cached = await _repository.getCachedUser();
-        if (cached != null) {
-          _syncUserAchievements(cached);
-          emit(AuthAuthenticatedState(cached));
-        } else {
-          emit(AuthUnauthenticatedState());
-        }
-      }
-    } catch (e) {
-      // Even on error, try cache
+      final user =
+          await _repository.login().timeout(const Duration(seconds: 8));
+      if (attempt != _authAttempt) return;
+      _syncUserAchievements(user);
+      emit(AuthAuthenticatedState(user));
+    } catch (error) {
+      if (attempt != _authAttempt) return;
       final cached = await _repository.getCachedUser();
-      if (cached != null) {
+      if (cached != null && !cached.isGuest) {
         _syncUserAchievements(cached);
         emit(AuthAuthenticatedState(cached));
       } else {
-        emit(AuthErrorState(e.toString()));
+        emit(AuthErrorState(
+            'Could not find or reach an account for this device. Create an account or keep playing offline.'));
       }
     }
   }
 
   Future<void> _onRegister(
       AuthRegisterEvent event, Emitter<AuthState> emit) async {
+    final attempt = ++_authAttempt;
     emit(AuthLoadingState());
     try {
       final user = await _repository.register(
         username: event.username,
         avatarPath: event.avatarPath,
       );
+      if (attempt != _authAttempt) return;
       _syncUserAchievements(user);
       emit(AuthAuthenticatedState(user));
     } catch (e) {
+      if (attempt != _authAttempt) return;
       emit(AuthErrorState(e.toString()));
     }
   }
 
   Future<void> _onGuestLogin(
       AuthGuestLoginEvent event, Emitter<AuthState> emit) async {
+    final attempt = ++_authAttempt;
     emit(AuthLoadingState());
-    final deviceId = await _repository.getDeviceId();
-    final guestUser = UserModel(
-      id: 'guest_${DateTime.now().millisecondsSinceEpoch}',
-      username: 'Guest_${deviceId.substring(0, 4)}',
-      xp: 0,
-      isOnline: false,
-      stats: const UserStats(),
-      deviceId: deviceId,
-      isGuest: true,
-    );
-    emit(AuthAuthenticatedState(guestUser));
+    final guestUser = await _repository.startGuestSession();
+    if (attempt == _authAttempt) emit(AuthAuthenticatedState(guestUser));
   }
 
   Future<void> _onUpdateProfile(
@@ -227,17 +227,16 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       emit(AuthAuthenticatedState(updated));
     } catch (e) {
       final errorMsg = e.toString();
-      
+
       if (errorMsg.contains('COOLDOWN_ACTIVE')) {
         emit(AuthErrorState(
-          'NAME_CHANGE_COOLDOWN::You can change your name once every 24 hours. Please try again later.'
-        ));
+            'NAME_CHANGE_COOLDOWN::You can change your name once every 24 hours. Please try again later.'));
       } else if (errorMsg.contains('LIFETIME_LIMIT_REACHED')) {
         emit(AuthErrorState(
-          'NAME_CHANGE_LIMIT::You have reached the maximum number of name changes (3 lifetime).'
-        ));
+            'NAME_CHANGE_LIMIT::You have reached the maximum number of name changes (3 lifetime).'));
       } else if (errorMsg.contains('Username already taken')) {
-        emit(AuthErrorState('NAME_TAKEN::This username is already taken. Please choose another.'));
+        emit(AuthErrorState(
+            'NAME_TAKEN::This username is already taken. Please choose another.'));
       } else {
         emit(AuthErrorState(errorMsg));
       }
@@ -246,6 +245,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   Future<void> _onSignOut(
       AuthSignOutEvent event, Emitter<AuthState> emit) async {
+    _authAttempt++;
     await _repository.signOut();
     emit(AuthUnauthenticatedState());
   }

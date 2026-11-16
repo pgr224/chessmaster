@@ -4,8 +4,6 @@ import { v4 as uuidv4 } from 'uuid'
 import type { Env } from '../index'
 import { authMiddleware } from '../middleware/auth'
 import { normalizeTimeControl, DEFAULT_TIME_CONTROL } from '../time_control'
-import { calculateMultiplayerXP, calculateAIGameXP } from '../xp_rules'
-import { StatsService } from '../services/stats_service'
 
 const game = new Hono<{ Bindings: Env; Variables: { user: any } }>()
 game.use('*', authMiddleware)
@@ -19,7 +17,7 @@ const CreateGameSchema = z.object({
   opponentId: z.string().optional(),
   timeControl: z.string().default('10+0'),
   color: z.enum(['white', 'black', 'random']).default('random'),
-  aiDifficulty: z.enum(['basic', 'intermediate', 'advanced', 'impossible']).optional(),
+  aiDifficulty: z.enum(['basic', 'intermediate', 'advanced', 'impossible', 'aiMode']).optional(),
   tournamentId: z.string().optional(),
   initialFen: z.string().optional(),
 })
@@ -31,6 +29,7 @@ game.post('/create', async (c) => {
   if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 400)
 
   const { gameId: clientGameId, mode, opponentId, timeControl, color, aiDifficulty, tournamentId, initialFen } = parsed.data
+  if(mode==='multiplayer'||mode==='tournament'||opponentId||tournamentId)return c.json({error:'Online games are reserved by matchmaking, challenges or tournaments'},403)
   const gameId = clientGameId ?? uuidv4()
   const now = new Date().toISOString()
   const normalizedTimeControl = normalizeTimeControl(timeControl ?? DEFAULT_TIME_CONTROL)
@@ -145,6 +144,7 @@ game.post('/move', async (c) => {
   ).bind(gameId, 'active').first<Record<string, unknown>>()
 
   if (!gameRow) return c.json({ error: 'Game not found' }, 404)
+  if(gameRow.mode==='multiplayer'||gameRow.mode==='tournament')return c.json({error:'Send online moves through the game room'},403)
 
   // Check it's the user's turn
   const moveCount = await c.env.DB.prepare(
@@ -200,26 +200,17 @@ game.post('/complete', async (c) => {
 
   if (!gameRow) return c.json({ error: 'Game not found' }, 404)
 
+  const actor=c.get('user').sub
+  if(gameRow.white_user_id!==actor&&gameRow.black_user_id!==actor)return c.json({error:'Not a participant'},403)
+  if(gameRow.mode==='multiplayer'||gameRow.mode==='tournament')return c.json({error:'Online games finish only in the game room'},403)
+
   // Update game status
   await c.env.DB.prepare(`
     UPDATE games SET status = 'completed', result = ?, termination = ?, pgn = ?,
                      completed_at = ?, updated_at = ? WHERE id = ?
   `).bind(result, termination, pgn ?? null, now, now, gameId).run()
 
-  // Update XP — Expand to singlePlayer and tournament
-  const supportedModes = ['multiplayer', 'tournament', 'singlePlayer'];
-  if (supportedModes.includes(gameRow.mode as string) && gameRow.rated !== 0) {
-    await updateXP(c.env.DB, gameRow, result)
-  }
-
-  // Update stats
-  if (gameRow.white_user_id) {
-    await updateStats(c.env.DB, gameRow.white_user_id as string, result === 'white' ? 'win' : result === 'black' ? 'loss' : 'draw', gameRow.mode as string)
-  }
-  if (gameRow.black_user_id) {
-    await updateStats(c.env.DB, gameRow.black_user_id as string, result === 'black' ? 'win' : result === 'white' ? 'loss' : 'draw', gameRow.mode as string)
-  }
-
+  // Offline XP uses the idempotent progress endpoint; completing the record must not award it again.
   return c.json({ ok: true })
 })
 
@@ -240,7 +231,7 @@ game.get('/:id', async (c) => {
   if (!gameRow) return c.json({ error: 'Not found' }, 404)
 
   const moves = await c.env.DB.prepare(
-    'SELECT * FROM moves WHERE game_id = ? ORDER BY move_number, color'
+    "SELECT * FROM moves WHERE game_id = ? ORDER BY move_number, CASE color WHEN 'white' THEN 0 ELSE 1 END"
   ).bind(c.req.param('id')).all()
 
   return c.json({ game: gameRow, moves: moves.results })
@@ -286,6 +277,10 @@ game.post('/abandon', async (c) => {
   const { gameId, cause } = parsed.data
   const now = new Date().toISOString()
 
+  const row=await c.env.DB.prepare('SELECT * FROM games WHERE id=?').bind(gameId).first<any>()
+  if(!row)return c.json({error:'Game not found'},404)
+  if(row.white_user_id!==c.get('user').sub&&row.black_user_id!==c.get('user').sub)return c.json({error:'Not a participant'},403)
+  if(row.mode==='multiplayer'||row.mode==='tournament')return c.json({error:'Online games finish only in the game room'},403)
   await c.env.DB.prepare(`
     UPDATE games
     SET status = 'abandoned',
@@ -297,40 +292,5 @@ game.post('/abandon', async (c) => {
 
   return c.json({ ok: true })
 })
-
-// ────────────────────────────────────────
-// HELPERS
-// ────────────────────────────────────────
-async function updateXP(db: D1Database, gameRow: Record<string, unknown>, result: string) {
-  const mode = gameRow.mode as any;
-  const whiteId = gameRow.white_user_id as string | null;
-  const blackId = gameRow.black_user_id as string | null;
-
-  if (whiteId) {
-    await StatsService.updateAll(db, {
-      userId: whiteId,
-      gameId: gameRow.id as string,
-      outcome: result === 'white' ? 'win' : (result === 'black' ? 'loss' : 'draw'),
-      mode,
-      aiDifficulty: gameRow.ai_difficulty as string
-    })
-  }
-
-  if (blackId) {
-    await StatsService.updateAll(db, {
-      userId: blackId,
-      gameId: gameRow.id as string,
-      outcome: result === 'black' ? 'win' : (result === 'white' ? 'loss' : 'draw'),
-      mode,
-      aiDifficulty: gameRow.ai_difficulty as string
-    })
-  }
-}
-
-async function updateStats(db: D1Database, userId: string, outcome: 'win' | 'loss' | 'draw', mode: string) {
-  // Stats are now handled by updateXP via StatsService.updateAll
-  // This function is kept for backward compatibility if needed, but its logic is now redundant helper-wise.
-  // We can leave it as a no-op if updateXP is now the primary entry point.
-}
 
 export { game as gameRoutes }

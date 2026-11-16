@@ -35,7 +35,7 @@ const Map<String, Map<String, int>> xpRules = {
   // SPECIAL ACHIEVEMENTS
   'milestones': {
     'mateIn5': 500,
-    'perfectGame': 5000,
+    'perfectGame': 1000,
     'every100thWin': 1000,
   },
 };

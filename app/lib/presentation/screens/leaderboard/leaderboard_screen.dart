@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:math' as math;
+import '../../../data/models/user_model.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -29,6 +29,7 @@ class _LeaderboardEntry {
   final int longestStreak;
   final int rank;
   final bool isOnline;
+  final bool isBountyHunter;
 
   const _LeaderboardEntry({
     required this.id,
@@ -44,6 +45,7 @@ class _LeaderboardEntry {
     required this.longestStreak,
     required this.rank,
     required this.isOnline,
+    this.isBountyHunter = false,
   });
 
   factory _LeaderboardEntry.fromJson(Map<String, dynamic> json) {
@@ -81,10 +83,11 @@ class _LeaderboardEntry {
       longestStreak: parseInt(json['longest_streak']),
       rank: parseInt(json['rank']),
       isOnline: isOnline,
+      isBountyHunter: json['is_bounty_hunter'] == true,
     );
   }
 
-  int get level => (xp <= 0) ? 1 : (math.sqrt(xp / 100)).floor() + 1;
+  int get level => UserStats.calculateLevel(xp);
 }
 
 class LeaderboardScreen extends StatefulWidget {
@@ -112,13 +115,14 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     final authState = context.read<AuthBloc>().state;
     if (authState is AuthAuthenticatedState) {
       _fetchLeaderboard();
-      
+
       // Real-time push connection: Listen to lobby updates to trigger smooth refreshes
       final multiplayerService = di.sl<MultiplayerService>();
       _lobbySubscription = multiplayerService.lobbyUpdates.listen((event) {
         if (!mounted) return;
         // Trigger background refresh on lobby updates or XP transfers
-        if (event['type'] == 'LOBBY_UPDATE' || event['type'] == 'XP_TRANSFERRED') {
+        if (event['type'] == 'LOBBY_UPDATE' ||
+            event['type'] == 'XP_TRANSFERRED') {
           _fetchLeaderboard(background: true);
         }
       });
@@ -182,7 +186,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
       final list = (data['leaderboard'] is List)
           ? data['leaderboard'] as List
           : const [];
-      
+
       setState(() {
         _entries = list
             .map(_asStringKeyedMap)
@@ -206,11 +210,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     }
   }
 
-  void _fetchBountyTarget() {
-    final missionService = di.sl<MissionService>();
-    setState(() {
-      _bountyUserId = missionService.bountyUserId;
-    });
+  Future<void> _fetchBountyTarget() async {
+    final target = await di.sl<MissionService>().refreshBounty();
+    if (mounted) setState(() => _bountyUserId = target);
   }
 
   Future<void> _fetchMyRank({
@@ -221,10 +223,10 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     if (authState is! AuthAuthenticatedState) return;
     try {
       final dio = di.sl<Dio>();
-      final response =
-          await dio.get('/api/leaderboard/rank/${authState.user.id}',
-            queryParameters: {'type': sortType},
-              options: Options(validateStatus: (_) => true));
+      final response = await dio.get(
+          '/api/leaderboard/rank/${authState.user.id}',
+          queryParameters: {'type': sortType},
+          options: Options(validateStatus: (_) => true));
 
       if (!mounted || fetchId != _activeFetchId || sortType != _sortType) {
         return;
@@ -255,10 +257,11 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                     fontSize: 24)),
             if (_isBackgroundRefreshing)
               Text('Syncing...',
-                style: GoogleFonts.baloo2(color: AppTheme.goldPrimary, fontSize: 10))
-                .animate(onPlay: (c) => c.repeat())
-                .fadeIn(duration: 500.ms)
-                .fadeOut(delay: 500.ms),
+                      style: GoogleFonts.baloo2(
+                          color: AppTheme.goldPrimary, fontSize: 10))
+                  .animate(onPlay: (c) => c.repeat())
+                  .fadeIn(duration: 500.ms)
+                  .fadeOut(delay: 500.ms),
           ],
         ),
         centerTitle: true,
@@ -274,8 +277,6 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
       ),
     );
   }
-
-
 
   Widget _buildMyRankBanner() {
     final authState = context.read<AuthBloc>().state;
@@ -307,7 +308,10 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('Your Global Identity',
-                      style: GoogleFonts.baloo2(color: AppTheme.midnight.withValues(alpha: 0.6), fontSize: 10, fontWeight: FontWeight.bold)),
+                      style: GoogleFonts.baloo2(
+                          color: AppTheme.midnight.withValues(alpha: 0.6),
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold)),
                   Text('RANKED #$_myRank',
                       style: GoogleFonts.fredoka(
                         color: AppTheme.midnight,
@@ -318,14 +322,11 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
               ),
             ],
           ),
-          if (myXp <= 0)
-            const SizedBox.shrink(), // XP request feature removed
+          if (myXp <= 0) const SizedBox.shrink(), // XP request feature removed
         ],
       ),
     ).animate().fadeIn().slideY(begin: 0.1);
   }
-
-
 
   Widget _buildContent() {
     if (_loading) {
@@ -407,24 +408,26 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          gradient: isPodium 
-            ? LinearGradient(
-                colors: [
-                  rankColor.withValues(alpha: 0.15),
-                  AppTheme.surface.withValues(alpha: 0.4)
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              )
-            : null,
+          gradient: isPodium
+              ? LinearGradient(
+                  colors: [
+                    rankColor.withValues(alpha: 0.15),
+                    AppTheme.surface.withValues(alpha: 0.4)
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
           color: isMe
               ? AppTheme.accentCyan.withValues(alpha: 0.1)
               : (isPodium ? null : AppTheme.surface.withValues(alpha: 0.4)),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-              color: isMe 
-                ? AppTheme.accentCyan 
-                : (isPodium ? rankColor.withValues(alpha: 0.3) : Colors.white.withValues(alpha: 0.05))),
+              color: isMe
+                  ? AppTheme.accentCyan
+                  : (isPodium
+                      ? rankColor.withValues(alpha: 0.3)
+                      : Colors.white.withValues(alpha: 0.05))),
         ),
         child: Column(
           children: [
@@ -448,7 +451,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                   radius: isPodium ? 24 : 20,
                   backgroundColor: rankColor.withValues(alpha: 0.2),
                   child: Text(
-                    entry.username.isNotEmpty ? entry.username.characters.first.toUpperCase() : '?',
+                    entry.username.isNotEmpty
+                        ? entry.username.characters.first.toUpperCase()
+                        : '?',
                     style: GoogleFonts.fredoka(
                         color: rankColor,
                         fontWeight: FontWeight.bold,
@@ -475,13 +480,32 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
+                          if (entry.id == _bountyUserId)
+                            const Padding(
+                                padding: EdgeInsets.only(left: 6),
+                                child: Tooltip(
+                                    message:
+                                        'Current bounty: +50% XP for a win',
+                                    child: Icon(Icons.gps_fixed_rounded,
+                                        color: AppTheme.goldPrimary,
+                                        size: 18))),
+                          if (entry.isBountyHunter)
+                            const Padding(
+                                padding: EdgeInsets.only(left: 6),
+                                child: Tooltip(
+                                    message:
+                                        'Bounty hunter until the next rotation',
+                                    child: Icon(Icons.military_tech_rounded,
+                                        color: AppTheme.accentOrange,
+                                        size: 18))),
                           if (isMe) ...[
                             const SizedBox(width: 6),
                             Container(
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                  color: AppTheme.goldPrimary.withValues(alpha: 0.2),
+                                  color: AppTheme.goldPrimary
+                                      .withValues(alpha: 0.2),
                                   borderRadius: BorderRadius.circular(6)),
                               child: Text('YOU',
                                   style: GoogleFonts.fredoka(
@@ -509,10 +533,14 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _miniStat('Rating', '${entry.eloRating}', AppTheme.lavender, Icons.stars_rounded),
-                _miniStat('Wins', '${entry.wins}', AppTheme.goldPrimary, Icons.emoji_events_rounded),
-                _miniStat('Win Rate', '${entry.winRate.toStringAsFixed(0)}%', AppTheme.accentCyan, Icons.insights_rounded),
-                _miniStat('Matches', '${entry.gamesPlayed}', AppTheme.skyBlue, Icons.sports_esports_rounded),
+                _miniStat('Rating', '${entry.eloRating}', AppTheme.lavender,
+                    Icons.stars_rounded),
+                _miniStat('Wins', '${entry.wins}', AppTheme.goldPrimary,
+                    Icons.emoji_events_rounded),
+                _miniStat('Win Rate', '${entry.winRate.toStringAsFixed(0)}%',
+                    AppTheme.accentCyan, Icons.insights_rounded),
+                _miniStat('Matches', '${entry.gamesPlayed}', AppTheme.skyBlue,
+                    Icons.sports_esports_rounded),
               ],
             ),
           ],
@@ -540,7 +568,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
           decoration: BoxDecoration(
             gradient: AppTheme.backgroundGradient,
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.1)),
+            border:
+                Border.all(color: AppTheme.goldPrimary.withValues(alpha: 0.1)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -552,7 +581,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                     radius: 30,
                     backgroundColor: rankColor.withValues(alpha: 0.2),
                     child: Text(
-                      entry.username.isNotEmpty ? entry.username.characters.first.toUpperCase() : '?',
+                      entry.username.isNotEmpty
+                          ? entry.username.characters.first.toUpperCase()
+                          : '?',
                       style: GoogleFonts.fredoka(
                           color: rankColor,
                           fontWeight: FontWeight.bold,
@@ -573,9 +604,11 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                           ),
                         ),
                         Text(
-                          EloService.getRankTitle(entry.eloRating).toUpperCase(),
+                          EloService.getRankTitle(entry.eloRating)
+                              .toUpperCase(),
                           style: GoogleFonts.baloo2(
-                              color: AppTheme.goldPrimary.withValues(alpha: 0.8),
+                              color:
+                                  AppTheme.goldPrimary.withValues(alpha: 0.8),
                               fontSize: 14,
                               fontWeight: FontWeight.w800,
                               letterSpacing: 1.2),
@@ -602,14 +635,28 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 children: [
-                  _dialogStatTile('ELO Rating', '${entry.eloRating}', AppTheme.lavender, Icons.stars_rounded),
-                  _dialogStatTile('Wins', '${entry.wins}', AppTheme.goldPrimary, Icons.emoji_events_rounded),
-                  _dialogStatTile('Losses', '${entry.losses}', AppTheme.accentRed, Icons.cancel_rounded),
-                  _dialogStatTile('Draws', '${entry.draws}', AppTheme.textMuted, Icons.handshake_rounded),
-                  _dialogStatTile('Win Rate', '${entry.winRate.toStringAsFixed(1)}%', AppTheme.accentCyan, Icons.insights_rounded),
-                  _dialogStatTile('Matches', '${entry.gamesPlayed}', AppTheme.skyBlue, Icons.sports_esports_rounded),
-                  _dialogStatTile('Longest Streak', '${entry.longestStreak}', AppTheme.accentPurple, Icons.local_fire_department_rounded),
-                  _dialogStatTile('Power XP', '${entry.xp}', AppTheme.goldPrimary, Icons.bolt_rounded),
+                  _dialogStatTile('ELO Rating', '${entry.eloRating}',
+                      AppTheme.lavender, Icons.stars_rounded),
+                  _dialogStatTile('Wins', '${entry.wins}', AppTheme.goldPrimary,
+                      Icons.emoji_events_rounded),
+                  _dialogStatTile('Losses', '${entry.losses}',
+                      AppTheme.accentRed, Icons.cancel_rounded),
+                  _dialogStatTile('Draws', '${entry.draws}', AppTheme.textMuted,
+                      Icons.handshake_rounded),
+                  _dialogStatTile(
+                      'Win Rate',
+                      '${entry.winRate.toStringAsFixed(1)}%',
+                      AppTheme.accentCyan,
+                      Icons.insights_rounded),
+                  _dialogStatTile('Matches', '${entry.gamesPlayed}',
+                      AppTheme.skyBlue, Icons.sports_esports_rounded),
+                  _dialogStatTile(
+                      'Longest Streak',
+                      '${entry.longestStreak}',
+                      AppTheme.accentPurple,
+                      Icons.local_fire_department_rounded),
+                  _dialogStatTile('Power XP', '${entry.xp}',
+                      AppTheme.goldPrimary, Icons.bolt_rounded),
                 ],
               ),
               const SizedBox(height: 24),
@@ -619,7 +666,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.goldPrimary,
                   foregroundColor: AppTheme.midnight,
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
@@ -658,20 +706,25 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                 const SizedBox(width: 4),
                 Text(value,
                     style: GoogleFonts.fredoka(
-                        color: color, fontSize: 14, fontWeight: FontWeight.w700)),
+                        color: color,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700)),
               ],
             ),
             const SizedBox(height: 2),
             Text(label.toUpperCase(),
                 style: GoogleFonts.baloo2(
-                    color: color.withValues(alpha: 0.6), fontSize: 9, fontWeight: FontWeight.bold)),
+                    color: color.withValues(alpha: 0.6),
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold)),
           ],
         ),
       ),
     );
   }
 
-  Widget _dialogStatTile(String label, String value, Color color, IconData icon) {
+  Widget _dialogStatTile(
+      String label, String value, Color color, IconData icon) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -715,4 +768,3 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     return const <String, dynamic>{};
   }
 }
-

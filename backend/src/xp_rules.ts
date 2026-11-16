@@ -89,10 +89,13 @@ export function calculateTournamentXP(
  */
 export function calculateAIGameXP(difficulty: string): number {
   switch (difficulty.toLowerCase()) {
+    case 'basic':
     case 'easy':
       return XP_RULES.computerAI.easyWin
+    case 'intermediate':
     case 'medium':
       return XP_RULES.computerAI.mediumWin
+    case 'advanced':
     case 'hard':
       return XP_RULES.computerAI.hardWin
     case 'impossible':

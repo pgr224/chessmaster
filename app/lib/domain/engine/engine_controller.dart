@@ -4,7 +4,9 @@ library;
 
 import 'dart:async';
 import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart' show kIsWeb;
+
 import 'chess_engine.dart';
 import 'ai_engine.dart';
 import '../../data/models/game_config.dart';
@@ -25,9 +27,9 @@ class AIEngineController {
   AIDifficulty _difficulty = AIDifficulty.basic;
   bool _initialized = false;
 
-  static final AIEngineController _instance = AIEngineController._internal();
-  factory AIEngineController() => _instance;
-  AIEngineController._internal();
+  AIEngineController();
+  // The platform bridge is shared, but lifecycle ownership belongs to one game.
+  static AIEngineController? _owner;
 
   /// Constants for time management
   static const Map<AIDifficulty, int> _maxTimeMs = {
@@ -40,16 +42,14 @@ class AIEngineController {
 
   /// Tracks active request to allow cancellation
   int _activeRequestId = 0;
-
-  /// Remember previous emergency fallback source square to reduce robotic repeats.
-  String? _lastFallbackFrom;
+  int _bridgeSequence = 0;
+  bool _bridgeBusy = false;
 
   /// Tracks which path produced the latest AI move for debug UI.
   String _lastMoveSource = 'none';
 
   String get lastMoveSource => _lastMoveSource;
 
-  /// Current AI Personality Message (for UI thinking bubble)
   /// Current AI Personality Message (for UI thinking bubble)
   String get aiMessage =>
       _latestThinkingMessage ?? PersonalityEngine().generateNewMessage();
@@ -60,14 +60,17 @@ class AIEngineController {
 
   /// Analyze player style for adaptive AI
   Future<Map<String, dynamic>> analyzePlayerStyle(
-      String fen, List<String> recentMoves) async {
+    String fen,
+    List<String> recentMoves,
+  ) async {
     // Use Leela if available, otherwise heuristic analysis
     try {
       return await js_bridge.jsEngineAnalyzeStyle(fen, recentMoves);
     } catch (_) {
       // Fallback heuristic
-      bool aggressive =
-          recentMoves.any((m) => m.contains('+') || m.contains('#'));
+      bool aggressive = recentMoves.any(
+        (m) => m.contains('+') || m.contains('#'),
+      );
       bool defensive = recentMoves.length > 5 && !aggressive;
 
       return {
@@ -83,23 +86,68 @@ class AIEngineController {
   }
 
   void init(GameMode mode, AIDifficulty? difficulty, {int? difficultyLevel}) {
+    _owner?.cancelEngine();
+    _owner = this;
+    cancelEngine();
+    _lastMoveSource = 'none';
+    clearThinkingMessage();
     _mode = mode;
     _difficulty = difficulty ?? AIDifficulty.basic;
     _initialized = true;
 
     // Both Web and Native use the unified js_bridge (aliased depending on platform)
-    js_bridge.jsEngineInit(mode.name, _difficulty.name, difficultyLevel: difficultyLevel);
+    js_bridge.jsEngineInit(
+      mode.name,
+      _difficulty.name,
+      difficultyLevel: difficultyLevel,
+    );
+  }
+
+  bool _isCurrentRequest(int requestId) =>
+      _owner == this && _initialized && requestId == _activeRequestId;
+
+  // The JS service may use a bounded Sunfish fallback after the primary budget.
+  Duration _requestTimeout(int budgetMs) =>
+      Duration(milliseconds: budgetMs + (kIsWeb ? 1850 : 5500));
+
+  Future<T> _searchBridge<T>(
+    Future<T> Function() search,
+    int budgetMs,
+    T timeoutValue,
+  ) async {
+    final sequence = ++_bridgeSequence;
+    if (_bridgeBusy) js_bridge.jsEngineCancel();
+    _bridgeBusy = true;
+    try {
+      return await search().timeout(
+        _requestTimeout(budgetMs),
+        onTimeout: () {
+          if (sequence == _bridgeSequence) {
+            LoggingService.warn(
+                '[AI] ${_difficulty.name} $_mode bridge watchdog expired after ${_requestTimeout(budgetMs).inMilliseconds}ms; cancelling before fallback');
+            js_bridge.jsEngineCancel();
+          }
+          return timeoutValue;
+        },
+      );
+    } finally {
+      if (sequence == _bridgeSequence) _bridgeBusy = false;
+    }
   }
 
   /// Get the best move for the current position with robust timeout handling
-  Future<String?> getBestMove(String fen,
-      {ChessEngine? engine,
-      bool humanized = true,
-      int moveNumber = 0,
-      double? playerAccuracy,
-      AdaptiveAIProfile? adaptiveProfile}) async {
-    if (!_initialized) return null;
-    if (_mode == GameMode.twoPlayer || _mode == GameMode.multiplayer) {
+  Future<String?> getBestMove(
+    String fen, {
+    ChessEngine? engine,
+    bool humanized = true,
+    int moveNumber = 0,
+    double? playerAccuracy,
+    AdaptiveAIProfile? adaptiveProfile,
+  }) async {
+    if (!_initialized || _owner != this) return null;
+    if (_mode == GameMode.twoPlayer ||
+        _mode == GameMode.multiplayer ||
+        _mode == GameMode.tournament) {
       return null;
     }
 
@@ -109,11 +157,14 @@ class AIEngineController {
 
     // ── SMART/HUMANOID AI PIPELINE (Advanced, Impossible, AI Mode) ──
     if (_difficulty == AIDifficulty.aiMode) {
-      return _getSmartMove(fen, requestId,
-          engine: engine,
-          moveNumber: moveNumber,
-          playerAccuracy: playerAccuracy,
-          adaptiveProfile: adaptiveProfile);
+      return _getSmartMove(
+        fen,
+        requestId,
+        engine: engine,
+        moveNumber: moveNumber,
+        playerAccuracy: playerAccuracy,
+        adaptiveProfile: adaptiveProfile,
+      );
     }
 
     final maxTime = _maxTimeMs[_difficulty] ?? 2000;
@@ -128,42 +179,47 @@ class AIEngineController {
       final randomDelay =
           (baseDelay * (0.8 + (math.Random().nextDouble() * 0.4))).toInt();
       await Future.delayed(Duration(milliseconds: randomDelay));
-      if (requestId != _activeRequestId) return null; // Cancelled
+      if (!_isCurrentRequest(requestId)) return null;
     }
 
     try {
       String? resultMove;
 
       // Simple call for lower difficulties
-      final Map<String, dynamic>? res =
-          await js_bridge.jsEngineGetBestMove(fen).timeout(
-                Duration(milliseconds: maxTime),
-                onTimeout: () => null,
-              );
+      final res = await _searchBridge(
+        () => js_bridge.jsEngineGetBestMove(fen, movetime: maxTime),
+        maxTime,
+        null,
+      );
+      if (!_isCurrentRequest(requestId)) return null;
       resultMove = res?['move'] as String?;
       if (resultMove != null) {
-        _lastMoveSource =
-            _normalizeMoveSource(js_bridge.jsEngineGetActiveEngine());
+        _lastMoveSource = _normalizeMoveSource(
+          js_bridge.jsEngineGetActiveEngine(),
+        );
       }
 
       if (resultMove == null && engine != null) {
-        if (requestId != _activeRequestId) return null;
         resultMove = await fallbackMove(fen, engine: engine);
       }
 
-      return resultMove;
+      return _isCurrentRequest(requestId) ? resultMove : null;
     } catch (e) {
-      if (engine != null) return await fallbackMove(fen, engine: engine);
-      return null;
+      if (!_isCurrentRequest(requestId) || engine == null) return null;
+      final fallback = await fallbackMove(fen, engine: engine);
+      return _isCurrentRequest(requestId) ? fallback : null;
     }
   }
 
   /// SMART AI System: MultiPV candidates -> Opening randomness -> Quality filtering
-  Future<String?> _getSmartMove(String fen, int requestId,
-      {ChessEngine? engine,
-      int moveNumber = 0,
-      double? playerAccuracy,
-      AdaptiveAIProfile? adaptiveProfile}) async {
+  Future<String?> _getSmartMove(
+    String fen,
+    int requestId, {
+    ChessEngine? engine,
+    int moveNumber = 0,
+    double? playerAccuracy,
+    AdaptiveAIProfile? adaptiveProfile,
+  }) async {
     try {
       List<MoveCandidate> candidates = [];
       String? bestFound;
@@ -244,21 +300,36 @@ class AIEngineController {
       }
 
       if (!kIsWeb) {
-        final rawCandidates = await js_bridge.jsEngineGetTopMoves(fen, 15, 3,
-            movetime: dynamicMoveTime);
+        final rawCandidates = await _searchBridge(
+          () => js_bridge.jsEngineGetTopMoves(
+            fen,
+            15,
+            3,
+            movetime: dynamicMoveTime,
+          ),
+          dynamicMoveTime,
+          <MoveCandidate>[],
+        );
+        if (!_isCurrentRequest(requestId)) return null;
         candidates = List<MoveCandidate>.from(rawCandidates);
         if (candidates.isNotEmpty) {
           bestFound = candidates.first.uci;
-          _lastMoveSource =
-              _normalizeMoveSource(js_bridge.jsEngineGetActiveEngine());
+          _lastMoveSource = _normalizeMoveSource(
+            js_bridge.jsEngineGetActiveEngine(),
+          );
         }
       } else {
-        final res =
-            await js_bridge.jsEngineGetBestMove(fen, movetime: dynamicMoveTime);
+        final res = await _searchBridge(
+          () => js_bridge.jsEngineGetBestMove(fen, movetime: dynamicMoveTime),
+          dynamicMoveTime,
+          null,
+        );
+        if (!_isCurrentRequest(requestId)) return null;
         bestFound = res?['move'] as String?;
         if (bestFound != null) {
-          _lastMoveSource =
-              _normalizeMoveSource(js_bridge.jsEngineGetActiveEngine());
+          _lastMoveSource = _normalizeMoveSource(
+            js_bridge.jsEngineGetActiveEngine(),
+          );
         }
         if (res?['candidates'] != null) {
           final rawCandidates = res!['candidates'];
@@ -273,7 +344,9 @@ class AIEngineController {
                     final scoreRaw = c['score'];
                     if (uciRaw is String && scoreRaw is num) {
                       return MoveCandidate(
-                          uci: uciRaw, score: scoreRaw.toInt());
+                        uci: uciRaw,
+                        score: scoreRaw.toInt(),
+                      );
                     }
                   }
                   return null;
@@ -286,7 +359,7 @@ class AIEngineController {
         }
       }
 
-      if (requestId != _activeRequestId) return null;
+      if (!_isCurrentRequest(requestId)) return null;
       if (candidates.isEmpty) return bestFound;
 
       // ── 1. OPENING RANDOMIZATION (First 10 moves) ──
@@ -339,20 +412,23 @@ class AIEngineController {
           if (eval > 300) {
             // AI is winning heavily -> ease up to keep player engaged
             errorChance = (errorChance * 3.0).clamp(0.0, 0.15);
-            maxLoss += 50; 
+            maxLoss += 50;
           } else if (eval < -150) {
             // AI is losing -> try hard to defend/win
             errorChance = 0.0;
-            maxLoss = 10; 
+            maxLoss = 10;
           }
 
           // Memory Chunk logic
-          if (adaptiveProfile != null && adaptiveProfile.recentMoveTypes.length >= 3) {
+          if (adaptiveProfile != null &&
+              adaptiveProfile.recentMoveTypes.length >= 3) {
             final recents = adaptiveProfile.recentMoveTypes;
             // If player played defensively 3 times in a row, force aggression
             if (recents.reversed.take(3).every((t) => t == 'defensive')) {
               personality = AIPersonality.aggressive;
-            } else if (recents.reversed.take(3).every((t) => t == 'aggressive')) {
+            } else if (recents.reversed
+                .take(3)
+                .every((t) => t == 'aggressive')) {
               personality = AIPersonality.defensive;
             }
           }
@@ -369,28 +445,36 @@ class AIEngineController {
       }
 
       if (_lastMoveSource == 'none') {
-        _lastMoveSource =
-            _normalizeMoveSource(js_bridge.jsEngineGetActiveEngine());
+        _lastMoveSource = _normalizeMoveSource(
+          js_bridge.jsEngineGetActiveEngine(),
+        );
       }
 
       return move;
     } catch (e) {
+      if (!_isCurrentRequest(requestId) || engine == null) return null;
       LoggingService.error('[SmartAI] Error', e);
-      return engine != null ? await fallbackMove(fen, engine: engine) : null;
+      final fallback = await fallbackMove(fen, engine: engine);
+      return _isCurrentRequest(requestId) ? fallback : null;
     }
   }
 
-
-
   /// Fallback move generation using Sunfish (Dart side)
-  Future<String?> fallbackMove(String fen,
-      {required ChessEngine engine}) async {
+  Future<String?> fallbackMove(
+    String fen, {
+    required ChessEngine engine,
+  }) async {
+    final requestId = _activeRequestId;
+    if (!_isCurrentRequest(requestId)) return null;
     final moves = engine.allLegalMoves();
     if (moves.isEmpty) return null;
 
     Duration timeout = const Duration(seconds: 2);
-    if (_difficulty == AIDifficulty.impossible || _difficulty == AIDifficulty.aiMode) {
-      timeout = const Duration(milliseconds: 2400); // 20% increase over standard 2s
+    if (_difficulty == AIDifficulty.impossible ||
+        _difficulty == AIDifficulty.aiMode) {
+      timeout = const Duration(
+        milliseconds: 2400,
+      ); // 20% increase over standard 2s
     } else if (_difficulty == AIDifficulty.advanced) {
       timeout = const Duration(seconds: 2);
     } else if (_difficulty == AIDifficulty.intermediate) {
@@ -406,6 +490,7 @@ class AIEngineController {
       personality: PersonalityEngine().currentPersonality,
     );
 
+    if (!_isCurrentRequest(requestId) || engine.toFEN() != fen) return null;
     if (bestMove != null) {
       _lastMoveSource = 'dart-sunfish';
       return bestMove.toAlgebraic();
@@ -418,36 +503,55 @@ class AIEngineController {
     final v = raw.toLowerCase();
     if (v.contains('sunfish')) return 'sunfish';
     if (v.contains('stockfish')) return 'stockfish';
-    return 'stockfish';
+    return 'none';
   }
 
   /// Background analysis of user move (AI Mode)
-  Future<Map<String, dynamic>?> analyzeMoveBackground(String fen,
-      {int nodes = 1000}) async {
-    if (!_initialized) return null;
-    return js_bridge.jsEngineGetBestMove(fen);
+  Future<Map<String, dynamic>?> analyzeMoveBackground(
+    String fen, {
+    int nodes = 1000,
+  }) async {
+    if (!_initialized ||
+        _owner != this ||
+        _bridgeBusy ||
+        _mode == GameMode.twoPlayer ||
+        _mode == GameMode.multiplayer ||
+        _mode == GameMode.tournament) {
+      return null;
+    }
+    final requestId = _activeRequestId;
+    final budget = _maxTimeMs[_difficulty] ?? 2000;
+    final result = await _searchBridge(
+      () => js_bridge.jsEngineGetBestMove(fen, movetime: budget),
+      budget,
+      null,
+    );
+    return _isCurrentRequest(requestId) ? result : null;
   }
 
   /// Stop current engine calculation
   void cancelEngine() {
-    _activeRequestId++; // Invalidate pending requests
-    if (kIsWeb) {
-      // In JS, we might need a specific 'stop' command to the worker
-      // For now, we rely on the bridge's dispose or requestId tracking.
-    }
+    _activeRequestId++;
+    _bridgeSequence++;
+    _bridgeBusy = false;
+    if (_owner == this) js_bridge.jsEngineCancel();
   }
 
   /// Get the currently active engine name (for debugging/UI)
   String get activeEngineName {
-    if (!_initialized) return 'none';
+    if (!_initialized || _owner != this) return 'none';
     return js_bridge.jsEngineGetActiveEngine();
   }
 
   /// Dispose all engine resources
   void dispose() {
-    js_bridge.jsEngineDispose();
+    cancelEngine();
+    if (_owner == this) {
+      js_bridge.jsEngineDispose();
+      _owner = null;
+    }
     _initialized = false;
-    _lastFallbackFrom = null;
+    clearThinkingMessage();
     _lastMoveSource = 'none';
   }
 }

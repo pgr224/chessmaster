@@ -1,6 +1,8 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
+import { verify } from 'hono/jwt'
+import { JWT_ALG, isGuestIdentity } from './auth_utils'
 import { authRoutes } from './routes/auth'
 import { profileRoutes } from './routes/profile'
 import { gameRoutes } from './routes/game'
@@ -24,6 +26,8 @@ export interface Env {
   JWT_SECRET: string
   ENVIRONMENT: string
   VAPID_PUBLIC_KEY: string
+  VAPID_SUBJECT?: string
+  FCM_SERVICE_ACCOUNT?: string
   VAPID_PRIVATE_KEY: string
 }
 
@@ -32,7 +36,7 @@ const app = new Hono<{ Bindings: Env }>()
 // ════════════════════════════════════════
 // MIDDLEWARE
 // ════════════════════════════════════════
-app.use('*', logger())
+app.use('*', logger((message, ...rest) => console.log(message.replace(/([?&]token=)[^&\s]+/g, '$1[redacted]'), ...rest)))
 app.onError((err, c) => {
   console.error(`[Global Error] ${c.req.method} ${c.req.url}:`, err)
   return c.json({ error: 'Internal Server Error', message: err.message, stack: err.stack }, 500)
@@ -65,14 +69,34 @@ app.route('/api/push', pushRoutes)
 // WEBSOCKET ROUTING
 // ════════════════════════════════════════
 
+async function authenticatedSocketRequest(request:Request, env:Env):Promise<Request|null> {
+  try {
+    const url=new URL(request.url)
+    const token=url.searchParams.get('token')??request.headers.get('Authorization')?.replace(/^Bearer /i,'')
+    if(!token)return null
+    const user=await verify(token,env.JWT_SECRET,JWT_ALG)
+    if(typeof user.sub!=='string'||isGuestIdentity(user.sub,user))return null
+    const row=await env.DB.prepare('SELECT username FROM users WHERE id=?').bind(user.sub).first<{username:string}>()
+    if(!row)return null
+    const headers=new Headers(request.headers)
+    headers.set('X-Authenticated-User',user.sub)
+    headers.set('X-Authenticated-Name',row.username)
+    url.searchParams.set('userId',user.sub)
+    url.searchParams.set('username',row.username)
+    return new Request(url,{headers})
+  }catch{return null}
+}
+
 // LOBBY (Global Presence & Matchmaking)
 app.get('/multiplayer/lobby', async (c) => {
   const upgrade = c.req.header('Upgrade')
   if (upgrade !== 'websocket') return c.text('Expect WebSocket', 426)
   
+  const request=await authenticatedSocketRequest(c.req.raw,c.env)
+  if(!request)return c.text('Unauthorized',401)
   const id = c.env.LOBBY.idFromName('global_lobby')
   const stub = c.env.LOBBY.get(id)
-  return stub.fetch(c.req.raw)
+  return stub.fetch(request)
 })
 
 // GAME ROOM (Individual Match)
@@ -80,10 +104,12 @@ app.get('/multiplayer/game/:gameId', async (c) => {
   const upgrade = c.req.header('Upgrade')
   if (upgrade !== 'websocket') return c.text('Expect WebSocket', 426)
 
+  const request=await authenticatedSocketRequest(c.req.raw,c.env)
+  if(!request)return c.text('Unauthorized',401)
   const gameId = c.req.param('gameId')
   const id = c.env.GAME_ROOM.idFromName(gameId)
   const stub = c.env.GAME_ROOM.get(id)
-  return stub.fetch(c.req.raw)
+  return stub.fetch(request)
 })
 
 // TOURNAMENT ROOM (Tournament WebSocket)
@@ -91,10 +117,12 @@ app.get('/multiplayer/tournament/:tournamentId', async (c) => {
   const upgrade = c.req.header('Upgrade')
   if (upgrade !== 'websocket') return c.text('Expect WebSocket', 426)
 
+  const request=await authenticatedSocketRequest(c.req.raw,c.env)
+  if(!request)return c.text('Unauthorized',401)
   const tournamentId = c.req.param('tournamentId')
   const id = c.env.TOURNAMENT_ROOM.idFromName(tournamentId)
   const stub = c.env.TOURNAMENT_ROOM.get(id)
-  return stub.fetch(c.req.raw)
+  return stub.fetch(request)
 })
 
 import { MaintenanceService } from './services/maintenance_service'
