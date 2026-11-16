@@ -12,6 +12,8 @@ class GameModel {
   final String? blackUsername;
   final int moveCount;
   final String? playerColor;
+  final String? aiDifficulty;
+  final int? aiDifficultyLevel;
   final DateTime updatedAt;
 
   const GameModel({
@@ -28,6 +30,8 @@ class GameModel {
     this.blackUsername,
     required this.moveCount,
     this.playerColor,
+    this.aiDifficulty,
+    this.aiDifficultyLevel,
     required this.updatedAt,
   });
 
@@ -63,6 +67,10 @@ class GameModel {
       blackUsername: json['black_username']?.toString(),
       moveCount: parseCount(json['move_count']),
       playerColor: json['player_color']?.toString(),
+      aiDifficulty: json['ai_difficulty']?.toString(),
+      aiDifficultyLevel: json['ai_difficulty_level'] == null
+          ? null
+          : parseCount(json['ai_difficulty_level']),
       updatedAt: parseDate(json['completed_at'] ?? json['updated_at']),
     );
   }
@@ -81,6 +89,8 @@ class GameModel {
         'black_username': blackUsername,
         'move_count': moveCount,
         'player_color': playerColor,
+        'ai_difficulty': aiDifficulty,
+        'ai_difficulty_level': aiDifficultyLevel,
         'updated_at': updatedAt.toIso8601String(),
       };
 }

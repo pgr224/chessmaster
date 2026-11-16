@@ -8,6 +8,7 @@
   const DEPTH = { basic: 3, intermediate: 5, advanced: 0, impossible: 0, aiMode: 0 };
   const BUDGET = { basic: 2250, intermediate: 4000, advanced: 7000, impossible: 12000, aiMode: 18000 };
   const FALLBACK_BUDGET = 1600;
+  const STOCKFISH_READY_TIMEOUT = 5000;
   const workers = new Map();
   let activeEngine = null;
   let lastSearchEngine = null;
@@ -97,6 +98,9 @@
   function sendSearch(request) {
     if (pending !== request || request.started) return;
     request.started = true;
+    clearTimeout(request.timer);
+    // WASM preparation is separate from the existing difficulty search budget.
+    request.timer = setTimeout(() => fail(request), request.budget);
     lastSearchEngine = request.engine;
     const depth = DEPTH[difficulty] ?? 3; // Zero means movetime-only search.
     const message = request.engine === STOCKFISH
@@ -117,10 +121,10 @@
     request.engine = type;
     request.budget = budget;
     request.started = false;
-    request.timer = setTimeout(() => fail(request), budget);
     try {
       request.record = getWorker(type);
       if (request.record.ready) sendSearch(request);
+      else request.timer = setTimeout(() => fail(request), STOCKFISH_READY_TIMEOUT);
     } catch (_) {
       fail(request);
     }

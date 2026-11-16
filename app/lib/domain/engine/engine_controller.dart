@@ -106,9 +106,10 @@ class AIEngineController {
   bool _isCurrentRequest(int requestId) =>
       _owner == this && _initialized && requestId == _activeRequestId;
 
-  // The JS service may use a bounded Sunfish fallback after the primary budget.
+  // Readiness is separate from search time: web 5s + bounded Sunfish recovery,
+  // native 5s preparation + bestmove/scheduler grace. Search budgets stay intact.
   Duration _requestTimeout(int budgetMs) =>
-      Duration(milliseconds: budgetMs + (kIsWeb ? 1850 : 5500));
+      Duration(milliseconds: budgetMs + (kIsWeb ? 6850 : 5500));
 
   Future<T> _searchBridge<T>(
     Future<T> Function() search,

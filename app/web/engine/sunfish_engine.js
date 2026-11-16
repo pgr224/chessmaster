@@ -470,7 +470,17 @@ function evaluate(board) {
   return board.turn === WHITE ? score : -score;
 }
 
-function quiescence(board, alpha, beta) {
+const SEARCH_EXPIRED = Symbol('search deadline');
+const searchNow = typeof performance !== 'undefined' && typeof performance.now === 'function'
+  ? () => performance.now() : () => Date.now();
+function checkDeadline(search) {
+  if (search && (++search.nodes & 63) === 0 && searchNow() >= search.deadline) {
+    throw SEARCH_EXPIRED;
+  }
+}
+
+function quiescence(board, alpha, beta, search) {
+  checkDeadline(search);
   const standPat = evaluate(board);
   if (standPat >= beta) return beta;
   if (alpha < standPat) alpha = standPat;
@@ -486,15 +496,16 @@ function quiescence(board, alpha, beta) {
   for (const move of moves) {
     const clone = board.clone();
     clone.makeMove(move);
-    const score = -quiescence(clone, -beta, -alpha);
+    const score = -quiescence(clone, -beta, -alpha, search);
     if (score >= beta) return beta;
     if (score > alpha) alpha = score;
   }
   return alpha;
 }
 
-function alphaBeta(board, depth, alpha, beta) {
-  if (depth <= 0) return { score: quiescence(board, alpha, beta), move: null };
+function alphaBeta(board, depth, alpha, beta, search) {
+  checkDeadline(search);
+  if (depth <= 0) return { score: quiescence(board, alpha, beta, search), move: null };
 
   const moves = board.legalMoves();
   if (moves.length === 0) {
@@ -520,7 +531,7 @@ function alphaBeta(board, depth, alpha, beta) {
   for (const move of moves) {
     const clone = board.clone();
     clone.makeMove(move);
-    const result = alphaBeta(clone, depth - 1, -beta, -alpha);
+    const result = alphaBeta(clone, depth - 1, -beta, -alpha, search);
     const score = -result.score;
 
     if (score > bestScore) {
@@ -545,7 +556,8 @@ function searchBestMove(fen, maxDepth = 3, timeoutMs = 3000) {
   const board = new SunfishBoard();
   board.loadFEN(fen);
 
-  const startTime = Date.now();
+  const startTime = searchNow();
+  const search = { deadline: startTime + timeoutMs, nodes: 0 };
   let bestResult = null;
 
   // Clear TT if too large
@@ -553,11 +565,16 @@ function searchBestMove(fen, maxDepth = 3, timeoutMs = 3000) {
 
   // Iterative deepening
   for (let depth = 1; depth <= maxDepth; depth++) {
-    const elapsed = Date.now() - startTime;
+    const elapsed = searchNow() - startTime;
     if (elapsed > timeoutMs && depth > 1) break;
 
-    const result = alphaBeta(board, depth, -999999, 999999);
-    if (result.move) bestResult = result;
+    try {
+      const result = alphaBeta(board, depth, -999999, 999999, search);
+      if (result.move) bestResult = result;
+    } catch (error) {
+      if (error !== SEARCH_EXPIRED) throw error;
+      break; // Return the last fully completed depth, never a partial search.
+    }
   }
 
   if (!bestResult || !bestResult.move) {
@@ -577,11 +594,17 @@ function searchBestMove(fen, maxDepth = 3, timeoutMs = 3000) {
   const candidates = [];
   const moves = board.legalMoves();
   for (const move of moves) {
+    if (searchNow() >= search.deadline) break;
     const clone = board.clone();
     clone.makeMove(move);
-    // Quick evaluate at lower depth for speed
-    const score = alphaBeta(clone, Math.max(1, Math.min(2, maxDepth - 1)), -999999, 999999).score;
-    candidates.push({ uci: SunfishBoard.toAlg(move.from) + SunfishBoard.toAlg(move.to) + promoChar(move.promo), score });
+    // Candidate generation shares the same budget as the main search.
+    try {
+      const score = alphaBeta(clone, Math.max(1, Math.min(2, maxDepth - 1)), -999999, 999999, search).score;
+      candidates.push({ uci: SunfishBoard.toAlg(move.from) + SunfishBoard.toAlg(move.to) + promoChar(move.promo), score });
+    } catch (error) {
+      if (error !== SEARCH_EXPIRED) throw error;
+      break;
+    }
   }
   candidates.sort((a, b) => b.score - a.score);
 

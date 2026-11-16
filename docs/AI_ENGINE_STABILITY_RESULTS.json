@@ -1,0 +1,114 @@
+{
+  "method": "Local Chromium, bundled engines, legal moves validated with chess.js; default budget for first request in each level and 1000 ms protocol-test budget thereafter.",
+  "levels": [
+    {
+      "difficulty": "basic",
+      "legalAiReplies": 12,
+      "totalPlies": 24,
+      "firstMs": 184,
+      "maxMs": 759,
+      "workerInstances": 1,
+      "liveWorkers": 1,
+      "wasmBytes": [],
+      "sources": [
+        "sunfish"
+      ],
+      "errors": []
+    },
+    {
+      "difficulty": "intermediate",
+      "legalAiReplies": 12,
+      "totalPlies": 24,
+      "firstMs": 1504,
+      "maxMs": 1504,
+      "workerInstances": 1,
+      "liveWorkers": 1,
+      "wasmBytes": [],
+      "sources": [
+        "sunfish"
+      ],
+      "errors": []
+    },
+    {
+      "difficulty": "advanced",
+      "legalAiReplies": 12,
+      "totalPlies": 24,
+      "firstMs": 6741,
+      "maxMs": 6741,
+      "workerInstances": 2,
+      "liveWorkers": 2,
+      "wasmBytes": [
+        80543744
+      ],
+      "sources": [
+        "stockfish"
+      ],
+      "errors": []
+    },
+    {
+      "difficulty": "impossible",
+      "legalAiReplies": 12,
+      "totalPlies": 24,
+      "firstMs": 11734,
+      "maxMs": 11734,
+      "workerInstances": 2,
+      "liveWorkers": 2,
+      "wasmBytes": [
+        80543744
+      ],
+      "sources": [
+        "stockfish"
+      ],
+      "errors": []
+    },
+    {
+      "difficulty": "aiMode",
+      "legalAiReplies": 12,
+      "totalPlies": 24,
+      "firstMs": 17721,
+      "maxMs": 17721,
+      "workerInstances": 2,
+      "liveWorkers": 2,
+      "wasmBytes": [
+        80543744
+      ],
+      "sources": [
+        "stockfish"
+      ],
+      "errors": []
+    }
+  ],
+  "isolatedFullBudget": [
+    {
+      "difficulty": "aiMode",
+      "legalAiReplies": 3,
+      "totalPlies": 6,
+      "firstMs": 17790,
+      "maxMs": 17790,
+      "workerInstances": 2,
+      "liveWorkers": 2,
+      "wasmBytes": [
+        80543744
+      ],
+      "timesMs": [
+        17790,
+        17507,
+        17507
+      ],
+      "pageTimesMs": [
+        17782.449999999255,
+        17502.115000002086,
+        17502.71499999985
+      ],
+      "wallTimesMs": [
+        17790,
+        17506,
+        17507
+      ],
+      "sources": [
+        "stockfish"
+      ],
+      "errors": []
+    }
+  ]
+}

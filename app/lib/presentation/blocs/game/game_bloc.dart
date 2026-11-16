@@ -2031,6 +2031,9 @@ class GameBloc extends Bloc<GameEvent, GameState> {
     if (!isVsAI) return;
 
     if (_engine.moveHistory.isEmpty) return;
+    // A Black player has no own move to take back after White's opening.
+    if(_engine.moveHistory.length==1 && _engine.currentTurn==state.playerColor)return;
+
 
     final undoEpoch = ++_aiRequestEpoch;
     _engineController.cancelEngine();

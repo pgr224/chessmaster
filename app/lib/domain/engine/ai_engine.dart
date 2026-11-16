@@ -64,10 +64,10 @@ class AIEngine {
       final moves = isolatedEngine.allLegalMoves();
       final List<(String, int)> scored = [];
 
-      final started = DateTime.now();
+      final started = Stopwatch()..start();
       for (final move in moves) {
         isolatedEngine.applyMoveInternal(move);
-        final score = DateTime.now().difference(started) >= timeout
+        final score = started.elapsed >= timeout
             ? -_evaluate(isolatedEngine)
             : -_search(isolatedEngine, config.depth, -999999, 999999, started,
                     timeout, personality)
@@ -102,7 +102,7 @@ class AIEngine {
     Duration timeout = const Duration(seconds: 5),
     AIPersonality personality = AIPersonality.coach,
   }) {
-    final startTime = DateTime.now();
+    final startTime = Stopwatch()..start();
     final config = _configs[difficulty]!;
     final fen = engine.toFEN();
 
@@ -123,7 +123,7 @@ class AIEngine {
     if (_tt.length > 50000) _tt.clear();
 
     while (currentDepth <= config.depth) {
-      final elapsed = DateTime.now().difference(startTime);
+      final elapsed = startTime.elapsed;
       if (elapsed > timeout && currentDepth > 1) break;
 
       final moves = engine.allLegalMoves();
@@ -162,9 +162,9 @@ class AIEngine {
   }
 
   static _SearchResult _search(ChessEngine engine, int depth, int alpha,
-      int beta, DateTime startTime, Duration timeout,
+      int beta, Stopwatch startTime, Duration timeout,
       [AIPersonality personality = AIPersonality.coach]) {
-    if (DateTime.now().difference(startTime) >= timeout)
+    if (startTime.elapsed >= timeout)
       return _SearchResult(score: _evaluate(engine));
     if (depth == 0) {
       return _SearchResult(
@@ -200,8 +200,7 @@ class AIEngine {
     for (final move in moves) {
       // Check for timeout deep in the tree every few nodes
       if (depth > 2 &&
-          DateTime.now().difference(startTime).inMilliseconds >
-              timeout.inMilliseconds) {
+          startTime.elapsed.inMilliseconds > timeout.inMilliseconds) {
         break;
       }
 
@@ -225,7 +224,7 @@ class AIEngine {
   }
 
   static int _quiescence(ChessEngine engine, int alpha, int beta,
-      DateTime startTime, Duration timeout,
+      Stopwatch startTime, Duration timeout,
       [AIPersonality personality = AIPersonality.coach]) {
     int standPat = _evaluate(engine, personality);
     if (standPat >= beta) return beta;
@@ -234,8 +233,7 @@ class AIEngine {
     final moves =
         engine.allLegalMoves().where((m) => m.capturedPiece != null).toList();
     for (final move in moves) {
-      if (DateTime.now().difference(startTime).inMilliseconds >
-          timeout.inMilliseconds) {
+      if (startTime.elapsed.inMilliseconds > timeout.inMilliseconds) {
         break;
       }
       engine.applyMoveInternal(move);
