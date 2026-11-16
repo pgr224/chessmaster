@@ -1,0 +1,44 @@
+{
+  "name": "chess-master-backend",
+  "version": "1.0.0",
+  "description": "Chess Master — Cloudflare Workers Backend",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --env development",
+    "deploy": "wrangler deploy",
+    "deploy:staging": "wrangler deploy --env staging",
+    "deploy:dev": "wrangler deploy --env development",
+    "build": "tsc --noEmit",
+    "db:create": "wrangler d1 create chessmaster-real4",
+    "db:migrate": "wrangler d1 execute chessmaster-real4 --local --file=./schema/d1-schema.sql",
+    "db:migrate:remote": "wrangler d1 execute chessmaster-real4 --remote --file=./schema/d1-schema.sql",
+    "db:migrate:v17": "wrangler d1 execute chessmaster-real4 --remote --file=./schema/migration_v17_fix_push_and_cleanup.sql",
+    "db:migrate:staging": "wrangler d1 execute chessmaster-real4 --env staging --remote --file=./schema/d1-schema.sql",
+
+    "db:migrate:xp": "wrangler d1 execute chessmaster-real4 --local --file=./schema/migration_v5_xp_p2p.sql",
+    "db:backfill": "wrangler d1 execute chessmaster-real4 --local --file=./schema/backfill_stats.sql",
+    "db:backfill:remote": "wrangler d1 execute chessmaster-real4 --remote --file=./schema/backfill_stats.sql",
+    "db:seed": "wrangler d1 execute chessmaster-real4 --local --file=./schema/seed.sql",
+    "kv:create": "wrangler kv:namespace create CHESS_KV",
+    "tail": "wrangler tail",
+    "secret:jwt": "wrangler secret put JWT_SECRET",
+    "secret:jwt:staging": "wrangler secret put JWT_SECRET --env staging",
+    "type-check": "tsc --noEmit",
+    "test:unit": "tsx --test src/**/*.test.ts"
+  },
+  "dependencies": {
+    "chess.js": "^1.4.0",
+    "hono": "^4.3.0",
+    "jose": "^5.3.0",
+    "uuid": "^9.0.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240529.0",
+    "@types/node": "^22.15.17",
+    "@types/uuid": "^10.0.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.4.5",
+    "wrangler": "^3.60.0"
+  }
+}

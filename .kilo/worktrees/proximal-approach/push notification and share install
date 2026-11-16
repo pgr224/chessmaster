@@ -1,0 +1,95 @@
+# Implementation Plan - Robust Notification System
+
+This plan outlines the steps to implement a cross-platform notification system (Web PWA + Native) for Chess Master. The primary focus is on **Online Multiplayer Invites**, ensuring users receive OS-level notifications even when the app is backgrounded or closed.
+
+## User Review Required
+
+> [!IMPORTANT]
+> **VAPID Keys (Web Push)**: This implementation will use the **W3C Push API (VAPID)**. You will need to:
+> 1. Generate a VAPID Public/Private key pair (I can provide the script).
+> 2. Add the `VAPID_PRIVATE_KEY` and `VAPID_PUBLIC_KEY` to your Cloudflare Worker environment variables.
+> 3. No Firebase project is required.
+
+> [!NOTE]
+> **Direct Installation**: As requested, we are removing the forced App Store/Play Store redirects.
+> - **Android**: A direct link to download the `.apk`.
+> - **iOS/macOS**: A placeholder link for a `.dmg` or `.ipa` bundle.
+> - **PWA**: The primary install vector for Web users.
+
+## Proposed Changes
+
+---
+
+### Database & Backend (Cloudflare)
+
+#### [MODIFY] [d1-schema.sql](file:///d:/PP942920DRIVE/PROJECTS/chess/backend/schema/d1-schema.sql)
+Add a table to store push subscriptions:
+```sql
+CREATE TABLE IF NOT EXISTS user_subscriptions (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    endpoint TEXT NOT NULL,
+    keys_p256dh TEXT NOT NULL,
+    keys_auth TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+```
+
+#### [NEW] [push_service.ts](file:///d:/PP942920DRIVE/PROJECTS/chess/backend/src/services/push_service.ts)
+Implement Web Push notification logic using the `web-push` logic (VAPID signing) for Cloudflare Workers.
+
+#### [NEW] [push_routes.ts](file:///d:/PP942920DRIVE/PROJECTS/chess/backend/src/routes/push.ts)
+Endpoints to subscribe/unsubscribe devices.
+
+#### [MODIFY] [challenge.ts](file:///d:/PP942920DRIVE/PROJECTS/chess/backend/src/routes/challenge.ts)
+Trigger a notification via `push_service` when a challenge is issued.
+
+---
+
+### Frontend (Flutter & Web)
+
+#### [MODIFY] [install_prompt.js](file:///d:/PP942920DRIVE/PROJECTS/chess/app/web/install_prompt.js)
+- Prioritize PWA "Add to Home Screen".
+- Add direct APK/DMG download links.
+- Implement Web Push subscription request logic.
+
+#### [NEW] [sw.js](file:///d:/PP942920DRIVE/PROJECTS/chess/app/web/sw.js)
+Update Service Worker to:
+- Listen for `push` events.
+- Show system notifications with "Accept" and "Decline" actions.
+- Listen for `notificationclick` to redirect the browser to the Lobby.
+
+#### [MODIFY] [lobby_screen.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/presentation/screens/multiplayer/lobby_screen.dart)
+- Handle deep-links from notifications (e.g., `?accept_challenge=id`).
+- Show the "Pending Invite" popup when directed from an offline notification.
+
+#### [NEW] [notification_repository.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/data/repositories/notification_repository.dart)
+Logic for:
+- Requesting OS permissions.
+- Fetching FCM token (handling Web VAPID keys).
+- Registering background message handlers.
+
+#### [NEW] [notification_bloc.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/presentation/blocs/notification/notification_bloc.dart)
+Manage notification state and toggle syncing with `SettingsBloc`.
+
+#### [MODIFY] [main.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/main.dart)
+Initialize Firebase and the Notification Service at app launch.
+
+#### [MODIFY] [settings_screen.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/presentation/screens/settings/settings_screen.dart)
+Ensure the notification toggle requests/revokes permissions and syncs with the server.
+
+## Open Questions
+
+- **Web Context**: For the Web version, should we use a specific **VAPID Key** (required for browser push)?
+- **Notification Direct Action**: When a user clicks an invite notification, should the app automatically redirect them to the Lobby or directly accept the challenge? (Recommended: Redirect to Lobby with a "Pending Invite" popup).
+
+## Verification Plan
+
+### Automated Tests
+- Backend: Mock FCM API calls to ensure `challenge.ts` correctly triggers the notification logic.
+
+### Manual Verification
+1. **Web (PWA)**: Install the app as a PWA, background the tab, and send a challenge from another account. Verify the browser notification appears.
+2. **Native**: Run on Android/iOS, lock the device, and send a challenge. Verify the system notification appears.
+3. **Settings**: Toggle "Notifications" off in settings and verify that subsequent challenges do not trigger alerts.

@@ -279,12 +279,18 @@ void main() {
     expect(bloc.state.isAIThinking, false);
     expect(bloc.state.currentTurn, PieceColor.black);
   });
-  test('undoing before Black has moved cannot leave the computer turn stalled',()async{
-    await start(color:'black');await waitRequests(1);
-    final opening=bloc.stream.firstWhere((s)=>s.moveHistory.length==1);
-    engine.requests.first.complete('e2e4');await opening;
-    bloc.add(GameUndoEvent());await Future<void>.delayed(const Duration(milliseconds:30));
-    expect(bloc.state.moveHistory.length,1);expect(bloc.state.currentTurn,PieceColor.black);expect(bloc.state.isAIThinking,false);
+  test('undoing before Black has moved cannot leave the computer turn stalled',
+      () async {
+    await start(color: 'black');
+    await waitRequests(1);
+    final opening = bloc.stream.firstWhere((s) => s.moveHistory.length == 1);
+    engine.requests.first.complete('e2e4');
+    await opening;
+    bloc.add(GameUndoEvent());
+    await Future<void>.delayed(const Duration(milliseconds: 30));
+    expect(bloc.state.moveHistory.length, 1);
+    expect(bloc.state.currentTurn, PieceColor.black);
+    expect(bloc.state.isAIThinking, false);
   });
 
   test('saved AI difficulty and numeric level survive resume', () async {

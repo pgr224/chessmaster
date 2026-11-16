@@ -1,0 +1,187 @@
+# ♟️ Chess Application — Master Implementation Plan
+
+> **Stack**: Flutter · Cloudflare Workers · Cloudflare D1 · WebSocket (Durable Objects) · GitHub CI/CD
+
+---
+
+## 📁 Project Structure
+
+```
+chess/
+├── app/                          # Flutter application
+│   ├── lib/
+│   │   ├── core/                 # App-core utilities
+│   │   │   ├── constants/
+│   │   │   ├── theme/
+│   │   │   ├── router/
+│   │   │   └── utils/
+│   │   ├── data/
+│   │   │   ├── models/
+│   │   │   ├── repositories/
+│   │   │   └── datasources/
+│   │   ├── domain/
+│   │   │   ├── entities/
+│   │   │   ├── usecases/
+│   │   │   └── repositories/
+│   │   ├── presentation/
+│   │   │   ├── blocs/
+│   │   │   ├── screens/
+│   │   │   └── widgets/
+│   │   └── main.dart
+│   ├── assets/
+│   │   ├── pieces/
+│   │   ├── sounds/
+│   │   └── themes/
+│   └── pubspec.yaml
+│
+├── backend/                      # Cloudflare Workers
+│   ├── src/
+│   │   ├── routes/
+│   │   ├── services/
+│   │   ├── durable-objects/
+│   │   └── index.ts
+│   ├── schema/
+│   │   └── d1-schema.sql
+│   └── wrangler.toml
+│
+├── .github/
+│   └── workflows/
+│       ├── flutter-ci.yml
+│       └── cloudflare-deploy.yml
+│
+└── docs/
+    ├── API.md
+    ├── DEPLOYMENT.md
+    └── SECURITY.md
+```
+
+---
+
+## 🗄️ Database Schema (Cloudflare D1)
+
+### Tables
+- `users` — player profiles, auth binding (device fingerprint/MAC)
+- `games` — game records (mode, result, pgn, timestamps)
+- `moves` — individual moves per game
+- `tournaments` — tournament definitions
+- `tournament_participants` — bracket assignments
+- `challenges` — player-to-player challenge system
+- `chat_messages` — in-game chat
+- `achievements` — badge system
+- `daily_content` — chess history/articles (auto-updated)
+- `leaderboard` — computed stats view
+
+---
+
+## 🔌 API Routes (Cloudflare Workers)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | /auth/register | Device fingerprint registration |
+| POST | /auth/verify | Token refresh |
+| GET | /profile/:id | Get player profile |
+| PUT | /profile/:id | Update profile/avatar |
+| POST | /game/create | Create new game record |
+| POST | /game/move | Save move (server validation) |
+| GET | /game/:id | Get game state |
+| GET | /leaderboard | Top players |
+| GET | /tournaments | List tournaments |
+| POST | /tournaments/:id/join | Join tournament |
+| GET | /content/daily | Daily chess content |
+| WS | /multiplayer | WebSocket gateway |
+
+---
+
+## ⚡ Multiplayer Architecture (Durable Objects)
+
+```
+Client A ──┐
+            ├──► Durable Object (Game Room) ◄── Cloudflare D1
+Client B ──┘
+```
+
+Each game room is a Durable Object with:
+- Real-time move broadcasting
+- Turn management
+- Time control
+- Chat relay
+- Graceful disconnect handling
+
+---
+
+## 🎮 Game State Machine
+
+```
+WAITING → ACTIVE → CHECK → CHECKMATE/STALEMATE
+                 ↘ DRAW_OFFERED → DRAW_ACCEPTED/REJECTED
+```
+
+---
+
+## 📱 Flutter App Architecture (BLoC)
+
+### Key BLoCs
+- `AuthBloc` — device auth, profile management
+- `GameBloc` — game state, move validation, history
+- `AIBloc` — Stockfish engine worker, difficulty
+- `MultiplayerBloc` — WebSocket, matchmaking
+- `TournamentBloc` — bracket, scheduling
+- `ThemeBloc` — board/piece customization
+- `LearningBloc` — tutorial progression
+- `LeaderboardBloc` — stats, rankings
+
+---
+
+## 🤖 AI Engine Integration
+
+- Stockfish WASM compiled for Flutter web
+- Native binaries for Android/iOS via FFI
+- Communication via Isolates (non-blocking)
+- Depth configuration per difficulty:
+  - Basic: depth 1-2 + random moves
+  - Intermediate: depth 5-7
+  - Advanced: depth 10-12
+  - Impossible: depth 18-20 + full engine
+
+---
+
+## 🔐 Authentication Strategy
+
+**Offline**: Device fingerprint (combination of device ID + model + install timestamp)
+**Online**: JWT tokens signed with Cloudflare secrets, bound to device fingerprint
+
+---
+
+## 🚀 Deployment Pipeline
+
+1. Flutter → build web → GitHub Actions
+2. Cloudflare Pages deployment via `wrangler pages deploy`
+3. Workers deployment via `wrangler deploy`
+4. D1 migrations via `wrangler d1 migrations apply`
+
+---
+
+## ✅ Implementation Phases
+
+### Phase 1 — Foundation
+- [x] Project scaffold (Flutter + Workers)
+- [x] D1 database schema
+- [x] Authentication system
+- [x] Core chess engine (move validation)
+
+### Phase 2 — Game Modes
+- [ ] Single player (AI integration)
+- [ ] Two player (local)
+- [ ] Tutorial system
+
+### Phase 3 — Multiplayer
+- [ ] WebSocket infrastructure
+- [ ] Matchmaking
+- [ ] Chat system
+- [ ] Tournament bracket
+
+### Phase 4 — Polish
+- [ ] Animations & themes
+- [ ] Achievements
+- [ ] Content system
+- [ ] CI/CD pipeline

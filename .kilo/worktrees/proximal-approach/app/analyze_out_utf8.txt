@@ -1,0 +1,126 @@
+﻿Analyzing app...                                                
+
+   info - Invalid use of a private type in a public API - lib\core\theme\app_theme.dart:35:22 - library_private_types_in_public_api
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\theme\app_theme.dart:115:34 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\theme\app_theme.dart:119:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\theme\app_theme.dart:124:27 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\theme\app_theme.dart:131:35 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\theme\app_theme.dart:217:35 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\theme\app_theme.dart:225:36 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\theme\app_theme.dart:279:36 - deprecated_member_use
+warning - Unused import: 'user_model.dart' - lib\data\models\game_record_model.dart:1:8 - unused_import
+   info - The constant name 'FIND_MATCH' isn't a lowerCamelCase identifier - lib\data\services\multiplayer_service.dart:8:3 - constant_identifier_names
+   info - The constant name 'CANCEL_FIND_MATCH' isn't a lowerCamelCase identifier - lib\data\services\multiplayer_service.dart:8:15 - constant_identifier_names
+   info - The constant name 'MOVE' isn't a lowerCamelCase identifier - lib\data\services\multiplayer_service.dart:8:34 - constant_identifier_names
+   info - The constant name 'CHAT' isn't a lowerCamelCase identifier - lib\data\services\multiplayer_service.dart:8:40 - constant_identifier_names
+   info - The constant name 'RESIGN' isn't a lowerCamelCase identifier - lib\data\services\multiplayer_service.dart:8:46 - constant_identifier_names
+   info - The constant name 'LOBBY_UPDATE' isn't a lowerCamelCase identifier - lib\data\services\multiplayer_service.dart:10:3 - constant_identifier_names
+   info - The constant name 'MATCH_FOUND' isn't a lowerCamelCase identifier - lib\data\services\multiplayer_service.dart:10:17 - constant_identifier_names
+   info - The constant name 'MOVE_UPDATE' isn't a lowerCamelCase identifier - lib\data\services\multiplayer_service.dart:10:30 - constant_identifier_names
+   info - The constant name 'CHAT_UPDATE' isn't a lowerCamelCase identifier - lib\data\services\multiplayer_service.dart:10:43 - constant_identifier_names
+   info - The constant name 'ROOM_STATE' isn't a lowerCamelCase identifier - lib\data\services\multiplayer_service.dart:10:56 - constant_identifier_names
+   info - The constant name 'PLAYER_DISCONNECTED' isn't a lowerCamelCase identifier - lib\data\services\multiplayer_service.dart:11:3 - constant_identifier_names
+   info - The constant name 'GAME_OVER' isn't a lowerCamelCase identifier - lib\data\services\multiplayer_service.dart:11:24 - constant_identifier_names
+   info - The constant name 'ERROR' isn't a lowerCamelCase identifier - lib\data\services\multiplayer_service.dart:11:35 - constant_identifier_names
+warning - The value of the field '_rating' isn't used - lib\data\services\multiplayer_service.dart:23:7 - unused_field
+   info - Don't invoke 'print' in production code - lib\data\services\multiplayer_service.dart:51:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\data\services\multiplayer_service.dart:78:22 - avoid_print
+   info - Dangling library doc comment - lib\domain\engine\chess_engine.dart:1:1 - dangling_library_doc_comments
+   info - The private field _moveHistory could be 'final' - lib\domain\engine\chess_engine.dart:154:14 - prefer_final_fields
+   info - The private field _positionHistory could be 'final' - lib\domain\engine\chess_engine.dart:155:16 - prefer_final_fields
+warning - The declaration '_resetCastlingRights' isn't referenced - lib\domain\engine\chess_engine.dart:527:8 - unused_element
+warning - The declaration '_findKing' isn't referenced - lib\domain\engine\chess_engine.dart:703:10 - unused_element
+   info - Dangling library doc comment - lib\domain\engine\engine_controller.dart:1:1 - dangling_library_doc_comments
+warning - The value of the field '_rng' isn't used - lib\domain\engine\engine_controller.dart:24:28 - unused_field
+   info - Dangling library doc comment - lib\domain\engine\js_engine_bridge.dart:1:1 - dangling_library_doc_comments
+   info - Don't invoke 'print' in production code - lib\domain\engine\js_engine_bridge.dart:35:5 - avoid_print
+   info - Don't invoke 'print' in production code - lib\domain\engine\js_engine_bridge.dart:50:5 - avoid_print
+   info - Dangling library doc comment - lib\domain\engine\native_engine_bridge.dart:1:1 - dangling_library_doc_comments
+warning - The value of the field '_engine' isn't used - lib\domain\engine\native_engine_bridge.dart:11:16 - unused_field
+   info - Dangling library doc comment - lib\domain\engine\native_engine_bridge_stub.dart:1:1 - dangling_library_doc_comments
+   info - Statements in an if should be enclosed in a block - lib\presentation\blocs\game\game_bloc.dart:390:22 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\presentation\blocs\game\game_bloc.dart:391:27 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\presentation\blocs\game\game_bloc.dart:392:27 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\presentation\blocs\game\game_bloc.dart:393:14 - curly_braces_in_flow_control_structures
+   info - Unnecessary 'this.' qualifier - lib\presentation\blocs\game\game_bloc.dart:761:12 - unnecessary_this
+   info - Unnecessary 'this.' qualifier - lib\presentation\blocs\game\game_bloc.dart:763:31 - unnecessary_this
+  error - The class '_GameScreenState' doesn't have an unnamed constructor - lib\presentation\screens\game\game_screen.dart:32:38 - new_with_undefined_constructor_default
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\screens\game\game_screen.dart:293:38 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\screens\game\game_screen.dart:297:41 - deprecated_member_use
+  error - The method '_modeName' isn't defined for the type '_GameScreenState' - lib\presentation\screens\game\game_screen.dart:438:15 - undefined_method
+  error - Methods must have an explicit list of parameters - lib\presentation\screens\game\game_screen.dart:911:5 - missing_method_parameters
+  error - The name of a constructor must match the name of the enclosing class - lib\presentation\screens\game\game_screen.dart:911:5 - invalid_constructor_name
+warning - The declaration '_GameScreenState.multiplayer' isn't referenced - lib\presentation\screens\game\game_screen.dart:911:14 - unused_element
+  error - Constructors can't return values - lib\presentation\screens\game\game_screen.dart:911:27 - return_in_generative_constructor
+  error - A value of type 'String' can't be returned from the constructor '_GameScreenState.multiplayer' because it has a return type of '_GameScreenState' - lib\presentation\screens\game\game_screen.dart:911:30 - return_of_invalid_type
+  error - Expected to find ';' - lib\presentation\screens\game\game_screen.dart:911:30 - expected_token
+  error - Expected a class member - lib\presentation\screens\game\game_screen.dart:911:41 - expected_class_member
+  error - Methods must have an explicit list of parameters - lib\presentation\screens\game\game_screen.dart:912:5 - missing_method_parameters
+  error - The name of a constructor must match the name of the enclosing class - lib\presentation\screens\game\game_screen.dart:912:5 - invalid_constructor_name
+warning - The declaration '_GameScreenState.puzzle' isn't referenced - lib\presentation\screens\game\game_screen.dart:912:14 - unused_element
+  error - Constructors can't return values - lib\presentation\screens\game\game_screen.dart:912:27 - return_in_generative_constructor
+  error - A value of type 'String' can't be returned from the constructor '_GameScreenState.puzzle' because it has a return type of '_GameScreenState' - lib\presentation\screens\game\game_screen.dart:912:30 - return_of_invalid_type
+  error - Expected to find ';' - lib\presentation\screens\game\game_screen.dart:912:30 - expected_token
+  error - Expected a class member - lib\presentation\screens\game\game_screen.dart:912:47 - expected_class_member
+  error - Methods must have an explicit list of parameters - lib\presentation\screens\game\game_screen.dart:913:5 - missing_method_parameters
+  error - The name of a constructor must match the name of the enclosing class - lib\presentation\screens\game\game_screen.dart:913:5 - invalid_constructor_name
+warning - The declaration '_GameScreenState.practice' isn't referenced - lib\presentation\screens\game\game_screen.dart:913:14 - unused_element
+  error - Constructors can't return values - lib\presentation\screens\game\game_screen.dart:913:27 - return_in_generative_constructor
+  error - A value of type 'String' can't be returned from the constructor '_GameScreenState.practice' because it has a return type of '_GameScreenState' - lib\presentation\screens\game\game_screen.dart:913:30 - return_of_invalid_type
+  error - Expected to find ';' - lib\presentation\screens\game\game_screen.dart:913:30 - expected_token
+  error - Expected a class member - lib\presentation\screens\game\game_screen.dart:913:43 - expected_class_member
+  error - Unexpected text ';' - lib\presentation\screens\game\game_screen.dart:914:4 - unexpected_token
+warning - The member 'emit' can only be used within 'package:bloc/src/bloc.dart' or a test - lib\presentation\screens\game\game_screen.dart:1189:65 - invalid_use_of_visible_for_testing_member
+  error - Expected a method, getter, setter or operator declaration - lib\presentation\screens\game\game_screen.dart:1200:1 - expected_executable
+warning - The value of the field '_timeControl' isn't used - lib\presentation\screens\game\game_setup_screen.dart:25:8 - unused_field
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\presentation\screens\game\game_setup_screen.dart:324:40 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\presentation\screens\game\game_setup_screen.dart:324:58 - deprecated_member_use
+   info - 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre - lib\presentation\screens\game\game_setup_screen.dart:416:7 - deprecated_member_use
+warning - The declaration '_MiniKingPainter' isn't referenced - lib\presentation\screens\game\game_setup_screen.dart:456:7 - unused_element
+   info - The member 'build' overrides an inherited member but isn't annotated with '@override' - lib\presentation\screens\home\home_screen.dart:40:10 - annotate_overrides
+   info - The import of '../../../data/models/game_config.dart' is unnecessary because all of the used elements are also provided by the import of '../../../core/router/app_router.dart' - lib\presentation\screens\learn\week_screen.dart:9:8 - unnecessary_import
+   info - Invalid use of a private type in a public API - lib\presentation\screens\learn\week_screen.dart:22:14 - library_private_types_in_public_api
+   info - Invalid use of a private type in a public API - lib\presentation\screens\learn\week_screen.dart:24:14 - library_private_types_in_public_api
+warning - Unused import: '../../blocs/auth/auth_bloc.dart' - lib\presentation\screens\multiplayer\game_room_screen.dart:6:8 - unused_import
+warning - The value of the field '_hasRetriedSuggestedUsername' isn't used - lib\presentation\screens\onboarding\onboarding_screen.dart:27:8 - unused_field
+warning - Unused import: 'dart:math' - lib\presentation\screens\profile\profile_screen.dart:2:8 - unused_import
+   info - Unnecessary use of 'toList' in a spread - lib\presentation\screens\profile\profile_screen.dart:405:66 - unnecessary_to_list_in_spreads
+  error - The method 'showEditProfileModal' isn't defined for the type 'ProfileScreen' - lib\presentation\screens\profile\profile_screen.dart:459:19 - undefined_method
+warning - The declaration 'showEditProfileModal' isn't referenced - lib\presentation\screens\profile\profile_screen.dart:463:15 - unused_element
+   info - 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor or activeTrackColor instead. This feature was deprecated after v3.31.0-2.0.pre - lib\presentation\screens\profile\profile_screen.dart:567:23 - deprecated_member_use
+  error - The method 'showEditProfileModal' isn't defined for the type 'ProfileScreen' - lib\presentation\screens\settings\settings_screen.dart:69:47 - undefined_method
+   info - 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor or activeTrackColor instead. This feature was deprecated after v3.31.0-2.0.pre - lib\presentation\screens\settings\settings_screen.dart:397:7 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\chat_widget.dart:46:34 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\chat_widget.dart:49:41 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\chat_widget.dart:101:52 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\chat_widget.dart:106:71 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\chat_widget.dart:144:64 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\chat_widget.dart:147:46 - deprecated_member_use
+warning - Unused import: 'package:flutter_svg/flutter_svg.dart' - lib\presentation\widgets\chess_board_widget.dart:5:8 - unused_import
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\chess_board_widget.dart:76:41 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\chess_board_widget.dart:140:67 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\chess_board_widget.dart:144:74 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\chess_board_widget.dart:289:46 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\chess_board_widget.dart:333:46 - deprecated_member_use
+   info - 'translate' is deprecated and shouldn't be used. Use translateByVector3, translateByVector4, or translateByDouble instead - lib\presentation\widgets\chess_board_widget.dart:538:9 - deprecated_member_use
+   info - 'scale' is deprecated and shouldn't be used. Use scaleByVector3, scaleByVector4, or scaleByDouble instead - lib\presentation\widgets\chess_board_widget.dart:539:9 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\chess_board_widget.dart:556:27 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\chess_board_widget.dart:567:36 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\chess_board_widget.dart:586:70 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\chess_board_widget.dart:590:29 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\chess_board_widget.dart:593:42 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\chess_board_widget.dart:597:62 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\chess_board_widget.dart:633:26 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\game_over_overlay.dart:87:31 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\game_over_overlay.dart:99:53 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\game_over_overlay.dart:101:46 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\game_over_overlay.dart:114:44 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\game_over_overlay.dart:153:45 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\game_over_overlay.dart:155:64 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\game_over_overlay.dart:192:78 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\game_over_overlay.dart:192:117 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\game_over_overlay.dart:194:70 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\game_over_overlay.dart:216:70 - deprecated_member_use
+warning - The declaration '_infoChip' isn't referenced - lib\presentation\widgets\game_over_overlay.dart:292:10 - unused_element
+warning - The declaration '_modeLabel' isn't referenced - lib\presentation\widgets\game_over_overlay.dart:303:10 - unused_element
+

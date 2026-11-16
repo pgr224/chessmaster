@@ -1,0 +1,95 @@
+# Human-Like Chess AI System
+
+This plan outlines the architecture for a "Humanoid" AI mode that feels like a real opponent rather than a machine. It uses Stockfish for tactical move generation (MultiPV) and Leela Chess Zero for background analysis of the user's playstyle to adapt the AI's personality.
+
+## User Review Required
+
+> [!IMPORTANT]
+> This system introduces a significant change to how AI moves are calculated and selected. Instead of always choosing the best move, the AI will now probabilistically select from top candidates based on its current "Personality".
+
+> [!NOTE]
+> Background analysis by Leela Chess Zero will run asynchronously after each player move to assess their playstyle (Aggressive, Defensive, etc.) without blocking the UI.
+
+## Proposed Changes
+
+---
+
+### 1. Engine Layer Enhancements
+
+#### [MODIFY] [native_stockfish.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/domain/engine/native_stockfish.dart)
+- Implement `getTopMoves(String fen, {int depth = 15, int multipv = 5})`.
+- Parse `info depth ... score cp ... pv ...` lines to collect multiple move candidates and their centipawn scores.
+- Return a list of `MoveCandidate(uci, score)`.
+
+#### [MODIFY] [native_engine_bridge.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/domain/engine/native_engine_bridge.dart)
+- Expose `jsEngineGetTopMoves` (and its native equivalent) to the `AIEngineController`.
+
+---
+
+### 2. Personality & Move Selection (Logic Layer)
+
+#### [NEW] [personality_engine.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/domain/engine/personality_engine.dart)
+- Define `AIPersonality` enum: `aggressive`, `defensive`, `tricky`, `lazy`, `random`.
+- Logic to adapt personality based on user move analysis:
+    - User Aggressive (high pressure moves) -> AI Defensive.
+    - User Defensive (solid, slow moves) -> AI Aggressive.
+    - User Lazy (suboptimal, repetitive moves) -> AI Tricky.
+    - User Blunder -> AI Lazy (intentionally plays some random moves).
+
+#### [NEW] [move_selector.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/domain/engine/move_selector.dart)
+- Implement `selectMove(List<MoveCandidate> candidates, AIPersonality personality)`.
+- **Scoring System**: `finalScore = engineScore + personalityBonus + randomness`.
+    - `Aggressive`: Bonus for captures, checks, and moves targeting king.
+    - `Defensive`: Bonus for safe squares and reinforcing threatened pieces.
+    - `Tricky`: Probabilistically selects slightly suboptimal moves if they create "traps" (high variance in follow-up lines).
+- Implements the "Human Error System":
+    - 20% random legal move chance for `hard` (if applicable), 0% for `impossible`.
+
+---
+
+### 3. Controller Layer
+
+#### [MODIFY] [engine_controller.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/domain/engine/engine_controller.dart)
+- Implement `getHumanoidMove(String fen, AIDifficulty difficulty, AIPersonality personality)`.
+- Pipeline:
+    1. Request Top N moves from Stockfish (MultiPV = 5).
+    2. Pass candidates to `MoveSelector`.
+    3. Calculate human-like thinking delay (300ms - 2000ms) based on position complexity.
+    4. Return selected move.
+
+---
+
+### 4. Background Analysis & Integration
+
+#### [MODIFY] [game_bloc.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/presentation/blocs/game/game_bloc.dart)
+- Update `GameState` (inline or in separate file if found) to include `aiMessage` and `currentPersonality`.
+- After every `GameMakeMoveEvent` (by player):
+    - Trigger background analysis using `NativeLeela`.
+    - Update `PersonalityEngine` with analysis results.
+- In `_onAIRequest`:
+    - Call `_engineController.getHumanoidMove`.
+    - Set appropriate `aiMessage` (thinking bubble) based on personality (e.g., "I'm going to track your queen! 😈" if Aggressive).
+
+---
+
+### 5. UI Layer
+
+#### [MODIFY] [game_screen.dart](file:///d:/PP942920DRIVE/PROJECTS/chess/app/lib/presentation/screens/game/game_screen.dart)
+- Ensure the "Thinking Bubble" (currently `ThinkingOverlayWidget`) correctly displays the `aiMessage` from the state.
+
+## Open Questions
+
+- Should we store the AI's "belief" about the user's personality across games, or reset it every session?
+- For the "Tricky" personality, should we use a deeper search to identify moves that are non-obvious yet strong, or just slightly off-beat moves?
+
+## Verification Plan
+
+### Automated Tests
+- `PersonalityEngine` unit tests: Verify adaptation transitions correctly.
+- `NativeStockfish` unit tests: Verify MultiPV parsing returns correctUCI and CP values.
+- `MoveSelector` unit tests: Verify selection probabilities align with personality traits.
+
+### Manual Verification
+- Play a game in "AI Mode" and verify that the engine plays differently (more aggressive vs defensive) based on your own playstyle.
+- Verify that thinking delays feel natural and vary with the complexity of the board state.
+- Check the "Thinking Bubble" for personality-appropriate messages.

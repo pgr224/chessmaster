@@ -41,6 +41,8 @@ One earlier full-budget endurance run completed eight legal AI replies but recor
 
 ## Validation
 
+Final checks passed: **91 Flutter tests, 37 JavaScript checks, two Chromium Flutter tests, and the release web build**. Dart analysis reports no errors; existing warnings and informational lints remain.
+
 - Flutter suite covers controller ownership, cancellation, undo, duplicate requests, draw/clock termination, failed storage, slow coaching, stale autosaves, opening as Black, and saved difficulty round trips.
 - Native lifecycle tests use a fake stockfish process to reproduce asynchronous readiness, stale output, crash/cancel/shutdown and watchdog failures. Actual Android/iOS binary execution was not available.
 - Chromium Flutter tests verify Dart fallback/coaching and a missing engine-service fallback without unsupported isolates.

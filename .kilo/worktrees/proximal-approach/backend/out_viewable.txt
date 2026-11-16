@@ -1,0 +1,132 @@
+﻿
+ Γ¢à∩╕Å wrangler 3.114.17 (update available 4.78.0)
+-----------------------------------------------
+
+node.exe : [33mΓû▓ [43;33m
+[[43;30mWARNING[43;33m][0
+m [1mThe version of 
+Wrangler you are using is 
+now out-of-date.[0m
+At line:1 char:1
++ & "C:\Program 
+Files\nodejs/node.exe" "C:\U
+sers\pgr22\AppData\Roaming\ 
+...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~
+    + CategoryInfo          
+    : NotSpecified: ([33m  
+  Γû▓ [43;3...ut-of-date   
+ .[0m:String) [], Remot    
+eException
+    + FullyQualifiedErrorId 
+    : NativeCommandError
+ 
+
+  Please update to the 
+latest version to prevent 
+critical errors.
+  Run `npm install 
+--save-dev wrangler@4` to 
+update to the latest 
+version.
+  After installation, run 
+Wrangler with `npx 
+wrangler`.
+
+
+[33mΓû▓ [43;33m[[43;30mWA
+RNING[43;33m][0m 
+[1mProcessing 
+wrangler.toml 
+configuration:[0m
+
+    - [1mDeprecation[0m: 
+"build.upload.format":
+      The format is 
+inferred automatically from 
+the code.
+
+
+≡ƒîÇ Executing on remote database chessmaster-real4 (0104f57f-e5e0-4f93-b7da-9473da2846c1):
+≡ƒîÇ To execute on your local development database, remove the --remote flag from your wrangler command.
+≡ƒÜú Executed 1 command in 0.26ms
+[
+  {
+    "results": [
+      {
+        "name": "_cf_KV"
+      },
+      {
+        "name": "users"
+      },
+      {
+        "name": "user_stats"
+      },
+      {
+        "name": "games"
+      },
+      {
+        "name": "moves"
+      },
+      {
+        "name": "sqlite_sequence"
+      },
+      {
+        "name": "tournaments"
+      },
+      {
+        "name": "tournament_participants"
+      },
+      {
+        "name": "tournament_rounds"
+      },
+      {
+        "name": "challenges"
+      },
+      {
+        "name": "chat_messages"
+      },
+      {
+        "name": "achievements"
+      },
+      {
+        "name": "user_achievements"
+      },
+      {
+        "name": "daily_content"
+      },
+      {
+        "name": "saved_games"
+      },
+      {
+        "name": "xp_history"
+      },
+      {
+        "name": "xp_transfers"
+      },
+      {
+        "name": "xp_requests"
+      }
+    ],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "APAC",
+      "served_by_colo": "SIN",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 0.2638
+      },
+      "duration": 0.2638,
+      "changes": 0,
+      "last_row_id": 0,
+      "changed_db": false,
+      "size_after": 274432,
+      "rows_read": 40,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  }
+]
